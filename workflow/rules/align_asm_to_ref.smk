@@ -9,6 +9,8 @@ module asm_to_ref_align:
             path="workflow/Snakefile",
             tag="v0.1",
         )
-    config: config
+    config:
+        config
+
 
 use rule * from asm_to_ref_align as ref_align_*
