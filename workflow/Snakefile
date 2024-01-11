@@ -4,8 +4,9 @@ min_version("6.0")
 
 
 include: "align_asm_to_ref.smk"
-include: "masking.smk"
+include: "mask_hor_arrays.smk"
 include: "ident_cen_ctgs.smk"
+
 
 rule all:
     input:

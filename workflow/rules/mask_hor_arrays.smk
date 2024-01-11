@@ -9,7 +9,7 @@ rule mask_hor_arrays:
     output:
         masked_ref="T2T-CHM13v2.hor_arrays_masked.fa",
     conda:
-        "env/masking.yaml"
+        "env/env.yaml"
     log:
         "logs/mask_hor_array_ref.log",
     shell:
@@ -20,31 +20,32 @@ rule mask_hor_arrays:
         -fo {output.masked_ref} &> {log}
         """
 
+
 # Extract masked HOR arrays from reference?
 rule extract_masked_hor_arrays:
     input:
-        rules.mask_hor_arrays.output,
-        "cenSat_Annotations_HORs.maxmin.v2.0.500kbp.bed",
+        masked_ref=rules.mask_hor_arrays.output,
+        hor_array_regions="cenSat_Annotations_HORs.maxmin.v2.0.500kbp.bed",
     output:
         "T2T-CHM13v2.hor_arrays_masked.500kbp.fa",
     log:
         "logs/extract_masked_hor_arrays.log",
-    params:
-        command="subseq",
-        extra="",
-    wrapper:
-        "v3.3.3/bio/seqtk"
+    conda:
+        "env/env.yaml"
+    shell:
+        """
+        seqtk subseq {input.masked_ref} {input.hor_array_regions} > {output} 2> {log}
+        """
 
-# Reindex masked reference genome.
-rule index_masked_ref:
+# Then index them.
+rule index_masked_hor_array:
     input:
-        rules.extract_masked_hor_arrays.output
+        rules.extract_masked_hor_arrays.output,
     output:
         "T2T-CHM13v2.hor_arrays_masked.500kbp.fai",
     log:
-        "logs/index_masked_ref.log",
-    params:
-        extra="",  # optional params string
-    threads: 4  # This value - 1 will be sent to -@
-    wrapper:
-        "v3.3.3/bio/samtools/index"
+        "logs/index_masked_hor_array.log",
+    shell:
+        """
+        samtools faidx {input} 2> {log}
+        """
