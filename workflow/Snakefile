@@ -1,0 +1,9 @@
+from snakemake.utils import min_version
+
+min_version("6.0")
+
+include: "align_asm_to_ref.smk"
+
+rule all:
+    input:
+        rules.ref_align_all.input
