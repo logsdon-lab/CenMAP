@@ -1,3 +1,10 @@
+import yaml
+
+
+with open(config["asm_to_ref"]["config"], "r") as file:
+    config["asm_to_ref"]["config"] = yaml.safe_load(file)
+
+
 # Align assemblies to reference.
 # Pull alignment workflow from github.
 # * TODO: Still need to see original config.yaml.
@@ -11,7 +18,7 @@ module asm_to_ref_align:
             tag="v0.1",
         )
     config:
-        config
+        config["asm_to_ref"]["config"]
 
 
 use rule * from asm_to_ref_align as ref_align_*

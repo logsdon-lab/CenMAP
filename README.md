@@ -16,3 +16,6 @@ mkdir -p $(dirname $ref) && touch $ref
 awk 'NR > 1 { print $2 }' config/table.asm.tbl | \
     xargs -n1 -I [] bash -c 'mkdir -p $(dirname []) && touch []'
 ```
+
+### TODO
+* TODO: Move renaming to start of analysis. Rename `sampleid_hapinfo_ctg-#`

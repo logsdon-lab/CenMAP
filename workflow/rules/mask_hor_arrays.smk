@@ -37,12 +37,15 @@ rule extract_masked_hor_arrays:
         seqtk subseq {input.masked_ref} {input.hor_array_regions} > {output} 2> {log}
         """
 
+
 # Then index them.
 rule index_masked_hor_array:
     input:
         rules.extract_masked_hor_arrays.output,
     output:
         "T2T-CHM13v2.hor_arrays_masked.500kbp.fai",
+    conda:
+        "env/env.yaml"
     log:
         "logs/index_masked_hor_array.log",
     shell:
