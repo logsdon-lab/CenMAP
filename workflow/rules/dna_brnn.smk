@@ -6,9 +6,7 @@ rule dna_brnn_fwd:
     output:
         alr_regions="{}_centromeric_regions.renamed.fwd.bed",
     threads: 20
-    # Requires installing dna-brnn. No conda recipe.
-    envmodules:
-        "dna-nn/0.1",
+    # No conda recipe. Use Dockerfile if not installed locally.
     shell:
         """
         dna-brnn -t {threads} -Ai {input.model} {input.cens} > {output}
