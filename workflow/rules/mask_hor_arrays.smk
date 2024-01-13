@@ -9,7 +9,7 @@ rule mask_hor_arrays:
     output:
         masked_ref="T2T-CHM13v2.hor_arrays_masked.fa",
     conda:
-        "env/env.yaml"
+        "env/tools.yaml"
     log:
         "logs/mask_hor_array_ref.log",
     shell:
@@ -31,7 +31,7 @@ rule extract_masked_hor_arrays:
     log:
         "logs/extract_masked_hor_arrays.log",
     conda:
-        "env/env.yaml"
+        "env/tools.yaml"
     shell:
         """
         seqtk subseq {input.masked_ref} {input.hor_array_regions} > {output} 2> {log}
@@ -45,7 +45,7 @@ rule index_masked_hor_array:
     output:
         "T2T-CHM13v2.hor_arrays_masked.500kbp.fai",
     conda:
-        "env/env.yaml"
+        "env/tools.yaml"
     log:
         "logs/index_masked_hor_array.log",
     shell:

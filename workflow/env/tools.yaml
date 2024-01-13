@@ -2,15 +2,7 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - python=3.10.13
   - repeatmasker=4.1.0
   - bedtools
   - seqtk
   - samtools
-  - pip
-  - pip:
-    - pandas
-    - pysam
-    - matplotlib
-    - numpy
-    - seaborn

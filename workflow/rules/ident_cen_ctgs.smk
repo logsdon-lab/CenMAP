@@ -110,7 +110,7 @@ rule extract_fwd_rev_regions:
     log:
         "logs/extract_fwd_rev_regions.log",
     conda:
-        "env/env.yaml"
+        "env/tools.yaml"
     shell:
         """
         awk -v OFS="\t" '{if ($6=="+") print}' {input.all_regions} > {output.fwd_cen_regions}
@@ -129,7 +129,7 @@ rule create_fwd_ctg_name_legend:
     log:
         "logs/create_fwd_ctg_name_legend.log",
     conda:
-        "env/env.yaml"
+        "env/tools.yaml"
     shell:
         """
         awk -v OFS="\t" '{print $0, FILENAME}' {input.regions} | \
@@ -154,7 +154,7 @@ rule split_fwd_cens_assembly_fasta:
     output:
         "{}.fwd.txt",
     conda:
-        "env/env.yaml"
+        "env/tools.yaml"
     log:
         "logs/split_fwd_cens_assembly_fasta.log",
     shell:
@@ -181,7 +181,7 @@ rule rename_cens_fwd_ctgs:
     output:
         "{}_centromeric_regions.renamed.fwd.fa",
     conda:
-        "env/env.yaml"
+        "env/tools.yaml"
     log:
         "logs/rename_cens_fwd_ctgs.log",
     shell:
@@ -210,7 +210,7 @@ rule index_renamed_cens_ctgs:
     output:
         "{}_centromeric_regions.renamed.rev.fai",
     conda:
-        "env/env.yaml"
+        "env/tools.yaml"
     shell:
         """
         samtools faidx {input}

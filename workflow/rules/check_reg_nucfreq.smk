@@ -6,7 +6,7 @@ rule make_bed_files_for_plot:
     output:
         "{sample}_ALR_regions.500kp.bed",
     conda:
-        "env/env.yaml"
+        "env/py.yaml"
     log:
         "logs/make_bed_files_for_plot.log",
     shell:
@@ -41,7 +41,7 @@ rule gen_nucfreq_plot:
     output:
         plot="plots/${sample}_hifi2v1.4.cens.png ",
     conda:
-        "env/env.yaml"
+        "env/py.yaml"
     params:
         ylim=100,
         height=4,
