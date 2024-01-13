@@ -2,8 +2,16 @@
 WIP
 
 ### Usage
+Local
 ```bash
+# NOTE: dna-brnn must be installed locally
 snakemake --use-conda -np --configfile config/config.yaml
+```
+
+Cluster via `singularity`
+```bash
+singularity pull docker://koisland/hgsvc3:latest
+singlarity run --use-conda -np --configfile config/config.yaml
 ```
 
 Make test files for workflow.
