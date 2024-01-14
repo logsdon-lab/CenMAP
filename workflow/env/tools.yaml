@@ -6,3 +6,5 @@ dependencies:
   - bedtools
   - seqtk
   - samtools
+  - hmmer
+  - bedops

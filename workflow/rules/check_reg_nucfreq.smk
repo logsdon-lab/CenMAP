@@ -35,7 +35,7 @@ rule make_bed_files_for_plot:
 
 rule gen_nucfreq_plot:
     input:
-        script="scripts/NucPlot.py",
+        script="workflow/scripts/NucPlot.py",
         bam_file="/net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/hgsvc3/map_align_hifi/results/{sample}_hifi2v1.4.bam",
         alr_regions="{sample}_ALR_regions.500kbp.bed",
     output:

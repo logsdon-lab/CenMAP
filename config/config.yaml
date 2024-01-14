@@ -6,3 +6,13 @@ asm_to_ref:
 dna_brnn:
   # https://github.com/lh3/dna-nn/tree/master/models
   model: "data/models/attcc-alpha.knm"
+
+
+humas_hmmer:
+  input_dir: "data/chr_cens"
+  output_dir: "output/"
+  # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
+  num_threads: 30
+  model: "data/AS-HORs-hmmer3.0-170921.hmm"
+  # # {"AS-HOR": hmmer-run.sh, "SF": hmmer-run_SF.sh}
+  mode: "AS-HOR"

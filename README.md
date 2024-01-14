@@ -23,6 +23,8 @@ mkdir -p $(dirname $ref) && touch $ref
 # Make fake assemblies
 awk 'NR > 1 { print $2 }' config/table.asm.tbl | \
     xargs -n1 -I [] bash -c 'mkdir -p $(dirname []) && touch []'
+
+touch data/AS-HORs-hmmer3.0-170921.hmm
 ```
 
 ### TODO
