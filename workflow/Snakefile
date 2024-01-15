@@ -10,9 +10,15 @@ with open(config["align_asm_to_ref"]["config"], "r") as file:
 
 
 include: "rules/common.smk"
+
+
+SAMPLES = load_samples_df()
+
+
 include: "rules/align_asm_to_ref.smk"
 include: "rules/mask_hor_arrays.smk"
 include: "rules/ident_cen_ctgs.smk"
+include: "rules/dna_brnn.smk"
 
 
 rule all:
@@ -20,3 +26,4 @@ rule all:
         rules.mask_hor_arrays_all.input,
         rules.ref_align_all.input,
         rules.ident_cen_ctgs_all.input,
+        rules.dna_brnn_all.input,

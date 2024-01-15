@@ -4,20 +4,13 @@
 REF_NAME = get_ref_name()
 OUTPUT_DIR = config["ident_cen_ctgs"]["output_dir"]
 
-# Load samples.
-# https://github.com/mrvollger/asm-to-reference-alignment/blob/fe0d4d5f1ccfd28bc1e3d926df83d64f18047e92/workflow/rules/reference_alignment.smk#L7-L12
-df = pd.read_csv(config["align_asm_to_ref"]["config"]["tbl"], sep="\t")
-df.asm = df.asm.map(os.path.abspath)
-df["asm"] = df.asm.str.split(",")
-df = df.explode("asm")
-df["num"] = df.groupby(level=0).cumcount() + 1
-df.set_index(df["sample"] + "_" + df["num"].astype(str), inplace=True)
-
 
 # Get centromeric regions from alignments to t2t-chm13 ONLY
 rule intersect_cen_regions:
     input:
-        left=lambda wc: expand(rules.ref_align_aln_to_bed.output, ref=[REF_NAME], sm=wc.sm),
+        left=lambda wc: expand(
+            rules.ref_align_aln_to_bed.output, ref=[REF_NAME], sm=wc.sm
+        ),
         right=config["align_asm_to_ref"]["cens_500kbp_regions"],
     output:
         cen_regions=os.path.join(f"results/{REF_NAME}/bed", "{sm}_cens.bed"),
@@ -57,7 +50,9 @@ rule collapse_cens_contigs:
 rule collapse_cens_contigs_only_t2t_cens:
     input:
         script="workflow/scripts/bedmin_max.py",
-        regions=lambda wc: expand(rules.ref_align_aln_to_bed.output, ref=[REF_NAME], sm=wc.sm),
+        regions=lambda wc: expand(
+            rules.ref_align_aln_to_bed.output, ref=[REF_NAME], sm=wc.sm
+        ),
     output:
         os.path.join(f"results/{REF_NAME}_cens/bed", "{sm}_centromeric_contigs.bed"),
     conda:
@@ -78,9 +73,9 @@ rule collapse_cens_contigs_only_t2t_cens:
 #  awk -F"," -v OFS="," '{dst=($2-$1)} {if (dst > 5 && $2=$3) print $1,$2,$3,$4, dst } ' test.tsv
 rule intersect_filter_both_cens_ctgs:
     input:
-        left=f"results/{REF_NAME}_cens/bed/{{sm}}_centromeric_contigs.bed",
+        left=f"results/{REF_NAME}_cens/bed/{sm}_centromeric_contigs.bed",
         # TODO: Ask about 1
-        right=f"results/{REF_NAME}/bed/{{sm}}_centromeric_contigs.bed",
+        right=f"results/{REF_NAME}/bed/{sm}_centromeric_contigs.bed",
     output:
         filt_regions=temp(
             os.path.join(OUTPUT_DIR, "{sm}_centromeric_regions.inter_filt.bed")
@@ -275,21 +270,21 @@ rule index_renamed_cens_ctgs:
 
 rule ident_cen_ctgs_all:
     input:
-        expand(rules.intersect_cen_regions.output, sm=df.index),
-        expand(rules.collapse_cens_contigs.output, sm=df.index),
+        expand(rules.intersect_cen_regions.output, sm=SAMPLES.index),
+        expand(rules.collapse_cens_contigs.output, sm=SAMPLES.index),
         expand(
             rules.collapse_cens_contigs_only_t2t_cens.output,
-            sm=df.index,
+            sm=SAMPLES.index,
         ),
-        expand(rules.intersect_filter_both_cens_ctgs.output, sm=df.index),
-        expand(rules.collapse_intersected_filtered_cen_ctgs.output, sm=df.index),
-        expand(rules.reintersect_sort_uniq_cens_ctgs.output, sm=df.index),
-        expand(rules.extract_fwd_rev_regions.output, sm=df.index),
+        expand(rules.intersect_filter_both_cens_ctgs.output, sm=SAMPLES.index),
+        expand(rules.collapse_intersected_filtered_cen_ctgs.output, sm=SAMPLES.index),
+        expand(rules.reintersect_sort_uniq_cens_ctgs.output, sm=SAMPLES.index),
+        expand(rules.extract_fwd_rev_regions.output, sm=SAMPLES.index),
         # Renaming section
-        expand(rules.create_fwd_ctg_name_legend.output, sm=df.index),
-        expand(rules.create_rev_ctg_name_legend.output, sm=df.index),
-        expand(rules.split_fwd_cens_assembly_fasta.output, sm=df.index),
-        expand(rules.split_rev_cens_assembly_fasta.output, sm=df.index),
-        expand(rules.rename_cens_fwd_ctgs.output, sm=df.index),
-        expand(rules.rename_cens_rev_ctgs.output, sm=df.index),
-        expand(rules.index_renamed_cens_ctgs.output, sm=df.index),
+        expand(rules.create_fwd_ctg_name_legend.output, sm=SAMPLES.index),
+        expand(rules.create_rev_ctg_name_legend.output, sm=SAMPLES.index),
+        expand(rules.split_fwd_cens_assembly_fasta.output, sm=SAMPLES.index),
+        expand(rules.split_rev_cens_assembly_fasta.output, sm=SAMPLES.index),
+        expand(rules.rename_cens_fwd_ctgs.output, sm=SAMPLES.index),
+        expand(rules.rename_cens_rev_ctgs.output, sm=SAMPLES.index),
+        expand(rules.index_renamed_cens_ctgs.output, sm=SAMPLES.index),
