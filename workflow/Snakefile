@@ -1,13 +1,24 @@
+import yaml
+import pandas as pd
 from snakemake.utils import min_version
 
 min_version("6.0")
 
 
+with open(config["align_asm_to_ref"]["config"], "r") as file:
+    config["align_asm_to_ref"]["config"] = yaml.safe_load(file)
+
+
+include: "rules/common.smk"
 include: "rules/align_asm_to_ref.smk"
 include: "rules/mask_hor_arrays.smk"
 include: "rules/ident_cen_ctgs.smk"
 
 
+# SAMPLES = get_samples()
+
+
 rule all:
     input:
+        rules.mask_hor_arrays_all.input,
         rules.ref_align_all.input,

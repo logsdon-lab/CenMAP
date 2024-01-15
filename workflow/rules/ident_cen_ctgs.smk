@@ -2,17 +2,17 @@
 # Extract centromeric regions
 
 
-# TODO: Replace with wildcard for assembly
-rule intersect_cent_regions:
+# Get centromeric regions from alignments to t2t-chm13
+rule intersect_cen_regions:
     input:
-        left="GM18989.bed",
-        right="cenSat_Annotations_HORs.maxmin.v2.0.500kbp.bed",
+        left="{sample}.bed",
+        right=config["align_asm_to_ref"]["cens_500kbp_regions"],
     output:
-        "GM18989_cens.bed",
+        cen_regions="{sample}_cens.bed",
     conda:
-        "../env/../env.yaml"
+        "../env/tools.yaml"
     log:
-        "logs/intersect_cent.log",
+        "logs/intersect_cent_{sample}.log",
     shell:
         """
         bedtools intersect -a {input.left} -b {input.right} > {output} 2> {log}
@@ -23,18 +23,19 @@ rule intersect_cent_regions:
 # TODO: What's difference between below?
 rule collapse_cens_contigs:
     input:
-        regions=rules.intersect_cent_regions.output,
+        script="workflow/scripts/bedmin_max.py",
+        regions=rules.intersect_cen_regions.output,
     output:
-        "GM18989_1_centromeric_contigs.bed",
+        "{sample}_1_centromeric_contigs.bed",
     conda:
-        "../env/../env.yaml"
+        "../env/py.yaml"
     log:
-        "logs/collapse_cent_ctgs.log",
+        "logs/collapse_cent_ctgs_{sample}.log",
     shell:
         """
         awk -v OFS="\t" '{print $6, $7, $8, $1, $5}' {input.regions} > tmp1.bed
 
-        ./bedminmax.py -i tmp1.bed -o tmp2.bed &> {log}
+        python {input.script} -i tmp1.bed -o tmp2.bed &> {log}
 
         awk -v OFS="\t" '{print $1, $2, $3, $4, $5, $3-$2}' tmp2.bed | sort -k1,1 > {output}
         """
@@ -44,18 +45,19 @@ rule collapse_cens_contigs:
 # TODO: what's the tail call for?
 rule collapse_cens_contigs_only_t2t_cens:
     input:
-        regions="GM18989.bed",
+        script="workflow/scripts/bedmin_max.py",
+        regions="{sample}.bed",
     output:
-        "GM18989_centromeric_contigs.bed",
+        "{sample}_centromeric_contigs.bed",
     conda:
-        "../env/../env.yaml"
+        "../env/py.yaml"
     log:
-        "logs/collapse_cent_ctgs_only_t2t_cens.log",
+        "logs/collapse_cent_ctgs_only_t2t_cens_{sample}.log",
     shell:
         """
         awk -v OFS="\t" '{print $6, $7, $8, $1, $5}' {input.regions} | tail -n +2 > tmp1.bed
 
-        ./bedminmax.py -i tmp1.bed -o tmp2.bed &> {log}
+        python {input.script} -i tmp1.bed -o tmp2.bed &> {log}
 
         awk -v OFS="\t" '{print $1, $2, $3, $4, $5, $3-$2}' tmp2.bed | sort -k1,1 > {output}
         """
@@ -65,19 +67,19 @@ rule collapse_cens_contigs_only_t2t_cens:
 #  awk -F"," -v OFS="," '{dst=($2-$1)} {if (dst > 5 && $2=$3) print $1,$2,$3,$4, dst } ' test.tsv
 rule intersect_both_cens_contigs:
     input:
-        left="GM18989_centromeric_contigs.bed",
+        left="{sample}_centromeric_contigs.bed",
         right="../../../t2t_chm13_v2.0/bed/centromeres/GM18989_centromeric_contigs.bed",
     output:
-        "{}_centromeric_regions.all.bed",
+        "{sample}_centromeric_regions.all.bed",
     conda:
-        "../env/../env.yaml"
+        "../env/env.yaml"
     params:
         # Left-outer-join. Each feat in A, report each overlap w/B.
         # No overlaps, return NULL feat for B
         intersect_params="-loj",
-        thr=1000000,
+        thr=1_000_00,
     log:
-        "logs/intersect_both_cens_contigs.log",
+        "logs/intersect_both_cens_contigs_{sample}.log",
     shell:
         """
         bedtools intersect {params.intersect_params} \
@@ -100,13 +102,13 @@ rule intersect_both_cens_contigs:
 # Reorient the regions.
 rule extract_fwd_rev_regions:
     input:
-        all_regions="GM18989_centromeric_regions.all.bed",
+        all_regions="{sample}_centromeric_regions.all.bed",
         combined_assembly="/net/eichler/vol27/projects/hgsvc/nobackups/analysis/glennis/assemblies/GM18989.vrk-ps-sseq.asm-combined.fa",
     output:
-        fwd_cen_regions="GM18989_centromeric_regions.fwd.bed",
-        rev_cen_regions="GM18989_centromeric_regions.rev.bed",
-        fwd_cen_seq="GM18989_centromeric_regions.fwd.fa",
-        rev_cen_seq="GM18989_centromeric_regions.rev.fa",
+        fwd_cen_regions="{sample}_centromeric_regions.fwd.bed",
+        rev_cen_regions="{sample}_centromeric_regions.rev.bed",
+        fwd_cen_seq="{sample}_centromeric_regions.fwd.fa",
+        rev_cen_seq="{sample}_centromeric_regions.rev.fa",
     log:
         "logs/extract_fwd_rev_regions.log",
     conda:
@@ -208,10 +210,15 @@ rule index_renamed_cens_ctgs:
     input:
         rules.rename_cens_fwd_ctgs.output,
     output:
-        "{}_centromeric_regions.renamed.rev.fai",
+        "{sample}_centromeric_regions.renamed.rev.fai",
     conda:
         "../env/tools.yaml"
     shell:
         """
         samtools faidx {input}
         """
+
+
+rule ident_cen_ctgs_all:
+    input:
+        expand(),
