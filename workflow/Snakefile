@@ -15,10 +15,8 @@ include: "rules/mask_hor_arrays.smk"
 include: "rules/ident_cen_ctgs.smk"
 
 
-# SAMPLES = get_samples()
-
-
 rule all:
     input:
         rules.mask_hor_arrays_all.input,
         rules.ref_align_all.input,
+        rules.ident_cen_ctgs_all.input,

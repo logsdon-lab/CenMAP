@@ -6,14 +6,15 @@ align_asm_to_ref:
   # Output dir set to results
 
 mask_hor_arrays:
-  output_dir: "results"
+  output_dir: "results/masked"
   # Theses are added as refs in the align_asm_to_ref workflow.
   added_alignments:
     - cens_hardmasked
     - cens
 
 ident_cen_ctgs:
-  output_dir: "results"
+  comb_assemblies_dir: "data/assemblies"
+  output_dir: "results/cens"
 
 dna_brnn:
   # https://github.com/lh3/dna-nn/tree/master/models

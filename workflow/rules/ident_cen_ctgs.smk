@@ -1,99 +1,150 @@
 # Identify centromeric regions
 # Extract centromeric regions
 
+REF_NAME = get_ref_name()
+OUTPUT_DIR = config["ident_cen_ctgs"]["output_dir"]
 
-# Get centromeric regions from alignments to t2t-chm13
+# Load samples.
+# https://github.com/mrvollger/asm-to-reference-alignment/blob/fe0d4d5f1ccfd28bc1e3d926df83d64f18047e92/workflow/rules/reference_alignment.smk#L7-L12
+df = pd.read_csv(config["align_asm_to_ref"]["config"]["tbl"], sep="\t")
+df.asm = df.asm.map(os.path.abspath)
+df["asm"] = df.asm.str.split(",")
+df = df.explode("asm")
+df["num"] = df.groupby(level=0).cumcount() + 1
+df.set_index(df["sample"] + "_" + df["num"].astype(str), inplace=True)
+
+# REF, REF_cens, REF_cens_masked
+REFS = [
+    REF_NAME,
+    *[f"{REF_NAME}_{t}" for t in config["mask_hor_arrays"]["added_alignments"]],
+]
+
+# Get centromeric regions from alignments to t2t-chm13 ONLY
 rule intersect_cen_regions:
     input:
-        left="{sample}.bed",
+        left=lambda wc: expand(rules.ref_align_aln_to_bed.output, ref=[REF_NAME], sm=wc.sm),
         right=config["align_asm_to_ref"]["cens_500kbp_regions"],
     output:
-        cen_regions="{sample}_cens.bed",
+        cen_regions=os.path.join(f"results/{REF_NAME}/bed", "{sm}_cens.bed"),
     conda:
         "../env/tools.yaml"
     log:
-        "logs/intersect_cent_{sample}.log",
+        "logs/intersect_cent_{sm}.log",
     shell:
         """
         bedtools intersect -a {input.left} -b {input.right} > {output} 2> {log}
         """
 
 
-# TODO: This can be parallelized by adding unique fnames with wildcards.
-# TODO: What's difference between below?
 rule collapse_cens_contigs:
     input:
         script="workflow/scripts/bedmin_max.py",
         regions=rules.intersect_cen_regions.output,
     output:
-        "{sample}_1_centromeric_contigs.bed",
+        os.path.join(f"results/{REF_NAME}/bed", "{sm}_centromeric_contigs.bed"),
     conda:
         "../env/py.yaml"
     log:
-        "logs/collapse_cent_ctgs_{sample}.log",
+        "logs/collapse_cent_ctgs_{sm}.log",
     shell:
         """
-        awk -v OFS="\t" '{print $6, $7, $8, $1, $5}' {input.regions} > tmp1.bed
+        awk -v OFS="\t" '{{print $6, $7, $8, $1, $5}}' {input.regions} > tmp1.bed
 
         python {input.script} -i tmp1.bed -o tmp2.bed &> {log}
 
-        awk -v OFS="\t" '{print $1, $2, $3, $4, $5, $3-$2}' tmp2.bed | sort -k1,1 > {output}
+        awk -v OFS="\t" '{{print $1, $2, $3, $4, $5, $3-$2}}' tmp2.bed | sort -k1,1 > {output}
         """
 
 
+# T2T-CHM13 CENS ONLY
 # In output dir of asm_to_ref_alignment
 # TODO: what's the tail call for?
 rule collapse_cens_contigs_only_t2t_cens:
     input:
         script="workflow/scripts/bedmin_max.py",
-        regions="{sample}.bed",
+        regions=lambda wc: expand(rules.ref_align_aln_to_bed.output, ref=[REF_NAME], sm=wc.sm),
     output:
-        "{sample}_centromeric_contigs.bed",
+        os.path.join(f"results/{REF_NAME}_cens/bed", "{sm}_centromeric_contigs.bed"),
     conda:
         "../env/py.yaml"
     log:
-        "logs/collapse_cent_ctgs_only_t2t_cens_{sample}.log",
+        "logs/collapse_cent_ctgs_only_t2t_cens_{sm}.log",
     shell:
         """
-        awk -v OFS="\t" '{print $6, $7, $8, $1, $5}' {input.regions} | tail -n +2 > tmp1.bed
+        awk -v OFS="\t" '{{print $6, $7, $8, $1, $5}}' {input.regions} | tail -n +2 > tmp1.bed
 
         python {input.script} -i tmp1.bed -o tmp2.bed &> {log}
 
-        awk -v OFS="\t" '{print $1, $2, $3, $4, $5, $3-$2}' tmp2.bed | sort -k1,1 > {output}
+        awk -v OFS="\t" '{{print $1, $2, $3, $4, $5, $3-$2}}' tmp2.bed | sort -k1,1 > {output}
         """
 
 
 # TODO: can awk comp be collapsed?
 #  awk -F"," -v OFS="," '{dst=($2-$1)} {if (dst > 5 && $2=$3) print $1,$2,$3,$4, dst } ' test.tsv
-rule intersect_both_cens_contigs:
+rule intersect_filter_both_cens_ctgs:
     input:
-        left="{sample}_centromeric_contigs.bed",
-        right="../../../t2t_chm13_v2.0/bed/centromeres/GM18989_centromeric_contigs.bed",
+        left=f"results/{REF_NAME}_cens/bed/{{sm}}_centromeric_contigs.bed",
+        # TODO: Ask about 1
+        right=f"results/{REF_NAME}/bed/{{sm}}_centromeric_contigs.bed",
     output:
-        "{sample}_centromeric_regions.all.bed",
+        filt_regions=temp(
+            os.path.join(OUTPUT_DIR, "{sm}_centromeric_regions.inter_filt.bed")
+        ),
     conda:
-        "../env/env.yaml"
+        "../env/tools.yaml"
     params:
         # Left-outer-join. Each feat in A, report each overlap w/B.
         # No overlaps, return NULL feat for B
         intersect_params="-loj",
         thr=1_000_00,
     log:
-        "logs/intersect_both_cens_contigs_{sample}.log",
+        "logs/intersect_filter_both_cens_ctgs_{sm}.log",
     shell:
         """
         bedtools intersect {params.intersect_params} \
             -a {input.left} \
             -b {input.right} | \
-        awk -v OFS="\t" -F"\t" '{if ($6==$12) print $1, $2, $3, $4, $5, $6, $3-$2}' | \
+        awk -v OFS="\t" -F"\t" '{{if ($6==$12) print $1, $2, $3, $4, $5, $6, $3-$2}}' | \
         awk '$7>{params.thr}' | \
-        uniq > tmp3.bed 2> {log}
+        uniq > {output} 2> {log}
+        """
 
+
+rule collapse_intersected_filtered_cen_ctgs:
+    input:
+        script="workflow/scripts/bedmin_max.py",
+        filt_regions=rules.intersect_filter_both_cens_ctgs.output,
+    output:
+        collapsed_regions=temp(
+            os.path.join(OUTPUT_DIR, "{sm}_centromeric_regions.collapsed.bed")
+        ),
+    log:
+        "logs/collapse_intersected_filtered_cen_ctgs_{sm}.log",
+    conda:
+        "../env/py.yaml"
+    shell:
+        """
         # Collapse ctgs grouped by label.
-        ./bedminmax.py -i tmp3.bed -o tmp4.bed 2> {log}
+        python {input.script} -i {input.filt_regions} -o {output.collapsed_regions} 2> {log}
+        """
 
-        bedtools intersect {params.intersect_params} -a tmp4.bed -b tmp3.bed | \
-        awk -v OFS="\t" '{print $1, $2, $3, $4, $9, $10, $3-$2}' | \
+
+rule reintersect_sort_uniq_cens_ctgs:
+    input:
+        collapsed_regions=rules.collapse_intersected_filtered_cen_ctgs.output,
+        filt_regions=rules.intersect_filter_both_cens_ctgs.output,
+    output:
+        os.path.join(OUTPUT_DIR, "{sm}_centromeric_regions.all.bed"),
+    params:
+        intersect_params="-loj",
+    conda:
+        "../env/tools.yaml"
+    log:
+        "logs/reintersect_sort_uniq_cens_ctgs_{sm}.log",
+    shell:
+        """
+        bedtools intersect {params.intersect_params} -a {input.collapsed_regions} -b {input.filt_regions}| \
+        awk -v OFS="\t" '{{print $1, $2, $3, $4, $9, $10, $3-$2}}' | \
         sort -k5,5 | \
         uniq > {output} 2> {log}
         """
@@ -102,21 +153,25 @@ rule intersect_both_cens_contigs:
 # Reorient the regions.
 rule extract_fwd_rev_regions:
     input:
-        all_regions="{sample}_centromeric_regions.all.bed",
-        combined_assembly="/net/eichler/vol27/projects/hgsvc/nobackups/analysis/glennis/assemblies/GM18989.vrk-ps-sseq.asm-combined.fa",
+        all_regions=rules.reintersect_sort_uniq_cens_ctgs.output,
+        combined_assembly=os.path.join(
+            config["ident_cen_ctgs"]["comb_assemblies_dir"],
+            "{sm}.vrk-ps-sseq.asm-combined.fa",
+        ),
+        # combined_assembly="/net/eichler/vol27/projects/hgsvc/nobackups/analysis/glennis/assemblies/{sm}.vrk-ps-sseq.asm-combined.fa",
     output:
-        fwd_cen_regions="{sample}_centromeric_regions.fwd.bed",
-        rev_cen_regions="{sample}_centromeric_regions.rev.bed",
-        fwd_cen_seq="{sample}_centromeric_regions.fwd.fa",
-        rev_cen_seq="{sample}_centromeric_regions.rev.fa",
+        fwd_cen_regions=os.path.join(OUTPUT_DIR, "{sm}_centromeric_regions.fwd.bed"),
+        rev_cen_regions=os.path.join(OUTPUT_DIR, "{sm}_centromeric_regions.rev.bed"),
+        fwd_cen_seq=os.path.join(OUTPUT_DIR, "{sm}_centromeric_regions.fwd.fa"),
+        rev_cen_seq=os.path.join(OUTPUT_DIR, "{sm}_centromeric_regions.rev.fa"),
     log:
-        "logs/extract_fwd_rev_regions.log",
+        "logs/extract_fwd_rev_regions_{sm}.log",
     conda:
         "../env/tools.yaml"
     shell:
         """
-        awk -v OFS="\t" '{if ($6=="+") print}' {input.all_regions} > {output.fwd_cen_regions}
-        awk -v OFS="\t" '{if ($6=="-") print}' {input.all_regions} > {output.rev_cen_regions}
+        awk -v OFS="\t" '{{if ($6=="+") print}}' {input.all_regions} > {output.fwd_cen_regions}
+        awk -v OFS="\t" '{{if ($6=="-") print}}' {input.all_regions} > {output.rev_cen_regions}
         seqtk subseq {input.combined_assembly} {output.fwd_cen_regions} > {output.fwd_cen_seq}
         seqtk subseq {input.combined_assembly} {output.rev_cen_regions} | seqtk seq -r - > {output.rev_cen_seq}
         """
@@ -127,16 +182,16 @@ rule create_fwd_ctg_name_legend:
     input:
         regions=rules.extract_fwd_rev_regions.output.fwd_cen_regions,
     output:
-        "{}.legend.fwd.txt",
+        os.path.join(OUTPUT_DIR, "{sm}.legend.fwd.txt"),
     log:
-        "logs/create_fwd_ctg_name_legend.log",
+        "logs/create_fwd_ctg_name_legend_{sm}.log",
     conda:
         "../env/tools.yaml"
     shell:
         """
-        awk -v OFS="\t" '{print $0, FILENAME}' {input.regions} | \
+        awk -v OFS="\t" '{{print $0, FILENAME}}' {input.regions} | \
         sed 's/_/\t/g' | \
-        awk -v OFS="\t" '{print $5, $8"_"$4"_"$5}' | \
+        awk -v OFS="\t" '{{print $5, $8"_"$4"_"$5}}' | \
         sort -k2,2 > {output} 2> {log}
         """
 
@@ -145,20 +200,20 @@ use rule create_fwd_ctg_name_legend as create_rev_ctg_name_legend with:
     input:
         regions=rules.extract_fwd_rev_regions.output.rev_cen_regions,
     output:
-        "{}.legend.rev.txt",
+        os.path.join(OUTPUT_DIR, "{sm}.legend.rev.txt"),
     log:
-        "logs/create_rev_ctg_name_legend.log",
+        "logs/create_rev_ctg_name_legend_{sm}.log",
 
 
 rule split_fwd_cens_assembly_fasta:
     input:
         rules.extract_fwd_rev_regions.output.fwd_cen_seq,
     output:
-        "{}.fwd.txt",
+        os.path.join(OUTPUT_DIR, "{sm}.fwd.txt"),
     conda:
         "../env/tools.yaml"
     log:
-        "logs/split_fwd_cens_assembly_fasta.log",
+        "logs/split_fwd_cens_assembly_fasta_{sm}.log",
     shell:
         """
         sed 's/>/>\n/g' {input} | sed 's/:/\n/g' > {output}
@@ -169,9 +224,9 @@ use rule split_fwd_cens_assembly_fasta as split_rev_cens_assembly_fasta with:
     input:
         rules.extract_fwd_rev_regions.output.rev_cen_seq,
     output:
-        "{}.rev.txt",
+        os.path.join(OUTPUT_DIR, "{sm}.rev.txt"),
     log:
-        "logs/split_rev_cens_assembly_fasta.log",
+        "logs/split_rev_cens_assembly_fasta_{sm}.log",
 
 
 rule rename_cens_fwd_ctgs:
@@ -181,15 +236,15 @@ rule rename_cens_fwd_ctgs:
         # b
         seq=rules.split_fwd_cens_assembly_fasta.output,
     output:
-        "{}_centromeric_regions.renamed.fwd.fa",
+        os.path.join(OUTPUT_DIR, "{sm}_centromeric_regions.renamed.fwd.fa"),
     conda:
         "../env/tools.yaml"
     log:
-        "logs/rename_cens_fwd_ctgs.log",
+        "logs/rename_cens_fwd_ctgs_{sm}.log",
     shell:
         """
-        awk 'BEGIN{FS=OFS="\t"} NR==FNR{a[$1]=$2;next} {print ($1 in a ? a[$1] : $1)}' {input.legend} {input.seq} | \
-        awk '{printf "%s%s", (/>/ ? ors : OFS), $0; ors=ORS} END{print ":"}' | \
+        awk 'BEGIN{{FS=OFS="\t"}} NR==FNR{{a[$1]=$2;next}} {{print ($1 in a ? a[$1] : $1)}}' {input.legend} {input.seq} | \
+        awk '{{printf "%s%s", (/>/ ? ors : OFS), $0; ors=ORS}} END{{print ":"}}' | \
         sed 's/> />/g' | \
         sed 's/\([0-9]\) \([0-9]\)/\1:\2/g' | \
         tr " " "\n" > {output} 2> {log}
@@ -201,24 +256,45 @@ use rule rename_cens_fwd_ctgs as rename_cens_rev_ctgs with:
         legend=rules.create_rev_ctg_name_legend.output,
         seq=rules.split_rev_cens_assembly_fasta.output,
     output:
-        "{}_centromeric_regions.renamed.rev.fa",
+        os.path.join(OUTPUT_DIR, "{sm}_centromeric_regions.renamed.rev.fa"),
     log:
-        "logs/rename_cens_rev_ctgs.log",
+        "logs/rename_cens_rev_ctgs_{sm}.log",
 
 
 rule index_renamed_cens_ctgs:
     input:
-        rules.rename_cens_fwd_ctgs.output,
+        fwd=rules.rename_cens_fwd_ctgs.output,
+        rev=rules.rename_cens_rev_ctgs.output,
     output:
-        "{sample}_centromeric_regions.renamed.rev.fai",
+        fwd=os.path.join(OUTPUT_DIR, "{sm}_centromeric_regions.renamed.fwd.fai"),
+        rev=os.path.join(OUTPUT_DIR, "{sm}_centromeric_regions.renamed.rev.fai"),
     conda:
         "../env/tools.yaml"
+    log:
+        "logs/index_renamed_cens_ctgs_{sm}.log",
     shell:
         """
-        samtools faidx {input}
+        samtools faidx {input} 2> {log}
         """
 
 
 rule ident_cen_ctgs_all:
     input:
-        expand(),
+        expand(rules.intersect_cen_regions.output, sm=df.index),
+        expand(rules.collapse_cens_contigs.output, sm=df.index),
+        expand(
+            rules.collapse_cens_contigs_only_t2t_cens.output,
+            sm=df.index,
+        ),
+        expand(rules.intersect_filter_both_cens_ctgs.output, sm=df.index),
+        expand(rules.collapse_intersected_filtered_cen_ctgs.output, sm=df.index),
+        expand(rules.reintersect_sort_uniq_cens_ctgs.output, sm=df.index),
+        expand(rules.extract_fwd_rev_regions.output, sm=df.index),
+        # Renaming section
+        expand(rules.create_fwd_ctg_name_legend.output, sm=df.index),
+        expand(rules.create_rev_ctg_name_legend.output, sm=df.index),
+        expand(rules.split_fwd_cens_assembly_fasta.output, sm=df.index),
+        expand(rules.split_rev_cens_assembly_fasta.output, sm=df.index),
+        expand(rules.rename_cens_fwd_ctgs.output, sm=df.index),
+        expand(rules.rename_cens_rev_ctgs.output, sm=df.index),
+        expand(rules.index_renamed_cens_ctgs.output, sm=df.index),

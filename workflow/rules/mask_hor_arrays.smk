@@ -6,6 +6,7 @@ OUTPUT = []
 
 # Mask HOR arrays in reference genome T2T-CHM13
 if "cens_hardmasked" in config["mask_hor_arrays"]["added_alignments"]:
+
     rule mask_hor_arrays:
         input:
             ref=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
