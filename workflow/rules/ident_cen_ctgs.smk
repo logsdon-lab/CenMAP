@@ -13,11 +13,6 @@ df = df.explode("asm")
 df["num"] = df.groupby(level=0).cumcount() + 1
 df.set_index(df["sample"] + "_" + df["num"].astype(str), inplace=True)
 
-# REF, REF_cens, REF_cens_masked
-REFS = [
-    REF_NAME,
-    *[f"{REF_NAME}_{t}" for t in config["mask_hor_arrays"]["added_alignments"]],
-]
 
 # Get centromeric regions from alignments to t2t-chm13 ONLY
 rule intersect_cen_regions:
