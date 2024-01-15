@@ -7,6 +7,8 @@ rule dna_brnn_fwd:
         alr_regions="{}_centromeric_regions.renamed.fwd.bed",
     threads: 20
     # No conda recipe. Use Dockerfile if not installed locally.
+    # singularity:
+    #     "docker://koisland/hgsvc3:latest"
     shell:
         """
         dna-brnn -t {threads} -Ai {input.model} {input.cens} > {output}

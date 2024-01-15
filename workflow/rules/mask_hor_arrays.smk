@@ -4,19 +4,20 @@
 # Mask HOR arrays in reference genome T2T-CHM13
 rule mask_hor_arrays:
     input:
-        ref="/net/eichler/vol28/eee_shared/assemblies/CHM13/T2T/v2.0/T2T-CHM13v2.fasta",
-        hor_arrays="/net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/t2t_chr8/ape_cens/chm1/asat_annotation/chm13_v2.0_hor_arrays.bed",
+        ref=config["asm_to_ref"]["config"]["ref"]["CHM13"],
+        # TODO: Are the annotations per chr or all grouped together?
+        asat_annotations=config["asm_to_ref"]["asat_annotations"]
     output:
-        masked_ref="T2T-CHM13v2.hor_arrays_masked.fa",
+        masked_ref="data/T2T-CHM13v2.hor_arrays_masked.fa",
     conda:
-        "env/tools.yaml"
+        "../env/tools.yaml"
     log:
         "logs/mask_hor_array_ref.log",
     shell:
         """
         bedtools maskfasta \
         -fi {input.ref} \
-        -bed {input.hor_arrays} \
+        -bed {input.asat_annotations} \
         -fo {output.masked_ref} &> {log}
         """
 
@@ -25,16 +26,16 @@ rule mask_hor_arrays:
 rule extract_masked_hor_arrays:
     input:
         masked_ref=rules.mask_hor_arrays.output,
-        hor_array_regions="cenSat_Annotations_HORs.maxmin.v2.0.500kbp.bed",
+        cens_regions=config["asm_to_ref"]["cens_500kbp_regions"],
     output:
-        "T2T-CHM13v2.hor_arrays_masked.500kbp.fa",
+        "data/T2T-CHM13v2.hor_arrays_masked.500kbp.fa",
     log:
         "logs/extract_masked_hor_arrays.log",
     conda:
-        "env/tools.yaml"
+        "../env/tools.yaml"
     shell:
         """
-        seqtk subseq {input.masked_ref} {input.hor_array_regions} > {output} 2> {log}
+        seqtk subseq {input.masked_ref} {input.cens_regions} > {output} 2> {log}
         """
 
 
@@ -43,9 +44,9 @@ rule index_masked_hor_array:
     input:
         rules.extract_masked_hor_arrays.output,
     output:
-        "T2T-CHM13v2.hor_arrays_masked.500kbp.fai",
+        "data/T2T-CHM13v2.hor_arrays_masked.500kbp.fai",
     conda:
-        "env/tools.yaml"
+        "../env/tools.yaml"
     log:
         "logs/index_masked_hor_array.log",
     shell:

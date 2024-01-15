@@ -6,7 +6,7 @@ rule make_bed_files_for_plot:
     output:
         "{sample}_ALR_regions.500kp.bed",
     conda:
-        "env/py.yaml"
+        "../env/py.yaml"
     log:
         "logs/make_bed_files_for_plot.log",
     shell:

@@ -1,7 +1,8 @@
 
 asm_to_ref:
   config: "config/asm_to_ref_config.yaml"
-
+  asat_annotations: "data/AlphaSatelliteMapping/nobackups/FindingAlphaSat/t2t_chr8/ape_cens/chm1/asat_annotation/chm13_v2.0_hor_arrays.bed"
+  cens_500kbp_regions: "data/AlphaSatelliteMapping/nobackups/FindingAlphaSat/t2t_chr8/chm13/centromeres/annotations/cenSat_Annotations_HORs.maxmin.v2.0.500kbp.bed"
 
 dna_brnn:
   # https://github.com/lh3/dna-nn/tree/master/models

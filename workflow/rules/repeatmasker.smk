@@ -10,7 +10,7 @@ rule run_repeatmasker:
             "/net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/hgsvc3/repeatmasker"
         ),
     conda:
-        "env/tools.yaml"
+        "../env/tools.yaml"
     threads: 40
     params:
         species="human",

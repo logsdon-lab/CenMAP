@@ -120,7 +120,7 @@ rule filter_hmm_res_by_score:
         # Overlap
         overlap_opt="--fraction-either 0.1",
     conda:
-        "env/tools.yaml"
+        "../env/tools.yaml"
     log:
         "logs/filter_hmm_res_by_score_{chr}.log",
     shell:

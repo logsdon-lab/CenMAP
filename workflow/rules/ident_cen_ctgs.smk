@@ -10,7 +10,7 @@ rule intersect_cent_regions:
     output:
         "GM18989_cens.bed",
     conda:
-        "env/env.yaml"
+        "../env/../env.yaml"
     log:
         "logs/intersect_cent.log",
     shell:
@@ -27,7 +27,7 @@ rule collapse_cens_contigs:
     output:
         "GM18989_1_centromeric_contigs.bed",
     conda:
-        "env/env.yaml"
+        "../env/../env.yaml"
     log:
         "logs/collapse_cent_ctgs.log",
     shell:
@@ -48,7 +48,7 @@ rule collapse_cens_contigs_only_t2t_cens:
     output:
         "GM18989_centromeric_contigs.bed",
     conda:
-        "env/env.yaml"
+        "../env/../env.yaml"
     log:
         "logs/collapse_cent_ctgs_only_t2t_cens.log",
     shell:
@@ -70,7 +70,7 @@ rule intersect_both_cens_contigs:
     output:
         "{}_centromeric_regions.all.bed",
     conda:
-        "env/env.yaml"
+        "../env/../env.yaml"
     params:
         # Left-outer-join. Each feat in A, report each overlap w/B.
         # No overlaps, return NULL feat for B
@@ -110,7 +110,7 @@ rule extract_fwd_rev_regions:
     log:
         "logs/extract_fwd_rev_regions.log",
     conda:
-        "env/tools.yaml"
+        "../env/tools.yaml"
     shell:
         """
         awk -v OFS="\t" '{if ($6=="+") print}' {input.all_regions} > {output.fwd_cen_regions}
@@ -123,13 +123,13 @@ rule extract_fwd_rev_regions:
 # TODO: Move to start before alignment.
 rule create_fwd_ctg_name_legend:
     input:
-        regions=rules.extract_fwd_rev_regions.fwd_cen_regions,
+        regions=rules.extract_fwd_rev_regions.output.fwd_cen_regions,
     output:
         "{}.legend.fwd.txt",
     log:
         "logs/create_fwd_ctg_name_legend.log",
     conda:
-        "env/tools.yaml"
+        "../env/tools.yaml"
     shell:
         """
         awk -v OFS="\t" '{print $0, FILENAME}' {input.regions} | \
@@ -141,7 +141,7 @@ rule create_fwd_ctg_name_legend:
 
 use rule create_fwd_ctg_name_legend as create_rev_ctg_name_legend with:
     input:
-        regions=rules.extract_fwd_rev_regions.rev_cen_regions,
+        regions=rules.extract_fwd_rev_regions.output.rev_cen_regions,
     output:
         "{}.legend.rev.txt",
     log:
@@ -150,11 +150,11 @@ use rule create_fwd_ctg_name_legend as create_rev_ctg_name_legend with:
 
 rule split_fwd_cens_assembly_fasta:
     input:
-        rules.extract_fwd_rev_regions.fwd_cen_seq,
+        rules.extract_fwd_rev_regions.output.fwd_cen_seq,
     output:
         "{}.fwd.txt",
     conda:
-        "env/tools.yaml"
+        "../env/tools.yaml"
     log:
         "logs/split_fwd_cens_assembly_fasta.log",
     shell:
@@ -165,7 +165,7 @@ rule split_fwd_cens_assembly_fasta:
 
 use rule split_fwd_cens_assembly_fasta as split_rev_cens_assembly_fasta with:
     input:
-        rules.extract_fwd_rev_regions.rev_cen_seq,
+        rules.extract_fwd_rev_regions.output.rev_cen_seq,
     output:
         "{}.rev.txt",
     log:
@@ -175,13 +175,13 @@ use rule split_fwd_cens_assembly_fasta as split_rev_cens_assembly_fasta with:
 rule rename_cens_fwd_ctgs:
     input:
         # a
-        legend=rules.create_fwd_ctg_name_legend,
+        legend=rules.create_fwd_ctg_name_legend.output,
         # b
-        seq=rules.split_fwd_cens_assembly_fasta,
+        seq=rules.split_fwd_cens_assembly_fasta.output,
     output:
         "{}_centromeric_regions.renamed.fwd.fa",
     conda:
-        "env/tools.yaml"
+        "../env/tools.yaml"
     log:
         "logs/rename_cens_fwd_ctgs.log",
     shell:
@@ -196,8 +196,8 @@ rule rename_cens_fwd_ctgs:
 
 use rule rename_cens_fwd_ctgs as rename_cens_rev_ctgs with:
     input:
-        legend=rules.create_rev_ctg_name_legend,
-        seq=rules.split_rev_cens_assembly_fasta,
+        legend=rules.create_rev_ctg_name_legend.output,
+        seq=rules.split_rev_cens_assembly_fasta.output,
     output:
         "{}_centromeric_regions.renamed.rev.fa",
     log:
@@ -210,7 +210,7 @@ rule index_renamed_cens_ctgs:
     output:
         "{}_centromeric_regions.renamed.rev.fai",
     conda:
-        "env/tools.yaml"
+        "../env/tools.yaml"
     shell:
         """
         samtools faidx {input}
