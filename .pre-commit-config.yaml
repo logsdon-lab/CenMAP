@@ -12,3 +12,9 @@ repos:
     rev: v0.9.0
     hooks:
     -   id: snakefmt
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.1.13
+    hooks:
+    -   id: ruff
+    -   id: ruff-format

@@ -1,5 +1,5 @@
 ref:
-  t2t_chm13_v2.0: data/chm13_t2t/nobackups/assemblies/chm13_v1.1_plus38Y_par_masked.fasta
+  t2t_chm13_v2.0: data/T2T-CHM13v2.fasta
 tbl: config/table.asm.tbl
 aln_threads: 8
 mm2_opts: "-x asm5 --secondary=no -s 25000 -K 8G"
