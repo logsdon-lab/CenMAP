@@ -1,4 +1,5 @@
 *.env
+*.sif
 .snakemake
 logs/
 results/

@@ -1,9 +1,8 @@
-FROM mambaorg/micromamba
+FROM condaforge/mambaforge
 
 WORKDIR /workflow
 
 # Install deps for dna-brnn as root
-USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libz-dev \
     gcc \
@@ -21,14 +20,11 @@ RUN git clone https://github.com/lh3/dna-nn && \
 # Update path for dna-brnn
 ENV PATH="${PATH}:/workflow/dna-nn/"
 
-# Return to mamba user.
-USER $MAMBA_USER
-
 # Copy env.yaml
-COPY --chown=$MAMBA_USER:$MAMBA_USER env.yaml /tmp/env.yaml
+COPY env.yaml /tmp/env.yaml
 
 # Install conda packages
-RUN micromamba install --yes --file /tmp/env.yaml && \
-    micromamba clean --all --yes
+RUN mamba env create -f /tmp/env.yaml -n hgsvc3 && \
+    mamba clean --all --yes
 
-ENTRYPOINT [ "/usr/local/bin/_entrypoint.sh", "snakemake" ]
+ENTRYPOINT [ "mamba", "run", "--no-capture-output", "-n", "hgsvc3", "snakemake" ]
