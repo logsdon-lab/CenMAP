@@ -1,14 +1,33 @@
 import os
 
 
+CONCAT_ASM_INPUT_DIR = config["concat_asm"]["input_dir"]
+CONCAT_ASM_OUTPUT_DIR = config["concat_asm"]["output_dir"]
+
+
 rule concat_asm:
     input:
-        expand(os.path.join(), types=config["concat_asm"]["types"]),
+        expand(
+            os.path.join(
+                CONCAT_ASM_INPUT_DIR, "{{sm}}", "{{sm}}.vrk-ps-sseq.asm-{typ}.fasta.gz"
+            ),
+            typ=config["concat_asm"]["types"],
+        ),
     output:
-        "",
+        os.path.join(CONCAT_ASM_OUTPUT_DIR, "{sm}.vrk-ps-sseq.asm-comb-dedup.fa.gz"),
+    # https://bioinf.shenwei.me/seqkit/usage/#rmdup
+    params:
+        by_seq="-s",
+    log:
+        "logs/concat_asm_{sm}.log",
+    conda:
+        "../env/tools.yaml"
     shell:
         """
-        zcat \
-        data/HG00171/HG00171.vrk-ps-sseq.asm-hap1.fasta.gz \
-        data/HG00171/HG00171.vrk-ps-sseq.asm-hap2.fasta.gz > HG000171.vrk-ps-sseq.asm-comb.fasta.gz
+        zcat {input} | seqkit rmdup {params.by_seq} | gzip > {output}
         """
+
+
+rule concat_asm_all:
+    input:
+        expand(rules.concat_asm.output, sm=SAMPLE_NAMES),

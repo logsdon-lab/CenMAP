@@ -1,8 +1,7 @@
 import os
 
 
-REF_NAME = get_ref_name()
-OUTPUT = []
+REF_MASK_OUTPUT = []
 
 # Mask HOR arrays in reference genome T2T-CHM13
 if "cens_hardmasked" in config["mask_hor_arrays"]["added_alignments"]:
@@ -29,7 +28,7 @@ if "cens_hardmasked" in config["mask_hor_arrays"]["added_alignments"]:
             -fo {output} &> {log}
             """
 
-    OUTPUT.append(rules.mask_hor_arrays.output)
+    REF_MASK_OUTPUT.append(rules.mask_hor_arrays.output)
 
 
 if "cens" in config["mask_hor_arrays"]["added_alignments"]:
@@ -60,7 +59,7 @@ if "cens" in config["mask_hor_arrays"]["added_alignments"]:
         output:
             os.path.join(
                 config["mask_hor_arrays"]["output_dir"],
-                f"{REF_NAME}.hor_arrays_masked.500kbp.fai",
+                f"{REF_NAME}.hor_arrays_masked.500kbp.fa.fai",
             ),
         conda:
             "../env/tools.yaml"
@@ -68,13 +67,13 @@ if "cens" in config["mask_hor_arrays"]["added_alignments"]:
             "logs/index_masked_hor_array.log",
         shell:
             """
-            samtools faidx {input} 2> {log}
+            samtools faidx {input} &> {log}
             """
 
-    OUTPUT.append(rules.extract_masked_hor_arrays.output)
-    OUTPUT.append(rules.index_masked_hor_array.output)
+    REF_MASK_OUTPUT.append(rules.extract_masked_hor_arrays.output)
+    REF_MASK_OUTPUT.append(rules.index_masked_hor_array.output)
 
 
 rule mask_hor_arrays_all:
     input:
-        OUTPUT,
+        REF_MASK_OUTPUT,

@@ -32,6 +32,6 @@ use rule dna_brnn_fwd as dna_brnn_rev with:
 
 rule dna_brnn_all:
     input:
-        expand(rules.dna_brnn_fwd.output, sm=SAMPLES.index),
-        expand(rules.dna_brnn_rev.output, sm=SAMPLES.index),
+        expand(rules.dna_brnn_fwd.output, sm=SAMPLES_DF.index),
+        expand(rules.dna_brnn_rev.output, sm=SAMPLES_DF.index),
         # ...

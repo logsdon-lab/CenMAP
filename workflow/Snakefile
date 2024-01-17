@@ -12,9 +12,13 @@ with open(config["align_asm_to_ref"]["config"], "r") as file:
 include: "rules/common.smk"
 
 
-SAMPLES = load_samples_df()
+# Globals shared throughout workflow.
+SAMPLES_DF = load_samples_df()
+REF_NAME = get_ref_name()
+SAMPLE_NAMES = pd.Index(sm_hap.split("_")[0] for sm_hap in SAMPLES_DF.index)
 
 
+include: "rules/concat_asm.smk"
 include: "rules/align_asm_to_ref.smk"
 include: "rules/mask_hor_arrays.smk"
 include: "rules/ident_cen_ctgs.smk"
@@ -25,5 +29,6 @@ rule all:
     input:
         rules.mask_hor_arrays_all.input,
         rules.ref_align_all.input,
+        rules.concat_asm_all.input,
         rules.ident_cen_ctgs_all.input,
         rules.dna_brnn_all.input,

@@ -1,10 +1,13 @@
 align_asm_to_ref:
+  # This config specifies the assemblies in `tbl`
   config: "config/asm_to_ref_config.yaml"
   asat_annotations: "data/annotations/chm13_v2.0_hor_arrays.bed"
-  cens_500kbp_regions: "data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.500kbp.bed"
+  cens_500kbp_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
   # Output dir set to results
 
 concat_asm:
+  # Expects {input_dir}/{sm}/{sm}.vrk-ps-sseq.asm-{typ}.fasta.gz
+  input_dir: "data/assemblies"
   output_dir: "data/assemblies/combined"
   # {asm}.vrk-ps-sseq.asm-{type}.fasta.gz
   types:
