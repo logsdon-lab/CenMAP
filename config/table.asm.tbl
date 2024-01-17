@@ -1,3 +1,2 @@
 sample	asm
-HG002	data/HG002_1.fa.gz,data/HG002_2.fa.gz
-HG00733	data/HG00733_1.fa.gz,data/HG00733_2.fa.gz
+HG00171 data/HG00171/HG00171.vrk-ps-sseq.asm-hap1.fasta.gz,data/HG00171/HG00171.vrk-ps-sseq.asm-hap2.fasta.gz

@@ -1,4 +1,3 @@
-
 align_asm_to_ref:
   config: "config/asm_to_ref_config.yaml"
   asat_annotations: "data/AlphaSatelliteMapping/nobackups/FindingAlphaSat/t2t_chr8/ape_cens/chm1/asat_annotation/chm13_v2.0_hor_arrays.bed"

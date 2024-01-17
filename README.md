@@ -19,5 +19,18 @@ Make test files for workflow.
 ./test/make_test_files.sh
 ```
 
+#### Download raw data with `globus-cli`
+Login and check your globus home endpt direcory. Directories specified below are local to this.
+```bash
+globus login
+globus endpoint local-id
+# C:\Users\koshima
+```
+
+To download files.
+```bash
+./workflow/scripts/globus_download_data.sh projects/hgsvc3/data/asm projects/hgsvc3/data/raw_data
+```
+
 ### TODO
 * TODO: Move renaming to start of analysis. Rename `sampleid_hapinfo_ctg-#`
