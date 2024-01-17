@@ -1,8 +1,21 @@
 align_asm_to_ref:
   config: "config/asm_to_ref_config.yaml"
-  asat_annotations: "data/chm13_v2.0_hor_arrays.bed"
-  cens_500kbp_regions: "data/cenSat_Annotations_HORs.maxmin.v2.0.500kbp.bed"
+  asat_annotations: "data/annotations/chm13_v2.0_hor_arrays.bed"
+  cens_500kbp_regions: "data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.500kbp.bed"
   # Output dir set to results
+
+concat_asm:
+  output_dir: "data/assemblies/combined"
+  # {asm}.vrk-ps-sseq.asm-{type}.fasta.gz
+  types:
+    # - mito
+    # - rdna
+    # - disconnected
+    # - ebv
+    - hap1
+    - hap2
+    # - unassigned
+    # - contaminants
 
 mask_hor_arrays:
   output_dir: "results/masked"
@@ -12,7 +25,7 @@ mask_hor_arrays:
     - cens
 
 ident_cen_ctgs:
-  comb_assemblies_dir: "data/assemblies"
+  comb_assemblies_dir: "data/assemblies/combined"
   output_dir: "results/cens"
 
 dna_brnn:

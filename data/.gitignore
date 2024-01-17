@@ -2,3 +2,8 @@
 !.gitignore
 !models/
 !*.bed
+!annotations/
+!raw_data/
+!reference/
+!assemblies
+!README.md
