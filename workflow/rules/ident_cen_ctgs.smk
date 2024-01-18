@@ -207,9 +207,10 @@ rule extract_fwd_rev_regions:
     conda:
         "../env/tools.yaml"
     shell:
+        # Changed to $4 position for strand
         """
-        awk -v OFS="\\t" '{{if ($6=="+") print}}' {input.all_regions} > {output.fwd_cen_regions}
-        awk -v OFS="\\t" '{{if ($6=="-") print}}' {input.all_regions} > {output.rev_cen_regions}
+        awk -v OFS="\\t" '{{if ($4=="+") print}}' {input.all_regions} > {output.fwd_cen_regions}
+        awk -v OFS="\\t" '{{if ($4=="-") print}}' {input.all_regions} > {output.rev_cen_regions}
         seqtk subseq {input.combined_assembly} {output.fwd_cen_regions} > {output.fwd_cen_seq}
         seqtk subseq {input.combined_assembly} {output.rev_cen_regions} | seqtk seq -r - > {output.rev_cen_seq}
         """
