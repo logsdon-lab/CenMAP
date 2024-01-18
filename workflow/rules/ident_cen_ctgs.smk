@@ -21,6 +21,24 @@ rule intersect_cen_regions:
         """
 
 
+# 1. reference_name
+# 2. reference_start
+# 3. reference_end
+# 4. reference_length
+# 5. strand
+# 6. query_name
+# 7. query_start
+# 8. query_end
+# 9. query_length
+# 10. perID_by_matches
+# 11. perID_by_events
+# 12. perID_by_all
+# 13. matches
+# 14. mismatches
+# 15. deletion_events
+# 16. insertion_events
+# 17. deletions
+# 18. insertions
 rule collapse_cens_contigs:
     input:
         # TODO: This one has orientation, v2 doesn't. What's up with that?
@@ -30,22 +48,25 @@ rule collapse_cens_contigs:
         os.path.join(f"results/{REF_NAME}/bed", "{sm}_centromeric_contigs.bed"),
     conda:
         "../env/py.yaml"
+    params:
+        # NR>1 if yes, blank if no.
+        awk_skip_input_header="",
     log:
         "logs/collapse_cent_ctgs_{sm}.log",
     shell:
         """
-        awk -v OFS="\t" '{{print $6, $7, $8, $1, $5}}' {input.regions} > tmp1.bed
+        # Calculate length of ref region.
+        awk -v OFS="\t" \
+        '{params.awk_skip_input_header} {{print $6, $7, $8, $8-$7, $1, $5}}' \
+        {input.regions} > tmp_{wildcards.sm}.bed
 
-        python {input.script} -i tmp1.bed -o tmp2.bed &> {log}
-
-        awk -v OFS="\t" '{{print $1, $2, $3, $4, $5, $3-$2}}' tmp2.bed | sort -k1,1 > {output}
+        python {input.script} -i tmp_{wildcards.sm}.bed | sort -k1,1 > {output}
         """
 
 
 # T2T-CHM13 CENS ONLY
 # In output dir of asm_to_ref_alignment
-# TODO: what's the tail call for?
-rule collapse_cens_contigs_only_t2t_cens:
+use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
     input:
         script="workflow/scripts/bedminmax.py",
         regions=lambda wc: expand(
@@ -55,16 +76,11 @@ rule collapse_cens_contigs_only_t2t_cens:
         os.path.join(f"results/{REF_NAME}_cens/bed", "{sm}_centromeric_contigs.bed"),
     conda:
         "../env/py.yaml"
+    params:
+        # NR>1 if yes, blank if no.
+        awk_skip_input_header="NR>1",
     log:
         "logs/collapse_cent_ctgs_only_t2t_cens_{sm}.log",
-    shell:
-        """
-        awk -v OFS="\t" '{{print $6, $7, $8, $1, $5}}' {input.regions} | tail -n +2 > tmp1.bed
-
-        python {input.script} -i tmp1.bed -o tmp2.bed &> {log}
-
-        awk -v OFS="\t" '{{print $1, $2, $3, $4, $5, $3-$2}}' tmp2.bed | sort -k1,1 > {output}
-        """
 
 
 # TODO: can awk comp be collapsed?
