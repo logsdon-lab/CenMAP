@@ -68,7 +68,7 @@ rule collapse_cens_contigs:
         '{params.awk_skip_input_header} {{print $6, $7, $8, $8-$7, $1, $5}}' \
         {input.regions} > {output.len_calc_regions} 2> {log}
 
-        python {input.script} -i {output.len_calc_regions} | sort -k1,1 > {output} 2> {log}
+        python {input.script} -i {output.len_calc_regions} | sort -k1,1 > {output.regions} 2> {log}
         """
 
 
@@ -254,7 +254,7 @@ rule split_fwd_cens_assembly_fasta:
         "logs/split_fwd_cens_assembly_fasta_{sm}.log",
     shell:
         """
-        sed -e 's/>/>\n/g' -e 's/:/\n/g' {input} > {output} 2> {log}
+        sed -e 's/>/>\\n/g' -e 's/:/\\n/g' {input} > {output} 2> {log}
         """
 
 
@@ -287,7 +287,7 @@ rule rename_cens_fwd_ctgs:
         {{ awk 'BEGIN{{FS=OFS="\\t"}} NR==FNR{{a[$1]=$2;next}} {{print ($1 in a ? a[$1] : $1)}}' {input.legend} {input.seq} | \
         awk '{{printf "%s%s", (/>/ ? ors : OFS), $0; ors=ORS}} END{{print ":"}}' | \
         sed -e 's/> />/g' -e 's/\([0-9]\) \([0-9]\)/\1:\2/g' | \
-        tr " " "\n";}} > {output} 2> {log}
+        tr " " "\\n";}} > {output} 2> {log}
         """
 
 
