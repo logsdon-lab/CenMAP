@@ -24,7 +24,12 @@ ENV PATH="${PATH}:/workflow/dna-nn/"
 COPY env.yaml /tmp/env.yaml
 
 # Install conda packages
-RUN mamba env create -f /tmp/env.yaml -n hgsvc3 && \
+ARG ENV_NAME="hgsvc3"
+RUN mamba env create -f /tmp/env.yaml -n $ENV_NAME && \
     mamba clean --all --yes
 
-ENTRYPOINT [ "mamba", "run", "--no-capture-output", "-n", "hgsvc3", "snakemake" ]
+# Activate environment automatically by modifying ~/.bashrc
+RUN echo "conda activate $ENV_NAME" >> ~/.bashrc
+SHELL ["/bin/bash", "--login", "-c"]
+
+ENTRYPOINT [ "snakemake" ]
