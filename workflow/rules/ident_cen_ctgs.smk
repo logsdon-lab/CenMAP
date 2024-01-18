@@ -125,7 +125,7 @@ rule intersect_filter_both_cens_ctgs:
         "logs/intersect_filter_both_cens_ctgs_{sm}.log",
     shell:
         """
-        {{bedtools intersect {params.intersect_params} \
+        {{ bedtools intersect {params.intersect_params} \
             -a {input.left} \
             -b {input.right} | \
         awk -v OFS="\t" -F"\t" '{{if ($6==$12) print $1, $2, $3, $4, $5, $6, $3-$2}}' | \
@@ -172,7 +172,7 @@ rule reintersect_sort_uniq_cens_ctgs:
         "logs/reintersect_sort_uniq_cens_ctgs_{sm}.log",
     shell:
         """
-        {{bedtools intersect {params.intersect_params} -a {input.collapsed_regions} -b {input.filt_regions}| \
+        {{ bedtools intersect {params.intersect_params} -a {input.collapsed_regions} -b {input.filt_regions}| \
         awk -v OFS="\t" '{{print $1, $2, $3, $4, $9, $10, $3-$2}}' | \
         sort -k5,5 | \
         uniq;}} > {output} 2> {log}
@@ -227,7 +227,7 @@ rule create_fwd_ctg_name_legend:
         "../env/tools.yaml"
     shell:
         """
-        {{awk -v OFS="\t" '{{print $0, FILENAME}}' {input.regions} | \
+        {{ awk -v OFS="\t" '{{print $0, FILENAME}}' {input.regions} | \
         sed 's/_/\t/g' | \
         awk -v OFS="\t" '{{print $5, $8"_"$4"_"$5}}' | \
         sort -k2,2;}} > {output} 2> {log}
@@ -284,7 +284,7 @@ rule rename_cens_fwd_ctgs:
         "logs/rename_cens_fwd_ctgs_{sm}.log",
     shell:
         """
-        {{awk 'BEGIN{{FS=OFS="\t"}} NR==FNR{{a[$1]=$2;next}} {{print ($1 in a ? a[$1] : $1)}}' {input.legend} {input.seq} | \
+        {{ awk 'BEGIN{{FS=OFS="\t"}} NR==FNR{{a[$1]=$2;next}} {{print ($1 in a ? a[$1] : $1)}}' {input.legend} {input.seq} | \
         awk '{{printf "%s%s", (/>/ ? ors : OFS), $0; ors=ORS}} END{{print ":"}}' | \
         sed -e 's/> />/g' -e 's/\([0-9]\) \([0-9]\)/\1:\2/g' | \
         tr " " "\n";}} > {output} 2> {log}

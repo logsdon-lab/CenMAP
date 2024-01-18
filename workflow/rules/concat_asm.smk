@@ -24,7 +24,7 @@ rule concat_asm:
         "../env/tools.yaml"
     shell:
         """
-        {{zcat {input} | seqkit rmdup {params.by_seq} | gzip;}} > {output} 2> {log}
+        {{ zcat {input} | seqkit rmdup {params.by_seq} | gzip;}} > {output} 2> {log}
         """
 
 
