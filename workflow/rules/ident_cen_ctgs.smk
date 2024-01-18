@@ -74,6 +74,7 @@ rule collapse_cens_contigs:
 
 # T2T-CHM13 CENS ONLY
 # TODO: This is missing a field.(4)
+# IMPORTANT: That field is the centromere region annotation for a specific chr. Add!
 # In output dir of asm_to_ref_alignment
 use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
     input:
