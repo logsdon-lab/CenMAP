@@ -18,10 +18,10 @@ rule make_bed_files_for_plot:
         grep {wildcards.sample} | \
         sed 's/hap/haplotype/g' | \
         sed 's/un/unassigned/g' | \
-        sed 's/_/\t/g' | \
-        sed 's/:/\t/g' | \
-        sed 's/-/\t/g' | \
-        awk -v OFS="\t" '{print $3"-"$4, $5, $6, $2}' | \
+        sed 's/_/\\t/g' | \
+        sed 's/:/\\t/g' | \
+        sed 's/-/\\t/g' | \
+        awk -v OFS="\\t" '{print $3"-"$4, $5, $6, $2}' | \
         sort | \
         uniq > $sorted_fname 2> {log}
 
@@ -29,7 +29,7 @@ rule make_bed_files_for_plot:
         ./bedminmax.py -i $sorted_fname -o $collapsed_fname 2> {log}
 
         # Format
-        awk -v OFS="\t" '{print $1, $2, $3, $3-$2, $4}' $collapsed_fname > {output} 2> {log}
+        awk -v OFS="\\t" '{print $1, $2, $3, $3-$2, $4}' $collapsed_fname > {output} 2> {log}
         """
 
 

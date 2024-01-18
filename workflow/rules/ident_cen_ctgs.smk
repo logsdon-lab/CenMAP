@@ -64,7 +64,7 @@ rule collapse_cens_contigs:
     shell:
         """
         # Calculate length of ref region.
-        awk -v OFS="\t" \
+        awk -v OFS="\\t" \
         '{params.awk_skip_input_header} {{print $6, $7, $8, $8-$7, $1, $5}}' \
         {input.regions} > {output.len_calc_regions} 2> {log}
 
@@ -128,7 +128,7 @@ rule intersect_filter_both_cens_ctgs:
         {{ bedtools intersect {params.intersect_params} \
             -a {input.left} \
             -b {input.right} | \
-        awk -v OFS="\t" -F"\t" '{{if ($6==$12) print $1, $2, $3, $4, $5, $6, $3-$2}}' | \
+        awk -v OFS="\\t" -F"\\t" '{{if ($6==$12) print $1, $2, $3, $4, $5, $6, $3-$2}}' | \
         awk '$7>{params.thr}' | \
         uniq;}} > {output} 2> {log}
         """
@@ -173,7 +173,7 @@ rule reintersect_sort_uniq_cens_ctgs:
     shell:
         """
         {{ bedtools intersect {params.intersect_params} -a {input.collapsed_regions} -b {input.filt_regions}| \
-        awk -v OFS="\t" '{{print $1, $2, $3, $4, $9, $10, $3-$2}}' | \
+        awk -v OFS="\\t" '{{print $1, $2, $3, $4, $9, $10, $3-$2}}' | \
         sort -k5,5 | \
         uniq;}} > {output} 2> {log}
         """
@@ -208,8 +208,8 @@ rule extract_fwd_rev_regions:
         "../env/tools.yaml"
     shell:
         """
-        awk -v OFS="\t" '{{if ($6=="+") print}}' {input.all_regions} > {output.fwd_cen_regions}
-        awk -v OFS="\t" '{{if ($6=="-") print}}' {input.all_regions} > {output.rev_cen_regions}
+        awk -v OFS="\\t" '{{if ($6=="+") print}}' {input.all_regions} > {output.fwd_cen_regions}
+        awk -v OFS="\\t" '{{if ($6=="-") print}}' {input.all_regions} > {output.rev_cen_regions}
         seqtk subseq {input.combined_assembly} {output.fwd_cen_regions} > {output.fwd_cen_seq}
         seqtk subseq {input.combined_assembly} {output.rev_cen_regions} | seqtk seq -r - > {output.rev_cen_seq}
         """
@@ -227,9 +227,9 @@ rule create_fwd_ctg_name_legend:
         "../env/tools.yaml"
     shell:
         """
-        {{ awk -v OFS="\t" '{{print $0, FILENAME}}' {input.regions} | \
-        sed 's/_/\t/g' | \
-        awk -v OFS="\t" '{{print $5, $8"_"$4"_"$5}}' | \
+        {{ awk -v OFS="\\t" '{{print $0, FILENAME}}' {input.regions} | \
+        sed 's/_/\\t/g' | \
+        awk -v OFS="\\t" '{{print $5, $8"_"$4"_"$5}}' | \
         sort -k2,2;}} > {output} 2> {log}
         """
 
@@ -284,7 +284,7 @@ rule rename_cens_fwd_ctgs:
         "logs/rename_cens_fwd_ctgs_{sm}.log",
     shell:
         """
-        {{ awk 'BEGIN{{FS=OFS="\t"}} NR==FNR{{a[$1]=$2;next}} {{print ($1 in a ? a[$1] : $1)}}' {input.legend} {input.seq} | \
+        {{ awk 'BEGIN{{FS=OFS="\\t"}} NR==FNR{{a[$1]=$2;next}} {{print ($1 in a ? a[$1] : $1)}}' {input.legend} {input.seq} | \
         awk '{{printf "%s%s", (/>/ ? ors : OFS), $0; ors=ORS}} END{{print ":"}}' | \
         sed -e 's/> />/g' -e 's/\([0-9]\) \([0-9]\)/\1:\2/g' | \
         tr " " "\n";}} > {output} 2> {log}

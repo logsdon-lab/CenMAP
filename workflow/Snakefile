@@ -3,6 +3,7 @@ import pandas as pd
 from snakemake.utils import min_version
 
 min_version("6.0")
+shell.prefix("set -euo pipefail; ")
 
 
 with open(config["align_asm_to_ref"]["config"], "r") as file:

@@ -26,7 +26,7 @@ elif HUMAS_HMMER_MODE == "SF":
     final_output_pattern = "AS-strand-vs-{chr}.bed"
     # FEDOR: AS-strand annotation. "+" is blue, "-" is red
     final_output_cmd = """
-    -F $'\t' 'BEGIN {{OFS = FS}} {{if ($6=="+") {{$9="0,0,255"}}; if ($6=="-") {{$9="255,0,0"}} print $0}}'
+    -F $'\\t' 'BEGIN {{OFS = FS}} {{if ($6=="+") {{$9="0,0,255"}}; if ($6=="-") {{$9="255,0,0"}} print $0}}'
     """
 else:
     raise ValueError(f"Invalid HumAS-HMMER mode. ({config['humas_hmmer']['mode']})")
