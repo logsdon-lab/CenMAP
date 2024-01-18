@@ -24,12 +24,12 @@ ENV PATH="${PATH}:/workflow/dna-nn/"
 COPY env.yaml /tmp/env.yaml
 
 # Install conda packages
-ARG ENV_NAME="hgsvc3"
-RUN mamba env create -f /tmp/env.yaml -n $ENV_NAME && \
+RUN mamba env create -f /tmp/env.yaml -n "hgsvc3" && \
     mamba clean --all --yes
 
 # Activate environment automatically by modifying ~/.bashrc
-RUN echo "conda activate $ENV_NAME" >> ~/.bashrc
+RUN echo "conda activate hgsvc3" >> ~/.bashrc
 SHELL ["/bin/bash", "--login", "-c"]
 
-ENTRYPOINT [ "snakemake" ]
+# https://pythonspeed.com/articles/activate-conda-dockerfile/
+ENTRYPOINT [ "mamba", "run", "--no-capture-output", "-n", "hgsvc3", "snakemake" ]
