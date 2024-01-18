@@ -21,10 +21,9 @@ if "cens" in config["mask_hor_arrays"]["added_alignments"]:
 module align_asm_to_ref:
     snakefile:
         github(
-            "koisland/asm-to-reference-alignment",
+            "mrvollger/asm-to-reference-alignment",
             path="workflow/Snakefile",
-            branch="bugfix/missing-rb-dep"
-            # tag="v0.1",
+            branch="main",
         )
     config:
         config["align_asm_to_ref"]["config"]

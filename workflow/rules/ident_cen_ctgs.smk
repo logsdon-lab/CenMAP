@@ -73,12 +73,13 @@ rule collapse_cens_contigs:
 
 
 # T2T-CHM13 CENS ONLY
+# TODO: This is missing a field.(4)
 # In output dir of asm_to_ref_alignment
 use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
     input:
         script="workflow/scripts/bedminmax.py",
         regions=lambda wc: expand(
-            rules.ref_align_aln_to_bed.output, ref=[REF_NAME], sm=wc.sm
+            rules.ref_align_aln_to_bed.output, ref=[f"{REF_NAME}_cens"], sm=wc.sm
         ),
     output:
         len_calc_regions=temp(
@@ -217,6 +218,7 @@ rule extract_fwd_rev_regions:
 
 
 # TODO: Move to start before alignment.
+# 100224566       results/cens/HG00171_-_100224566
 rule create_fwd_ctg_name_legend:
     input:
         regions=rules.extract_fwd_rev_regions.output.fwd_cen_regions,
@@ -244,6 +246,12 @@ use rule create_fwd_ctg_name_legend as create_rev_ctg_name_legend with:
         "logs/create_rev_ctg_name_legend_{sm}.log",
 
 
+# :Before:
+# >haplotype1-0000001:56723941-58474753
+# :After:
+# >
+# haplotype1-0000001
+# 56723941-58474753
 rule split_fwd_cens_assembly_fasta:
     input:
         rules.extract_fwd_rev_regions.output.fwd_cen_seq,
@@ -268,6 +276,7 @@ use rule split_fwd_cens_assembly_fasta as split_rev_cens_assembly_fasta with:
         "logs/split_rev_cens_assembly_fasta_{sm}.log",
 
 
+# >haplotype1-000000^A:^B6723941-58474753
 rule rename_cens_fwd_ctgs:
     input:
         # a
