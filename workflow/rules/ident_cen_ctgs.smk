@@ -1,6 +1,9 @@
 # Identify centromeric regions
 # Extract centromeric regions
 
+OUTPUT_DIR_T2T_REF_REGIONS = f"results/{REF_NAME}/bed"
+OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS = f"results/{REF_NAME}_cens/bed"
+
 
 # Get centromeric regions from alignments to t2t-chm13 ONLY
 rule intersect_cen_regions:
@@ -10,7 +13,7 @@ rule intersect_cen_regions:
         ),
         right=config["align_asm_to_ref"]["cens_500kbp_regions"],
     output:
-        cen_regions=os.path.join(f"results/{REF_NAME}/bed", "{sm}_cens.bed"),
+        cen_regions=os.path.join(OUTPUT_DIR_T2T_REF_REGIONS, "{sm}_cens.bed"),
     conda:
         "../env/tools.yaml"
     log:
@@ -45,7 +48,12 @@ rule collapse_cens_contigs:
         script="workflow/scripts/bedminmax.py",
         regions=rules.intersect_cen_regions.output,
     output:
-        os.path.join(f"results/{REF_NAME}/bed", "{sm}_centromeric_contigs.bed"),
+        len_calc_regions=temp(
+            os.path.join(
+                OUTPUT_DIR_T2T_REF_REGIONS, "len_calc_{sm}_centromeric_contigs.bed"
+            )
+        ),
+        regions=os.path.join(OUTPUT_DIR_T2T_REF_REGIONS, "{sm}_centromeric_contigs.bed"),
     conda:
         "../env/py.yaml"
     params:
@@ -58,9 +66,9 @@ rule collapse_cens_contigs:
         # Calculate length of ref region.
         awk -v OFS="\t" \
         '{params.awk_skip_input_header} {{print $6, $7, $8, $8-$7, $1, $5}}' \
-        {input.regions} > tmp_{wildcards.sm}.bed
+        {input.regions} > {output.len_calc_regions}
 
-        python {input.script} -i tmp_{wildcards.sm}.bed | sort -k1,1 > {output}
+        python {input.script} -i {output.len_calc_regions} | sort -k1,1 > {output}
         """
 
 
@@ -73,7 +81,15 @@ use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
             rules.ref_align_aln_to_bed.output, ref=[REF_NAME], sm=wc.sm
         ),
     output:
-        os.path.join(f"results/{REF_NAME}_cens/bed", "{sm}_centromeric_contigs.bed"),
+        len_calc_regions=temp(
+            os.path.join(
+                OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS,
+                "len_calc_{sm}_centromeric_contigs.bed",
+            )
+        ),
+        regions=os.path.join(
+            OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS, "{sm}_centromeric_contigs.bed"
+        ),
     conda:
         "../env/py.yaml"
     params:
@@ -87,9 +103,10 @@ use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
 #  awk -F"," -v OFS="," '{dst=($2-$1)} {if (dst > 5 && $2=$3) print $1,$2,$3,$4, dst } ' test.tsv
 rule intersect_filter_both_cens_ctgs:
     input:
-        left=f"results/{REF_NAME}_cens/bed/{{sm}}_centromeric_contigs.bed",
-        # TODO: Ask about 1
-        right=f"results/{REF_NAME}/bed/{{sm}}_centromeric_contigs.bed",
+        left=os.path.join(
+            OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS, "{sm}_centromeric_contigs.bed"
+        ),
+        right=os.path.join(OUTPUT_DIR_T2T_REF_REGIONS, "{sm}_centromeric_contigs.bed"),
     output:
         filt_regions=temp(
             os.path.join(
