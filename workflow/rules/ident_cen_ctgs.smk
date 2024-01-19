@@ -66,7 +66,7 @@ rule collapse_cens_contigs:
 # 7. query_start
 # 8. query_end
 # 9. query_length
-# 1:2-3. reference_name:ref_start-ref_end
+# 1. reference_name
 # 5. strand
 
 
@@ -75,7 +75,7 @@ rule collapse_cens_contigs:
 # 2. query_start
 # 3. query_end
 # 4. query_length
-# 5. reference_name:ref_start-ref_end
+# 5. reference_name
 # 6. strand
 # +. sub(query_end, query_start)
 # T2T-CHM13 CENS ONLY
@@ -97,8 +97,7 @@ use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
             OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS, "{sm}_centromeric_contigs.bed"
         ),
     params:
-        # Change ref name to include start and stop
-        awk_print_cmd='\'NR>1 {print $6, $7, $8, $9, $1":"$2"-"$3, $5}\'',
+        awk_print_cmd="'NR>1 {print $6, $7, $8, $9, $1, $5}'",
     log:
         "logs/collapse_cent_ctgs_only_t2t_cens_{sm}.log",
 
