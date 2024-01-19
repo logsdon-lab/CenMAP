@@ -242,8 +242,16 @@ rule extract_fwd_rev_regions:
         """
 
 
-# TODO: Move to start before alignment.
-# 100224566       results/cens/HG00171_-_100224566
+# 1. name: haplotype1-0000027
+# 2. start: 96023560
+# 3. end: 101450776
+# 4. length: 158780978
+# 5. chr: chr7
+# 6. chr_coords: 58924390-64604808
+# 7. orientation: +
+# 8. start_end_diff: 5427216
+# 9-12. results/cens/HG00171    1       centromeric     regions.fwd.bed
+# haplotype1-0000027    results/cens/HG00171_chr7_haplotype1-0000027
 rule create_fwd_ctg_name_legend:
     input:
         regions=rules.extract_fwd_rev_regions.output.fwd_cen_regions,
@@ -256,8 +264,8 @@ rule create_fwd_ctg_name_legend:
     shell:
         """
         {{ awk -v OFS="\\t" '{{print $0, FILENAME}}' {input.regions} | \
-        sed 's/_/\\t/g' | \
-        awk -v OFS="\\t" '{{print $5, $8"_"$4"_"$5}}' | \
+        sed -e 's/_/\\t/g' -e 's/:/\\t/g' | \
+        awk -v OFS="\\t" '{{print $1, $9"_"$5"_"$1}}' | \
         sort -k2,2;}} > {output} 2> {log}
         """
 
@@ -301,13 +309,10 @@ use rule split_fwd_cens_assembly_fasta as split_rev_cens_assembly_fasta with:
         "logs/split_rev_cens_assembly_fasta_{sm}.log",
 
 
-# Currently: >haplotype1-000000^A:^B6723941-58474753
 # Desired: >haplotype1-0000001:chr#:6723941-58474753
 rule rename_cens_fwd_ctgs:
     input:
-        # a
         legend=rules.create_fwd_ctg_name_legend.output,
-        # b
         seq=rules.split_fwd_cens_assembly_fasta.output,
     output:
         os.path.join(
@@ -319,8 +324,11 @@ rule rename_cens_fwd_ctgs:
     log:
         "logs/rename_cens_fwd_ctgs_{sm}.log",
     shell:
+        # Construct associative array from input legend. (line 2)
         """
-        {{ awk 'BEGIN{{FS=OFS="\\t"}} NR==FNR{{a[$1]=$2;next}} {{print ($1 in a ? a[$1] : $1)}}' {input.legend} {input.seq} | \
+        {{ awk 'BEGIN{{FS=OFS="\\t"}} \
+        NR==FNR {{legend[$1]=$2; next}} \
+        {{print ($1 in legend ? legend[$1] : $1)}}' {input.legend} {input.seq} | \
         awk '{{printf "%s%s", (/>/ ? ors : OFS), $0; ors=ORS}} END{{print ":"}}' | \
         sed -e 's/> />/g' -e 's/\([0-9]\) \([0-9]\)/\\1:\\2/g' | \
         tr " " "\\n";}} > {output} 2> {log}
