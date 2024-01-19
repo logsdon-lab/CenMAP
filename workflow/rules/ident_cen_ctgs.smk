@@ -251,7 +251,7 @@ rule extract_fwd_rev_regions:
 # 7. orientation: +
 # 8. start_end_diff: 5427216
 # 9-12. results/cens/HG00171    1       centromeric     regions.fwd.bed
-# haplotype1-0000027    results/cens/HG00171_chr7_haplotype1-0000027
+# haplotype1-0000027    HG00171_chr7_haplotype1-0000027
 rule create_fwd_ctg_name_legend:
     input:
         regions=rules.extract_fwd_rev_regions.output.fwd_cen_regions,
@@ -259,11 +259,15 @@ rule create_fwd_ctg_name_legend:
         os.path.join(config["ident_cen_ctgs"]["output_dir"], "{sm}.legend.fwd.txt"),
     log:
         "logs/create_fwd_ctg_name_legend_{sm}.log",
+    params:
+        # Replaced awk FILENAME with (vvv) because run from multiple dirs above.
+        # Would include subdirs otherwise.
+        file_bname=lambda wc, input: os.path.basename(input),
     conda:
         "../env/tools.yaml"
     shell:
         """
-        {{ awk -v OFS="\\t" '{{print $0, FILENAME}}' {input.regions} | \
+        {{ awk -v OFS="\\t" '{{print $0, {params.file_bname}}}' {input.regions} | \
         sed -e 's/_/\\t/g' -e 's/:/\\t/g' | \
         awk -v OFS="\\t" '{{print $1, $9"_"$5"_"$1}}' | \
         sort -k2,2;}} > {output} 2> {log}
@@ -355,11 +359,11 @@ rule index_renamed_cens_ctgs:
     output:
         fwd=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
-            "{sm}_centromeric_regions.renamed.fwd.fai",
+            "{sm}_centromeric_regions.renamed.fwd.fa.fai",
         ),
         rev=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
-            "{sm}_centromeric_regions.renamed.rev.fai",
+            "{sm}_centromeric_regions.renamed.rev.fa.fai",
         ),
     conda:
         "../env/tools.yaml"

@@ -32,6 +32,7 @@ ident_cen_ctgs:
   output_dir: "results/cens"
 
 dna_brnn:
+  output_dir: "results/dna_brnn"
   # https://github.com/lh3/dna-nn/tree/master/models
   model: "data/models/attcc-alpha.knm"
 

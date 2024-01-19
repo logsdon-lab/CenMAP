@@ -1,10 +1,16 @@
+import os
+
+
 # https://github.com/lh3/dna-nn/tree/master
 rule dna_brnn_fwd:
     input:
         model=config["dna_brnn"]["model"],
         cens=rules.rename_cens_fwd_ctgs.output,
     output:
-        alr_regions="{sm}_centromeric_regions.renamed.fwd.bed",
+        alr_regions=os.path.join(
+            config["dna_brnn"]["output_dir"],
+            "{sm}_centromeric_regions.renamed.fwd.bed",
+        ),
     threads: 20
     log:
         "logs/dna_brnn_fwd_{sm}.log",
@@ -22,7 +28,10 @@ use rule dna_brnn_fwd as dna_brnn_rev with:
         model=config["dna_brnn"]["model"],
         cens=rules.rename_cens_rev_ctgs.output,
     output:
-        alr_regions="{sm}_centromeric_regions.renamed.rev.bed",
+        alr_regions=os.path.join(
+            config["dna_brnn"]["output_dir"],
+            "{sm}_centromeric_regions.renamed.rev.bed",
+        ),
     log:
         "logs/dna_brnn_rev_{sm}.log",
 
