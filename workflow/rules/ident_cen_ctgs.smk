@@ -225,6 +225,8 @@ rule extract_oriented_regions:
         seq=os.path.join(
             config["ident_cen_ctgs"]["output_dir"], "{sm}_centromeric_regions.{ort}.fa"
         ),
+    wildcard_constraints:
+        ort="fwd|rev",
     params:
         sign=lambda wc: "+" if wc.ort == "fwd" else "-",
         added_cmds=lambda wc: "" if wc.ort == "fwd" else "| seqtk seq -r",
