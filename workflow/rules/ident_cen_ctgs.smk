@@ -262,7 +262,7 @@ rule create_fwd_ctg_name_legend:
     params:
         # Replaced awk FILENAME with (vvv) because run from multiple dirs above.
         # Would include subdirs otherwise.
-        file_bname=lambda wc, input: os.path.basename(input),
+        file_bname=lambda wc, input: os.path.basename(str(input)),
     conda:
         "../env/tools.yaml"
     shell:
