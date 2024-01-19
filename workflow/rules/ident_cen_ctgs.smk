@@ -367,7 +367,8 @@ rule index_renamed_cens_ctgs:
         "logs/index_renamed_cens_ctgs_{sm}.log",
     shell:
         """
-        samtools faidx {input} &> {log}
+        samtools faidx {input.fwd} 2> {log}
+        samtools faidx {input.rev} >> {log}
         """
 
 
