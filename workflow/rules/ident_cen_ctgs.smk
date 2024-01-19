@@ -139,7 +139,7 @@ rule intersect_filter_both_cens_ctgs:
 
 rule collapse_intersected_filtered_cen_ctgs:
     input:
-        script="workflow/scripts/bedminmax.py",
+        script="workflow/scripts/bed-er-minmax.py",
         filt_regions=rules.intersect_filter_both_cens_ctgs.output,
     output:
         collapsed_regions=temp(
@@ -148,6 +148,18 @@ rule collapse_intersected_filtered_cen_ctgs:
                 "{sm}_centromeric_regions.collapsed.bed",
             )
         ),
+    params:
+        input_cols=" ".join(
+            [
+                "chr",
+                "start",
+                "end",
+                "length",
+                "name",
+                "orientation",
+                "query_start_end_diff",
+            ]
+        ),
     log:
         "logs/collapse_intersected_filtered_cen_ctgs_{sm}.log",
     conda:
@@ -155,7 +167,10 @@ rule collapse_intersected_filtered_cen_ctgs:
     shell:
         """
         # Collapse ctgs grouped by label.
-        python {input.script} -i {input.filt_regions} -o {output.collapsed_regions} 2> {log}
+        python {input.script} \
+        -i {input.filt_regions} \
+        -o {output.collapsed_regions} \
+        -ci {params.input_cols} 2> {log}
         """
 
 
@@ -278,7 +293,8 @@ use rule split_fwd_cens_assembly_fasta as split_rev_cens_assembly_fasta with:
         "logs/split_rev_cens_assembly_fasta_{sm}.log",
 
 
-# >haplotype1-000000^A:^B6723941-58474753
+# Currently: >haplotype1-000000^A:^B6723941-58474753
+# Desired: >haplotype1-0000001:chr#:6723941-58474753
 rule rename_cens_fwd_ctgs:
     input:
         # a
@@ -298,7 +314,7 @@ rule rename_cens_fwd_ctgs:
         """
         {{ awk 'BEGIN{{FS=OFS="\\t"}} NR==FNR{{a[$1]=$2;next}} {{print ($1 in a ? a[$1] : $1)}}' {input.legend} {input.seq} | \
         awk '{{printf "%s%s", (/>/ ? ors : OFS), $0; ors=ORS}} END{{print ":"}}' | \
-        sed -e 's/> />/g' -e 's/\([0-9]\) \([0-9]\)/\1:\2/g' | \
+        sed -e 's/> />/g' -e 's/\([0-9]\) \([0-9]\)/\\1:\\2/g' | \
         tr " " "\\n";}} > {output} 2> {log}
         """
 
