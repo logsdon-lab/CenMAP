@@ -208,7 +208,9 @@ rule reintersect_sort_uniq_cens_ctgs:
 # Reorient the regions.
 rule extract_oriented_regions:
     input:
-        all_regions=rules.reintersect_sort_uniq_cens_ctgs.output,
+        all_regions=lambda wc: expand(
+            rules.reintersect_sort_uniq_cens_ctgs.output, ort=ORIENTATION, sm=[wc.sm]
+        ),
         # Weird hack because sm wildcard in asm_to_ref_alignment encodes both sample name and haplotype (1/2)
         # ex. HG00171_1 -> HG00171
         combined_assembly=lambda wc: os.path.join(
