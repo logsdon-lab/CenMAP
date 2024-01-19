@@ -131,7 +131,7 @@ rule intersect_filter_both_cens_ctgs:
         {{ bedtools intersect {params.intersect_params} \
             -a {input.left} \
             -b {input.right} | \
-        awk -v OFS="\\t" -F"\\t" '{{if ($6==$12) print $1, $2, $3, $4, $5, $6, $3-$2}}' | \
+        awk -v OFS="\\t" -F"\\t" '{{if ($6==$13) print $1, $2, $3, $4, $5, $6, $3-$2}}' | \
         awk '$7>{params.thr}' | \
         uniq;}} > {output} 2> {log}
         """
