@@ -206,7 +206,7 @@ rule reintersect_sort_uniq_cens_ctgs:
 
 
 # Reorient the regions.
-rule extract_fwd_rev_regions:
+rule extract_oriented_regions:
     input:
         all_regions=rules.reintersect_sort_uniq_cens_ctgs.output,
         # Weird hack because sm wildcard in asm_to_ref_alignment encodes both sample name and haplotype (1/2)
@@ -216,29 +216,25 @@ rule extract_fwd_rev_regions:
             f"{wc.sm.split('_')[0]}.vrk-ps-sseq.asm-comb-dedup.fa.gz",
         ),
     output:
-        fwd_cen_regions=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"], "{sm}_centromeric_regions.fwd.bed"
+        regions=os.path.join(
+            config["ident_cen_ctgs"]["output_dir"],
+            "{sm}_centromeric_regions.{ort}.bed",
         ),
-        rev_cen_regions=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"], "{sm}_centromeric_regions.rev.bed"
+        seq=os.path.join(
+            config["ident_cen_ctgs"]["output_dir"], "{sm}_centromeric_regions.{ort}.fa"
         ),
-        fwd_cen_seq=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"], "{sm}_centromeric_regions.fwd.fa"
-        ),
-        rev_cen_seq=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"], "{sm}_centromeric_regions.rev.fa"
-        ),
+    params:
+        sign=lambda wc: "+" if wc.ort == "fwd" else "-",
+        added_cmds=lambda wc: "" if wc.ort == "fwd" else "| seqtk seq -r",
     log:
-        "logs/extract_fwd_rev_regions_{sm}.log",
+        "logs/extract_{ort}_rev_regions_{sm}.log",
     conda:
         "../env/tools.yaml"
     shell:
         # Changed to $4 position for strand
         """
-        awk -v OFS="\\t" '{{if ($6=="+") print}}' {input.all_regions} > {output.fwd_cen_regions}
-        awk -v OFS="\\t" '{{if ($6=="-") print}}' {input.all_regions} > {output.rev_cen_regions}
-        seqtk subseq {input.combined_assembly} {output.fwd_cen_regions} > {output.fwd_cen_seq}
-        seqtk subseq {input.combined_assembly} {output.rev_cen_regions} | seqtk seq -r - > {output.rev_cen_seq}
+        awk -v OFS="\\t" '{{if ($6=="{params.sign}") print}}' {input.all_regions} > {output.regions}
+        seqtk subseq {input.combined_assembly} {output.regions} {params.added_cmds} > {output.seq}
         """
 
 
@@ -252,13 +248,13 @@ rule extract_fwd_rev_regions:
 # 8. start_end_diff: 5427216
 # 9-12. results/cens/HG00171    1       centromeric     regions.fwd.bed
 # haplotype1-0000027    HG00171_chr7_haplotype1-0000027
-rule create_fwd_ctg_name_legend:
+rule create_oriented_ctg_name_legend:
     input:
-        regions=rules.extract_fwd_rev_regions.output.fwd_cen_regions,
+        regions=rules.extract_oriented_regions.output.regions,
     output:
-        os.path.join(config["ident_cen_ctgs"]["output_dir"], "{sm}.legend.fwd.txt"),
+        os.path.join(config["ident_cen_ctgs"]["output_dir"], "{sm}.legend.{ort}.txt"),
     log:
-        "logs/create_fwd_ctg_name_legend_{sm}.log",
+        "logs/create_{ort}_ctg_name_legend_{sm}.log",
     params:
         # Replaced awk FILENAME with (vvv) because run from multiple dirs above.
         # Would include subdirs otherwise.
@@ -274,59 +270,41 @@ rule create_fwd_ctg_name_legend:
         """
 
 
-use rule create_fwd_ctg_name_legend as create_rev_ctg_name_legend with:
-    input:
-        regions=rules.extract_fwd_rev_regions.output.rev_cen_regions,
-    output:
-        os.path.join(config["ident_cen_ctgs"]["output_dir"], "{sm}.legend.rev.txt"),
-    log:
-        "logs/create_rev_ctg_name_legend_{sm}.log",
-
-
 # :Before:
 # >haplotype1-0000001:56723941-58474753
 # :After:
 # >
 # haplotype1-0000001
 # 56723941-58474753
-rule split_fwd_cens_assembly_fasta:
+rule split_oriented_cens_assembly_fasta:
     input:
-        rules.extract_fwd_rev_regions.output.fwd_cen_seq,
+        rules.extract_oriented_regions.output.seq,
     output:
-        os.path.join(config["ident_cen_ctgs"]["output_dir"], "{sm}.fwd.txt"),
+        os.path.join(config["ident_cen_ctgs"]["output_dir"], "{sm}.{ort}.txt"),
     conda:
         "../env/tools.yaml"
     log:
-        "logs/split_fwd_cens_assembly_fasta_{sm}.log",
+        "logs/split_{ort}_cens_assembly_fasta_{sm}.log",
     shell:
         """
         sed -e 's/>/>\\n/g' -e 's/:/\\n/g' {input} > {output} 2> {log}
         """
 
 
-use rule split_fwd_cens_assembly_fasta as split_rev_cens_assembly_fasta with:
-    input:
-        rules.extract_fwd_rev_regions.output.rev_cen_seq,
-    output:
-        os.path.join(config["ident_cen_ctgs"]["output_dir"], "{sm}.rev.txt"),
-    log:
-        "logs/split_rev_cens_assembly_fasta_{sm}.log",
-
-
 # Desired: >haplotype1-0000001:chr#:6723941-58474753
-rule rename_cens_fwd_ctgs:
+rule rename_cens_oriented_ctgs:
     input:
-        legend=rules.create_fwd_ctg_name_legend.output,
-        seq=rules.split_fwd_cens_assembly_fasta.output,
+        legend=rules.create_oriented_ctg_name_legend.output,
+        seq=rules.split_oriented_cens_assembly_fasta.output,
     output:
         os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
-            "{sm}_centromeric_regions.renamed.fwd.fa",
+            "{sm}_centromeric_regions.renamed.{ort}.fa",
         ),
     conda:
         "../env/tools.yaml"
     log:
-        "logs/rename_cens_fwd_ctgs_{sm}.log",
+        "logs/rename_cens_{ort}_ctgs_{sm}.log",
     shell:
         # Construct associative array from input legend. (line 2)
         """
@@ -339,40 +317,21 @@ rule rename_cens_fwd_ctgs:
         """
 
 
-use rule rename_cens_fwd_ctgs as rename_cens_rev_ctgs with:
+rule index_renamed_cens_ctgs:
     input:
-        legend=rules.create_rev_ctg_name_legend.output,
-        seq=rules.split_rev_cens_assembly_fasta.output,
+        rules.rename_cens_oriented_ctgs.output,
     output:
         os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
-            "{sm}_centromeric_regions.renamed.rev.fa",
-        ),
-    log:
-        "logs/rename_cens_rev_ctgs_{sm}.log",
-
-
-rule index_renamed_cens_ctgs:
-    input:
-        fwd=rules.rename_cens_fwd_ctgs.output,
-        rev=rules.rename_cens_rev_ctgs.output,
-    output:
-        fwd=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "{sm}_centromeric_regions.renamed.fwd.fa.fai",
-        ),
-        rev=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "{sm}_centromeric_regions.renamed.rev.fa.fai",
+            "{sm}_centromeric_regions.renamed.{ort}.fa.fai",
         ),
     conda:
         "../env/tools.yaml"
     log:
-        "logs/index_renamed_cens_ctgs_{sm}.log",
+        "logs/index_renamed_cens_{ort}_ctgs_{sm}.log",
     shell:
         """
-        samtools faidx {input.fwd} 2> {log}
-        samtools faidx {input.rev} >> {log}
+        samtools faidx {input} &> {log}
         """
 
 
@@ -387,12 +346,25 @@ rule ident_cen_ctgs_all:
         expand(rules.intersect_filter_both_cens_ctgs.output, sm=SAMPLES_DF.index),
         expand(rules.collapse_intersected_filtered_cen_ctgs.output, sm=SAMPLES_DF.index),
         expand(rules.reintersect_sort_uniq_cens_ctgs.output, sm=SAMPLES_DF.index),
-        expand(rules.extract_fwd_rev_regions.output, sm=SAMPLES_DF.index),
+        expand(
+            rules.extract_oriented_regions.output, sm=SAMPLES_DF.index, ort=ORIENTATION
+        ),
         # Renaming section
-        expand(rules.create_fwd_ctg_name_legend.output, sm=SAMPLES_DF.index),
-        expand(rules.create_rev_ctg_name_legend.output, sm=SAMPLES_DF.index),
-        expand(rules.split_fwd_cens_assembly_fasta.output, sm=SAMPLES_DF.index),
-        expand(rules.split_rev_cens_assembly_fasta.output, sm=SAMPLES_DF.index),
-        expand(rules.rename_cens_fwd_ctgs.output, sm=SAMPLES_DF.index),
-        expand(rules.rename_cens_rev_ctgs.output, sm=SAMPLES_DF.index),
-        expand(rules.index_renamed_cens_ctgs.output, sm=SAMPLES_DF.index),
+        expand(
+            rules.create_oriented_ctg_name_legend.output,
+            sm=SAMPLES_DF.index,
+            ort=ORIENTATION,
+        ),
+        expand(
+            rules.split_oriented_cens_assembly_fasta.output,
+            sm=SAMPLES_DF.index,
+            ort=ORIENTATION,
+        ),
+        expand(
+            rules.rename_cens_oriented_ctgs.output,
+            sm=SAMPLES_DF.index,
+            ort=ORIENTATION,
+        ),
+        expand(
+            rules.index_renamed_cens_ctgs.output, sm=SAMPLES_DF.index, ort=ORIENTATION
+        ),
