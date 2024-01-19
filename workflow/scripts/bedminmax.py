@@ -34,7 +34,6 @@ bed_out = pd.merge(
     right_index=True,
 ).reset_index()
 
-# Changed output format to avoid extra awk call.
-bed_out[["chr", "start", "end", "name", "orientation", "length"]].sort_values(
+bed_out[["chr", "start", "end", "length", "name", "orientation"]].sort_values(
     by=["chr", "start"]
 ).to_csv(args.output, sep="\t", header=False, index=False)

@@ -24,31 +24,19 @@ rule intersect_cen_regions:
         """
 
 
-# 1. reference_name
-# 2. reference_start
-# 3. reference_end
-# 4. reference_length
-# 5. strand
 # 6. query_name
 # 7. query_start
 # 8. query_end
-# 9. query_length
-# 10. perID_by_matches
-# 11. perID_by_events
-# 12. perID_by_all
-# 13. matches
-# 14. mismatches
-# 15. deletion_events
-# 16. insertion_events
-# 17. deletions
-# 18. insertions
+# 4. reference_length
+# 1. reference_name
+# 5. strand
 rule collapse_cens_contigs:
     input:
         # TODO: This one has orientation, v2 doesn't. What's up with that?
         script="workflow/scripts/bedminmax.py",
         regions=rules.intersect_cen_regions.output,
     output:
-        len_calc_regions=temp(
+        refmt_regions=temp(
             os.path.join(
                 OUTPUT_DIR_T2T_REF_REGIONS, "len_calc_{sm}_centromeric_contigs.bed"
             )
@@ -58,32 +46,48 @@ rule collapse_cens_contigs:
         "../env/py.yaml"
     params:
         # NR>1 if yes, blank if no.
-        awk_skip_input_header="",
+        awk_print_cmd="'{ print $6, $7, $8, $4, $1, $5 }'",
     log:
         "logs/collapse_cent_ctgs_{sm}.log",
     shell:
         """
-        # Calculate length of ref region.
-        awk -v OFS="\\t" \
-        '{params.awk_skip_input_header} {{print $6, $7, $8, $8-$7, $1, $5}}' \
-        {input.regions} > {output.len_calc_regions} 2> {log}
+        awk -v OFS="\\t" {params.awk_print_cmd} \
+        {input.regions} > {output.refmt_regions} 2> {log}
 
-        python {input.script} -i {output.len_calc_regions} | sort -k1,1 > {output.regions} 2> {log}
+        # Calculate length of ref region.
+        {{ python {input.script} -i {output.refmt_regions} | \
+        awk -v OFS="\\t" '{{print $0, $3-$2}}' | \
+        sort -k1,1;}} > {output.regions} 2> {log}
         """
 
 
+# 1st awk
+# 6. query_name
+# 7. query_start
+# 8. query_end
+# 9. query_length
+# 1:2-3. reference_name:ref_start-ref_end
+# 5. strand
+
+
+# 2nd awk (# relative to 1st)
+# 1. query_name
+# 2. query_start
+# 3. query_end
+# 4. query_length
+# 5. reference_name:ref_start-ref_end
+# 6. strand
+# +. sub(query_end, query_start)
 # T2T-CHM13 CENS ONLY
-# TODO: This is missing a field.(4)
-# IMPORTANT: That field is the centromere region annotation for a specific chr. Add!
-# In output dir of asm_to_ref_alignment
 use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
     input:
         script="workflow/scripts/bedminmax.py",
+        # asm aligned to t2t_chm13_v2.hor_arrays_masked.500kbp.fa
         regions=lambda wc: expand(
             rules.ref_align_aln_to_bed.output, ref=[f"{REF_NAME}_cens"], sm=wc.sm
         ),
     output:
-        len_calc_regions=temp(
+        refmt_regions=temp(
             os.path.join(
                 OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS,
                 "len_calc_{sm}_centromeric_contigs.bed",
@@ -92,11 +96,9 @@ use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
         regions=os.path.join(
             OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS, "{sm}_centromeric_contigs.bed"
         ),
-    conda:
-        "../env/py.yaml"
     params:
-        # NR>1 if yes, blank if no.
-        awk_skip_input_header="NR>1",
+        # Change ref name to include start and stop
+        awk_print_cmd='\'NR>1 {print $6, $7, $8, $9, $1":"$2"-"$3, $5}\'',
     log:
         "logs/collapse_cent_ctgs_only_t2t_cens_{sm}.log",
 
@@ -211,8 +213,8 @@ rule extract_fwd_rev_regions:
     shell:
         # Changed to $4 position for strand
         """
-        awk -v OFS="\\t" '{{if ($4=="+") print}}' {input.all_regions} > {output.fwd_cen_regions}
-        awk -v OFS="\\t" '{{if ($4=="-") print}}' {input.all_regions} > {output.rev_cen_regions}
+        awk -v OFS="\\t" '{{if ($6=="+") print}}' {input.all_regions} > {output.fwd_cen_regions}
+        awk -v OFS="\\t" '{{if ($6=="-") print}}' {input.all_regions} > {output.rev_cen_regions}
         seqtk subseq {input.combined_assembly} {output.fwd_cen_regions} > {output.fwd_cen_seq}
         seqtk subseq {input.combined_assembly} {output.rev_cen_regions} | seqtk seq -r - > {output.rev_cen_seq}
         """
