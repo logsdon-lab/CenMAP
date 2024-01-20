@@ -268,7 +268,7 @@ rule create_oriented_ctg_name_legend:
         "../env/tools.yaml"
     shell:
         """
-        {{ awk -v OFS="\\t" '{{print $0, {params.file_bname}}}' {input.regions} | \
+        {{ awk -v OFS="\\t" '{{print $0, "{params.file_bname}"}}' {input.regions} | \
         sed -e 's/_/\\t/g' -e 's/:/\\t/g' | \
         awk -v OFS="\\t" '{{print $1, $9"_"$5"_"$1}}' | \
         sort -k2,2;}} > {output} 2> {log}
