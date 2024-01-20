@@ -24,9 +24,39 @@ rule run_dna_brnn:
 
 
 # TODO: Glennis has script to filter valid predict ALR per chr on UW cluster.
+rule filter_valid_alr:
+    input:
+        lambda wc: rules.run_dna_brnn.output,
+    output:
+        temp("{chr}_{sm}_contigs.{ort}.ALR.bed"),
+    shell:
+        """
+        """
+
+
+def get_chr_stats(wc):
+    pass
+
+
+rule aggregate_alr_by_chr:
+    input:
+        lambda wc: expand(
+            rules.filter_valid_alr, chr=[wc.chr], ort=[wc.ort], sm=SAMPLES_DF.index
+        ),
+    output:
+        "{chr}_contigs.{ort}.ALR.bed",
+    shell:
+        """
+        """
 
 
 rule dna_brnn_all:
     input:
         expand(rules.run_dna_brnn.output, sm=SAMPLES_DF.index, ort=ORIENTATION),
+        expand(
+            rules.filter_valid_alr.output,
+            sm=SAMPLES_DF.index,
+            ort=ORIENTATION,
+            chr=CHROMOSOMES,
+        ),
         # ...

@@ -296,7 +296,12 @@ rule split_oriented_cens_assembly_fasta:
         """
 
 
-# Desired: >haplotype1-0000001:chr#:6723941-58474753
+# Before:
+# >
+# haplotype1-0000003
+# 4-8430174
+# After:
+# >HG00171_chr16_haplotype1-0000003:4-8430174
 rule rename_cens_oriented_ctgs:
     input:
         legend=rules.create_oriented_ctg_name_legend.output,
