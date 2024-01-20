@@ -262,7 +262,8 @@ rule create_oriented_ctg_name_legend:
     params:
         # Replaced awk FILENAME with (vvv) because run from multiple dirs above.
         # Would include subdirs otherwise.
-        file_bname=lambda wc, input: os.path.basename(str(input)),
+        # test/HG00171_1_centromeric_regions.rev.bed -> HG00171_1_centromeric_regions
+        file_bname=lambda wc, input: os.path.basename(str(input)).split(".")[0],
     conda:
         "../env/tools.yaml"
     shell:
