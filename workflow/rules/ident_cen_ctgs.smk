@@ -139,7 +139,7 @@ rule intersect_filter_both_cens_ctgs:
 
 rule collapse_intersected_filtered_cen_ctgs:
     input:
-        script="workflow/scripts/bed-er-minmax.py",
+        script="workflow/scripts/filter_cen_ctgs.py",
         filt_regions=rules.intersect_filter_both_cens_ctgs.output,
     output:
         collapsed_regions=temp(
@@ -167,7 +167,7 @@ rule collapse_intersected_filtered_cen_ctgs:
     shell:
         """
         # Collapse ctgs grouped by label.
-        python {input.script} \
+        python {input.script} bedminmax \
         -i {input.filt_regions} \
         -o {output.collapsed_regions} \
         -ci {params.input_cols} 2> {log}

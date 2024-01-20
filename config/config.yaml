@@ -22,10 +22,6 @@ concat_asm:
 
 mask_hor_arrays:
   output_dir: "results/masked"
-  # Theses are added as refs in the align_asm_to_ref workflow.
-  added_alignments:
-    - cens_hardmasked
-    - cens
 
 ident_cen_ctgs:
   comb_assemblies_dir: "data/assemblies/combined"

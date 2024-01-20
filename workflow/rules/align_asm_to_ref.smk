@@ -1,16 +1,14 @@
 # Add additional ref to be aligned to all samples.
-if "cens_hardmasked" in config["mask_hor_arrays"]["added_alignments"]:
-    config["align_asm_to_ref"]["config"]["ref"][
-        f"{REF_NAME}_cens_hardmasked"
-    ] = os.path.join(
-        config["mask_hor_arrays"]["output_dir"], f"{REF_NAME}.hor_arrays_masked.fa"
-    )
+config["align_asm_to_ref"]["config"]["ref"][
+    f"{REF_NAME}_cens_hardmasked"
+] = os.path.join(
+    config["mask_hor_arrays"]["output_dir"], f"{REF_NAME}.hor_arrays_masked.fa"
+)
 
-if "cens" in config["mask_hor_arrays"]["added_alignments"]:
-    config["align_asm_to_ref"]["config"]["ref"][f"{REF_NAME}_cens"] = os.path.join(
-        config["mask_hor_arrays"]["output_dir"],
-        f"{REF_NAME}.hor_arrays_masked.500kbp.fa",
-    )
+config["align_asm_to_ref"]["config"]["ref"][f"{REF_NAME}_cens"] = os.path.join(
+    config["mask_hor_arrays"]["output_dir"],
+    f"{REF_NAME}.hor_arrays_masked.500kbp.fa",
+)
 
 
 # Align assemblies to reference.

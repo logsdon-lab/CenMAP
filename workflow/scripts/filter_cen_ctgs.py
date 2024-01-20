@@ -1,3 +1,4 @@
+import sys
 import argparse
 import pandas as pd
 from typing import Any, Iterable, TextIO, TYPE_CHECKING
@@ -8,7 +9,9 @@ if TYPE_CHECKING:
 else:
     SubArgumentParser = Any
 
-DNA_BRNN_COLS = ("name", "repeat_start", "repeat_end", "repeat_type")
+DEF_DNA_BRNN_COLS = ("name", "repeat_start", "repeat_end", "repeat_type")
+DEF_DNA_BRNN_NAME_SPLIT_COLS = ("ctg_label", "ctg_num", "ctg_start", "ctg_stop")
+
 DEF_BEDMINMAX_IN_COLS = ("chr", "start", "end", "length", "name", "orientation")
 DEF_BEDMINMAX_OUT_COLS = ("chr", "start", "end", "length", "name", "orientation")
 DEF_BEDMINMAX_GRP_COLS = ("chr", "length", "name", "orientation")
@@ -17,13 +20,20 @@ DEF_BEDMINMAX_SORT_COLS = ("chr", "start")
 
 def add_bedminmax_args(sub_ap: SubArgumentParser) -> None:
     ap = sub_ap.add_parser("bedminmax", description="")
-    ap.add_argument("-i", "--input", help="Input bed file", type=str, required=True)
+    ap.add_argument(
+        "-i",
+        "--input",
+        help="Input bed file. Defaults to stdin.",
+        default=sys.stdin,
+        type=argparse.FileType("r"),
+        required=True,
+    )
     ap.add_argument(
         "-o",
         "--output",
-        help="Output bed file. Defaults to /dev/stdout",
-        type=str,
-        default="/dev/stdout",
+        help="Output bed file. Defaults to stdout",
+        type=argparse.FileType("w"),
+        default=sys.stdout,
     )
     ap.add_argument(
         "-g",
@@ -64,13 +74,50 @@ def add_filt_dna_brnn_args(sub_ap: SubArgumentParser) -> None:
     ap.add_argument(
         "-i",
         "--input",
-        required=True,
-        type=str,
+        default=sys.stdin,
+        type=argparse.FileType("r"),
         help='Input bed file. Expected to have ("name", "start", "end", "type") columns.',
     )
-    ap.add_argument("-o", "--output", required=True, type=str, help="Output bed file.")
+    ap.add_argument(
+        "-o",
+        "--output",
+        type=argparse.FileType("w"),
+        help="Output bed file.",
+        default=sys.stdout,
+    )
     ap.add_argument(
         "-c", "--chr", required=True, type=str, help="Chromosome to filter for."
+    )
+    ap.add_argument(
+        "--forward",
+        action="store_true",
+        help="If sequence orientation is forward (+). Alters repeat length calculation.",
+    )
+    ap.add_argument(
+        "-ci",
+        "--columns_in",
+        nargs="+",
+        help="Input bed cols for dna-nn output. Defaults to (name, repeat_start, repeat_end, repeat_type)",
+        default=DEF_DNA_BRNN_COLS,
+    )
+    ap.add_argument(
+        "-cs",
+        "--columns_split",
+        nargs="+",
+        help="Cols created on splitting `name` field by `-` and `:`. Defaults to (ctg_label, ctg_num, ctg_start, ctg_end)",
+        default=DEF_DNA_BRNN_NAME_SPLIT_COLS,
+    )
+    ap.add_argument(
+        "--repeat_type",
+        type=int,
+        default=2,
+        help="Repeat type to filter. Defaults to 2 for alpha satellite.",
+    )
+    ap.add_argument(
+        "--repeat_gt_length",
+        type=int,
+        default=1000,
+        help="Repeat length filter. Must be greater than value.",
     )
     return None
 
@@ -163,13 +210,9 @@ def bedminmax(
 # (Per chr)
 # TODO: Where does this come from?
 # /net/eichler/vol27/projects/hgsvc/nobackups/analysis/glennis/map_align_t2t_chm13/results/t2t_chm13_v2.0_cens/bed/centromeres/dna-brnn/chm13_cens.trimmed.bed
-# grep "chr1:" chm13_cens.trimmed.bed | \
-# sed 's/:/\t/g' | \
-# sed 's/-/\t/g' | \
-# awk -v OFS="\t" '{print $1, $2+$4, $2+$5, $6, $5-$4}' | \
-# awk '$4==2' | \
-# awk '$5>1000' > chr1_tmp.fwd.bed
+# dna-brnn on f"chm13.hor_arrays_masked.500kbp.fa"?
 
+# ex. >HG00171_chr16_haplotype1-0000003:4-8430174
 # (Per chr + sample)
 # grep "chr2_" ${sample}.renamed.fwd.bed | \
 # sed 's/:/\t/g' | \
@@ -179,7 +222,6 @@ def bedminmax(
 # awk '$5>1000' >> chr2_tmp.fwd.bed
 
 
-# TODO: Needs to be done after all samples evaluated.
 # /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py \
 # -i chr2_tmp.fwd.bed | \
 # awk -v OFS="\t" '{print $1, $2, $3, $3-$2}' | \
@@ -191,7 +233,9 @@ def filtdnabrnn(
     output_path: str,
     *,
     chr: str,
-    input_cols: Iterable[str] = DNA_BRNN_COLS,
+    forward: bool,
+    input_cols: Iterable[str] = DEF_DNA_BRNN_COLS,
+    name_split_cols: Iterable[str] = DEF_DNA_BRNN_NAME_SPLIT_COLS,
     repeat_type_filter: int = 2,
     repeat_length_filter: int = 1000,
 ) -> None:
@@ -205,12 +249,17 @@ def filtdnabrnn(
             * Output filtered bed file
     * `chr`:
             * Chromosome to filter
+    * `forward`:
+            * If sequences are forward oriented.
     * `input_cols`
             * Columns of input file. Expects the following:
-                * `name` (sample, chr, haplotype, contig, regstart, regstop)
+                * `name`
                 * `repeat_start`
                 * `repeat_stop`
                 * `repeat_type`
+    * `name_split_cols`:
+            * Columns created after splitting `name` col by `-` and `:`.
+            * Defaults to (`ctg_label`, `ctg_num`, `ctg_start`, `ctg_stop`)
     * `repeat_type_filter`
             * A label 1 on the 4th column indicates the interval is a region of (AATTC)n ;
             label 2 indicates a region of alpha satellites. [1]
@@ -239,26 +288,39 @@ def filtdnabrnn(
         & (df_bed["repeat_type"] == repeat_type_filter)
     ]
 
-    # Split name col
+    # Split name col. EXPECTS 4 COLS BY DEFAULT.
     # |HG00171_chr16_haplotype1-0000003:4-8430174| -> |HG00171_chr16_haplotype1|0000003|4|8430174|
-    df_bed[["sample_chr_haplo", "ctg_num", "ctg_start", "ctg_stop"]] = df_bed[
-        "name"
-    ].str.split(":|-", expand=True, regex=True)
+    df_bed[name_split_cols] = df_bed["name"].str.split(":|-", expand=True, regex=True)
     df_bed.drop(columns=["name"], inplace=True)
 
     # |ooo|x|o|
+    # fwd: $3+$5, $3+$6
+    # rev: $4-$6, $4-$5
+    if forward:
+        calc_dst_cols = (
+            df_bed["ctg_start"] + df_bed["repeat_start"],
+            df_bed["ctg_start"] + df_bed["repeat_stop"],
+        )
+    else:
+        calc_dst_cols = (
+            df_bed["ctg_stop"] - df_bed["repeat_stop"],
+            df_bed["ctg_stop"] - df_bed["repeat_start"],
+        )
+
     output_cols = [
-        "name",
+        "ctg_label",
         "dst_to_repeat",
         "dst_to_end_repeat",
         "repeat_type",
         "repeat_length",
     ]
+
     df_bed = pd.concat(
         [
-            df_bed["sample_chr_haplo"] + "-" + df_bed["ctg_num"],
-            df_bed["ctg_start"] + df_bed["repeat_start"],
-            df_bed["ctg_start"] + df_bed["repeat_stop"],
+            df_bed["ctg_label"] + "-" + df_bed["ctg_num"]
+            if "ctg_num" in df_bed.columns
+            else df_bed["ctg_label"],
+            *calc_dst_cols,
             df_bed["repeat_type"],
             df_bed["repeat_stop"] - df_bed["repeat_start"],
         ],
@@ -285,14 +347,22 @@ def main() -> int:
         bedminmax(
             args.input,
             args.output,
-            args.columns_in,
-            args.column_out,
-            args.groupby,
-            args.sortby,
+            input_cols=args.columns_in,
+            output_cols=args.column_out,
+            grpby_cols=args.groupby,
+            sortby_cols=args.sortby,
         )
     elif args.cmd == "filtdnabrnn":
-        filtdnabrnn(args.input, args.output)
-
+        filtdnabrnn(
+            args.input,
+            args.output,
+            chr=args.chr,
+            forward=args.forward,
+            input_cols=args.columns_in,
+            name_split_cols=args.columns_split,
+            repeat_type_filter=args.repeat_type,
+            repeat_length_filter=args.repeat_gt_length,
+        )
     return 0
 
 
