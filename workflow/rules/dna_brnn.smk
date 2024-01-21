@@ -54,6 +54,8 @@ rule filter_dnabrnn_ref_cens_regions:
         split_cols=" ".join(["ctg_label", "ctg_start", "ctg_stop"]),
         repeat_type_filter=2,
         repeat_len_thr=1000,
+        # Ref is treated as forward so add start/end instead of subtract.
+        is_forward_ort="--forward",
     log:
         "logs/filter_dnabrnn_ref_{chr}_cens_regions.log",
     conda:
@@ -64,6 +66,7 @@ rule filter_dnabrnn_ref_cens_regions:
         -i {input.repeats} \
         -o {output} \
         -c {wildcards.chr} \
+        {params.is_forward_ort} \
         --columns_split {params.split_cols} \
         --repeat_type {params.repeat_type_filter} \
         --repeat_len_thr {params.repeat_len_thr} &> {log}
@@ -92,6 +95,7 @@ use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions w
         split_cols=" ".join(["ctg_label", "ctg_num" "ctg_start", "ctg_stop"]),
         repeat_type_filter=2,
         repeat_len_thr=1000,
+        is_forward_ort=lambda wc: "--forward" if wc.ort == "fwd" else "",
     log:
         "logs/filter_dnabrnn_{ort}_{sm}_{chr}_cens_regions.log",
 
@@ -101,7 +105,7 @@ use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions w
 # awk -v OFS="\t" '{print $1, $2-(*467987), $3+(*522450), $3-$2}' | \
 rule get_dnabrnn_ref_cens_pos:
     input:
-        script="workflow/scripts/get_cen_data.py",
+        script="workflow/scripts/get_cen_pos.py",
         filt_repeats=rules.filter_dnabrnn_ref_cens_regions.output,
     output:
         os.path.join(config["dna_brnn"]["output_dir"], "{chr}_cens_data.json"),
@@ -126,6 +130,9 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
     input:
         script="workflow/scripts/filter_cen_ctgs.py",
         cen_pos=rules.get_dnabrnn_ref_cens_pos.output,
+        added_ref_cens=lambda wc: rules.filter_dnabrnn_ref_cens_regions.output
+        if wc.ort == "fwd"
+        else [],
         sample_cens=expand(
             os.path.join(
                 config["dna_brnn"]["output_dir"],
@@ -159,8 +166,8 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         "../env/py.yaml"
     shell:
         """
-        start=$(jq .start {input.cens_pos})
-        end=$(jq .end {input.cens_pos})
+        start=$(jq .start {input.cen_pos})
+        end=$(jq .end {input.cen_pos})
 
         # Aggregate and bedminmax all.
         # Select cols and calculate length.
@@ -168,7 +175,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         # Take only repeats greater than some value.
         # Take abs value.
         {{ python {input.script} bedminmax \
-            -i {input.sample_cens} \
+            -i {input.sample_cens} {input.added_ref_cens} \
             -ci {params.io_cols} \
             -co {params.io_cols} \
             -g {params.grp_cols} \
@@ -195,7 +202,7 @@ rule dna_brnn_all:
             chr=CHROMOSOMES,
         ),
         expand(
-            rules.get_dnabrnn_ref_cens_data.output,
+            rules.get_dnabrnn_ref_cens_pos.output,
             chr=CHROMOSOMES,
         ),
         expand(
