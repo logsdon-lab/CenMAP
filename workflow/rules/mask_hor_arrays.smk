@@ -1,11 +1,7 @@
-import os
-
-
 # Mask HOR arrays in reference genome T2T-CHM13
 rule mask_hor_arrays:
     input:
         ref=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
-        # TODO: Are the annotations per chr or all grouped together?
         asat_annotations=config["align_asm_to_ref"]["asat_annotations"],
     output:
         os.path.join(

@@ -1,6 +1,3 @@
-import os
-
-
 CONCAT_ASM_INPUT_DIR = config["concat_asm"]["input_dir"]
 CONCAT_ASM_OUTPUT_DIR = config["concat_asm"]["output_dir"]
 
@@ -18,6 +15,9 @@ rule concat_asm:
     # https://bioinf.shenwei.me/seqkit/usage/#rmdup
     params:
         by_seq="-s",
+    # Only allow not hap names ex. HG00171 (Not H00171_1)
+    wildcard_constraints:
+        sm="\w+",
     log:
         "logs/concat_asm_{sm}.log",
     conda:

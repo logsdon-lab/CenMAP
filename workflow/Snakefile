@@ -1,4 +1,5 @@
 import yaml
+import os
 import pandas as pd
 from snakemake.utils import min_version
 

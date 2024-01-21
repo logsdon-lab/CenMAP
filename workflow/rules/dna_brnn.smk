@@ -65,7 +65,7 @@ rule filter_ref_cens_regions:
 
 
 # TODO: Glennis has script to filter valid predict ALR per chr on UW cluster.
-rule filter_ref_cens_regions:
+rule filter_sample_cens_regions:
     input:
         lambda wc: rules.run_dna_brnn.output,
     output:
@@ -82,7 +82,10 @@ def get_chr_stats(wc):
 rule aggregate_alr_by_chr:
     input:
         lambda wc: expand(
-            rules.filter_valid_alr, chr=[wc.chr], ort=[wc.ort], sm=SAMPLES_DF.index
+            rules.filter_sample_cens_regions,
+            chr=[wc.chr],
+            ort=[wc.ort],
+            sm=SAMPLES_DF.index,
         ),
     output:
         "{chr}_contigs.{ort}.ALR.bed",
@@ -95,10 +98,10 @@ rule dna_brnn_all:
     input:
         expand(rules.run_dna_brnn.output, sm=SAMPLES_DF.index, ort=ORIENTATION),
         expand(
-            rules.filter_valid_alr.output,
+            rules.filter_sample_cens_regions.output,
             sm=SAMPLES_DF.index,
             ort=ORIENTATION,
             chr=CHROMOSOMES,
         ),
-        rules.run_dna_brnn_cens.output,
+        rules.run_dna_brnn_ref_cens.output,
         # ...

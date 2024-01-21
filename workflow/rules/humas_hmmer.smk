@@ -1,7 +1,6 @@
 # This is a port of the following:
 # * https://github.com/fedorrik/HumAS-HMMER_for_AnVIL/blob/main/hmmer-run.sh
 # * https://github.com/fedorrik/HumAS-HMMER_for_AnVIL/blob/main/hmmer-run_SF.sh
-import os
 
 
 # https://github.com/fedorrik/HumAS-HMMER_for_AnVIL/blob/dc5e958dfc3820fb8cc21a6ccc5cd8e5d6ef1052/hmmer-run.sh#L31

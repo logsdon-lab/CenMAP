@@ -345,6 +345,12 @@ rule index_renamed_cens_ctgs:
         """
 
 
+# Operate on samples with a given haplotype num.
+# ex. HG00171_1
+wildcard_constraints:
+    sm="\w+_\d",
+
+
 rule ident_cen_ctgs_all:
     input:
         expand(rules.intersect_cen_regions.output, sm=SAMPLES_DF.index),
