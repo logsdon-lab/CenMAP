@@ -3,7 +3,6 @@ import argparse
 import pandas as pd
 from typing import Any, Iterable, TextIO, TYPE_CHECKING
 
-
 if TYPE_CHECKING:
     SubArgumentParser = argparse._SubParsersAction[argparse.ArgumentParser]
 else:
@@ -24,6 +23,7 @@ def add_bedminmax_args(sub_ap: SubArgumentParser) -> None:
         "-i",
         "--input",
         help="Input bed file. Defaults to stdin.",
+        nargs="+",
         default=sys.stdin,
         type=argparse.FileType("r"),
         required=True,
@@ -150,7 +150,7 @@ def read_bed_df(input: str, *, input_cols: Iterable[str]) -> pd.DataFrame:
 
 
 def bedminmax(
-    input: str | pd.DataFrame,
+    input: str | Iterable[str] | pd.DataFrame,
     output_path: str | None,
     *,
     input_cols: Iterable[str] = DEF_BEDMINMAX_IN_COLS,
@@ -165,7 +165,7 @@ def bedminmax(
 
     ### Args:
     * `input`:
-            * Input bed file or `pd.DataFrame`.
+            * Input bed file, bed files, or `pd.DataFrame`.
     * `output_path`:
             * Output bed file or `pd.DataFrame` if `None`.
     * `input_cols`:
@@ -186,8 +186,12 @@ def bedminmax(
     """
     if isinstance(input, pd.DataFrame):
         bed_df = input
-    else:
+    elif isinstance(input, str):
         bed_df = read_bed_df(input, input_cols=input_cols)
+    else:
+        bed_df = pd.concat(
+            (read_bed_df(i, input_cols=input_cols) for i in input), axis=1
+        )
 
     assert (
         "start" in bed_df.columns and "end" in bed_df.columns
@@ -207,27 +211,6 @@ def bedminmax(
         return bed_out
 
 
-# (Per chr)
-# TODO: Where does this come from?
-# /net/eichler/vol27/projects/hgsvc/nobackups/analysis/glennis/map_align_t2t_chm13/results/t2t_chm13_v2.0_cens/bed/centromeres/dna-brnn/chm13_cens.trimmed.bed
-# dna-brnn on f"chm13.hor_arrays_masked.500kbp.fa"?
-
-# ex. >HG00171_chr16_haplotype1-0000003:4-8430174
-# (Per chr + sample)
-# grep "chr2_" ${sample}.renamed.fwd.bed | \
-# sed 's/:/\t/g' | \
-# sed 's/-/\t/g' | \
-# awk -v OFS="\t" '{print $1"-"$2, $3+$5, $3+$6, $7, $6-$5}' | \
-# awk '$4==2' | \
-# awk '$5>1000' >> chr2_tmp.fwd.bed
-
-
-# /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py \
-# -i chr2_tmp.fwd.bed | \
-# awk -v OFS="\t" '{print $1, $2, $3, $3-$2}' | \
-# awk -v OFS="\t" '{print $1, $2-467987, $3+522450, $3-$2}' | \
-# awk '$4>1000000' | \
-# awk -v OFS="\t" '$2<0 {$2=0}1' > chr2_contigs.fwd.repeat.bed
 def filtdnabrnn(
     input_path: str,
     output_path: str,
