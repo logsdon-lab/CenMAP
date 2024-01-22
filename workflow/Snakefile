@@ -52,6 +52,7 @@ include: "rules/align_asm_to_ref.smk"
 include: "rules/mask_hor_arrays.smk"
 include: "rules/ident_cen_ctgs.smk"
 include: "rules/dna_brnn.smk"
+include: "rules/extract_new_cens_ctgs.smk"
 
 
 rule all:
@@ -61,3 +62,4 @@ rule all:
         rules.concat_asm_all.input,
         rules.ident_cen_ctgs_all.input,
         rules.dna_brnn_all.input,
+        rules.new_cens_rename_ctg_all.input,

@@ -25,14 +25,14 @@ rule extract_new_oriented_cens_regions:
 
 
 # HG00171_chr4_haplotype1-0000002:1892469-12648706        293621  293950  1
+# |HG00171|chr4|haplotype1-0000002|1892469-12648706|293621|293950|1
 RENAME_NEW_CTGS_CFG = {
     # TODO: Is this correct? This is before processed.
     "bed_input_regions": rules.run_dna_brnn.output.repeat_regions,
     "fa_assembly": rules.extract_new_oriented_cens_regions.output,
-    "output_dir": config["ident_cen_ctgs"]["comb_assemblies_dir"],
+    "output_dir": os.path.join(config["dna_brnn"]["output_dir"], "new_cens"),
     "samples": SAMPLES_DF.index,
     "log_dir": "logs/rename_cens",
-    # TODO: Cols looks wrong.
     "bed_find_col": 3,
     "bed_replace_w_joined_cols": (1, 2, 3),
 }
