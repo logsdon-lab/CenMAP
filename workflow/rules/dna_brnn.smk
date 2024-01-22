@@ -5,7 +5,7 @@ import os
 rule run_dna_brnn:
     input:
         model=config["dna_brnn"]["model"],
-        seqs=rules.rename_cens_oriented_ctgs.output,
+        seqs=rules.cens_rename_oriented_ctgs.output,
     output:
         repeat_regions=os.path.join(
             config["dna_brnn"]["output_dir"],
