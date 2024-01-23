@@ -32,6 +32,9 @@ dna_brnn:
   # https://github.com/lh3/dna-nn/tree/master/models
   model: "data/models/attcc-alpha.knm"
 
+nuc_freq:
+  hifi_reads_dir: "data/raw_data/hifi"
+  output_dir: "results/dna_brnn/nucfreq"
 
 humas_hmmer:
   input_dir: "data/chr_cens"

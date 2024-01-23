@@ -9,3 +9,4 @@ dependencies:
   - hmmer
   - bedops
   - seqkit
+  - minimap2

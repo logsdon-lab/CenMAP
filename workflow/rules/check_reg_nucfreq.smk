@@ -1,52 +1,107 @@
-
+# HG00171_chr4_haplotype1-0000002:1892469-12648706
+# |haplotype1-0000002|1892469|12648706|chr4|
+# |haplotype1-0000002|1892469|12648706|12648706-1892469|chr4|
 rule make_bed_files_for_plot:
     input:
-        # TODO: All fasta index files concatenated. Can we just get the individual section?
-        "*ALR.fa.fai",
+        script="workflow/scripts/filter_cen_ctgs.py",
+        faidx=lambda wc: expand(
+            rules.new_cens_index_renamed_ctgs.output, ort=ORIENTATION, sm=[wc.sm]
+        ),
     output:
-        "{sample}_ALR_regions.500kp.bed",
+        os.path.join(config["nuc_freq"]["output_dir"], "{sm}_ALR_regions.500kp.bed"),
+    params:
+        io_cols=" ".join(["ctg", "start", "end", "chr"]),
+        grp_cols=" ".join(["ctg", "chr"]),
+        sort_cols=" ".join(["ctg", "start"]),
     conda:
         "../env/py.yaml"
     log:
-        "logs/make_bed_files_for_plot.log",
+        "logs/make_{sm}_bed_files_for_plot.log",
     shell:
         """
-        sorted_fname="{wildcards.sample}_ALR_regions_sorted.500kbp.bed"
-        collapsed_fname="{wildcards.sample}_ALR_regions_collapsed.500kbp.bed"
-
-        cat ../*ALR.fa.fai | \
-        grep {wildcards.sample} | \
-        sed 's/hap/haplotype/g' | \
-        sed 's/un/unassigned/g' | \
-        sed 's/_/\\t/g' | \
-        sed 's/:/\\t/g' | \
-        sed 's/-/\\t/g' | \
-        awk -v OFS="\\t" '{print $3"-"$4, $5, $6, $2}' | \
+        {{ cat {input.faidx} | \
+        # grep {wildcards.sm} | \
+        # sed 's/hap/haplotype/g' | \
+        # sed 's/un/unassigned/g' | \
+        sed -e 's/_/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
+        awk -v OFS="\\t" '{{print $3"-"$4, $5, $6, $2}}' | \
         sort | \
-        uniq > $sorted_fname 2> {log}
-
-        # Collapse by group.
-        ./bedminmax.py -i $sorted_fname -o $collapsed_fname 2> {log}
-
-        # Format
-        awk -v OFS="\\t" '{print $1, $2, $3, $3-$2, $4}' $collapsed_fname > {output} 2> {log}
+        uniq | \
+        python {input.script} bedminmax \
+            -ci {params.io_cols} \
+            -co {params.io_cols} \
+            -g {params.grp_cols} \
+            -s {params.sort_cols} | \
+        awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2, $4}}';}} > {output} 2> {log}
         """
 
 
+def get_hifi_read_files(wc) -> list[str]:
+    """
+    Get hifi reads by sample automatically from hifi_reads_dir.
+    Expects {hifi_reads_dir}/{sample}/*.bam
+    """
+    # HG00171_1 -> HG00171
+    trimmed_wc = str(wc.sm).split("_")[0]
+    path_pattern = os.path.join(
+        config["nuc_freq"]["hifi_reads_dir"], trimmed_wc, "{mdata_id}.bam"
+    )
+    reads_run_mdata_id = glob_wildcards(path_pattern)
+    return expand(path_pattern, mdata_id=reads_run_mdata_id.mdata_id)
+
+
+rule convert_hifi_reads_to_fq:
+    input:
+        get_hifi_read_files,
+    output:
+        os.path.join(config["nuc_freq"]["output_dir"], "{sm}_hifi.fq"),
+    conda:
+        "../env/tools.yaml"
+    log:
+        "logs/convert_{sm}_hifi_reads_to_fq.log",
+    shell:
+        """
+        samtools bam2fq {input} > {output} 2> {log}
+        """
+
+
+rule align_fq_to_ref:
+    input:
+        ref=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
+        reads=rules.convert_hifi_reads_to_fq.output,
+    output:
+        alignments=os.path.join(config["nuc_freq"]["output_dir"], "{sm}_hifi.bam"),
+    threads: 20
+    conda:
+        "../env/tools.yaml"
+    log:
+        "logs/align_{sm}_hifi_reads_to_ref.log",
+    shell:
+        """
+        {{ minimap2 -ax map-pb {input.ref} {input.reads} | \
+        samtools view;}} > {output} 2> {log}
+        """
+
+
+# TODO: Each hifi read file has been aligned to t2t-chm13 ref at this pt.
+# Merge now or pass each one to vvv?
 rule gen_nucfreq_plot:
     input:
         script="workflow/scripts/NucPlot.py",
-        bam_file="/net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/hgsvc3/map_align_hifi/results/{sample}_hifi2v1.4.bam",
-        alr_regions="{sample}_ALR_regions.500kbp.bed",
+        bam_file=rules.align_fq_to_ref.output,
+        alr_regions=rules.make_bed_files_for_plot.output,
     output:
-        plot="plots/${sample}_hifi2v1.4.cens.png ",
+        plot=os.path.join(
+            config["nuc_freq"]["output_dir"],
+            "{sm}_hifi_cens.png",
+        ),
     conda:
-        "env/py.yaml"
+        "../env/py.yaml"
     params:
         ylim=100,
         height=4,
     log:
-        "logs/run_nucfreq_{sample}.log",
+        "logs/run_nucfreq_{sm}.log",
     shell:
         """
         python {input.script} \
