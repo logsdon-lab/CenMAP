@@ -78,7 +78,7 @@ rule align_fq_to_ref:
         "logs/align_{sm}_hifi_reads_to_ref.log",
     shell:
         """
-        {{ minimap2 -ax map-pb {input.ref} {input.reads} | \
+        {{ minimap2 -ax map-pb -t {threads} {input.ref} {input.reads} | \
         samtools view;}} > {output} 2> {log}
         """
 

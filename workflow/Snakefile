@@ -54,6 +54,7 @@ include: "rules/ident_cen_ctgs.smk"
 include: "rules/dna_brnn.smk"
 include: "rules/extract_new_cens_ctgs.smk"
 include: "rules/check_reg_nucfreq.smk"
+include: "rules/repeatmasker.smk"
 
 
 rule all:
@@ -69,3 +70,9 @@ rule all:
 rule nuc_freq_all:
     input:
         expand(rules.gen_nucfreq_plot.output, sm=SAMPLES_DF.index),
+
+
+# rule repeatmasker_all:
+#     input:
+#         # TODO: Hap1 and hap2 in
+#         expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),
