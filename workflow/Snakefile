@@ -67,12 +67,12 @@ rule all:
         rules.new_cens_rename_ctg_all.input,
 
 
-rule nuc_freq_all:
-    input:
-        expand(rules.gen_nucfreq_plot.output, sm=SAMPLES_DF.index),
-
-
-# rule repeatmasker_all:
+# rule nuc_freq_all:
 #     input:
-#         # TODO: Hap1 and hap2 in
-#         expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),
+#         expand(rules.gen_nucfreq_plot.output, sm=SAMPLE_NAMES),
+
+
+rule repeatmasker_all:
+    input:
+        # TODO: Hap1 and hap2 in
+        expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),

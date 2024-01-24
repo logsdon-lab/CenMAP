@@ -31,14 +31,14 @@ rule run_repeatmasker:
     input:
         seq=get_correct_alr_regions,
     output:
-        directory(config["repeatmasker"]["output_dir"]),
+        directory(os.path.join(config["repeatmasker"]["output_dir"], "{sm}")),
     conda:
         "../env/tools.yaml"
     threads: config["repeatmasker"]["num_threads"]
     params:
         species="human",
     log:
-        "logs/repeatmasker_{correct_sm}.log",
+        "logs/repeatmasker_{sm}.log",
     shell:
         """
         RepeatMasker \

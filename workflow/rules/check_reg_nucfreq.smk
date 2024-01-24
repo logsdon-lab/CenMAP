@@ -20,9 +20,6 @@ rule make_bed_files_for_plot:
     shell:
         """
         {{ cat {input.faidx} | \
-        # grep {wildcards.sm} | \
-        # sed 's/hap/haplotype/g' | \
-        # sed 's/un/unassigned/g' | \
         sed -e 's/_/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
         awk -v OFS="\\t" '{{print $3"-"$4, $5, $6, $2}}' | \
         sort | \
@@ -41,10 +38,8 @@ def get_hifi_read_files(wc) -> list[str]:
     Get hifi reads by sample automatically from hifi_reads_dir.
     Expects {hifi_reads_dir}/{sample}/*.bam
     """
-    # HG00171_1 -> HG00171
-    trimmed_wc = str(wc.sm).split("_")[0]
     path_pattern = os.path.join(
-        config["nuc_freq"]["hifi_reads_dir"], trimmed_wc, "{mdata_id}.bam"
+        config["nuc_freq"]["hifi_reads_dir"], wc.sm, "{mdata_id}.bam"
     )
     reads_run_mdata_id = glob_wildcards(path_pattern)
     return expand(path_pattern, mdata_id=reads_run_mdata_id.mdata_id)
@@ -61,13 +56,15 @@ rule convert_hifi_reads_to_fq:
         "logs/convert_{sm}_hifi_reads_to_fq.log",
     shell:
         """
-        samtools bam2fq {input} > {output} 2> {log}
+        for file in {input}; do
+            samtools bam2fq $file >> {output} 2> {log}
+        done
         """
 
 
-rule align_fq_to_ref:
+rule align_reads_to_asm:
     input:
-        ref=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
+        asm=lambda wc: expand(rules.concat_asm.output, sm=[str(wc.sm).split("_")[0]]),
         reads=rules.convert_hifi_reads_to_fq.output,
     output:
         alignments=os.path.join(config["nuc_freq"]["output_dir"], "{sm}_hifi.bam"),
@@ -78,17 +75,16 @@ rule align_fq_to_ref:
         "logs/align_{sm}_hifi_reads_to_ref.log",
     shell:
         """
-        {{ minimap2 -ax map-pb -t {threads} {input.ref} {input.reads} | \
+        {{ minimap2 -ax map-pb -t {threads} {input.asm} {input.reads} | \
         samtools view;}} > {output} 2> {log}
         """
 
 
-# TODO: Each hifi read file has been aligned to t2t-chm13 ref at this pt.
 # Merge now or pass each one to vvv?
 rule gen_nucfreq_plot:
     input:
         script="workflow/scripts/NucPlot.py",
-        bam_file=rules.align_fq_to_ref.output,
+        bam_file=rules.align_reads_to_asm.output,
         alr_regions=rules.make_bed_files_for_plot.output,
     output:
         plot=os.path.join(
@@ -114,3 +110,8 @@ rule gen_nucfreq_plot:
 
 
 # Then review plots manually.
+
+
+rule nuc_freq_all:
+    input:
+        expand(rules.gen_nucfreq_plot.output, sm=SAMPLES_DF.index),
