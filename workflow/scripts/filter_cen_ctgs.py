@@ -203,7 +203,7 @@ def bedminmax(
         right_index=True,
     ).reset_index()
 
-    bed_out = bed_out[output_cols].sort_values(by=list(sortby_cols))
+    bed_out = bed_out[list(output_cols)].sort_values(by=list(sortby_cols))
     if output_path:
         bed_out.to_csv(output_path, sep="\t", header=False, index=False)
         return None
