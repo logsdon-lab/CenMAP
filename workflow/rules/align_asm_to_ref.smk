@@ -19,9 +19,10 @@ config["align_asm_to_ref"]["config"]["ref"][f"{REF_NAME}_cens"] = os.path.join(
 module align_asm_to_ref:
     snakefile:
         github(
-            "mrvollger/asm-to-reference-alignment",
+            "koisland/asm-to-reference-alignment",
+            # "mrvollger/asm-to-reference-alignment",
             path="workflow/Snakefile",
-            branch="main",
+            branch="fix-wildcards",
         )
     config:
         config["align_asm_to_ref"]["config"]

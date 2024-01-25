@@ -4,8 +4,11 @@
 rule make_bed_files_for_plot:
     input:
         script="workflow/scripts/filter_cen_ctgs.py",
-        faidx=lambda wc: expand(
-            rules.new_cens_index_renamed_ctgs.output, ort=ORIENTATION, sm=[wc.sm]
+        faidx=expand(
+            rules.new_cens_index_renamed_ctgs.output,
+            ort=ORIENTATION,
+            sm=SAMPLE_NAMES,
+            num=HAPLOS,
         ),
     output:
         os.path.join(config["nuc_freq"]["output_dir"], "{sm}_ALR_regions.500kp.bed"),
@@ -39,7 +42,7 @@ def get_hifi_read_files(wc) -> list[str]:
     Expects {hifi_reads_dir}/{sample}/*.bam
     """
     path_pattern = os.path.join(
-        config["nuc_freq"]["hifi_reads_dir"], wc.sm, "{mdata_id}.bam"
+        config["nuc_freq"]["hifi_reads_dir"], str(wc.sm), "{mdata_id}.bam"
     )
     reads_run_mdata_id = glob_wildcards(path_pattern)
     return expand(path_pattern, mdata_id=reads_run_mdata_id.mdata_id)
@@ -64,7 +67,7 @@ rule convert_hifi_reads_to_fq:
 
 rule align_reads_to_asm:
     input:
-        asm=lambda wc: expand(rules.concat_asm.output, sm=[str(wc.sm).split("_")[0]]),
+        asm=rules.concat_asm.output,
         reads=rules.convert_hifi_reads_to_fq.output,
     output:
         alignments=os.path.join(config["nuc_freq"]["output_dir"], "{sm}_hifi.bam"),
@@ -114,4 +117,7 @@ rule gen_nucfreq_plot:
 
 rule nuc_freq_all:
     input:
-        expand(rules.gen_nucfreq_plot.output, sm=SAMPLES_DF.index),
+        expand(rules.make_bed_files_for_plot.output, sm=SAMPLE_NAMES, num=HAPLOS),
+        expand(rules.convert_hifi_reads_to_fq.output, sm=SAMPLE_NAMES, num=HAPLOS),
+        expand(rules.align_reads_to_asm.output, sm=SAMPLE_NAMES, num=HAPLOS),
+        expand(rules.gen_nucfreq_plot.output, sm=SAMPLE_NAMES, num=HAPLOS),

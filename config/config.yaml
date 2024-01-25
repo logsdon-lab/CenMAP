@@ -39,7 +39,7 @@ nuc_freq:
 repeatmasker:
   # Json map of paths to correct samples.
   # {"HG00731": "HG00731_correct_ALR_regions.500kbp.fa"}
-  correct_samples: "correct_samples.json"
+  correct_samples: "config/correct_samples.json"
   num_threads: 40
   output_dir: "results/repeatmasker"
 
