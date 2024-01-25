@@ -9,7 +9,7 @@ OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS = f"results/{REF_NAME}_cens/bed"
 rule intersect_cen_regions:
     input:
         left=lambda wc: expand(
-            rules.ref_align_aln_to_bed.output, ref=[REF_NAME], sm=wc.sm, num=wc.num
+            rules.asm_ref_aln_to_bed.output, ref=[REF_NAME], sm=wc.sm, num=wc.num
         ),
         right=config["align_asm_to_ref"]["cens_500kbp_regions"],
     output:
@@ -87,7 +87,7 @@ use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
         script="workflow/scripts/bedminmax.py",
         # asm aligned to t2t_chm13_v2.hor_arrays_masked.500kbp.fa
         regions=lambda wc: expand(
-            rules.ref_align_aln_to_bed.output,
+            rules.asm_ref_aln_to_bed.output,
             ref=[f"{REF_NAME}_cens"],
             sm=wc.sm,
             num=wc.num,

@@ -1,6 +1,8 @@
 # HGSVC3
 WIP
 
+![](docs/rulegraph.svg)
+
 ### Usage
 Local
 ```bash
@@ -8,15 +10,10 @@ Local
 snakemake --use-conda -np --configfile config/config.yaml
 ```
 
-Cluster via `singularity`
+Cluster via `singularity`. In project dir.
 ```bash
 singularity pull docker://koisland/hgsvc3:latest
 singlarity run --use-conda -np --configfile config/config.yaml
-```
-
-Make test files for workflow.
-```bash
-./test/make_test_files.sh
 ```
 
 #### Download raw data with `globus-cli`
@@ -34,3 +31,7 @@ To download files.
 
 ### TODO
 * TODO: Move renaming to start of analysis. Rename `sampleid_hapinfo_ctg-#`
+* Make test files for workflow.
+```bash
+./test/make_test_files.sh
+```

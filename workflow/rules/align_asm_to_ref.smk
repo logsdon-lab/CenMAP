@@ -28,4 +28,4 @@ module align_asm_to_ref:
         config["align_asm_to_ref"]["config"]
 
 
-use rule * from align_asm_to_ref as ref_align_*
+use rule * from align_asm_to_ref as asm_ref_*

@@ -68,7 +68,8 @@ include: "rules/repeatmasker.smk"
 rule all:
     input:
         rules.mask_hor_arrays_all.input,
-        rules.ref_align_all.input,
+        # Alignment
+        rules.asm_ref_all.input,
         rules.concat_asm_all.input,
         rules.ident_cen_ctgs_all.input,
         rules.dna_brnn_all.input,
