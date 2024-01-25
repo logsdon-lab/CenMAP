@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 else:
     SubArgumentParser = Any
 
-DEF_DNA_BRNN_COLS = ("name", "repeat_start", "repeat_end", "repeat_type")
+DEF_DNA_BRNN_COLS = ("name", "repeat_start", "repeat_stop", "repeat_type")
 DEF_DNA_BRNN_NAME_SPLIT_COLS = ("ctg_label", "ctg_num", "ctg_start", "ctg_stop")
 
 DEF_BEDMINMAX_IN_COLS = ("chr", "start", "end", "length", "name", "orientation")
@@ -264,6 +264,7 @@ def filtdnabrnn(
         repeat_type_filter == 1 or repeat_type_filter == 2
     ), f"Invalid repeat type filter. {repeat_type_filter}"
 
+    breakpoint()
     df_bed = read_bed_df(input_path, input_cols=input_cols)
     # Only look at single chr and only take a specific repeat type.
     df_bed = df_bed.loc[
