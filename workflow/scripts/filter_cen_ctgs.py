@@ -197,13 +197,13 @@ def bedminmax(
         "start" in bed_df.columns and "end" in bed_df.columns
     ), "Missing required start/end cols."
     bed_out = pd.merge(
-        bed_df.groupby(grpby_cols).min()["start"],
-        bed_df.groupby(grpby_cols).max()["end"],
+        bed_df.groupby(list(grpby_cols)).min()["start"],
+        bed_df.groupby(list(grpby_cols)).max()["end"],
         left_index=True,
         right_index=True,
     ).reset_index()
 
-    bed_out = bed_out[output_cols].sort_values(by=sortby_cols)
+    bed_out = bed_out[output_cols].sort_values(by=list(sortby_cols))
     if output_path:
         bed_out.to_csv(output_path, sep="\t", header=False, index=False)
         return None
