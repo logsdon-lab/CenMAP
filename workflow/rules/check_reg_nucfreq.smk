@@ -113,11 +113,3 @@ rule gen_nucfreq_plot:
 
 
 # Then review plots manually.
-
-
-rule nuc_freq_all:
-    input:
-        expand(rules.make_bed_files_for_plot.output, sm=SAMPLE_NAMES, num=HAPLOS),
-        expand(rules.convert_hifi_reads_to_fq.output, sm=SAMPLE_NAMES, num=HAPLOS),
-        expand(rules.align_reads_to_asm.output, sm=SAMPLE_NAMES, num=HAPLOS),
-        expand(rules.gen_nucfreq_plot.output, sm=SAMPLE_NAMES, num=HAPLOS),

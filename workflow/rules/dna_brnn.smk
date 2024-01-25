@@ -26,6 +26,7 @@ rule run_dna_brnn:
 # Run dna-brnn only on the ref centromeres as baseline expectation of ALR repeats.
 # (Per chr)
 # TODO: Where does this come from?
+# REPLACE WITH VALS IN Onenote
 # /net/eichler/vol27/projects/hgsvc/nobackups/analysis/glennis/map_align_t2t_chm13/results/t2t_chm13_v2.0_cens/bed/centromeres/dna-brnn/chm13_cens.trimmed.bed
 # dna-brnn on f"chm13.hor_arrays_masked.500kbp.fa"?
 use rule run_dna_brnn as run_dna_brnn_ref_cens with:
@@ -69,7 +70,7 @@ rule filter_dnabrnn_ref_cens_regions:
         {params.is_forward_ort} \
         --columns_split {params.split_cols} \
         --repeat_type {params.repeat_type_filter} \
-        --repeat_len_thr {params.repeat_len_thr} &> {log}
+        --repeat_gt_length {params.repeat_len_thr} &> {log}
         """
 
 

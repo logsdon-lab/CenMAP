@@ -13,7 +13,6 @@ config["align_asm_to_ref"]["config"]["ref"][f"{REF_NAME}_cens"] = os.path.join(
 
 # Align assemblies to reference.
 # Pull alignment workflow from github.
-# * TODO: Still need to see original config.yaml.
 # See output files here. Most of everything gets dumped in subdirs from results/{ref}/{ftype}/{asm}.{ftype}:
 # https://github.com/mrvollger/asm-to-reference-alignment/blob/main/workflow/rules/reference_alignment.smk
 module align_asm_to_ref:
