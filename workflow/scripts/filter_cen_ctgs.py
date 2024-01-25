@@ -1,6 +1,7 @@
 import sys
 import argparse
 import pandas as pd
+from io import IOBase
 from typing import Any, Iterable, TextIO, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -129,28 +130,27 @@ def first_line_sv(fh: TextIO, *, delim: str = "\t") -> str:
 
 def is_header(first_line: str) -> bool:
     # All words in first line must be alphanumeric to be header.
-    return first_line.replace("\t", "").replace("#", "").replace("_", "").isalpha()
+    return first_line.replace("#", "").replace("_", "").isalpha()
 
 
-def read_bed_df(input: str, *, input_cols: Iterable[str]) -> pd.DataFrame:
-    with open(input, mode="r") as bed_fh:
-        first_line = first_line_sv(bed_fh)
-        num_cols = len(first_line)
-        has_header = is_header(first_line_sv)
+def read_bed_df(input: TextIO, *, input_cols: Iterable[str]) -> pd.DataFrame:
+    first_line = first_line_sv(input)
+    num_cols = len(first_line)
+    has_header = is_header(first_line="".join(first_line))
 
     if has_header:
         # Let pandas infer.
-        return pd.read_csv(input, sep="\t")
+        return pd.read_csv(input.name, sep="\t")
     else:
         num_input_cols = len(input_cols)
         assert (
             num_cols == len(input_cols)
         ), f"Number of cols not equal to input columns. ({num_cols} != {num_input_cols})"
-        return pd.read_csv(input, sep="\t", header=0, names=input_cols)
+        return pd.read_csv(input.name, sep="\t", header=0, names=input_cols)
 
 
 def bedminmax(
-    input: str | Iterable[str] | pd.DataFrame,
+    input: TextIO | Iterable[TextIO] | pd.DataFrame,
     output_path: str | None,
     *,
     input_cols: Iterable[str] = DEF_BEDMINMAX_IN_COLS,
@@ -186,11 +186,11 @@ def bedminmax(
     """
     if isinstance(input, pd.DataFrame):
         bed_df = input
-    elif isinstance(input, str):
+    elif isinstance(input, IOBase):
         bed_df = read_bed_df(input, input_cols=input_cols)
     else:
         bed_df = pd.concat(
-            (read_bed_df(i, input_cols=input_cols) for i in input), axis=1
+            (read_bed_df(i, input_cols=input_cols) for i in input), axis=0
         )
 
     assert (
@@ -212,8 +212,8 @@ def bedminmax(
 
 
 def filtdnabrnn(
-    input_path: str,
-    output_path: str,
+    input_path: TextIO,
+    output_path: TextIO,
     *,
     chr: str,
     forward: bool,
@@ -267,14 +267,16 @@ def filtdnabrnn(
     df_bed = read_bed_df(input_path, input_cols=input_cols)
     # Only look at single chr and only take a specific repeat type.
     df_bed = df_bed.loc[
-        df_bed["repeat_type"].str.contains(chr)
-        & (df_bed["repeat_type"] == repeat_type_filter)
+        df_bed["name"].str.contains(chr) & (df_bed["repeat_type"] == repeat_type_filter)
     ]
 
     # Split name col. EXPECTS 4 COLS BY DEFAULT.
     # |HG00171_chr16_haplotype1-0000003:4-8430174| -> |HG00171_chr16_haplotype1|0000003|4|8430174|
     df_bed[name_split_cols] = df_bed["name"].str.split(":|-", expand=True, regex=True)
     df_bed.drop(columns=["name"], inplace=True)
+    df_bed[["ctg_start", "ctg_stop"]] = df_bed[["ctg_start", "ctg_stop"]].astype(
+        "int64"
+    )
 
     # |ooo|x|o|
     # fwd: $3+$5, $3+$6
@@ -290,26 +292,16 @@ def filtdnabrnn(
             df_bed["ctg_stop"] - df_bed["repeat_start"],
         )
 
-    output_cols = [
-        "ctg_label",
-        "dst_to_repeat",
-        "dst_to_end_repeat",
-        "repeat_type",
-        "repeat_length",
-    ]
+    cols = {
+        "ctg_label": df_bed["ctg_label"] + "-" + df_bed["ctg_num"]
+        if "ctg_num" in df_bed.columns
+        else df_bed["ctg_label"],
+        **dict(zip(("dst_to_repeat", "dst_to_end_repeat"), calc_dst_cols)),
+        "repeat_type": df_bed["repeat_type"],
+        "repeat_length": df_bed["repeat_stop"] - df_bed["repeat_start"],
+    }
 
-    df_bed = pd.concat(
-        [
-            df_bed["ctg_label"] + "-" + df_bed["ctg_num"]
-            if "ctg_num" in df_bed.columns
-            else df_bed["ctg_label"],
-            *calc_dst_cols,
-            df_bed["repeat_type"],
-            df_bed["repeat_stop"] - df_bed["repeat_start"],
-        ],
-        names=output_cols,
-        axis=1,
-    )
+    df_bed = pd.DataFrame(cols)
 
     # Keep desired repeats above a len.
     df_bed = df_bed.loc[df_bed["repeat_length"] > repeat_length_filter]
@@ -331,7 +323,7 @@ def main() -> int:
             args.input,
             args.output,
             input_cols=args.columns_in,
-            output_cols=args.column_out,
+            output_cols=args.columns_out,
             grpby_cols=args.groupby,
             sortby_cols=args.sortby,
         )
