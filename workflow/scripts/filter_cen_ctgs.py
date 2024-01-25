@@ -264,7 +264,6 @@ def filtdnabrnn(
         repeat_type_filter == 1 or repeat_type_filter == 2
     ), f"Invalid repeat type filter. {repeat_type_filter}"
 
-    breakpoint()
     df_bed = read_bed_df(input_path, input_cols=input_cols)
     # Only look at single chr and only take a specific repeat type.
     df_bed = df_bed.loc[
