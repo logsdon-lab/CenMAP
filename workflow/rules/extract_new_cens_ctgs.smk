@@ -1,9 +1,24 @@
 # TODO: This might be redone to go at start. Wait until later.
 
 
-rule extract_new_oriented_cens_regions:
+rule create_format_orient_cens_list:
     input:
         regions=rules.run_dna_brnn.output.repeat_regions,
+    output:
+        os.path.join(config["dna_brnn"]["output_dir"], "{sm}_{num}_contigs.{ort}.list"),
+    log:
+        "logs/format_{ort}_cens_list_{sm}_{num}.log",
+    conda:
+        "../env/tools.yaml"
+    shell:
+        """
+        {{ sed -e 's/_/\\t/g' -e 's/:/\\t/g' {input} | cut -f 3 | sort | uniq;}} > {output} 2> {log}
+        """
+
+
+rule extract_new_oriented_cens_regions:
+    input:
+        regions=rules.create_format_orient_cens_list.output,
         combined_assembly=os.path.join(
             config["ident_cen_ctgs"]["comb_assemblies_dir"],
             "{sm}.vrk-ps-sseq.asm-comb-dedup.fa.gz",
