@@ -1,11 +1,13 @@
-# TODO: This might be redone to go at start. Wait until later.
-
 
 rule create_format_orient_cens_list:
     input:
         regions=rules.run_dna_brnn.output.repeat_regions,
     output:
-        os.path.join(config["dna_brnn"]["output_dir"], "{sm}_{num}_contigs.{ort}.list"),
+        os.path.join(
+            config["dna_brnn"]["output_dir"],
+            "new_cens",
+            "{sm}_{num}_contigs.{ort}.list",
+        ),
     log:
         "logs/format_{ort}_cens_list_{sm}_{num}.log",
     conda:
@@ -24,7 +26,9 @@ rule extract_new_oriented_cens_regions:
             "{sm}.vrk-ps-sseq.asm-comb-dedup.fa.gz",
         ),
     output:
-        os.path.join(config["dna_brnn"]["output_dir"], "{sm}_{num}_contigs.{ort}.fa"),
+        os.path.join(
+            config["dna_brnn"]["output_dir"], "new_cens", "{sm}_{num}_contigs.{ort}.fa"
+        ),
     wildcard_constraints:
         ort="fwd|rev",
     params:

@@ -254,7 +254,7 @@ rule extract_cens_oriented_regions:
 RENAME_CTGS_CFG = {
     "bed_input_regions": rules.extract_cens_oriented_regions.output.regions,
     "fa_assembly": rules.extract_cens_oriented_regions.output.seq,
-    "output_dir": config["ident_cen_ctgs"]["comb_assemblies_dir"],
+    "output_dir": config["ident_cen_ctgs"]["output_dir"],
     "samples": SAMPLE_NAMES,
     "log_dir": "logs/rename_cens",
 }
