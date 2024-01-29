@@ -9,11 +9,11 @@ rule run_dna_brnn:
     output:
         repeat_regions=os.path.join(
             config["dna_brnn"]["output_dir"],
-            "{sm}_{num}_centromeric_regions.renamed.{ort}.bed",
+            "{sm}_centromeric_regions.renamed.{ort}.bed",
         ),
     threads: 20
     log:
-        "logs/dna_brnn_{ort}_{sm}_{num}.log",
+        "logs/dna_brnn_{ort}_{sm}.log",
     # No conda recipe. Use Dockerfile if not installed locally.
     singularity:
         "docker://koisland/hgsvc3:latest"
@@ -89,7 +89,7 @@ use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions w
         temp(
             os.path.join(
                 config["dna_brnn"]["output_dir"],
-                "{chr}_{sm}_{num}_contigs.{ort}.ALR.bed",
+                "{chr}_{sm}_contigs.{ort}.ALR.bed",
             )
         ),
     params:
@@ -98,7 +98,7 @@ use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions w
         repeat_len_thr=1000,
         is_forward_ort=lambda wc: "--forward" if wc.ort == "fwd" else "",
     log:
-        "logs/filter_dnabrnn_{ort}_{sm}_{num}_{chr}_cens_regions.log",
+        "logs/filter_dnabrnn_{ort}_{sm}_{chr}_cens_regions.log",
 
 
 # Calculate the start and end *-terms
@@ -137,10 +137,9 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         sample_cens=expand(
             os.path.join(
                 config["dna_brnn"]["output_dir"],
-                "{{chr}}_{sm}_{num}_contigs.{{ort}}.ALR.bed",
+                "{{chr}}_{sm}_contigs.{{ort}}.ALR.bed",
             ),
             sm=SAMPLE_NAMES,
-            num=SAMPLES_DF["num"].unique(),
         ),
     output:
         os.path.join(
@@ -189,7 +188,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
 
 rule dna_brnn_all:
     input:
-        expand(rules.run_dna_brnn.output, sm=SAMPLE_NAMES, num=HAPLOS, ort=ORIENTATION),
+        expand(rules.run_dna_brnn.output, sm=SAMPLE_NAMES, ort=ORIENTATION),
         rules.run_dna_brnn_ref_cens.output,
         expand(
             rules.filter_dnabrnn_ref_cens_regions.output,
@@ -198,7 +197,6 @@ rule dna_brnn_all:
         expand(
             rules.filter_dnabrnn_sample_cens_regions.output,
             sm=SAMPLE_NAMES,
-            num=HAPLOS,
             ort=ORIENTATION,
             chr=CHROMOSOMES,
         ),

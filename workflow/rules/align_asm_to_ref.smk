@@ -21,10 +21,25 @@ module align_asm_to_ref:
             "koisland/asm-to-reference-alignment",
             # "mrvollger/asm-to-reference-alignment",
             path="workflow/Snakefile",
-            branch="fix-wildcards",
+            branch="remove_sm_num_index",
         )
     config:
         config["align_asm_to_ref"]["config"]
 
 
 use rule * from align_asm_to_ref as asm_ref_*
+
+
+# Override rules from ^ because input getter functions run before concat_asm so cannot detect file.
+use rule alignment from align_asm_to_ref as asm_ref_alignment with:
+    input:
+        ref=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
+        # Take concat asm with all types included.
+        query=rules.concat_asm.output,
+
+
+use rule alignment2 from align_asm_to_ref as asm_ref_alignment2 with:
+    input:
+        ref_fasta=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
+        query=rules.concat_asm.output,
+        aln=rules.asm_ref_alignment.output,

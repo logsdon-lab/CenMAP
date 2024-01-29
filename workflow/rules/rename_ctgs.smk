@@ -23,7 +23,6 @@ import os
 
 
 SAMPLES = config["samples"]
-HAPLOS = [1, 2]
 OUTPUT_DIR = config.get("output_dir", "output")
 LOG_DIR = config.get("logs_dir", "logs")
 BED_FIND_COL = config.get("bed_find_col", 1)
@@ -45,9 +44,9 @@ rule create_oriented_ctg_name_legend:
     input:
         regions=config["bed_input_regions"],
     output:
-        os.path.join(OUTPUT_DIR, "{sm}_{num}.legend.{ort}.txt"),
+        os.path.join(OUTPUT_DIR, "{sm}.legend.{ort}.txt"),
     log:
-        os.path.join(LOG_DIR, "create_{ort}_ctg_name_legend_{sm}_{num}.log"),
+        os.path.join(LOG_DIR, "create_{ort}_ctg_name_legend_{sm}.log"),
     params:
         # Replaced awk FILENAME with (vvv) because run from multiple dirs above.
         # Would include subdirs otherwise.
@@ -76,11 +75,11 @@ rule split_oriented_assembly_fasta:
     input:
         config["fa_assembly"],
     output:
-        os.path.join(OUTPUT_DIR, "{sm}_{num}.{ort}.txt"),
+        os.path.join(OUTPUT_DIR, "{sm}.{ort}.txt"),
     conda:
         "../env/tools.yaml"
     log:
-        os.path.join(LOG_DIR, "split_{ort}_assembly_fasta_{sm}_{num}.log"),
+        os.path.join(LOG_DIR, "split_{ort}_assembly_fasta_{sm}.log"),
     shell:
         """
         sed -e 's/>/>\\n/g' -e 's/:/\\n/g' {input} > {output} 2> {log}
@@ -100,12 +99,12 @@ rule rename_oriented_ctgs:
     output:
         os.path.join(
             OUTPUT_DIR,
-            "{sm}_{num}_regions.renamed.{ort}.fa",
+            "{sm}_regions.renamed.{ort}.fa",
         ),
     conda:
         "../env/tools.yaml"
     log:
-        os.path.join(LOG_DIR, "rename_{ort}_ctgs_{sm}_{num}.log"),
+        os.path.join(LOG_DIR, "rename_{ort}_ctgs_{sm}.log"),
     shell:
         # Construct associative array from input legend. (line 2)
         """
@@ -124,12 +123,12 @@ rule index_renamed_ctgs:
     output:
         os.path.join(
             OUTPUT_DIR,
-            "{sm}_{num}_regions.renamed.{ort}.fa.fai",
+            "{sm}_regions.renamed.{ort}.fa.fai",
         ),
     conda:
         "../env/tools.yaml"
     log:
-        os.path.join(LOG_DIR, "index_renamed_{ort}_ctgs_{sm}_{num}.log"),
+        os.path.join(LOG_DIR, "index_renamed_{ort}_ctgs_{sm}.log"),
     shell:
         """
         samtools faidx {input} &> {log}
@@ -141,19 +140,16 @@ rule rename_ctg_all:
         expand(
             rules.create_oriented_ctg_name_legend.output,
             sm=SAMPLES,
-            num=HAPLOS,
             ort=ORIENTATION,
         ),
         expand(
             rules.split_oriented_assembly_fasta.output,
             sm=SAMPLES,
-            num=HAPLOS,
             ort=ORIENTATION,
         ),
         expand(
             rules.rename_oriented_ctgs.output,
             sm=SAMPLES,
-            num=HAPLOS,
             ort=ORIENTATION,
         ),
-        expand(rules.index_renamed_ctgs.output, num=HAPLOS, sm=SAMPLES, ort=ORIENTATION),
+        expand(rules.index_renamed_ctgs.output, sm=SAMPLES, ort=ORIENTATION),

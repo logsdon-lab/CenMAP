@@ -8,7 +8,6 @@ rule make_bed_files_for_plot:
             rules.new_cens_index_renamed_ctgs.output,
             ort=ORIENTATION,
             sm=SAMPLE_NAMES,
-            num=HAPLOS,
         ),
     output:
         os.path.join(config["nuc_freq"]["output_dir"], "{sm}_ALR_regions.500kp.bed"),
@@ -41,10 +40,12 @@ def get_hifi_read_files(wc) -> list[str]:
     Get hifi reads by sample automatically from hifi_reads_dir.
     Expects {hifi_reads_dir}/{sample}/*.bam
     """
-    path_pattern = os.path.join(
-        config["nuc_freq"]["hifi_reads_dir"], str(wc.sm), "{mdata_id}.bam"
-    )
+    reads_dir = config["nuc_freq"]["hifi_reads_dir"]
+    path_pattern = os.path.join(reads_dir, str(wc.sm), "{mdata_id}.bam")
     reads_run_mdata_id = glob_wildcards(path_pattern)
+    assert (
+        len(reads_run_mdata_id.mdata_id) > 0
+    ), f"No hifi reads found in {reads_dir}/{wc.sm}."
     return expand(path_pattern, mdata_id=reads_run_mdata_id.mdata_id)
 
 
@@ -59,9 +60,7 @@ rule convert_hifi_reads_to_fq:
         "logs/convert_{sm}_hifi_reads_to_fq.log",
     shell:
         """
-        for file in {input}; do
-            samtools bam2fq $file >> {output} 2> {log}
-        done
+        {{ samtools cat {input} | samtools bam2fq;}} > {output} 2> {log}
         """
 
 

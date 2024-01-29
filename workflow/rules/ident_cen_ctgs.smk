@@ -9,15 +9,15 @@ OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS = f"results/{REF_NAME}_cens/bed"
 rule intersect_cen_regions:
     input:
         left=lambda wc: expand(
-            rules.asm_ref_aln_to_bed.output, ref=[REF_NAME], sm=wc.sm, num=wc.num
+            rules.asm_ref_aln_to_bed.output, ref=[REF_NAME], sm=wc.sm
         ),
         right=config["align_asm_to_ref"]["cens_500kbp_regions"],
     output:
-        cen_regions=os.path.join(OUTPUT_DIR_T2T_REF_REGIONS, "{sm}_{num}_cens.bed"),
+        cen_regions=os.path.join(OUTPUT_DIR_T2T_REF_REGIONS, "{sm}_cens.bed"),
     conda:
         "../env/tools.yaml"
     log:
-        "logs/intersect_cent_{sm}_{num}.log",
+        "logs/intersect_cent_{sm}.log",
     shell:
         """
         bedtools intersect -a {input.left} -b {input.right} > {output} 2> {log}
@@ -39,19 +39,17 @@ rule collapse_cens_contigs:
         refmt_regions=temp(
             os.path.join(
                 OUTPUT_DIR_T2T_REF_REGIONS,
-                "len_calc_{sm}_{num}_centromeric_contigs.bed",
+                "len_calc_{sm}_centromeric_contigs.bed",
             )
         ),
-        regions=os.path.join(
-            OUTPUT_DIR_T2T_REF_REGIONS, "{sm}_{num}_centromeric_contigs.bed"
-        ),
+        regions=os.path.join(OUTPUT_DIR_T2T_REF_REGIONS, "{sm}_centromeric_contigs.bed"),
     conda:
         "../env/py.yaml"
     params:
         # NR>1 if yes, blank if no.
         awk_print_cmd="'{ print $6, $7, $8, $4, $1, $5 }'",
     log:
-        "logs/collapse_cent_ctgs_{sm}_{num}.log",
+        "logs/collapse_cent_ctgs_{sm}.log",
     shell:
         """
         awk -v OFS="\\t" {params.awk_print_cmd} \
@@ -90,22 +88,21 @@ use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
             rules.asm_ref_aln_to_bed.output,
             ref=[f"{REF_NAME}_cens"],
             sm=wc.sm,
-            num=wc.num,
         ),
     output:
         refmt_regions=temp(
             os.path.join(
                 OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS,
-                "len_calc_{sm}_{num}_centromeric_contigs.bed",
+                "len_calc_{sm}_centromeric_contigs.bed",
             )
         ),
         regions=os.path.join(
-            OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS, "{sm}_{num}_centromeric_contigs.bed"
+            OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS, "{sm}_centromeric_contigs.bed"
         ),
     params:
         awk_print_cmd="'NR>1 {print $6, $7, $8, $9, $1, $5}'",
     log:
-        "logs/collapse_cent_ctgs_only_t2t_cens_{sm}_{num}.log",
+        "logs/collapse_cent_ctgs_only_t2t_cens_{sm}.log",
 
 
 # TODO: can awk comp be collapsed?
@@ -113,16 +110,14 @@ use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
 rule intersect_filter_both_cens_ctgs:
     input:
         left=os.path.join(
-            OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS, "{sm}_{num}_centromeric_contigs.bed"
+            OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS, "{sm}_centromeric_contigs.bed"
         ),
-        right=os.path.join(
-            OUTPUT_DIR_T2T_REF_REGIONS, "{sm}_{num}_centromeric_contigs.bed"
-        ),
+        right=os.path.join(OUTPUT_DIR_T2T_REF_REGIONS, "{sm}_centromeric_contigs.bed"),
     output:
         filt_regions=temp(
             os.path.join(
                 config["ident_cen_ctgs"]["output_dir"],
-                "{sm}_{num}_centromeric_regions.inter_filt.bed",
+                "{sm}_centromeric_regions.inter_filt.bed",
             )
         ),
     conda:
@@ -133,7 +128,7 @@ rule intersect_filter_both_cens_ctgs:
         intersect_params="-loj",
         thr=1_000_00,
     log:
-        "logs/intersect_filter_both_cens_ctgs_{sm}_{num}.log",
+        "logs/intersect_filter_both_cens_ctgs_{sm}.log",
     shell:
         """
         {{ bedtools intersect {params.intersect_params} \
@@ -153,7 +148,7 @@ rule collapse_intersected_filtered_cen_ctgs:
         collapsed_regions=temp(
             os.path.join(
                 config["ident_cen_ctgs"]["output_dir"],
-                "{sm}_{num}_centromeric_regions.collapsed.bed",
+                "{sm}_centromeric_regions.collapsed.bed",
             )
         ),
     params:
@@ -169,7 +164,7 @@ rule collapse_intersected_filtered_cen_ctgs:
             ]
         ),
     log:
-        "logs/collapse_intersected_filtered_cen_ctgs_{sm}_{num}.log",
+        "logs/collapse_intersected_filtered_cen_ctgs_{sm}.log",
     conda:
         "../env/py.yaml"
     shell:
@@ -197,14 +192,14 @@ rule reintersect_sort_uniq_cens_ctgs:
     output:
         os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
-            "{sm}_{num}_centromeric_regions.all.bed",
+            "{sm}_centromeric_regions.all.bed",
         ),
     params:
         intersect_params="-loj",
     conda:
         "../env/tools.yaml"
     log:
-        "logs/reintersect_sort_uniq_cens_ctgs_{sm}_{num}.log",
+        "logs/reintersect_sort_uniq_cens_ctgs_{sm}.log",
     shell:
         """
         {{ bedtools intersect {params.intersect_params} -a {input.collapsed_regions} -b {input.filt_regions}| \
@@ -220,28 +215,25 @@ rule extract_cens_oriented_regions:
             rules.reintersect_sort_uniq_cens_ctgs.output,
             ort=ORIENTATION,
             sm=[wc.sm],
-            num=[wc.num],
         ),
-        # Weird hack because sm wildcard in asm_to_ref_alignment encodes both sample name and haplotype (1/2)
-        # ex. HG00171_1 -> HG00171
         combined_assembly=os.path.join(
             config["ident_cen_ctgs"]["comb_assemblies_dir"],
-            "{sm}.vrk-ps-sseq.asm-comb-dedup.fa.gz",
+            "{sm}.vrk-ps-sseq.asm-comb-dedup.fasta.gz",
         ),
     output:
         regions=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
-            "{sm}_{num}_centromeric_regions.{ort}.bed",
+            "{sm}_centromeric_regions.{ort}.bed",
         ),
         seq=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
-            "{sm}_{num}_centromeric_regions.{ort}.fa",
+            "{sm}_centromeric_regions.{ort}.fa",
         ),
     params:
         sign=lambda wc: "+" if wc.ort == "fwd" else "-",
         added_cmds=lambda wc: "" if wc.ort == "fwd" else "| seqtk seq -r",
     log:
-        "logs/extract_{ort}_rev_regions_{sm}_{num}.log",
+        "logs/extract_{ort}_rev_regions_{sm}.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -272,28 +264,27 @@ use rule * from rename_cens_ctgs as cens_*
 
 rule ident_cen_ctgs_all:
     input:
-        expand(rules.intersect_cen_regions.output, sm=SAMPLE_NAMES, num=HAPLOS),
-        expand(rules.collapse_cens_contigs.output, sm=SAMPLE_NAMES, num=HAPLOS),
+        expand(rules.intersect_cen_regions.output, sm=SAMPLE_NAMES),
+        expand(rules.collapse_cens_contigs.output, sm=SAMPLE_NAMES),
         expand(
             rules.collapse_cens_contigs_only_t2t_cens.output,
             sm=SAMPLE_NAMES,
-            num=HAPLOS,
         ),
         expand(
-            rules.intersect_filter_both_cens_ctgs.output, sm=SAMPLE_NAMES, num=HAPLOS
+            rules.intersect_filter_both_cens_ctgs.output,
+            sm=SAMPLE_NAMES,
         ),
         expand(
             rules.collapse_intersected_filtered_cen_ctgs.output,
             sm=SAMPLE_NAMES,
-            num=HAPLOS,
         ),
         expand(
-            rules.reintersect_sort_uniq_cens_ctgs.output, sm=SAMPLE_NAMES, num=HAPLOS
+            rules.reintersect_sort_uniq_cens_ctgs.output,
+            sm=SAMPLE_NAMES,
         ),
         expand(
             rules.extract_cens_oriented_regions.output,
             sm=SAMPLE_NAMES,
-            num=HAPLOS,
             ort=ORIENTATION,
         ),
         # Rename cens ctgs

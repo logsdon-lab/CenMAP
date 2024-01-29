@@ -19,7 +19,6 @@ SAMPLES_DF = load_samples_df()
 REF_NAME = get_ref_name()
 SAMPLE_NAMES = pd.Index(sm_hap.split("_")[0] for sm_hap in SAMPLES_DF.index)
 ORIENTATION = ("fwd", "rev")
-HAPLOS = (1, 2)
 CHROMOSOMES = (
     "chr1",
     "chr2",
@@ -49,7 +48,6 @@ CHROMOSOMES = (
 
 
 wildcard_constraints:
-    num="1|2",
     chr="|".join(CHROMOSOMES),
     ort="|".join(ORIENTATION),
     sm="|".join(SAMPLE_NAMES),
@@ -69,8 +67,8 @@ rule all:
     input:
         rules.mask_hor_arrays_all.input,
         # Alignment
-        rules.asm_ref_all.input,
         rules.concat_asm_all.input,
+        rules.asm_ref_all.input,
         rules.ident_cen_ctgs_all.input,
         rules.dna_brnn_all.input,
         rules.new_cens_rename_ctg_all.input,
@@ -84,7 +82,7 @@ rule repeatmasker_all:
 
 rule nuc_freq_all:
     input:
-        expand(rules.make_bed_files_for_plot.output, sm=SAMPLE_NAMES, num=HAPLOS),
-        expand(rules.convert_hifi_reads_to_fq.output, sm=SAMPLE_NAMES, num=HAPLOS),
-        expand(rules.align_reads_to_asm.output, sm=SAMPLE_NAMES, num=HAPLOS),
-        expand(rules.gen_nucfreq_plot.output, sm=SAMPLE_NAMES, num=HAPLOS),
+        expand(rules.make_bed_files_for_plot.output, sm=SAMPLE_NAMES),
+        expand(rules.convert_hifi_reads_to_fq.output, sm=SAMPLE_NAMES),
+        expand(rules.align_reads_to_asm.output, sm=SAMPLE_NAMES),
+        expand(rules.gen_nucfreq_plot.output, sm=SAMPLE_NAMES),

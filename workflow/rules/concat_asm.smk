@@ -11,7 +11,7 @@ rule concat_asm:
             typ=config["concat_asm"]["types"],
         ),
     output:
-        os.path.join(CONCAT_ASM_OUTPUT_DIR, "{sm}.vrk-ps-sseq.asm-comb-dedup.fa.gz"),
+        os.path.join(CONCAT_ASM_OUTPUT_DIR, "{sm}.vrk-ps-sseq.asm-comb-dedup.fasta.gz"),
     # https://bioinf.shenwei.me/seqkit/usage/#rmdup
     params:
         by_seq="-s",

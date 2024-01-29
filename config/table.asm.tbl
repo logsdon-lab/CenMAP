@@ -1,2 +1,2 @@
 sample	asm
-HG00171	data/assemblies/HG00171/HG00171.vrk-ps-sseq.asm-hap1.fasta.gz,data/assemblies/HG00171/HG00171.vrk-ps-sseq.asm-hap2.fasta.gz
+HG00171	data/assemblies/combined/HG00171.vrk-ps-sseq.asm-comb-dedup.fasta.gz

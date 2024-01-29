@@ -6,10 +6,10 @@ rule create_format_orient_cens_list:
         os.path.join(
             config["dna_brnn"]["output_dir"],
             "new_cens",
-            "{sm}_{num}_contigs.{ort}.list",
+            "{sm}_contigs.{ort}.list",
         ),
     log:
-        "logs/format_{ort}_cens_list_{sm}_{num}.log",
+        "logs/format_{ort}_cens_list_{sm}.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -23,18 +23,18 @@ rule extract_new_oriented_cens_regions:
         regions=rules.create_format_orient_cens_list.output,
         combined_assembly=os.path.join(
             config["ident_cen_ctgs"]["comb_assemblies_dir"],
-            "{sm}.vrk-ps-sseq.asm-comb-dedup.fa.gz",
+            "{sm}.vrk-ps-sseq.asm-comb-dedup.fasta.gz",
         ),
     output:
         os.path.join(
-            config["dna_brnn"]["output_dir"], "new_cens", "{sm}_{num}_contigs.{ort}.fa"
+            config["dna_brnn"]["output_dir"], "new_cens", "{sm}_contigs.{ort}.fa"
         ),
     wildcard_constraints:
         ort="fwd|rev",
     params:
         added_cmds=lambda wc: "" if wc.ort == "fwd" else "| seqtk seq -r",
     log:
-        "logs/extract_new_{ort}_cens_regions_{sm}_{num}.log",
+        "logs/extract_new_{ort}_cens_regions_{sm}.log",
     conda:
         "../env/tools.yaml"
     shell:

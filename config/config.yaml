@@ -11,13 +11,13 @@ concat_asm:
   output_dir: "data/assemblies/combined"
   # {asm}.vrk-ps-sseq.asm-{type}.fasta.gz
   types:
-    # - mito
-    # - rdna
-    # - disconnected
-    # - ebv
+    - mito
+    - rdna
+    - disconnected
+    - ebv
     - hap1
     - hap2
-    # - unassigned
+    - unassigned
     # - contaminants
 
 mask_hor_arrays:
