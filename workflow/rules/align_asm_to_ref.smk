@@ -42,4 +42,5 @@ use rule alignment2 from align_asm_to_ref as asm_ref_alignment2 with:
     input:
         ref_fasta=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
         query=rules.concat_asm.output,
-        aln=rules.asm_ref_alignment.output,
+        # Weird. Blank if passing reference rule output from above. Use string instead.
+        aln="temp/{ref}/{sm}.bam",
