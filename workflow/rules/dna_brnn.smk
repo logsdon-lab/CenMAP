@@ -14,6 +14,8 @@ rule run_dna_brnn:
     threads: 20
     log:
         "logs/dna_brnn_{ort}_{sm}.log",
+    benchmark:
+        "benchmarks/dna_brnn_{ort}_{sm}.tsv"
     # No conda recipe. Use Dockerfile if not installed locally.
     singularity:
         "docker://koisland/hgsvc3:latest"
@@ -38,6 +40,8 @@ use rule run_dna_brnn as run_dna_brnn_ref_cens with:
         ),
     log:
         f"logs/dna_brnn_{REF_NAME}_cens.log",
+    benchmark:
+        f"benchmarks/dna_brnn_{REF_NAME}_cens.tsv"
 
 
 # TODO: Script different from notebook?

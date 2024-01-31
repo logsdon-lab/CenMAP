@@ -75,6 +75,8 @@ rule align_reads_to_asm:
         "../env/tools.yaml"
     log:
         "logs/align_{sm}_hifi_reads_to_ref.log",
+    benchmark:
+        "benchmarks/align_{sm}_hifi_reads_to_ref.tsv"
     shell:
         """
         {{ minimap2 -ax map-pb -t {threads} {input.asm} {input.reads} | \
@@ -100,6 +102,8 @@ rule gen_nucfreq_plot:
         height=4,
     log:
         "logs/run_nucfreq_{sm}.log",
+    benchmark:
+        "benchmarks/run_nucfreq_{sm}.tsv"
     shell:
         """
         python {input.script} \

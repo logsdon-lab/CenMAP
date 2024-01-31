@@ -56,6 +56,8 @@ rule humas_hmmer_analysis:
         "env/tools.yaml"
     log:
         "logs/humas_hmmer_analysis_{chr}.log",
+    benchmark:
+        "benchmarks/humas_hmmer_analysis_{chr}.tsv"
     shell:
         """
         nhmmer \

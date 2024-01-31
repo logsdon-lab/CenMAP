@@ -39,6 +39,8 @@ rule run_repeatmasker:
         species="human",
     log:
         "logs/repeatmasker_{sm}.log",
+    benchmark:
+        "benchmarks/repeatmasker_{sm}.tsv"
     shell:
         """
         RepeatMasker \
@@ -60,3 +62,5 @@ use rule run_repeatmasker as run_repeatmasker_ref with:
         directory(os.path.join(config["repeatmasker"]["output_dir"], REF_NAME)),
     log:
         f"logs/repeatmasker_{REF_NAME}.log",
+    benchmark:
+        f"benchmarks/repeatmasker_{REF_NAME}.tsv"
