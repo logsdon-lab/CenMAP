@@ -30,7 +30,7 @@ def main():
     if chr_name == "chr16":
         # Get row with max diff in start and end
         rep_lens = df["end"] - df["start"]
-        row = df.iloc[rep_lens.idxmax()]
+        row = df.loc[rep_lens.idxmax()]
         cen_data["start"] = int(ctg_dst - row["start"])
         cen_data["end"] = int(ctg_dst - row["end"])
     else:

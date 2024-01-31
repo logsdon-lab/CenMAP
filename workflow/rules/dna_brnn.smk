@@ -40,36 +40,27 @@ use rule run_dna_brnn as run_dna_brnn_ref_cens with:
         f"logs/dna_brnn_{REF_NAME}_cens.log",
 
 
+# TODO: Script different from notebook?
 # grep "chr1:" chm13_cens.trimmed.bed | \
 # sed 's/:/\t/g' | sed 's/-/\t/g' | \
 # awk -v OFS="\t" '{print $1, $2+$4, $2+$5, $6, $5-$4}' | awk '$4==2' | awk '$5>1000' > chr1_tmp.fwd.bed
 rule filter_dnabrnn_ref_cens_regions:
     input:
-        script="workflow/scripts/filter_cen_ctgs.py",
         repeats=rules.run_dna_brnn_ref_cens.output,
     output:
         temp(os.path.join(config["dna_brnn"]["output_dir"], "{chr}_tmp.fwd.bed")),
     params:
-        # Columns created when splitting name.
-        split_cols=" ".join(["ctg_label", "ctg_start", "ctg_stop"]),
         repeat_type_filter=2,
         repeat_len_thr=1000,
-        # Ref is treated as forward so add start/end instead of subtract.
-        is_forward_ort="--forward",
     log:
         "logs/filter_dnabrnn_ref_{chr}_cens_regions.log",
     conda:
-        "../env/py.yaml"
+        "../env/tools.yaml"
     shell:
         """
-        python {input.script} filtdnabrnn \
-        -i {input.repeats} \
-        -o {output} \
-        -c {wildcards.chr} \
-        {params.is_forward_ort} \
-        --columns_split {params.split_cols} \
-        --repeat_type {params.repeat_type_filter} \
-        --repeat_gt_length {params.repeat_len_thr} &> {log}
+        {{ grep "{chr}:" {input.repeats} | \
+        awk -v OFS="\\t" '{{print $1, $2, $3, $4, $3-$2}}' | \
+        awk '$4=={params.repeat_type_filter} && $5>{params.repeat_len_thr}';}} > {output} 2> {log}
         """
 
 
@@ -81,7 +72,7 @@ rule filter_dnabrnn_ref_cens_regions:
 # awk -v OFS="\t" '{print $1"-"$2, $3+$5, $3+$6, $7, $6-$5}' | \
 # awk '$4==2' | \
 # awk '$5>1000' >> chr2_tmp.fwd.bed
-use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions with:
+rule filter_dnabrnn_sample_cens_regions:
     input:
         script="workflow/scripts/filter_cen_ctgs.py",
         repeats=rules.run_dna_brnn.output,
@@ -99,6 +90,19 @@ use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions w
         is_forward_ort=lambda wc: "--forward" if wc.ort == "fwd" else "",
     log:
         "logs/filter_dnabrnn_{ort}_{sm}_{chr}_cens_regions.log",
+    conda:
+        "../env/py.yaml"
+    shell:
+        """
+        python {input.script} filtdnabrnn \
+        -i {input.repeats} \
+        -o {output} \
+        -c {wildcards.chr} \
+        {params.is_forward_ort} \
+        --columns_split {params.split_cols} \
+        --repeat_type {params.repeat_type_filter} \
+        --repeat_gt_length {params.repeat_len_thr} &> {log}
+        """
 
 
 # Calculate the start and end *-terms
