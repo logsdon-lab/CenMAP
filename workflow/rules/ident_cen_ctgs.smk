@@ -126,7 +126,7 @@ rule intersect_filter_both_cens_ctgs:
         # Left-outer-join. Each feat in A, report each overlap w/B.
         # No overlaps, return NULL feat for B
         intersect_params="-loj",
-        thr=1_000_00,
+        thr=1_000_000,
     log:
         "logs/intersect_filter_both_cens_ctgs_{sm}.log",
     shell:
