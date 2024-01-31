@@ -58,7 +58,7 @@ rule filter_dnabrnn_ref_cens_regions:
         "../env/tools.yaml"
     shell:
         """
-        {{ grep "{chr}:" {input.repeats} | \
+        {{ grep "{wildcards.chr}:" {input.repeats} | \
         awk -v OFS="\\t" '{{print $1, $2, $3, $4, $3-$2}}' | \
         awk '$4=={params.repeat_type_filter} && $5>{params.repeat_len_thr}';}} > {output} 2> {log}
         """
