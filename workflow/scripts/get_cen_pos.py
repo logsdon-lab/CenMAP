@@ -20,7 +20,10 @@ def main():
     args = ap.parse_args()
 
     df = pd.read_csv(
-        args.input, sep="\t", header=None, names=["lbl", "start", "end", "repeat"]
+        args.input,
+        sep="\t",
+        header=None,
+        names=["lbl", "start", "end", "repeat", "dst"],
     )
     cen_data = {}
     chr_name, str_ctg_coords = df["lbl"].iloc[0].split(":")
