@@ -64,3 +64,34 @@ use rule run_repeatmasker as run_repeatmasker_ref with:
         f"logs/repeatmasker_{REF_NAME}.log",
     benchmark:
         f"benchmarks/repeatmasker_{REF_NAME}.tsv"
+
+
+# Reformat repeatmasker
+# |1259|28.4|7.4|5.3|GM18989_chr1_hap1-0000003:9717731-15372230|8|560|(5653940)|+|Charlie2b|DNA/hAT-Charlie|120|683|(2099)|1|
+rule format_repeatmasker_output:
+    input:
+        rules.run_repeatmasker.output,
+    output:
+        os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "all_correct_{sm}_ALR_regions.500kbp.fa.out",
+        ),
+    params:
+        rm_output=lambda wc: expand(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "{sm}",
+                "{sm}_correct_ALR_regions.500kbp.fa.out",
+            ),
+            sm=[wc.sm],
+        ),
+    log:
+        "logs/format_repeatmasker_output_{sm}.log",
+    shell:
+        """
+        {{ cat {params.rm_output} | \
+        sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
+        awk -v OFS="\\t" '{{print $1, $2, $3, $4, $5"-"$6":"$7"-"$8, $9, $10, $11, $12, $13,
+$14, $15, $16, $17, $18}}' | \
+        tail -n +4;}} > {output} 2> {log}
+        """
