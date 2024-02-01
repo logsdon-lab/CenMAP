@@ -123,8 +123,8 @@ def add_filt_dna_brnn_args(sub_ap: SubArgumentParser) -> None:
     return None
 
 
-def first_line_sv(fh: TextIO, *, delim: str = "\t") -> str:
-    first_line = next(fh)
+def first_line_sv(fh: TextIO, *, delim: str = "\t") -> list[str]:
+    first_line = next(fh).strip()
     return first_line.split(delim)
 
 
@@ -146,7 +146,13 @@ def read_bed_df(input: TextIO, *, input_cols: Iterable[str]) -> pd.DataFrame:
         assert (
             num_cols == len(input_cols)
         ), f"Number of cols not equal to input columns. ({num_cols} != {num_input_cols})"
-        return pd.read_csv(input.name, sep="\t", header=0, names=input_cols)
+        # Add back in first row.
+        return pd.concat(
+            [
+                pd.DataFrame([first_line], columns=input_cols),
+                pd.read_csv(input.name, sep="\t", header=0, names=input_cols),
+            ]
+        )
 
 
 def bedminmax(
