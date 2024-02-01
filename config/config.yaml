@@ -1,6 +1,8 @@
 align_asm_to_ref:
   # This config specifies the assemblies in `tbl`
   config: "config/asm_to_ref_config.yaml"
+  # Reference in asm_to_ref_config.yaml
+  ref_key: "t2t_chm13_v2.0"
   asat_annotations: "data/annotations/chm13_v2.0_hor_arrays.bed"
   cens_500kbp_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
   # Output dir set to results

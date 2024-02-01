@@ -1,16 +1,3 @@
-# Add additional ref to be aligned to all samples.
-config["align_asm_to_ref"]["config"]["ref"][
-    f"{REF_NAME}_cens_hardmasked"
-] = os.path.join(
-    config["mask_hor_arrays"]["output_dir"], f"{REF_NAME}.hor_arrays_masked.fa"
-)
-
-config["align_asm_to_ref"]["config"]["ref"][f"{REF_NAME}_cens"] = os.path.join(
-    config["mask_hor_arrays"]["output_dir"],
-    f"{REF_NAME}.hor_arrays_masked.500kbp.fa",
-)
-
-
 # Align assemblies to reference.
 # Pull alignment workflow from github.
 # See output files here. Most of everything gets dumped in subdirs from results/{ref}/{ftype}/{asm}.{ftype}:
@@ -27,20 +14,34 @@ module align_asm_to_ref:
         config["align_asm_to_ref"]["config"]
 
 
-use rule * from align_asm_to_ref as asm_ref_*
+use rule * from align_asm_to_ref exclude dipcall, ideogram as asm_ref_*
+
+
+def get_asm(wc):
+    return SAMPLES_DF.loc[str(wc.sm)].asm
 
 
 # Override rules from ^ because input getter functions run before concat_asm so cannot detect file.
 use rule alignment from align_asm_to_ref as asm_ref_alignment with:
     input:
-        ref=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
+        ref=lambda wc: config["align_asm_to_ref"]["config"]["ref"][wc.ref],
         # Take concat asm with all types included.
         query=rules.concat_asm.output,
 
 
 use rule alignment2 from align_asm_to_ref as asm_ref_alignment2 with:
     input:
-        ref_fasta=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
+        ref_fasta=lambda wc: config["align_asm_to_ref"]["config"]["ref"][wc.ref],
         query=rules.concat_asm.output,
         # Weird. Blank if passing reference rule output from above. Use string instead.
         aln="temp/{ref}/{sm}.bam",
+
+
+use rule all from align_asm_to_ref as align_asm_ref_all with:
+    input:
+        ra=rules.asm_ref_reference_alignment.input,
+        SafFire=expand(
+            rules.asm_ref_SafFire.output,
+            sm=SAMPLE_NAMES,
+            ref=config["align_asm_to_ref"]["config"]["ref"].keys(),
+        ),
