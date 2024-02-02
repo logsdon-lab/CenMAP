@@ -139,9 +139,9 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
     input:
         script="workflow/scripts/filter_cen_ctgs.py",
         cen_pos=rules.get_dnabrnn_ref_cens_pos.output,
-        added_ref_cens=lambda wc: rules.filter_dnabrnn_ref_cens_regions.output
-        if wc.ort == "fwd"
-        else [],
+        added_ref_cens=lambda wc: (
+            rules.filter_dnabrnn_ref_cens_regions.output if wc.ort == "fwd" else []
+        ),
         sample_cens=expand(
             os.path.join(
                 config["dna_brnn"]["output_dir"],
