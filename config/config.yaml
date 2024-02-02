@@ -42,6 +42,8 @@ repeatmasker:
   # Json map of paths to correct samples according to nuc_freq.
   # {"HG00731": "HG00731_correct_ALR_regions.500kbp.fa"}
   correct_samples: "config/correct_samples.json"
+  # /net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/t2t_chr8/chm13/centromeres/repeatmasker/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
+  censat_annot_hor_output: data/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   num_threads: 40
   output_dir: "results/repeatmasker"
 
