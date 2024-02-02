@@ -161,18 +161,6 @@ rule collapse_intersected_filtered_cen_ctgs:
                 "{sm}_centromeric_regions.collapsed.bed",
             )
         ),
-    # params:
-    #     input_cols=" ".join(
-    #         [
-    #             "chr",
-    #             "start",
-    #             "end",
-    #             "length",
-    #             "name",
-    #             "orientation",
-    #             "query_start_end_diff",
-    #         ]
-    #     ),
     log:
         "logs/collapse_intersected_filtered_cen_ctgs_{sm}.log",
     conda:
@@ -212,7 +200,7 @@ rule reintersect_sort_uniq_cens_ctgs:
     shell:
         """
         {{ bedtools intersect {params.intersect_params} -a {input.collapsed_regions} -b {input.filt_regions}| \
-        awk -v OFS="\\t" '{{print $1, $2, $3, $4, $11, $12, $3-$2}}' | \
+        awk -v OFS="\\t" '{{print $1, $2, $3, $4, $9, $10, $3-$2}}' | \
         sort -k5,5 | \
         uniq;}} > {output} 2> {log}
         """
