@@ -66,7 +66,7 @@ rule collapse_cens_contigs:
 
         # Calculate length of ref region.
         {{ python {input.script} -i {output.refmt_regions} | \
-        awk -v OFS="\\t" '{params.awk_out_cols_cmd}' | \
+        awk -v OFS="\\t" {params.awk_out_cols_cmd} | \
         sort -k1,1;}} > {output.regions} 2> {log}
         """
 
