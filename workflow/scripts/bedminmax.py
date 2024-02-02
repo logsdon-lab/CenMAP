@@ -1,6 +1,7 @@
 #!/bin/env python3
 
 import pandas as pd
+import sys
 import argparse
 
 parser = argparse.ArgumentParser(description="")
@@ -12,8 +13,8 @@ parser.add_argument(
     "-o",
     "--output",
     help="output file default /dev/stdout",
-    type=str,
-    default="/dev/stdout",
+    type=argparse.FileType("wt"),
+    default=sys.stdout,
     required=False,
 )
 
