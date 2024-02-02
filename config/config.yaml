@@ -39,7 +39,7 @@ nuc_freq:
   output_dir: "results/dna_brnn/nucfreq"
 
 repeatmasker:
-  # Json map of paths to correct samples.
+  # Json map of paths to correct samples according to nuc_freq.
   # {"HG00731": "HG00731_correct_ALR_regions.500kbp.fa"}
   correct_samples: "config/correct_samples.json"
   num_threads: 40

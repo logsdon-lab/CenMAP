@@ -78,6 +78,8 @@ rule repeatmasker_all:
     input:
         expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),
         rules.run_repeatmasker_ref.output,
+        rules.format_repeatmasker_output.output,
+        rules.format_add_control_repeatmasker_output.output,
 
 
 rule nuc_freq_all:

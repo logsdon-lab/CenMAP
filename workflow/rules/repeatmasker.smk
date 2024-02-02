@@ -31,11 +31,16 @@ rule run_repeatmasker:
     input:
         seq=get_correct_alr_regions,
     output:
-        directory(os.path.join(config["repeatmasker"]["output_dir"], "{sm}")),
+        os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "{sm}",
+            "{sm}_correct_ALR_regions.500kbp.fa.out",
+        ),
     conda:
         "../env/tools.yaml"
     threads: config["repeatmasker"]["num_threads"]
     params:
+        output_dir=lambda wc, output: os.path.dirname(str(output)),
         species="human",
     log:
         "logs/repeatmasker_{sm}.log",
@@ -44,8 +49,8 @@ rule run_repeatmasker:
     shell:
         """
         RepeatMasker \
-        -species {param.species} \
-        -dir {output} \
+        -species {params.species} \
+        -dir {params.output_dir} \
         -pa {threads} \
         {input.seq} &> {log}
         """
@@ -57,9 +62,13 @@ rule run_repeatmasker:
 # Run repeatmasker on reference t2t-chm13 as a control.
 use rule run_repeatmasker as run_repeatmasker_ref with:
     input:
-        ref=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
+        seq=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
     output:
-        directory(os.path.join(config["repeatmasker"]["output_dir"], REF_NAME)),
+        os.path.join(
+            config["repeatmasker"]["output_dir"],
+            REF_NAME,
+            f"{REF_NAME}_correct_ALR_regions.500kbp.fa.out",
+        ),
     log:
         f"logs/repeatmasker_{REF_NAME}.log",
     benchmark:
@@ -70,28 +79,48 @@ use rule run_repeatmasker as run_repeatmasker_ref with:
 # |1259|28.4|7.4|5.3|GM18989_chr1_hap1-0000003:9717731-15372230|8|560|(5653940)|+|Charlie2b|DNA/hAT-Charlie|120|683|(2099)|1|
 rule format_repeatmasker_output:
     input:
-        rules.run_repeatmasker.output,
+        expand(
+            rules.run_repeatmasker.output,
+            sm=SAMPLE_NAMES,
+        ),
     output:
         os.path.join(
             config["repeatmasker"]["output_dir"],
-            "all_correct_{sm}_ALR_regions.500kbp.fa.out",
-        ),
-    params:
-        rm_output=lambda wc: expand(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "{sm}",
-                "{sm}_correct_ALR_regions.500kbp.fa.out",
-            ),
-            sm=[wc.sm],
+            "all_samples_correct_ALR_regions.500kbp.fa.out",
         ),
     log:
-        "logs/format_repeatmasker_output_{sm}.log",
+        "logs/format_repeatmasker_output_all_samples.log",
+    conda:
+        "../env/tools.yaml"
     shell:
         """
-        {{ cat {params.rm_output} | \
+        {{ cat {input} | \
         sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
         awk -v OFS="\\t" '{{print $1, $2, $3, $4, $5"-"$6":"$7"-"$8, $9, $10, $11, $12, $13,
 $14, $15, $16, $17, $18}}' | \
         tail -n +4;}} > {output} 2> {log}
+        """
+
+
+rule format_add_control_repeatmasker_output:
+    input:
+        ref_rm_output=rules.run_repeatmasker_ref.output,
+        sample_rm_output=rules.format_repeatmasker_output.output,
+    output:
+        os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "all_samples_and_ref_correct_ALR_regions.500kbp.fa.out",
+        ),
+    log:
+        "logs/format_add_control_repeatmasker_output.log",
+    conda:
+        "../env/tools.yaml"
+    shell:
+        """
+        # Copy file and append reference repeatmasker output.
+        cp {input.sample_rm_output} {output} 2> {log}
+        {{ grep "chr" {input.ref_rm_output} | \
+        sed -e 's/chr/chm13_chr/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
+        awk -v OFS="\t" \
+        '{{print $1, $2, $3, $4, $5":"$6"-"$7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17}}';}} >> {output} 2> {log}
         """
