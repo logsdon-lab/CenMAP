@@ -198,6 +198,7 @@ def bedminmax(
         bed_df = pd.concat(
             (read_bed_df(i, input_cols=input_cols) for i in input), axis=0
         )
+    bed_df.reset_index(drop=True, inplace=True)
 
     assert (
         "start" in bed_df.columns and "end" in bed_df.columns
