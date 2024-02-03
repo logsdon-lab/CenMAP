@@ -88,7 +88,7 @@ rule filter_dnabrnn_sample_cens_regions:
             )
         ),
     params:
-        split_cols=" ".join(["ctg_label", "ctg_num" "ctg_start", "ctg_stop"]),
+        split_cols=" ".join(["ctg_label", "ctg_num", "ctg_start", "ctg_stop"]),
         repeat_type_filter=2,
         repeat_len_thr=1000,
         is_forward_ort=lambda wc: "--forward" if wc.ort == "fwd" else "",
