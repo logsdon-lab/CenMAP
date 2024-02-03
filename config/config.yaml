@@ -20,7 +20,7 @@ concat_asm:
     - hap1
     - hap2
     - unassigned
-    # - contaminants
+    - contaminants
 
 mask_hor_arrays:
   output_dir: "results/masked"
