@@ -142,12 +142,11 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         added_ref_cens=lambda wc: (
             rules.filter_dnabrnn_ref_cens_regions.output if wc.ort == "fwd" else []
         ),
-        sample_cens=expand(
-            os.path.join(
-                config["dna_brnn"]["output_dir"],
-                "{{chr}}_{sm}_contigs.{{ort}}.ALR.bed",
-            ),
+        sample_cens=lambda wc: expand(
+            rules.filter_dnabrnn_sample_cens_regions.output,
             sm=SAMPLE_NAMES,
+            ort=[wc.ort],
+            chr=[wc.chr],
         ),
     output:
         os.path.join(
