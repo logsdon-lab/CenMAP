@@ -188,7 +188,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
             -g {params.grp_cols} \
             -s {params.sort_cols} | \
         awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2}}' | \
-        awk -v START=$start END=$end OFS="\\t" '{{print $1, $2-start, $3+end, $3-$2}}' | \
+        awk -v START_POS=$start -v END_POS=$end -v OFS="\\t" '{{print $1, $2-START_POS, $3+END_POS, $3-$2}}' | \
         awk '$4>{params.repeat_len_thr}' | \
         awk -v OFS="\\t" '$2<0 {{$2=0}}1';}} > {output} 2> {log}
         """
