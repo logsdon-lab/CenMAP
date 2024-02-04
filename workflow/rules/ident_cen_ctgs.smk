@@ -24,15 +24,21 @@ rule intersect_cen_regions:
         """
 
 
+# In.
 # 6. query_name
 # 7. query_start
 # 8. query_end
-# 4. reference_length
 # 1. reference_name
 # 5. strand
+# Out.
+# 1. query_name
+# 2. query_start
+# 3. query_end
+# 5. reference_name
+# 6. strand
+# +. sub(query_end, query_start)
 rule collapse_cens_contigs:
     input:
-        # TODO: This one has orientation, v2 doesn't. What's up with that?
         script="workflow/scripts/bedminmax.py",
         regions=rules.intersect_cen_regions.output,
     output:
@@ -46,18 +52,18 @@ rule collapse_cens_contigs:
     conda:
         "../env/py.yaml"
     params:
-        # NR>1 if yes, blank if no.
-        awk_print_cmd="'{ print $6, $7, $8, $4, $1, $5 }'",
+        awk_in_cols_cmd="'{ print $6, $7, $8, $1, $5 }'",
+        awk_out_cols_cmd="'{ print $1, $2, $3, $4, $5, $3-$2 }'",
     log:
         "logs/collapse_cent_ctgs_{sm}.log",
     shell:
         """
-        awk -v OFS="\\t" {params.awk_print_cmd} \
+        awk -v OFS="\\t" {params.awk_in_cols_cmd} \
         {input.regions} > {output.refmt_regions} 2> {log}
 
         # Calculate length of ref region.
         {{ python {input.script} -i {output.refmt_regions} | \
-        awk -v OFS="\\t" '{{print $0, $3-$2}}' | \
+        awk -v OFS="\\t" {params.awk_out_cols_cmd} | \
         sort -k1,1;}} > {output.regions} 2> {log}
         """
 
@@ -82,7 +88,7 @@ rule collapse_cens_contigs:
 # T2T-CHM13 CENS ONLY
 use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
     input:
-        script="workflow/scripts/bedminmax.py",
+        script="workflow/scripts/bedminmax_cens.py",
         # asm aligned to t2t_chm13_v2.hor_arrays_masked.500kbp.fa
         regions=lambda wc: expand(
             rules.asm_ref_aln_to_bed.output,
@@ -100,7 +106,8 @@ use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
             OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS, "{sm}_centromeric_contigs.bed"
         ),
     params:
-        awk_print_cmd="'NR>1 {print $6, $7, $8, $9, $1, $5}'",
+        awk_in_cols_cmd="'NR>1 {print $6, $7, $8, $9, $1, $5}'",
+        awk_out_cols_cmd="'{print $1, $2, $3, $4, $5, $6, $3-$2}'",
     log:
         "logs/collapse_cent_ctgs_only_t2t_cens_{sm}.log",
 
@@ -134,7 +141,7 @@ rule intersect_filter_both_cens_ctgs:
         {{ bedtools intersect {params.intersect_params} \
             -a {input.left} \
             -b {input.right} | \
-        awk -v OFS="\\t" -F"\\t" '{{if ($6==$13) print $1, $2, $3, $4, $5, $6, $3-$2}}' | \
+        awk -v OFS="\\t" -F"\\t" '{{if ($6==$12) print $1, $2, $3, $4, $5, $6, $3-$2}}' | \
         awk '$7>{params.thr}' | \
         uniq;}} > {output} 2> {log}
         """
@@ -142,7 +149,7 @@ rule intersect_filter_both_cens_ctgs:
 
 rule collapse_intersected_filtered_cen_ctgs:
     input:
-        script="workflow/scripts/filter_cen_ctgs.py",
+        script="workflow/scripts/bedminmax2.py",
         filt_regions=rules.intersect_filter_both_cens_ctgs.output,
     output:
         collapsed_regions=temp(
@@ -151,18 +158,6 @@ rule collapse_intersected_filtered_cen_ctgs:
                 "{sm}_centromeric_regions.collapsed.bed",
             )
         ),
-    params:
-        input_cols=" ".join(
-            [
-                "chr",
-                "start",
-                "end",
-                "length",
-                "name",
-                "orientation",
-                "query_start_end_diff",
-            ]
-        ),
     log:
         "logs/collapse_intersected_filtered_cen_ctgs_{sm}.log",
     conda:
@@ -170,10 +165,9 @@ rule collapse_intersected_filtered_cen_ctgs:
     shell:
         """
         # Collapse ctgs grouped by label.
-        python {input.script} bedminmax \
+        python {input.script} \
         -i {input.filt_regions} \
-        -o {output.collapsed_regions} \
-        -ci {params.input_cols} 2> {log}
+        -o {output.collapsed_regions} 2> {log}
         """
 
 
@@ -203,7 +197,7 @@ rule reintersect_sort_uniq_cens_ctgs:
     shell:
         """
         {{ bedtools intersect {params.intersect_params} -a {input.collapsed_regions} -b {input.filt_regions}| \
-        awk -v OFS="\\t" '{{print $1, $2, $3, $4, $11, $12, $3-$2}}' | \
+        awk -v OFS="\\t" '{{print $1, $2, $3, $4, $5, $11, $3-$2}}' | \
         sort -k5,5 | \
         uniq;}} > {output} 2> {log}
         """

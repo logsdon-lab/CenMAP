@@ -6,9 +6,12 @@ rule concat_asm:
     input:
         expand(
             os.path.join(
-                CONCAT_ASM_INPUT_DIR, "{{sm}}", "{{sm}}.vrk-ps-sseq.asm-{typ}.fasta.gz"
+                CONCAT_ASM_INPUT_DIR, "{{sm}}", "{{sm}}.vrk-ps-sseq.{typ}.fasta.gz"
             ),
-            typ=config["concat_asm"]["types"],
+            typ=[
+                typ if typ == "contaminants" else f"asm-{typ}"
+                for typ in config["concat_asm"]["types"]
+            ],
         ),
     output:
         os.path.join(CONCAT_ASM_OUTPUT_DIR, "{sm}.vrk-ps-sseq.asm-comb-dedup.fasta.gz"),

@@ -121,6 +121,54 @@ rule format_add_control_repeatmasker_output:
         cp {input.sample_rm_output} {output} 2> {log}
         {{ grep "chr" {input.ref_rm_output} | \
         sed -e 's/chr/chm13_chr/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
-        awk -v OFS="\t" \
+        awk -v OFS="\\t" \
         '{{print $1, $2, $3, $4, $5":"$6"-"$7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17}}';}} >> {output} 2> {log}
+        """
+
+
+rule format_add_censat_annot_repeatmasker_output:
+    input:
+        # TODO: Where at? Should have rule for this as well?
+        cen_sat_rm_output=config["repeatmasker"]["censat_annot_hor_output"],
+        sample_ctrl_rm_output=rules.format_add_control_repeatmasker_output.output,
+    output:
+        os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "all_correct_ALR_regions.500kbp.fa.out",
+        ),
+    log:
+        "logs/format_add_censat_annot_repeatmasker_output.log",
+    conda:
+        "../env/tools.yaml"
+    shell:
+        """
+        cp {input.sample_ctrl_rm_output} {output} 2> {log}
+
+        {{ cat {input.cen_sat_rm_output} | \
+        sed -e 's/chr/chm13_chr/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
+        awk -v OFS="\\t" '{{print $1, $2, $3,
+$4, $5":"$6"-"$7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17}}';}} >> {output} 2> {log}
+        """
+
+
+rule reverse_complete_repeatmasker_output:
+    input:
+        rules.format_add_censat_annot_repeatmasker_output.output,
+    output:
+        os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "all_correct_ALR_regions.500kbp.rc.fa.out",
+        ),
+    log:
+        "logs/reverse_complete_repeatmasker_output.log",
+    conda:
+        "../env/tools.yaml"
+    shell:
+        """
+        tac {input} | \
+        sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
+        awk -v OFS="\\t" '{{print $1, $2, $3, $4, $5"-"$6":"$7"-"$8, $8-$7-$10+1,
+$8-$7-$9+1, $11, $12, $13, $14, $15, $16, $17, $18}}' | \
+        sed 's/chr/rc_chr/g' | \
+        grep -v "chm13" > {output}
         """

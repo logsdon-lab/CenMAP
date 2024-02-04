@@ -88,7 +88,7 @@ rule filter_dnabrnn_sample_cens_regions:
             )
         ),
     params:
-        split_cols=" ".join(["ctg_label", "ctg_num" "ctg_start", "ctg_stop"]),
+        split_cols=" ".join(["ctg_label", "ctg_num", "ctg_start", "ctg_stop"]),
         repeat_type_filter=2,
         repeat_len_thr=1000,
         is_forward_ort=lambda wc: "--forward" if wc.ort == "fwd" else "",
@@ -129,7 +129,7 @@ rule get_dnabrnn_ref_cens_pos:
 
 
 # TODO: Annotate
-# /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py \
+# /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py (modified bedminmax) \
 # -i chr2_tmp.fwd.bed | \
 # awk -v OFS="\t" '{print $1, $2, $3, $3-$2}' | \
 # awk -v OFS="\t" '{print $1, $2-467987, $3+522450, $3-$2}' | \
@@ -139,15 +139,14 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
     input:
         script="workflow/scripts/filter_cen_ctgs.py",
         cen_pos=rules.get_dnabrnn_ref_cens_pos.output,
-        added_ref_cens=lambda wc: rules.filter_dnabrnn_ref_cens_regions.output
-        if wc.ort == "fwd"
-        else [],
-        sample_cens=expand(
-            os.path.join(
-                config["dna_brnn"]["output_dir"],
-                "{{chr}}_{sm}_contigs.{{ort}}.ALR.bed",
-            ),
+        added_ref_cens=lambda wc: (
+            rules.filter_dnabrnn_ref_cens_regions.output if wc.ort == "fwd" else []
+        ),
+        sample_cens=lambda wc: expand(
+            rules.filter_dnabrnn_sample_cens_regions.output,
             sm=SAMPLE_NAMES,
+            ort=[wc.ort],
+            chr=[wc.chr],
         ),
     output:
         os.path.join(
@@ -188,7 +187,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
             -g {params.grp_cols} \
             -s {params.sort_cols} | \
         awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2}}' | \
-        awk -v START=$start END=$end OFS="\\t" '{{print $1, $2-start, $3+end, $3-$2}}' | \
+        awk -v START_POS=$start -v END_POS=$end -v OFS="\\t" '{{print $1, $2-START_POS, $3+END_POS, $3-$2}}' | \
         awk '$4>{params.repeat_len_thr}' | \
         awk -v OFS="\\t" '$2<0 {{$2=0}}1';}} > {output} 2> {log}
         """

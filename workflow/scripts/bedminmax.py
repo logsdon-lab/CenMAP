@@ -1,5 +1,6 @@
 #!/bin/env python3
 
+import sys
 import pandas as pd
 import argparse
 
@@ -12,28 +13,26 @@ parser.add_argument(
     "-o",
     "--output",
     help="output file default /dev/stdout",
-    type=str,
-    default="/dev/stdout",
+    type=argparse.FileType("wt"),
+    default=sys.stdout,
     required=False,
 )
 
 args = parser.parse_args()
 
-bed_df = pd.read_csv(args.bed, sep="\t", header=None, usecols=[0, 1, 2, 3, 4, 5])
+bed_df = pd.read_csv(args.bed, sep="\t", header=None, usecols=[0, 1, 2, 3, 4])
 
 bed_df.rename(
-    {0: "chr", 1: "start", 2: "end", 3: "length", 4: "name", 5: "orientation"},
-    axis=1,
-    inplace=True,
+    {0: "chr", 1: "start", 2: "end", 3: "name", 4: "orientation"}, axis=1, inplace=True
 )
 
 bed_out = pd.merge(
-    bed_df.groupby(["chr", "length", "name", "orientation"]).min()["start"],
-    bed_df.groupby(["chr", "length", "name", "orientation"]).max()["end"],
+    bed_df.groupby(["name", "chr", "orientation"]).min()["start"],
+    bed_df.groupby(["name", "chr", "orientation"]).max()["end"],
     left_index=True,
     right_index=True,
 ).reset_index()
 
-bed_out[["chr", "start", "end", "length", "name", "orientation"]].sort_values(
+bed_out[["chr", "start", "end", "name", "orientation"]].sort_values(
     by=["chr", "start"]
 ).to_csv(args.output, sep="\t", header=False, index=False)

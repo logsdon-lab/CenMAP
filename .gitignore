@@ -3,3 +3,5 @@
 .snakemake
 logs/
 results/
+venv/
+__pycache__

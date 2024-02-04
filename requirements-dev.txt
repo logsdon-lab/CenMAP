@@ -1,0 +1,4 @@
+snakemake>=6.0
+pytest
+pre-commit
+pandas
