@@ -28,7 +28,6 @@ rule intersect_cen_regions:
 # 6. query_name
 # 7. query_start
 # 8. query_end
-# 4. reference_length
 # 1. reference_name
 # 5. strand
 # Out.
@@ -40,7 +39,6 @@ rule intersect_cen_regions:
 # +. sub(query_end, query_start)
 rule collapse_cens_contigs:
     input:
-        # TODO: This one has orientation, v2 doesn't. What's up with that?
         script="workflow/scripts/bedminmax.py",
         regions=rules.intersect_cen_regions.output,
     output:
@@ -54,9 +52,8 @@ rule collapse_cens_contigs:
     conda:
         "../env/py.yaml"
     params:
-        # NR>1 if yes, blank if no.
-        awk_in_cols_cmd="'{ print $6, $7, $8, $4, $1, $5 }'",
-        awk_out_cols_cmd="'{ print $1, $2, $3, $5, $6, $3-$2 }'",
+        awk_in_cols_cmd="'{ print $6, $7, $8, $1, $5 }'",
+        awk_out_cols_cmd="'{ print $1, $2, $3, $4, $5, $3-$2 }'",
     log:
         "logs/collapse_cent_ctgs_{sm}.log",
     shell:
@@ -91,7 +88,7 @@ rule collapse_cens_contigs:
 # T2T-CHM13 CENS ONLY
 use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
     input:
-        script="workflow/scripts/bedminmax.py",
+        script="workflow/scripts/bedminmax_cens.py",
         # asm aligned to t2t_chm13_v2.hor_arrays_masked.500kbp.fa
         regions=lambda wc: expand(
             rules.asm_ref_aln_to_bed.output,
@@ -110,7 +107,7 @@ use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
         ),
     params:
         awk_in_cols_cmd="'NR>1 {print $6, $7, $8, $9, $1, $5}'",
-        awk_out_cols_cmd="'{print $0, $3-$2}'",
+        awk_out_cols_cmd="'{print $1, $2, $3, $4, $5, $6, $3-$2}'",
     log:
         "logs/collapse_cent_ctgs_only_t2t_cens_{sm}.log",
 
@@ -152,7 +149,7 @@ rule intersect_filter_both_cens_ctgs:
 
 rule collapse_intersected_filtered_cen_ctgs:
     input:
-        script="workflow/scripts/bedminmax.py",
+        script="workflow/scripts/bedminmax2.py",
         filt_regions=rules.intersect_filter_both_cens_ctgs.output,
     output:
         collapsed_regions=temp(
@@ -200,7 +197,7 @@ rule reintersect_sort_uniq_cens_ctgs:
     shell:
         """
         {{ bedtools intersect {params.intersect_params} -a {input.collapsed_regions} -b {input.filt_regions}| \
-        awk -v OFS="\\t" '{{print $1, $2, $3, $4, $11, $12, $3-$2}}' | \
+        awk -v OFS="\\t" '{{print $1, $2, $3, $4, $5, $11, $3-$2}}' | \
         sort -k5,5 | \
         uniq;}} > {output} 2> {log}
         """

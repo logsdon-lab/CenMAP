@@ -129,7 +129,7 @@ rule get_dnabrnn_ref_cens_pos:
 
 
 # TODO: Annotate
-# /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py \
+# /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py (modified bedminmax) \
 # -i chr2_tmp.fwd.bed | \
 # awk -v OFS="\t" '{print $1, $2, $3, $3-$2}' | \
 # awk -v OFS="\t" '{print $1, $2-467987, $3+522450, $3-$2}' | \
