@@ -216,7 +216,9 @@ rule aggregate_dnabrnn_alr_regions_by_chr_loop:
             "{chr}_contigs.{ort}.ALR.bed",
         ),
     params:
-        awk_dst_calc_cols=lambda wc: "$4-$6, $4-$5" if ort == "rev" else "$3+$5, $3+$6",
+        awk_dst_calc_cols=lambda wc: "$4-$6, $4-$5"
+        if wc.ort == "rev"
+        else "$3+$5, $3+$6",
         repeat_type_filter=2,
         repeat_len_thr=1000,
         grp_repeat_len_thr=1_000_000,
