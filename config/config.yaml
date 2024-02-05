@@ -33,6 +33,9 @@ dna_brnn:
   output_dir: "results/dna_brnn"
   # https://github.com/lh3/dna-nn/tree/master/models
   model: "data/models/attcc-alpha.knm"
+  # File with dna-brnn run on t2t-chm13 ref. Avoids running rule to generate.
+  # Optional.
+  ref_alr_file: "data/annotations/chm13_cens.trimmed.bed"
 
 nuc_freq:
   hifi_reads_dir: "data/raw_data/hifi"

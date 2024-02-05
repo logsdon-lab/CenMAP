@@ -1,5 +1,5 @@
-import yaml
 import os
+import yaml
 import pandas as pd
 from snakemake.utils import min_version
 
@@ -63,18 +63,22 @@ include: "rules/check_reg_nucfreq.smk"
 include: "rules/repeatmasker.smk"
 
 
-rule all:
+rule extract_cens_only:
     input:
         rules.mask_hor_arrays_all.input,
         # Alignment
         rules.concat_asm_all.input,
         rules.align_asm_ref_all.input,
         rules.ident_cen_ctgs_all.input,
+
+
+rule dna_brnn_only:
+    input:
         rules.dna_brnn_all.input,
         rules.new_cens_rename_ctg_all.input,
 
 
-rule repeatmasker_all:
+rule repeatmasker_only:
     input:
         expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),
         rules.run_repeatmasker_ref.output,
@@ -84,9 +88,16 @@ rule repeatmasker_all:
         rules.reverse_complete_repeatmasker_output.output,
 
 
-rule nuc_freq_all:
+rule nuc_freq_only:
     input:
         expand(rules.make_bed_files_for_plot.output, sm=SAMPLE_NAMES),
         expand(rules.convert_hifi_reads_to_fq.output, sm=SAMPLE_NAMES),
         expand(rules.align_reads_to_asm.output, sm=SAMPLE_NAMES),
         expand(rules.gen_nucfreq_plot.output, sm=SAMPLE_NAMES),
+
+
+rule all:
+    input:
+        rules.extract_cens_only.input,
+        rules.dna_brnn_only.input,
+    default_target: True

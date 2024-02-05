@@ -27,7 +27,6 @@ rule run_dna_brnn:
 
 # Run dna-brnn only on the ref centromeres as baseline expectation of ALR repeats.
 # (Per chr)
-# TODO: Replace with static values?
 # /net/eichler/vol27/projects/hgsvc/nobackups/analysis/glennis/map_align_t2t_chm13/results/t2t_chm13_v2.0_cens/bed/centromeres/dna-brnn/chm13_cens.trimmed.bed
 # dna-brnn on f"chm13.hor_arrays_masked.500kbp.fa"?
 use rule run_dna_brnn as run_dna_brnn_ref_cens with:
@@ -50,7 +49,9 @@ use rule run_dna_brnn as run_dna_brnn_ref_cens with:
 # awk -v OFS="\t" '{print $1, $2+$4, $2+$5, $6, $5-$4}' | awk '$4==2' | awk '$5>1000' > chr1_tmp.fwd.bed
 rule filter_dnabrnn_ref_cens_regions:
     input:
-        repeats=rules.run_dna_brnn_ref_cens.output,
+        repeats=rules.run_dna_brnn_ref_cens.output
+        if config["dna_brnn"].get("ref_alr_file") is None
+        else config["dna_brnn"]["ref_alr_file"],
     output:
         temp(os.path.join(config["dna_brnn"]["output_dir"], "{chr}_tmp.fwd.bed")),
     params:
