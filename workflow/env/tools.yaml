@@ -10,3 +10,4 @@ dependencies:
   - bedops
   - seqkit
   - minimap2
+  - pbmm2

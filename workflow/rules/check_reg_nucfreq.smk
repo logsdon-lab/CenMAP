@@ -35,54 +35,77 @@ rule make_bed_files_for_plot:
         """
 
 
-def get_hifi_read_files(wc) -> list[str]:
-    """
-    Get hifi reads by sample automatically from hifi_reads_dir.
-    Expects {hifi_reads_dir}/{sample}/*.bam
-    """
-    reads_dir = config["nuc_freq"]["hifi_reads_dir"]
-    path_pattern = os.path.join(reads_dir, str(wc.sm), "{mdata_id}.bam")
-    reads_run_mdata_id = glob_wildcards(path_pattern)
-    assert (
-        len(reads_run_mdata_id.mdata_id) > 0
-    ), f"No hifi reads found in {reads_dir}/{wc.sm}."
-    return expand(path_pattern, mdata_id=reads_run_mdata_id.mdata_id)
+# rule convert_hifi_reads_to_fq:
+#     input:
+#         lambda wc: expand(
+#             os.path.join(reads_dir, wc.sm, "{id}.bam"),
+#             id=SAMPLE_FLOWCELL_IDS[wc.sm]
+#         ),
+#     output:
+#         os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.fq"),
+#     conda:
+#         "../env/tools.yaml"
+#     log:
+#         "logs/convert_{sm}_{id}_hifi_reads_to_fq.log",
+#     shell:
+#         """
+#         samtools bam2fq {input} > {output} 2> {log}
+#         """
 
 
-rule convert_hifi_reads_to_fq:
-    input:
-        get_hifi_read_files,
-    output:
-        os.path.join(config["nuc_freq"]["output_dir"], "{sm}_hifi.fq"),
-    conda:
-        "../env/tools.yaml"
-    log:
-        "logs/convert_{sm}_hifi_reads_to_fq.log",
-    shell:
-        """
-        {{ samtools cat {input} | samtools bam2fq;}} > {output} 2> {log}
-        """
-
-
-# TODO: Find out minimap2 params.
-# /net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/hgsvc3/map_align_hifi/results/${sample}_hifi2v1.4.bam
 rule align_reads_to_asm:
     input:
         asm=rules.concat_asm.output,
-        reads=rules.convert_hifi_reads_to_fq.output,
+        reads=os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}.bam"),
     output:
-        alignments=os.path.join(config["nuc_freq"]["output_dir"], "{sm}_hifi.bam"),
-    threads: 20
+        alignments=temp(
+            os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")
+        ),
+    threads: config["nuc_freq"]["threads"]
+    resources:
+        sort_mem=4,
+    params:
+        # https://broadinstitute.github.io/picard/explain-flags.html
+        samtools_view_flag=config["nuc_freq"]["samtools_view_flag"],
+        aln_log_level="DEBUG",
+        aln_preset="SUBREAD",
+        aln_min_length=5000,
     conda:
         "../env/tools.yaml"
     log:
-        "logs/align_{sm}_hifi_reads_to_ref.log",
+        "logs/align_{sm}_{id}_hifi_reads_to_asm.log",
     benchmark:
-        "benchmarks/align_{sm}_hifi_reads_to_ref.tsv"
+        "benchmarks/align_{sm}_{id}_hifi_reads_to_asm.tsv"
     shell:
         """
-        {{ minimap2 -ax map-pb -t {threads} {input.asm} {input.reads} | \
-        samtools view;}} > {output} 2> {log}
+        {{ pbmm2 align \
+        --log-level {params.aln_log_level} \
+        --preset {params.aln_preset} \
+        --min-length {params.aln_min_length} \
+        -j {threads} {input.asm} {input.reads} | \
+        samtools view -F {params.samtools_view_flag} -u - | \
+        samtools sort -m {resources.sort_mem}G -@ {threads} -;}} > {output} 2> {log}
+        """
+
+
+rule merge_hifi_read_asm_alignments:
+    input:
+        lambda wc: expand(
+            rules.align_reads_to_asm.output,
+            sm=[wc.sm],
+            id=SAMPLE_FLOWCELL_IDS[str(wc.sm)],
+        ),
+    output:
+        alignment=os.path.join(config["nuc_freq"]["output_dir"], "{sm}_hifi.bam"),
+    conda:
+        "../env/tools.yaml"
+    log:
+        "logs/merge_{sm}_hifi_read_asm_alignments.log",
+    benchmark:
+        "benchmarks/merge_{sm}_hifi_read_asm_alignments.tsv"
+    shell:
+        """
+        samtools merge -@ {threads} {output} {input} 2> {log}
         """
 
 
@@ -90,7 +113,7 @@ rule align_reads_to_asm:
 rule gen_nucfreq_plot:
     input:
         script="workflow/scripts/NucPlot.py",
-        bam_file=rules.align_reads_to_asm.output,
+        bam_file=rules.merge_hifi_read_asm_alignments.output,
         alr_regions=rules.make_bed_files_for_plot.output,
     output:
         plot=os.path.join(

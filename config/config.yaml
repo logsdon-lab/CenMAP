@@ -40,6 +40,9 @@ dna_brnn:
 nuc_freq:
   hifi_reads_dir: "data/raw_data/hifi"
   output_dir: "results/dna_brnn/nucfreq"
+  threads: 4
+  samtools_view_flag: 2308
+
 
 repeatmasker:
   # Json map of paths to correct samples according to nuc_freq.

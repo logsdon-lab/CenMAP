@@ -1,6 +1,7 @@
 import os
 import yaml
 import pandas as pd
+from collections import defaultdict
 from snakemake.utils import min_version
 
 min_version("6.0")
@@ -45,6 +46,8 @@ CHROMOSOMES = (
     "chrX",
     "chrY",
 )
+# TODO: Assertion here to check that samples and sample names are equivalent?
+SAMPLE_FLOWCELL_IDS = get_hifi_read_wildcards()
 
 
 wildcard_constraints:
@@ -90,10 +93,12 @@ rule repeatmasker_only:
 
 rule nuc_freq_only:
     input:
-        expand(rules.make_bed_files_for_plot.output, sm=SAMPLE_NAMES),
-        expand(rules.convert_hifi_reads_to_fq.output, sm=SAMPLE_NAMES),
-        expand(rules.align_reads_to_asm.output, sm=SAMPLE_NAMES),
-        expand(rules.gen_nucfreq_plot.output, sm=SAMPLE_NAMES),
+        expand(rules.make_bed_files_for_plot.output, sm=SAMPLE_FLOWCELL_IDS.keys()),
+        # expand(rules.align_reads_to_asm.output, sm=SAMPLE_NAMES),
+        expand(
+            rules.merge_hifi_read_asm_alignments.output, sm=SAMPLE_FLOWCELL_IDS.keys()
+        ),
+        expand(rules.gen_nucfreq_plot.output, sm=SAMPLE_FLOWCELL_IDS.keys()),
 
 
 rule all:
