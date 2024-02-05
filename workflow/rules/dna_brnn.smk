@@ -69,45 +69,45 @@ rule filter_dnabrnn_ref_cens_regions:
         """
 
 
-# ex. >HG00171_chr16_haplotype1-0000003:4-8430174
-# (Per chr + sample)
-# grep "chr2_" ${sample}.renamed.fwd.bed | \
-# sed 's/:/\t/g' | \
-# sed 's/-/\t/g' | \
-# awk -v OFS="\t" '{print $1"-"$2, $3+$5, $3+$6, $7, $6-$5}' | \
-# awk '$4==2' | \
-# awk '$5>1000' >> chr2_tmp.fwd.bed
-rule filter_dnabrnn_sample_cens_regions:
-    input:
-        script="workflow/scripts/filter_cen_ctgs.py",
-        repeats=rules.run_dna_brnn.output,
-    output:
-        temp(
-            os.path.join(
-                config["dna_brnn"]["output_dir"],
-                "{chr}_{sm}_contigs.{ort}.ALR.bed",
-            )
-        ),
-    params:
-        split_cols=" ".join(["ctg_label", "ctg_num", "ctg_start", "ctg_stop"]),
-        repeat_type_filter=2,
-        repeat_len_thr=1000,
-        is_forward_ort=lambda wc: "--forward" if wc.ort == "fwd" else "",
-    log:
-        "logs/filter_dnabrnn_{ort}_{sm}_{chr}_cens_regions.log",
-    conda:
-        "../env/py.yaml"
-    shell:
-        """
-        python {input.script} filtdnabrnn \
-        -i {input.repeats} \
-        -o {output} \
-        -c {wildcards.chr} \
-        {params.is_forward_ort} \
-        --columns_split {params.split_cols} \
-        --repeat_type {params.repeat_type_filter} \
-        --repeat_gt_length {params.repeat_len_thr} &> {log}
-        """
+# # ex. >HG00171_chr16_haplotype1-0000003:4-8430174
+# # (Per chr + sample)
+# # grep "chr2_" ${sample}.renamed.fwd.bed | \
+# # sed 's/:/\t/g' | \
+# # sed 's/-/\t/g' | \
+# # awk -v OFS="\t" '{print $1"-"$2, $3+$5, $3+$6, $7, $6-$5}' | \
+# # awk '$4==2' | \
+# # awk '$5>1000' >> chr2_tmp.fwd.bed
+# rule filter_dnabrnn_sample_cens_regions:
+#     input:
+#         script="workflow/scripts/filter_cen_ctgs.py",
+#         repeats=rules.run_dna_brnn.output,
+#     output:
+#         temp(
+#             os.path.join(
+#                 config["dna_brnn"]["output_dir"],
+#                 "{chr}_{sm}_contigs.{ort}.ALR.bed",
+#             )
+#         ),
+#     params:
+#         split_cols=" ".join(["ctg_label", "ctg_num", "ctg_start", "ctg_stop"]),
+#         repeat_type_filter=2,
+#         repeat_len_thr=1000,
+#         is_forward_ort=lambda wc: "--forward" if wc.ort == "fwd" else "",
+#     log:
+#         "logs/filter_dnabrnn_{ort}_{sm}_{chr}_cens_regions.log",
+#     conda:
+#         "../env/py.yaml"
+#     shell:
+#         """
+#         python {input.script} filtdnabrnn \
+#         -i {input.repeats} \
+#         -o {output} \
+#         -c {wildcards.chr} \
+#         {params.is_forward_ort} \
+#         --columns_split {params.split_cols} \
+#         --repeat_type {params.repeat_type_filter} \
+#         --repeat_gt_length {params.repeat_len_thr} &> {log}
+#         """
 
 
 # Calculate the start and end *-terms
@@ -129,44 +129,97 @@ rule get_dnabrnn_ref_cens_pos:
         """
 
 
-# TODO: Annotate
-# /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py (modified bedminmax) \
-# -i chr2_tmp.fwd.bed | \
-# awk -v OFS="\t" '{print $1, $2, $3, $3-$2}' | \
-# awk -v OFS="\t" '{print $1, $2-467987, $3+522450, $3-$2}' | \
-# awk '$4>1000000' | \
-# awk -v OFS="\t" '$2<0 {$2=0}1' > chr2_contigs.fwd.repeat.bed
-rule aggregate_dnabrnn_alr_regions_by_chr:
+# # TODO: Annotate
+# # /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py (modified bedminmax) \
+# # -i chr2_tmp.fwd.bed | \
+# # awk -v OFS="\t" '{print $1, $2, $3, $3-$2}' | \
+# # awk -v OFS="\t" '{print $1, $2-467987, $3+522450, $3-$2}' | \
+# # awk '$4>1000000' | \
+# # awk -v OFS="\t" '$2<0 {$2=0}1' > chr2_contigs.fwd.repeat.bed
+# rule aggregate_dnabrnn_alr_regions_by_chr:
+#     input:
+#         script="workflow/scripts/filter_cen_ctgs.py",
+#         cen_pos=rules.get_dnabrnn_ref_cens_pos.output,
+#         added_ref_cens=lambda wc: (
+#             rules.filter_dnabrnn_ref_cens_regions.output if wc.ort == "fwd" else []
+#         ),
+#         sample_cens=lambda wc: expand(
+#             rules.filter_dnabrnn_sample_cens_regions.output,
+#             sm=SAMPLE_NAMES,
+#             ort=[wc.ort],
+#             chr=[wc.chr],
+#         ),
+#     output:
+#         os.path.join(
+#             config["dna_brnn"]["output_dir"],
+#             "{chr}_contigs.{ort}.ALR.bed",
+#         ),
+#     params:
+#         repeat_len_thr=1_000_000,
+#         io_cols=" ".join(
+#             [
+#                 "chr",
+#                 "start",
+#                 "end",
+#                 "repeat_type",
+#                 "repeat_length",
+#             ]
+#         ),
+#         grp_cols=" ".join(["chr", "repeat_type", "repeat_length"]),
+#         sort_cols=" ".join(["chr", "start"]),
+#     log:
+#         "logs/aggregate_dnabrnn_alr_regions_by_{chr}_{ort}.log",
+#     conda:
+#         "../env/py.yaml"
+#     shell:
+#         """
+#         start=$(jq .start {input.cen_pos})
+#         end=$(jq .end {input.cen_pos})
+
+#         # Aggregate and bedminmax all.
+#         # Select cols and calculate length.
+#         # Calculate vals.
+#         # Take only repeats greater than some value.
+#         # Take abs value.
+#         {{ python {input.script} bedminmax \
+#             -i {input.sample_cens} {input.added_ref_cens} \
+#             -ci {params.io_cols} \
+#             -co {params.io_cols} \
+#             -g {params.grp_cols} \
+#             -s {params.sort_cols} | \
+#         awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2}}' | \
+#         awk -v START_POS=$start -v END_POS=$end -v OFS="\\t" '{{print $1, $2-START_POS, $3+END_POS, $3-$2}}' | \
+#         awk '$4>{params.repeat_len_thr}' | \
+#         awk -v OFS="\\t" '$2<0 {{$2=0}}1';}} > {output} 2> {log}
+#         """
+
+
+rule aggregate_dnabrnn_alr_regions_by_chr_loop:
     input:
-        script="workflow/scripts/filter_cen_ctgs.py",
+        script="workflow/scripts/bedminmax2.py",
         cen_pos=rules.get_dnabrnn_ref_cens_pos.output,
-        added_ref_cens=lambda wc: (
-            rules.filter_dnabrnn_ref_cens_regions.output if wc.ort == "fwd" else []
-        ),
+        added_ref_cens=rules.filter_dnabrnn_ref_cens_regions.output,
         sample_cens=lambda wc: expand(
-            rules.filter_dnabrnn_sample_cens_regions.output,
+            rules.run_dna_brnn.output,
             sm=SAMPLE_NAMES,
             ort=[wc.ort],
-            chr=[wc.chr],
         ),
     output:
-        os.path.join(
+        tmp_alr_ctgs=temp(
+            os.path.join(
+                config["dna_brnn"]["output_dir"],
+                "{chr}_tmp.{ort}.bed",
+            )
+        ),
+        alr_ctgs=os.path.join(
             config["dna_brnn"]["output_dir"],
             "{chr}_contigs.{ort}.ALR.bed",
         ),
     params:
-        repeat_len_thr=1_000_000,
-        io_cols=" ".join(
-            [
-                "chr",
-                "start",
-                "end",
-                "repeat_type",
-                "repeat_length",
-            ]
-        ),
-        grp_cols=" ".join(["chr", "repeat_type", "repeat_length"]),
-        sort_cols=" ".join(["chr", "start"]),
+        awk_dst_calc_cols=lambda wc: "$4-$6, $4-$5" if ort == "rev" else "$3+$5, $3+$6",
+        repeat_type_filter=2,
+        repeat_len_thr=1000,
+        grp_repeat_len_thr=1_000_000,
     log:
         "logs/aggregate_dnabrnn_alr_regions_by_{chr}_{ort}.log",
     conda:
@@ -176,44 +229,41 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         start=$(jq .start {input.cen_pos})
         end=$(jq .end {input.cen_pos})
 
-        # Aggregate and bedminmax all.
-        # Select cols and calculate length.
-        # Calculate vals.
-        # Take only repeats greater than some value.
-        # Take abs value.
-        {{ python {input.script} bedminmax \
-            -i {input.sample_cens} {input.added_ref_cens} \
-            -ci {params.io_cols} \
-            -co {params.io_cols} \
-            -g {params.grp_cols} \
-            -s {params.sort_cols} | \
-        awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2}}' | \
-        awk -v START_POS=$start -v END_POS=$end -v OFS="\\t" '{{print $1, $2-START_POS, $3+END_POS, $3-$2}}' | \
-        awk '$4>{params.repeat_len_thr}' | \
-        awk -v OFS="\\t" '$2<0 {{$2=0}}1';}} > {output} 2> {log}
+        for sample in {input.sample_cens}; do
+            grep "{wildcards.chr}_" $sample | \
+            sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
+            awk -v OFS="\\t" '{{print $1"-"$2, {params.awk_dst_calc_cols}, $7, $6-$5}}' | \
+            awk '$4=={params.repeat_type_filter} && $5>{params.repeat_len_thr}' >> {output.tmp_alr_ctgs}
+
+            python {input.script} -i {output.tmp_alr_ctgs} | \
+            awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2}}' | \
+            awk -v START_POS=$start -v END_POS=$end OFS="\\t" '{{print $1, $2-START_POS, $3+END_POS, $3-$2}}' | \
+            awk '$4>{params.grp_repeat_len_thr}' | \
+            awk -v OFS="\\t" '$2<0 {{$2=0}}1' > {output.alr_ctgs}
+        done
         """
 
 
 rule dna_brnn_all:
     input:
         expand(rules.run_dna_brnn.output, sm=SAMPLE_NAMES, ort=ORIENTATION),
-        rules.run_dna_brnn_ref_cens.output,
+        # rules.run_dna_brnn_ref_cens.output,
         expand(
             rules.filter_dnabrnn_ref_cens_regions.output,
             chr=CHROMOSOMES,
         ),
-        expand(
-            rules.filter_dnabrnn_sample_cens_regions.output,
-            sm=SAMPLE_NAMES,
-            ort=ORIENTATION,
-            chr=CHROMOSOMES,
-        ),
+        # expand(
+        #     rules.filter_dnabrnn_sample_cens_regions.output,
+        #     sm=SAMPLE_NAMES,
+        #     ort=ORIENTATION,
+        #     chr=CHROMOSOMES,
+        # ),
         expand(
             rules.get_dnabrnn_ref_cens_pos.output,
             chr=CHROMOSOMES,
         ),
         expand(
-            rules.aggregate_dnabrnn_alr_regions_by_chr.output,
+            rules.aggregate_dnabrnn_alr_regions_by_chr_loop.output,
             ort=ORIENTATION,
             chr=CHROMOSOMES,
         ),

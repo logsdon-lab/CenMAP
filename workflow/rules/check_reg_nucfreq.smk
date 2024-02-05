@@ -64,6 +64,8 @@ rule convert_hifi_reads_to_fq:
         """
 
 
+# TODO: Find out minimap2 params.
+# /net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/hgsvc3/map_align_hifi/results/${sample}_hifi2v1.4.bam
 rule align_reads_to_asm:
     input:
         asm=rules.concat_asm.output,
