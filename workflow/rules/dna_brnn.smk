@@ -11,7 +11,7 @@ rule run_dna_brnn:
             config["dna_brnn"]["output_dir"],
             "{sm}_centromeric_regions.renamed.{ort}.bed",
         ),
-    threads: 20
+    threads: config["dna_brnn"]["threads"]
     log:
         "logs/dna_brnn_{ort}_{sm}.log",
     benchmark:
@@ -27,13 +27,12 @@ rule run_dna_brnn:
 
 # Run dna-brnn only on the ref centromeres as baseline expectation of ALR repeats.
 # (Per chr)
-# TODO: Replace with static values?
 # /net/eichler/vol27/projects/hgsvc/nobackups/analysis/glennis/map_align_t2t_chm13/results/t2t_chm13_v2.0_cens/bed/centromeres/dna-brnn/chm13_cens.trimmed.bed
 # dna-brnn on f"chm13.hor_arrays_masked.500kbp.fa"?
 use rule run_dna_brnn as run_dna_brnn_ref_cens with:
     input:
         model=config["dna_brnn"]["model"],
-        seqs=rules.extract_masked_hor_arrays.output,
+        seqs=rules.extract_hor_arrays.output,
     output:
         cens=os.path.join(
             config["dna_brnn"]["output_dir"], f"{REF_NAME}_cens.trimmed.bed"
@@ -50,7 +49,9 @@ use rule run_dna_brnn as run_dna_brnn_ref_cens with:
 # awk -v OFS="\t" '{print $1, $2+$4, $2+$5, $6, $5-$4}' | awk '$4==2' | awk '$5>1000' > chr1_tmp.fwd.bed
 rule filter_dnabrnn_ref_cens_regions:
     input:
-        repeats=rules.run_dna_brnn_ref_cens.output,
+        repeats=rules.run_dna_brnn_ref_cens.output
+        if config["dna_brnn"].get("ref_alr_file") is None
+        else config["dna_brnn"]["ref_alr_file"],
     output:
         temp(os.path.join(config["dna_brnn"]["output_dir"], "{chr}_tmp.fwd.bed")),
     params:
@@ -81,31 +82,34 @@ rule filter_dnabrnn_sample_cens_regions:
         script="workflow/scripts/filter_cen_ctgs.py",
         repeats=rules.run_dna_brnn.output,
     output:
-        temp(
+        tmp_alr_ctgs=temp(
             os.path.join(
                 config["dna_brnn"]["output_dir"],
                 "{chr}_{sm}_contigs.{ort}.ALR.bed",
             )
         ),
     params:
-        split_cols=" ".join(["ctg_label", "ctg_num", "ctg_start", "ctg_stop"]),
         repeat_type_filter=2,
         repeat_len_thr=1000,
-        is_forward_ort=lambda wc: "--forward" if wc.ort == "fwd" else "",
+        awk_dst_calc_cols=lambda wc: "$4-$6, $4-$5"
+        if wc.ort == "rev"
+        else "$3+$5, $3+$6",
     log:
         "logs/filter_dnabrnn_{ort}_{sm}_{chr}_cens_regions.log",
     conda:
-        "../env/py.yaml"
+        "../env/tools.yaml"
     shell:
         """
-        python {input.script} filtdnabrnn \
-        -i {input.repeats} \
-        -o {output} \
-        -c {wildcards.chr} \
-        {params.is_forward_ort} \
-        --columns_split {params.split_cols} \
-        --repeat_type {params.repeat_type_filter} \
-        --repeat_gt_length {params.repeat_len_thr} &> {log}
+        chr_repeats=$(grep "{wildcards.chr}_" {input.repeats} || true)
+        if [ -z "${{chr_repeats}}" ]; then
+            # Still make the file even if chr doesn't exist.
+            touch {output.tmp_alr_ctgs}
+        else
+           {{ printf '%s\\n' "${{chr_repeats}}" | \
+            sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
+            awk -v OFS="\\t" '{{print $1"-"$2, {params.awk_dst_calc_cols}, $7, $6-$5}}' | \
+            awk '$4=={params.repeat_type_filter} && $5>{params.repeat_len_thr}';}} > {output.tmp_alr_ctgs} 2> {log}
+        fi
         """
 
 
@@ -170,16 +174,13 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         "logs/aggregate_dnabrnn_alr_regions_by_{chr}_{ort}.log",
     conda:
         "../env/py.yaml"
+    # Aggregate and bedminmax all.
+    # Select cols and calculate length.
+    # Calculate vals.
+    # Take only repeats greater than some value.
+    # Take abs value.
     shell:
         """
-        start=$(jq .start {input.cen_pos})
-        end=$(jq .end {input.cen_pos})
-
-        # Aggregate and bedminmax all.
-        # Select cols and calculate length.
-        # Calculate vals.
-        # Take only repeats greater than some value.
-        # Take abs value.
         {{ python {input.script} bedminmax \
             -i {input.sample_cens} {input.added_ref_cens} \
             -ci {params.io_cols} \
@@ -187,7 +188,9 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
             -g {params.grp_cols} \
             -s {params.sort_cols} | \
         awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2}}' | \
-        awk -v START_POS=$start -v END_POS=$end -v OFS="\\t" '{{print $1, $2-START_POS, $3+END_POS, $3-$2}}' | \
+        awk -v START_POS=$(jq .start {input.cen_pos}) \
+            -v END_POS=$(jq .end {input.cen_pos}) \
+            -v OFS="\\t" '{{print $1, $2-START_POS, $3+END_POS, $3-$2}}' | \
         awk '$4>{params.repeat_len_thr}' | \
         awk -v OFS="\\t" '$2<0 {{$2=0}}1';}} > {output} 2> {log}
         """
@@ -196,7 +199,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
 rule dna_brnn_all:
     input:
         expand(rules.run_dna_brnn.output, sm=SAMPLE_NAMES, ort=ORIENTATION),
-        rules.run_dna_brnn_ref_cens.output,
+        # rules.run_dna_brnn_ref_cens.output,
         expand(
             rules.filter_dnabrnn_ref_cens_regions.output,
             chr=CHROMOSOMES,

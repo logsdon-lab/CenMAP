@@ -46,7 +46,7 @@ rule humas_hmmer_analysis:
         # https://github.com/fedorrik/HumAS-HMMER_for_AnVIL/blob/dc5e958dfc3820fb8cc21a6ccc5cd8e5d6ef1052/hmmer-run.sh#L49
         # Ugh. f-string / numbers will screw up regex for wildcard parsing.
         temp("nhmmer-" + HMM_PROFILE_NAME + "-vs-{chr}-tbl.out"),
-    threads: 30
+    threads: config["humas_hmmer"]["threads"]
     params:
         # https://manpages.ubuntu.com/manpages/focal/man1/nhmmer.1.html
         no_line_limit="--notextw",

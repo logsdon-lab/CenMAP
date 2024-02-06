@@ -134,7 +134,12 @@ def is_header(first_line: str) -> bool:
 
 
 def read_bed_df(input: TextIO, *, input_cols: Iterable[str]) -> pd.DataFrame:
-    first_line = first_line_sv(input)
+    # If empty, return empty df. Jank ik.
+    try:
+        first_line = first_line_sv(input)
+    except StopIteration:
+        return pd.DataFrame()
+
     num_cols = len(first_line)
     has_header = is_header(first_line="".join(first_line))
 

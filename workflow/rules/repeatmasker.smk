@@ -38,7 +38,7 @@ rule run_repeatmasker:
         ),
     conda:
         "../env/tools.yaml"
-    threads: config["repeatmasker"]["num_threads"]
+    threads: config["repeatmasker"]["threads"]
     params:
         output_dir=lambda wc, output: os.path.dirname(str(output)),
         species="human",

@@ -1,11 +1,16 @@
-def get_ref_name() -> str:
-    if ref_genome_name := config.get("ref_genome_name"):
-        return ref_genome_name
-    else:
-        REFS = list(config["align_asm_to_ref"]["config"]["ref"].keys())
-        assert len(REFS) == 1, "Only one reference genome expected."
-        config["ref_genome_name"] = REFS[0]
-        return REFS[0]
+def get_hifi_read_wildcards() -> dict[str, list[str]]:
+    """
+    Get hifi reads by sample automatically from hifi_reads_dir.
+    Expects {hifi_reads_dir}/{sample}/*.bam
+    """
+    reads_dir = config["nuc_freq"]["hifi_reads_dir"]
+    path_pattern = os.path.join(reads_dir, "{sm}", "{flowcell_id}.bam")
+    reads_run_mdata_id = glob_wildcards(path_pattern)
+
+    samples = defaultdict(list)
+    for sm, flowcell_id in zip(reads_run_mdata_id.sm, reads_run_mdata_id.flowcell_id):
+        samples[sm].append(flowcell_id)
+    return samples
 
 
 def load_samples_df() -> pd.DataFrame:
