@@ -209,7 +209,7 @@ rule dna_brnn_all:
             chr=CHROMOSOMES,
         ),
         expand(
-            rules.aggregate_dnabrnn_alr_regions_by_chr_loop.output,
+            rules.aggregate_dnabrnn_alr_regions_by_chr.output,
             ort=ORIENTATION,
             chr=CHROMOSOMES,
         ),
