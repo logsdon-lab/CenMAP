@@ -97,6 +97,7 @@ rule merge_hifi_read_asm_alignments:
         ),
     output:
         alignment=os.path.join(config["nuc_freq"]["output_dir"], "{sm}_hifi.bam"),
+    threads: config["nuc_freq"]["threads"]
     conda:
         "../env/tools.yaml"
     log:

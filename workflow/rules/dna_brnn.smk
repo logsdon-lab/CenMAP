@@ -11,7 +11,7 @@ rule run_dna_brnn:
             config["dna_brnn"]["output_dir"],
             "{sm}_centromeric_regions.renamed.{ort}.bed",
         ),
-    threads: 20
+    threads: config["dna_brnn"]["threads"]
     log:
         "logs/dna_brnn_{ort}_{sm}.log",
     benchmark:

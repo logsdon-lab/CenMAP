@@ -36,6 +36,7 @@ dna_brnn:
   # File with dna-brnn run on t2t-chm13 ref. Avoids running rule to generate.
   # Optional.
   ref_alr_file: "data/annotations/chm13_cens.trimmed.bed"
+  threads: 12
 
 nuc_freq:
   hifi_reads_dir: "data/raw_data/hifi"
@@ -50,14 +51,14 @@ repeatmasker:
   correct_samples: "config/correct_samples.json"
   # /net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/t2t_chr8/chm13/centromeres/repeatmasker/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   censat_annot_hor_output: data/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
-  num_threads: 40
+  threads: 40
   output_dir: "results/repeatmasker"
 
 humas_hmmer:
   input_dir: "data/chr_cens"
   output_dir: "output/"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
-  num_threads: 30
+  threads: 30
   model: "data/AS-HORs-hmmer3.0-170921.hmm"
   # # {"AS-HOR": hmmer-run.sh, "SF": hmmer-run_SF.sh}
   mode: "AS-HOR"
