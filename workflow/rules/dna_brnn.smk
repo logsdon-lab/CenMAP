@@ -100,7 +100,7 @@ rule filter_dnabrnn_sample_cens_regions:
         "../env/tools.yaml"
     shell:
         """
-        chr_repeats=$(grep "{wildcards.chr}_" {input.repeats})
+        chr_repeats=$(grep "{wildcards.chr}_" {input.repeats} || true)
         if [ -z "${{chr_repeats}}" ]; then
             # Still make the file even if chr doesn't exist.
             touch {output.tmp_alr_ctgs}
