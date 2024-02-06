@@ -32,7 +32,7 @@ rule run_dna_brnn:
 use rule run_dna_brnn as run_dna_brnn_ref_cens with:
     input:
         model=config["dna_brnn"]["model"],
-        seqs=rules.extract_masked_hor_arrays.output,
+        seqs=rules.extract_hor_arrays.output,
     output:
         cens=os.path.join(
             config["dna_brnn"]["output_dir"], f"{REF_NAME}_cens.trimmed.bed"
