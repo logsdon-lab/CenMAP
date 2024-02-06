@@ -66,13 +66,11 @@ include: "rules/check_reg_nucfreq.smk"
 include: "rules/repeatmasker.smk"
 
 
-rule extract_cens_only:
+rule extract_align_cens_only:
     input:
-        rules.mask_hor_arrays_all.input,
-        # Alignment
+        rules.extract_hor_arrays_all.input,
         rules.concat_asm_all.input,
         rules.align_asm_ref_all.input,
-        rules.ident_cen_ctgs_all.input,
 
 
 rule dna_brnn_only:
@@ -103,6 +101,7 @@ rule nuc_freq_only:
 
 rule all:
     input:
-        rules.extract_cens_only.input,
+        rules.extract_align_cens_only.input,
+        rules.ident_cen_ctgs_all.input,
         rules.dna_brnn_only.input,
     default_target: True

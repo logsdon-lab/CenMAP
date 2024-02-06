@@ -1,7 +1,7 @@
 ref:
   t2t_chm13_v2.0: data/reference/T2T-CHM13v2.fasta
   # Note files are made as part of first steps.
-  t2t_chm13_v2.0_cens: results/masked/t2t_chm13_v2.0.hor_arrays_masked.500kbp.fa
+  t2t_chm13_v2.0_cens: results/masked/t2t_chm13_v2.0.hor_arrays.500kbp.fa
   t2t_chm13_v2.0_cens_hardmasked: results/masked/t2t_chm13_v2.0.hor_arrays_masked.fa
 tbl: config/table.asm.tbl
 aln_threads: 8

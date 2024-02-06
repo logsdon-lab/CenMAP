@@ -21,7 +21,7 @@ rule mask_hor_arrays:
         """
 
 
-# Extract masked HOR arrays from reference?
+# Extract masked HOR arrays from reference.
 rule extract_masked_hor_arrays:
     input:
         masked_ref=rules.mask_hor_arrays.output,
@@ -31,6 +31,10 @@ rule extract_masked_hor_arrays:
             config["mask_hor_arrays"]["output_dir"],
             f"{REF_NAME}.hor_arrays_masked.500kbp.fa",
         ),
+        os.path.join(
+            config["mask_hor_arrays"]["output_dir"],
+            f"{REF_NAME}.hor_arrays_masked.500kbp.fa.fai",
+        ),
     log:
         "logs/extract_masked_hor_arrays.log",
     conda:
@@ -38,30 +42,37 @@ rule extract_masked_hor_arrays:
     shell:
         """
         seqtk subseq {input.masked_ref} {input.cens_regions} > {output} 2> {log}
+        samtools faidx {output} &> {log}
         """
 
 
-# Then index them.
-rule index_masked_hor_array:
+# Extract HOR arrays from reference.
+rule extract_hor_arrays:
     input:
-        rules.extract_masked_hor_arrays.output,
+        ref=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
+        cens_regions=config["align_asm_to_ref"]["cens_500kbp_regions"],
     output:
         os.path.join(
             config["mask_hor_arrays"]["output_dir"],
-            f"{REF_NAME}.hor_arrays_masked.500kbp.fa.fai",
+            f"{REF_NAME}.hor_arrays.500kbp.fa",
         ),
+        os.path.join(
+            config["mask_hor_arrays"]["output_dir"],
+            f"{REF_NAME}.hor_arrays.500kbp.fa.fai",
+        ),
+    log:
+        "logs/extract_hor_arrays.log",
     conda:
         "../env/tools.yaml"
-    log:
-        "logs/index_masked_hor_array.log",
     shell:
         """
-        samtools faidx {input} &> {log}
+        seqtk subseq {input.ref} {input.cens_regions} > {output} 2> {log}
+        samtools faidx {output} &> {log}
         """
 
 
-rule mask_hor_arrays_all:
+rule extract_hor_arrays_all:
     input:
         rules.mask_hor_arrays.output,
         rules.extract_masked_hor_arrays.output,
-        rules.index_masked_hor_array.output,
+        rules.extract_hor_arrays.output,
