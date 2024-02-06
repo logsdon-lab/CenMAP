@@ -27,11 +27,11 @@ rule extract_masked_hor_arrays:
         masked_ref=rules.mask_hor_arrays.output,
         cens_regions=config["align_asm_to_ref"]["cens_500kbp_regions"],
     output:
-        os.path.join(
+        seq=os.path.join(
             config["mask_hor_arrays"]["output_dir"],
             f"{REF_NAME}.hor_arrays_masked.500kbp.fa",
         ),
-        os.path.join(
+        idx=os.path.join(
             config["mask_hor_arrays"]["output_dir"],
             f"{REF_NAME}.hor_arrays_masked.500kbp.fa.fai",
         ),
@@ -41,8 +41,8 @@ rule extract_masked_hor_arrays:
         "../env/tools.yaml"
     shell:
         """
-        seqtk subseq {input.masked_ref} {input.cens_regions} > {output} 2> {log}
-        samtools faidx {output} &> {log}
+        seqtk subseq {input.masked_ref} {input.cens_regions} > {output.seq} 2> {log}
+        samtools faidx {output.seq} &> {log}
         """
 
 
@@ -52,11 +52,11 @@ rule extract_hor_arrays:
         ref=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
         cens_regions=config["align_asm_to_ref"]["cens_500kbp_regions"],
     output:
-        os.path.join(
+        seq=os.path.join(
             config["mask_hor_arrays"]["output_dir"],
             f"{REF_NAME}.hor_arrays.500kbp.fa",
         ),
-        os.path.join(
+        idx=os.path.join(
             config["mask_hor_arrays"]["output_dir"],
             f"{REF_NAME}.hor_arrays.500kbp.fa.fai",
         ),
@@ -66,8 +66,8 @@ rule extract_hor_arrays:
         "../env/tools.yaml"
     shell:
         """
-        seqtk subseq {input.ref} {input.cens_regions} > {output} 2> {log}
-        samtools faidx {output} &> {log}
+        seqtk subseq {input.ref} {input.cens_regions} > {output.seq} 2> {log}
+        samtools faidx {output.seq} &> {log}
         """
 
 
