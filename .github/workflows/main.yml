@@ -1,0 +1,36 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  workflow:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout directory.
+      uses: actions/checkout@v3
+
+    - name: Dry run
+      uses: snakemake/snakemake-github-action@v1.25.1
+      with:
+        directory: '.'
+        snakefile: 'workflow/Snakefile'
+        args: '-c 1 -np --configfile test/config/config.yaml'
+  # test:
+  #     runs-on: ubuntu-latest
+  #     steps:
+  #     - name: Checkout directory.
+  #       uses: actions/checkout@v3
+
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.12'
+
+  #     - name: Install dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install -r requirements-dev.txt
+
+  #     - name: Test with pytest
+  #       run: |
+  #         pytest
