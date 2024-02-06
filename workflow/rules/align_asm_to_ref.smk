@@ -17,10 +17,6 @@ module align_asm_to_ref:
 use rule * from align_asm_to_ref exclude dipcall, ideogram as asm_ref_*
 
 
-def get_asm(wc):
-    return SAMPLES_DF.loc[str(wc.sm)].asm
-
-
 # Override rules from ^ because input getter functions run before concat_asm so cannot detect file.
 use rule alignment from align_asm_to_ref as asm_ref_alignment with:
     input:
