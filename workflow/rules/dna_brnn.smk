@@ -100,10 +100,16 @@ rule filter_dnabrnn_sample_cens_regions:
         "../env/tools.yaml"
     shell:
         """
-        {{ grep "{wildcards.chr}_" {input.repeats} | \
-        sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
-        awk -v OFS="\\t" '{{print $1"-"$2, {params.awk_dst_calc_cols}, $7, $6-$5}}' | \
-        awk '$4=={params.repeat_type_filter} && $5>{params.repeat_len_thr}';}} > {output.tmp_alr_ctgs} 2> {log}
+        chr_repeats=$(grep "{wildcards.chr}_" {input.repeats})
+        if [ -z "${chr_repeats}" ]; then
+            # Still make the file even if chr doesn't exist.
+            touch {output.tmp_alr_ctgs}
+        else
+           {{ printf '%s\\n' "${chr_repeats}" | \
+            sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
+            awk -v OFS="\\t" '{{print $1"-"$2, {params.awk_dst_calc_cols}, $7, $6-$5}}' | \
+            awk '$4=={params.repeat_type_filter} && $5>{params.repeat_len_thr}';}} > {output.tmp_alr_ctgs} 2> {log}
+        fi
         """
 
 
