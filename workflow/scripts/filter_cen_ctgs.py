@@ -64,6 +64,9 @@ def add_bedminmax_args(sub_ap: SubArgumentParser) -> None:
         help="Sort by columns.",
         default=DEF_BEDMINMAX_SORT_COLS,
     )
+    ap.add_argument(
+        "--allow_empty", action="store_true", help="Allow an output df to be empty."
+    )
     return None
 
 
@@ -168,6 +171,7 @@ def bedminmax(
     output_cols: Iterable[str] = DEF_BEDMINMAX_OUT_COLS,
     grpby_cols: Iterable[str] = DEF_BEDMINMAX_GRP_COLS,
     sortby_cols: Iterable[str] = DEF_BEDMINMAX_SORT_COLS,
+    allow_empty: bool = False,
 ) -> pd.DataFrame | None:
     """
     Collapse records in a bed file by grouping by a series
@@ -188,6 +192,9 @@ def bedminmax(
             * Group by columns.
     * `sortby_cols`:
             * Sort by columns before writing output.
+    * `allow_empty`:
+            * Allow empty dataframe to be output.
+            * Useful if aggregating and collapsing multiple files.
 
     ### Raises
     * `AssertionError` if `start` or `end` not a column.
@@ -203,6 +210,12 @@ def bedminmax(
         bed_df = pd.concat(
             (read_bed_df(i, input_cols=input_cols) for i in input), axis=0
         )
+
+    # Allow empty df as output.
+    if bed_df.empty and allow_empty:
+        bed_df.to_csv(output_path, sep="\t", header=False, index=False)
+        return None
+
     bed_df.reset_index(drop=True, inplace=True)
 
     assert (
@@ -338,6 +351,7 @@ def main() -> int:
             output_cols=args.columns_out,
             grpby_cols=args.groupby,
             sortby_cols=args.sortby,
+            allow_empty=args.allow_empty,
         )
     elif args.cmd == "filtdnabrnn":
         filtdnabrnn(
