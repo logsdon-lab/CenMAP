@@ -1,7 +1,10 @@
 # HGSVC3
-WIP
+[![CI](https://github.com/logsdon-lab/hgsvc3/actions/workflows/main.yml/badge.svg)](https://github.com/logsdon-lab/hgsvc3/actions/workflows/main.yml)
+[![Docker Image Version](https://img.shields.io/docker/v/logsdonlab/hgsvc3)](https://hub.docker.com/r/logsdonlab/hgsvc3)
 
-![](docs/rulegraph.svg)
+Workflow for [HGSVC3](https://www.internationalgenome.org/human-genome-structural-variation-consortium/) centromere analysis. (WIP)
+
+<img src="docs/rulegraph.svg" width="50%" />
 
 ### Usage
 Local
