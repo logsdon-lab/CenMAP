@@ -1,0 +1,28 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout directory.
+      uses: actions/checkout@v3
+
+    - name: Set up Python.
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies.
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Test workflow.
+      run: |
+        snakemake -c 1 -np --configfile test/config/config.yaml
+
+    - name: Test scripts.
+      run: |
+        pytest -s

@@ -154,13 +154,8 @@ def read_bed_df(input: TextIO, *, input_cols: Iterable[str]) -> pd.DataFrame:
         assert (
             num_cols == len(input_cols)
         ), f"Number of cols not equal to input columns. ({num_cols} != {num_input_cols})"
-        # Add back in first row.
-        return pd.concat(
-            [
-                pd.DataFrame([first_line], columns=input_cols),
-                pd.read_csv(input.name, sep="\t", header=0, names=input_cols),
-            ]
-        )
+
+        return pd.read_csv(input.name, sep="\t", header=None, names=input_cols)
 
 
 def bedminmax(

@@ -1,2 +1,2 @@
-snakemake>=6.0
+snakemake==7.32.4
 pandas

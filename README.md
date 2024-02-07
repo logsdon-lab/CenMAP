@@ -30,8 +30,4 @@ To download files.
 ```
 
 ### TODO
-* Make test files for workflow and CI workflow.
-```bash
-./test/make_test_files.sh
-```
 * Remove old bedminmax scripts. Only leaving in until output discrepancies finished.
