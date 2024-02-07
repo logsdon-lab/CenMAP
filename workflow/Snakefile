@@ -92,7 +92,6 @@ rule repeatmasker_only:
 rule nuc_freq_only:
     input:
         expand(rules.make_bed_files_for_plot.output, sm=SAMPLE_FLOWCELL_IDS.keys()),
-        # expand(rules.align_reads_to_asm.output, sm=SAMPLE_NAMES),
         expand(
             rules.merge_hifi_read_asm_alignments.output, sm=SAMPLE_FLOWCELL_IDS.keys()
         ),

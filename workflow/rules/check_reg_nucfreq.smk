@@ -10,7 +10,14 @@ rule make_bed_files_for_plot:
             sm=SAMPLE_NAMES,
         ),
     output:
-        os.path.join(config["nuc_freq"]["output_dir"], "{sm}_ALR_regions.500kp.bed"),
+        tmp_fmt_alr_bed=temp(
+            os.path.join(
+                config["nuc_freq"]["output_dir"], "fmt_{sm}_ALR_regions.500kp.bed"
+            )
+        ),
+        alr_bed=os.path.join(
+            config["nuc_freq"]["output_dir"], "{sm}_ALR_regions.500kp.bed"
+        ),
     params:
         io_cols=" ".join(["ctg", "start", "end", "chr"]),
         grp_cols=" ".join(["ctg", "chr"]),
@@ -25,38 +32,36 @@ rule make_bed_files_for_plot:
         sed -e 's/_/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
         awk -v OFS="\\t" '{{print $3"-"$4, $5, $6, $2}}' | \
         sort | \
-        uniq | \
+        uniq;}} > {output.tmp_fmt_alr_bed} 2> {log}
         python {input.script} bedminmax \
+            -i {output.tmp_fmt_alr_bed} \
             -ci {params.io_cols} \
             -co {params.io_cols} \
             -g {params.grp_cols} \
             -s {params.sort_cols} | \
-        awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2, $4}}';}} > {output} 2> {log}
+        awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2, $4}}';}} > {output} 2>> {log}
         """
 
 
-# rule convert_hifi_reads_to_fq:
-#     input:
-#         lambda wc: expand(
-#             os.path.join(reads_dir, wc.sm, "{id}.bam"),
-#             id=SAMPLE_FLOWCELL_IDS[wc.sm]
-#         ),
-#     output:
-#         os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.fq"),
-#     conda:
-#         "../env/tools.yaml"
-#     log:
-#         "logs/convert_{sm}_{id}_hifi_reads_to_fq.log",
-#     shell:
-#         """
-#         samtools bam2fq {input} > {output} 2> {log}
-#         """
+rule convert_hifi_reads_to_fq:
+    input:
+        os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}.bam"),
+    output:
+        os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.fq"),
+    conda:
+        "../env/tools.yaml"
+    log:
+        "logs/convert_{sm}_{id}_hifi_reads_to_fq.log",
+    shell:
+        """
+        samtools bam2fq {input} > {output} 2> {log}
+        """
 
 
 rule align_reads_to_asm:
     input:
         asm=rules.concat_asm.output,
-        reads=os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}.bam"),
+        reads=rules.convert_hifi_reads_to_fq.output,
     output:
         alignments=temp(
             os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")
@@ -115,7 +120,7 @@ rule gen_nucfreq_plot:
     input:
         script="workflow/scripts/NucPlot.py",
         bam_file=rules.merge_hifi_read_asm_alignments.output,
-        alr_regions=rules.make_bed_files_for_plot.output,
+        alr_regions=rules.make_bed_files_for_plot.output.alr_bed,
     output:
         plot=os.path.join(
             config["nuc_freq"]["output_dir"],
