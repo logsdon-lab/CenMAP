@@ -23,4 +23,6 @@ jobs:
       run: |
         snakemake -c 1 -np --configfile test/config/config.yaml
 
-    # - name: Test scripts.
+    - name: Test scripts.
+      run: |
+        pytest -s
