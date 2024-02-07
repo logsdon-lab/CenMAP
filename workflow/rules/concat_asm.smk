@@ -20,7 +20,7 @@ rule concat_asm:
         by_seq="-s",
     # Only allow not hap names ex. HG00171 (Not H00171_1)
     wildcard_constraints:
-        sm="\w+",
+        sm="\\w+",
     log:
         "logs/concat_asm_{sm}.log",
     conda:
