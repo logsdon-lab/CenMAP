@@ -2,7 +2,7 @@ rule concat_asm:
     input:
         expand(
             os.path.join(
-                onfig["concat_asm"]["input_dir"],
+                config["concat_asm"]["input_dir"],
                 "{{sm}}",
                     "{{sm}}.vrk-ps-sseq.{typ}.fasta.gz",
                 ),
