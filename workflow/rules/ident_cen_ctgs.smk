@@ -210,10 +210,7 @@ rule extract_cens_oriented_regions:
             ort=ORIENTATION,
             sm=[wc.sm],
         ),
-        combined_assembly=os.path.join(
-            config["ident_cen_ctgs"]["comb_assemblies_dir"],
-            "{sm}.vrk-ps-sseq.asm-comb-dedup.fasta.gz",
-        ),
+        combined_assembly=rules.concat_asm.output,
     output:
         regions=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],

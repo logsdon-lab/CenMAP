@@ -1,20 +1,20 @@
-CONCAT_ASM_INPUT_DIR = config["concat_asm"]["input_dir"]
-CONCAT_ASM_OUTPUT_DIR = config["concat_asm"]["output_dir"]
-
-
 rule concat_asm:
     input:
         expand(
             os.path.join(
-                CONCAT_ASM_INPUT_DIR, "{{sm}}", "{{sm}}.vrk-ps-sseq.{typ}.fasta.gz"
-            ),
-            typ=[
+                onfig["concat_asm"]["input_dir"],
+                "{{sm}}",
+                    "{{sm}}.vrk-ps-sseq.{typ}.fasta.gz",
+                ),
+                typ=[
                 typ if typ == "contaminants" else f"asm-{typ}"
                 for typ in config["concat_asm"]["types"]
             ],
         ),
     output:
-        os.path.join(CONCAT_ASM_OUTPUT_DIR, "{sm}.vrk-ps-sseq.asm-comb-dedup.fasta.gz"),
+        os.path.join(
+            config["concat_asm"]["output_dir"], "{sm}.vrk-ps-sseq.asm-comb-dedup.fasta"
+        ),
     # https://bioinf.shenwei.me/seqkit/usage/#rmdup
     params:
         by_seq="-s",
@@ -27,7 +27,7 @@ rule concat_asm:
         "../env/tools.yaml"
     shell:
         """
-        {{ zcat {input} | seqkit rmdup {params.by_seq} | gzip;}} > {output} 2> {log}
+        {{ zcat {input} | seqkit rmdup {params.by_seq};}} > {output} 2> {log}
         """
 
 

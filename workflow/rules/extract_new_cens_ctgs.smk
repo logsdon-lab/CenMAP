@@ -21,10 +21,7 @@ rule create_format_orient_cens_list:
 rule extract_new_oriented_cens_regions:
     input:
         regions=rules.create_format_orient_cens_list.output,
-        combined_assembly=os.path.join(
-            config["ident_cen_ctgs"]["comb_assemblies_dir"],
-            "{sm}.vrk-ps-sseq.asm-comb-dedup.fasta.gz",
-        ),
+        combined_assembly=rules.concat_asm.output,
     output:
         os.path.join(
             config["dna_brnn"]["output_dir"], "new_cens", "{sm}_contigs.{ort}.fa"
