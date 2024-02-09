@@ -8,19 +8,9 @@ align_asm_to_ref:
   # Output dir set to results
 
 concat_asm:
-  # Expects {input_dir}/{sm}/{sm}.vrk-ps-sseq.asm-{typ}.fasta.gz
+  # Expects {input_dir}/{sm}/*.gz
   input_dir: "data/assemblies"
   output_dir: "data/assemblies/combined"
-  # {asm}.vrk-ps-sseq.asm-{type}.fasta.gz
-  types:
-    - mito
-    - rdna
-    - disconnected
-    - ebv
-    - hap1
-    - hap2
-    - unassigned
-    - contaminants
 
 mask_hor_arrays:
   output_dir: "results/masked"
