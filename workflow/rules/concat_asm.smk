@@ -1,3 +1,6 @@
+EXEMPLAR_TYPS = {"ebv", "mito", "rdna"}
+
+
 rule concat_asm:
     input:
         expand(
@@ -10,6 +13,14 @@ rule concat_asm:
                 typ if typ == "contaminants" else f"asm-{typ}"
                 for typ in config["concat_asm"]["types"]
             ],
+        ),
+        expand(
+            os.path.join(
+                config["concat_asm"]["input_dir"],
+                "{{sm}}",
+                "{{sm}}.ps-sseq.exemplar-{typ}.fasta.gz",
+            ),
+            typ=[typ for typ in config["concat_asm"]["types"] if typ in EXEMPLAR_TYPS],
         ),
     output:
         os.path.join(
