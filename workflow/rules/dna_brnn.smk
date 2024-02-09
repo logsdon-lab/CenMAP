@@ -168,7 +168,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
                 "repeat_length",
             ]
         ),
-        grp_cols=" ".join(["chr", "repeat_type", "repeat_length"]),
+        grp_cols=" ".join(["chr", "repeat_type"]),
         sort_cols=" ".join(["chr", "start"]),
     log:
         "logs/aggregate_dnabrnn_alr_regions_by_{chr}_{ort}.log",
