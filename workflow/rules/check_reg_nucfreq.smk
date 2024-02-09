@@ -64,8 +64,11 @@ rule align_reads_to_asm:
         asm=rules.concat_asm.output,
         reads=rules.convert_hifi_reads_to_fq.output,
     output:
-        alignments=temp(
+        alignment=temp(
             os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")
+        ),
+        alignment_idx=temp(
+            os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam.bai")
         ),
     threads: config["nuc_freq"]["threads"]
     resources:
@@ -90,7 +93,9 @@ rule align_reads_to_asm:
         --min-length {params.aln_min_length} \
         -j {threads} {input.asm} {input.reads} | \
         samtools view -F {params.samtools_view_flag} -u - | \
-        samtools sort -m {resources.sort_mem}G -@ {threads} -;}} > {output} 2> {log}
+        samtools sort -m {resources.sort_mem}G -@ {threads} -;}} > {output.alignment} 2> {log}
+
+        samtools index {output.alignment} 2> {log}
         """
 
 
@@ -103,6 +108,9 @@ rule merge_hifi_read_asm_alignments:
         ),
     output:
         alignment=os.path.join(config["nuc_freq"]["output_dir"], "{sm}_hifi.bam"),
+        alignment_idx=os.path.join(
+            config["nuc_freq"]["output_dir"], "{sm}_hifi.bam.bai"
+        ),
     threads: config["nuc_freq"]["threads"]
     conda:
         "../env/tools.yaml"
@@ -112,7 +120,8 @@ rule merge_hifi_read_asm_alignments:
         "benchmarks/merge_{sm}_hifi_read_asm_alignments.tsv"
     shell:
         """
-        samtools merge -@ {threads} {output} {input} 2> {log}
+        samtools merge -@ {threads} {output.alignment} {input} 2> {log}
+        samtools index {output.alignment} 2> {log}
         """
 
 
