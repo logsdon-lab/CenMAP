@@ -167,6 +167,8 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         ),
         grp_cols=" ".join(["chr", "repeat_type"]),
         sort_cols=" ".join(["chr", "start"]),
+        # dna-brnn output may not contain repeats from a chr.
+        allow_empty="--allow_empty",
     log:
         "logs/aggregate_dnabrnn_alr_regions_by_{chr}_{ort}.log",
     conda:
@@ -183,7 +185,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
             -ci {params.io_cols} \
             -co {params.io_cols} \
             -g {params.grp_cols} \
-            -s {params.sort_cols} | \
+            -s {params.sort_cols} {params.allow_empty} | \
         awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2}}' | \
         awk -v START_POS=$(jq .start {input.cen_pos}) \
             -v END_POS=$(jq .end {input.cen_pos}) \
