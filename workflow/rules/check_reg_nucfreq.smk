@@ -40,7 +40,7 @@ rule make_bed_files_for_plot:
             -co {params.io_cols} \
             -g {params.grp_cols} \
             -s {params.sort_cols} | \
-        awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2, $4}}';}} > {output} 2>> {log}
+        awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2, $4}}';}} > {output.alr_bed} 2>> {log}
         """
 
 
