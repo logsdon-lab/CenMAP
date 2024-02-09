@@ -33,7 +33,8 @@ rule make_bed_files_for_plot:
         awk -v OFS="\\t" '{{print $3"-"$4, $5, $6, $2}}' | \
         sort | \
         uniq;}} > {output.tmp_fmt_alr_bed} 2> {log}
-        python {input.script} bedminmax \
+
+        {{ python {input.script} bedminmax \
             -i {output.tmp_fmt_alr_bed} \
             -ci {params.io_cols} \
             -co {params.io_cols} \
