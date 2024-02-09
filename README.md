@@ -7,16 +7,21 @@ Workflow for [HGSVC3](https://www.internationalgenome.org/human-genome-structura
 <img src="docs/rulegraph.svg" width="50%" />
 
 ### Usage
-Local
+
+#### Locally
 ```bash
 # NOTE: dna-brnn must be installed locally
 snakemake --use-conda -np --configfile config/config.yaml
 ```
 
-Cluster via `singularity`. In project dir.
+#### Cluster via `singularity`.
+* Must be in project dir.
+
 ```bash
-singularity pull docker://koisland/hgsvc3:latest
-singlarity run --use-conda -np --configfile config/config.yaml
+module load singularity
+
+singularity pull docker://logsdonlab/hgsvc3:latest
+bsub < run_cluster.sh -n
 ```
 
 #### Download raw data with `globus-cli`
