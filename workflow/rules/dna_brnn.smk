@@ -1,6 +1,3 @@
-import os
-
-
 # https://github.com/lh3/dna-nn/tree/master
 rule run_dna_brnn:
     input:

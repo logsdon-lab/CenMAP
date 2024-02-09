@@ -46,7 +46,6 @@ CHROMOSOMES = (
     "chrX",
     "chrY",
 )
-# TODO: Assertion here to check that samples and sample names are equivalent?
 SAMPLE_FLOWCELL_IDS = get_hifi_read_wildcards()
 
 
