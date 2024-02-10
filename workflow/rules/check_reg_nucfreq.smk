@@ -102,7 +102,7 @@ rule align_reads_to_asm:
 rule merge_hifi_read_asm_alignments:
     input:
         lambda wc: expand(
-            rules.align_reads_to_asm.output,
+            rules.align_reads_to_asm.output.alignment,
             sm=[wc.sm],
             id=SAMPLE_FLOWCELL_IDS[str(wc.sm)],
         ),
@@ -129,7 +129,7 @@ rule merge_hifi_read_asm_alignments:
 rule gen_nucfreq_plot:
     input:
         script="workflow/scripts/NucPlot.py",
-        bam_file=rules.merge_hifi_read_asm_alignments.output,
+        bam_file=rules.merge_hifi_read_asm_alignments.output.alignment,
         alr_regions=rules.make_bed_files_for_plot.output.alr_bed,
     output:
         plot=os.path.join(
