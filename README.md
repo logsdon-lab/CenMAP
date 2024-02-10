@@ -8,7 +8,7 @@ Workflow for [HGSVC3](https://www.internationalgenome.org/human-genome-structura
 
 ### Usage
 
-#### Locally
+#### Local
 ```bash
 # NOTE: dna-brnn must be installed locally
 snakemake --use-conda -np --configfile config/config.yaml
@@ -19,22 +19,17 @@ snakemake --use-conda -np --configfile config/config.yaml
 
 ```bash
 module load singularity
-
 singularity pull docker://logsdonlab/hgsvc3:latest
-bsub < run_cluster.sh -n
 ```
 
-#### Download raw data with `globus-cli`
-Login and check your globus home endpt direcory. Directories specified below are local to this.
 ```bash
-globus login
-globus endpoint local-id
-# C:\Users\koshima
-```
+max_mem=61440
+num_cores=12
 
-To download files.
-```bash
-./workflow/scripts/globus_download_data.sh projects/hgsvc3/data/asm projects/hgsvc3/data/raw_data
+bsub -e hgsvc3.err -o hgsvc3.out \
+-n $num_cores \
+-M $max_mem -R "rusage [mem=$max_mem] span[hosts=1]" \
+"./run_singularity.sh -np -c $num_cores"
 ```
 
 ### TODO
