@@ -117,16 +117,25 @@ rule filter_dnabrnn_sample_cens_regions:
 rule get_dnabrnn_ref_cens_pos:
     input:
         script="workflow/scripts/get_cen_pos.py",
-        filt_repeats=rules.filter_dnabrnn_ref_cens_regions.output,
+        repeats=rules.run_dna_brnn_ref_cens.output
+        if config["dna_brnn"].get("ref_alr_file") is None
+        else config["dna_brnn"]["ref_alr_file"],
     output:
         os.path.join(config["dna_brnn"]["output_dir"], "{chr}_cens_data.json"),
     log:
         "logs/get_dnabrnn_ref_{chr}_cens_data.log",
+    params:
+        repeat_type_filter=2,
+        repeat_len_thr=1000,
     conda:
         "../env/py.yaml"
     shell:
+        # Read from stdin filtered ref alr repeats. Done separately from above because of formatting.
         """
-        python {input.script} -i {input.filt_repeats} -o {output} &> {log}
+        python {input.script} -o {output} -i &> {log} \
+        <(grep "{wildcards.chr}:" {input.repeats} | \
+        awk -v OFS="\\t" \
+        '{len=$3-$2; rp_typ=$4; if (rp_typ=={params.repeat_type_filter} && len>{params.repeat_len_thr}) print}')
         """
 
 

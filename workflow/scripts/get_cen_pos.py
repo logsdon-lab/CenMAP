@@ -23,7 +23,7 @@ def main():
         args.input,
         sep="\t",
         header=None,
-        names=["lbl", "start", "end", "repeat", "dst"],
+        names=["lbl", "start", "end", "repeat"],
     )
     cen_data = {}
     chr_name, str_ctg_coords = df["lbl"].iloc[0].split(":")
