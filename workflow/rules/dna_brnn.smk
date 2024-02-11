@@ -135,7 +135,7 @@ rule get_dnabrnn_ref_cens_pos:
         python {input.script} -o {output} -i &> {log} \
         <(grep "{wildcards.chr}:" {input.repeats} | \
         awk -v OFS="\\t" \
-        '{len=$3-$2; rp_typ=$4; if (rp_typ=={params.repeat_type_filter} && len>{params.repeat_len_thr}) print}')
+        '{{len=$3-$2; rp_typ=$4; if (rp_typ=={params.repeat_type_filter} && len>{params.repeat_len_thr}) print}}')
         """
 
 
