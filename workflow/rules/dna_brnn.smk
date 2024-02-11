@@ -156,7 +156,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         ),
     params:
         repeat_len_thr=1_000_000,
-        io_cols=" ".join(
+        input_cols=" ".join(
             [
                 "chr",
                 "start",
@@ -165,6 +165,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
                 "repeat_length",
             ]
         ),
+        output_cols=" ".join(["chr", "start", "end", "repeat_type"]),
         grp_cols=" ".join(["chr", "repeat_type"]),
         sort_cols=" ".join(["chr", "start"]),
         # dna-brnn output may not contain repeats from a chr.
@@ -182,8 +183,8 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         """
         {{ python {input.script} bedminmax \
             -i {input.sample_cens} {input.added_ref_cens} \
-            -ci {params.io_cols} \
-            -co {params.io_cols} \
+            -ci {params.input_cols} \
+            -co {params.output_cols} \
             -g {params.grp_cols} \
             -s {params.sort_cols} {params.allow_empty} | \
         awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2}}' | \
