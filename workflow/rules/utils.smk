@@ -19,4 +19,5 @@ rule extract_and_index_fa:
             samtools faidx {output.seq} &> {log}
         else
             touch {output.idx}
+        fi
         """
