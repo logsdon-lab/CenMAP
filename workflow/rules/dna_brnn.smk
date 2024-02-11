@@ -61,7 +61,8 @@ rule filter_dnabrnn_ref_cens_regions:
     shell:
         """
         {{ grep "{wildcards.chr}:" {input.repeats} | \
-        awk -v OFS="\\t" '{{print $1, $2, $3, $4, $3-$2}}' | \
+        sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
+        awk -v OFS="\\t" '{{print $1, $2+$4, $2+$5, $6, $5-$4}}' | \
         awk '$4=={params.repeat_type_filter} && $5>{params.repeat_len_thr}';}} > {output} 2> {log}
         """
 
