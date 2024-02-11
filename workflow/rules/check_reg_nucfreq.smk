@@ -5,9 +5,10 @@ rule make_bed_files_for_plot:
     input:
         script="workflow/scripts/filter_cen_ctgs.py",
         faidx=expand(
-            rules.new_cens_index_renamed_ctgs.output,
+            rules.merge_alr_regions_by_chr.output.idx,
             ort=ORIENTATION,
             sm=SAMPLE_NAMES,
+            chr=CHROMOSOMES,
         ),
     output:
         tmp_fmt_alr_bed=temp(
@@ -125,7 +126,6 @@ rule merge_hifi_read_asm_alignments:
         """
 
 
-# Merge now or pass each one to vvv?
 rule gen_nucfreq_plot:
     input:
         script="workflow/scripts/NucPlot.py",

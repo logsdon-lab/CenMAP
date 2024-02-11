@@ -1,11 +1,12 @@
+NEW_CENS_OUTPUT_DIR = os.path.join(config["dna_brnn"]["output_dir"], "new_cens")
+
 
 rule create_format_orient_cens_list:
     input:
         regions=rules.run_dna_brnn.output.repeat_regions,
     output:
         os.path.join(
-            config["dna_brnn"]["output_dir"],
-            "new_cens",
+            NEW_CENS_OUTPUT_DIR,
             "{sm}_contigs.{ort}.list",
         ),
     log:
@@ -18,35 +19,25 @@ rule create_format_orient_cens_list:
         """
 
 
-rule extract_new_oriented_cens_regions:
+use rule extract_and_index_fa as extract_new_oriented_cens_regions with:
     input:
-        regions=rules.create_format_orient_cens_list.output,
-        combined_assembly=rules.concat_asm.output,
+        bed=rules.create_format_orient_cens_list.output,
+        fa=rules.concat_asm.output,
     output:
-        os.path.join(
-            config["dna_brnn"]["output_dir"], "new_cens", "{sm}_contigs.{ort}.fa"
-        ),
-    wildcard_constraints:
-        ort="fwd|rev",
+        seq=os.path.join(NEW_CENS_OUTPUT_DIR, "{sm}_contigs.{ort}.fa"),
+        idx=os.path.join(NEW_CENS_OUTPUT_DIR, "{sm}_contigs.{ort}.fa.fai"),
     params:
         added_cmds=lambda wc: "" if wc.ort == "fwd" else "| seqtk seq -r",
     log:
         "logs/extract_new_{ort}_cens_regions_{sm}.log",
-    conda:
-        "../env/tools.yaml"
-    shell:
-        """
-        seqtk subseq {input.combined_assembly} {input.regions} {params.added_cmds} > {output}
-        """
 
 
 # HG00171_chr4_haplotype1-0000002:1892469-12648706        293621  293950  1
 # |HG00171|chr4|haplotype1-0000002|1892469-12648706|293621|293950|1
 RENAME_NEW_CTGS_CFG = {
-    # TODO: Is this correct? This is before processed.
     "bed_input_regions": rules.run_dna_brnn.output.repeat_regions,
     "fa_assembly": rules.extract_new_oriented_cens_regions.output,
-    "output_dir": os.path.join(config["dna_brnn"]["output_dir"], "new_cens"),
+    "output_dir": NEW_CENS_OUTPUT_DIR,
     "samples": SAMPLE_NAMES,
     "log_dir": "logs/rename_cens",
     "bed_find_col": 3,
@@ -62,3 +53,106 @@ module rename_new_cens_ctgs:
 
 
 use rule * from rename_new_cens_ctgs as new_cens_*
+
+
+# Corresponds to
+# /net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/hgsvc3/...
+# ...map_align_t2t_chm13/results/t2t_chm13_v2.0_cens/bed/centromeres/dna-brnn/centromeric_regions/extract_ALR_regions.bash
+use rule extract_and_index_fa as extract_alr_region_ref_by_chr with:
+    input:
+        fa=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
+        bed=lambda wc: expand(
+            rules.aggregate_dnabrnn_alr_regions_by_chr.output,
+            chr=[wc.chr],
+            ort=["fwd"],
+        ),
+    output:
+        seq=temp(
+            os.path.join(NEW_CENS_OUTPUT_DIR, f"{REF_NAME}_{{chr}}_contigs.fwd.ALR.fa")
+        ),
+        idx=temp(
+            os.path.join(
+                NEW_CENS_OUTPUT_DIR, f"{REF_NAME}_{{chr}}_contigs.fwd.ALR.fa.fai"
+            )
+        ),
+    params:
+        added_cmds="",
+    log:
+        f"logs/extract_alr_region_{REF_NAME}_{{chr}}.log",
+
+
+use rule extract_and_index_fa as extract_alr_region_sample_by_chr with:
+    input:
+        fa=rules.new_cens_rename_oriented_ctgs.output,
+        bed=rules.aggregate_dnabrnn_alr_regions_by_chr.output,
+    output:
+        seq=temp(os.path.join(NEW_CENS_OUTPUT_DIR, "{chr}_{sm}_contigs.{ort}.ALR.fa")),
+        idx=temp(
+            os.path.join(NEW_CENS_OUTPUT_DIR, "{chr}_{sm}_contigs.{ort}.ALR.fa.fai")
+        ),
+    log:
+        "logs/extract_alr_region_{sm}_{chr}_{ort}.log",
+
+
+rule merge_alr_regions_by_chr:
+    input:
+        sm_ctgs_fa=lambda wc: expand(
+            rules.extract_alr_region_sample_by_chr.output.seq,
+            chr=[wc.chr],
+            sm=SAMPLE_NAMES,
+            ort=[wc.ort],
+        ),
+        ref_ctgs_fa=rules.extract_alr_region_ref_by_chr.output.seq,
+        sm_ctgs_fai=lambda wc: expand(
+            rules.extract_alr_region_sample_by_chr.output.idx,
+            chr=[wc.chr],
+            sm=SAMPLE_NAMES,
+            ort=[wc.ort],
+        ),
+        ref_ctgs_fai=lambda wc: rules.extract_alr_region_ref_by_chr.output.idx,
+    output:
+        seq=os.path.join(NEW_CENS_OUTPUT_DIR, "{chr}_contigs.{ort}.ALR.fa"),
+        idx=os.path.join(NEW_CENS_OUTPUT_DIR, "{chr}_contigs.{ort}.ALR.fa.fai"),
+    conda:
+        "../env/tools.yaml"
+    log:
+        "logs/merge_alr_regions_by_{chr}_{ort}.log",
+    shell:
+        """
+        cat {input.ref_ctgs_fa} {input.sm_ctgs_fa} > {output.seq} 2> {log}
+        cat {input.ref_ctgs_fai} {input.sm_ctgs_fai} > {output.idx} 2> {log}
+        """
+
+
+rule extract_new_cens_all:
+    input:
+        expand(
+            rules.create_format_orient_cens_list.output,
+            sm=SAMPLE_NAMES,
+            ort=ORIENTATION,
+            chr=CHROMOSOMES,
+        ),
+        expand(
+            rules.extract_new_oriented_cens_regions.output,
+            sm=SAMPLE_NAMES,
+            ort=ORIENTATION,
+            chr=CHROMOSOMES,
+        ),
+        expand(
+            rules.extract_alr_region_ref_by_chr.output,
+            sm=SAMPLE_NAMES,
+            ort=ORIENTATION,
+            chr=CHROMOSOMES,
+        ),
+        expand(
+            rules.extract_alr_region_sample_by_chr.output,
+            sm=SAMPLE_NAMES,
+            ort=ORIENTATION,
+            chr=CHROMOSOMES,
+        ),
+        expand(
+            rules.merge_alr_regions_by_chr.output,
+            sm=SAMPLE_NAMES,
+            ort=ORIENTATION,
+            chr=CHROMOSOMES,
+        ),
