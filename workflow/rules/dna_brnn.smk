@@ -88,7 +88,7 @@ rule filter_dnabrnn_sample_cens_regions:
         ),
     params:
         repeat_type_filter=2,
-        repeat_len_thr=1000,
+        awk_repeat_len_thr_stmt=lambda wc: build_awk_cen_region_length_thr(str(wc.chr)),
         awk_dst_calc_cols=lambda wc: "$4-$6, $4-$5"
         if wc.ort == "rev"
         else "$3+$5, $3+$6",
@@ -106,7 +106,7 @@ rule filter_dnabrnn_sample_cens_regions:
            {{ printf '%s\\n' "${{chr_repeats}}" | \
             sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
             awk -v OFS="\\t" '{{print $1"-"$2, {params.awk_dst_calc_cols}, $7, $6-$5}}' | \
-            awk '$4=={params.repeat_type_filter} && $5>{params.repeat_len_thr}';}} > {output.tmp_alr_ctgs} 2> {log}
+            awk '$4=={params.repeat_type_filter} && {params.awk_repeat_len_thr_stmt}';}} > {output.tmp_alr_ctgs} 2> {log}
         fi
         """
 
