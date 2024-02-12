@@ -138,7 +138,7 @@ rule gen_nucfreq_plot:
             "{sm}_hifi_cens.png",
         ),
     conda:
-        "../env/py.yaml"
+        "../env/pysam.yaml"
     params:
         ylim=100,
         height=4,
