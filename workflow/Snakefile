@@ -20,6 +20,7 @@ SAMPLES_DF = load_samples_df()
 REF_NAME = config["align_asm_to_ref"]["ref_key"]
 SAMPLE_NAMES = SAMPLES_DF.index
 ORIENTATION = ("fwd", "rev")
+HAPLOTYPE = ("haplotype1", "haplotype2")
 CHROMOSOMES = (
     "chr1",
     "chr2",
@@ -53,6 +54,7 @@ wildcard_constraints:
     chr="|".join(CHROMOSOMES),
     ort="|".join(ORIENTATION),
     sm="|".join(SAMPLE_NAMES),
+    hap="|".join(HAPLOTYPE),
 
 
 include: "rules/utils.smk"
@@ -101,7 +103,9 @@ rule nuc_freq_only:
         expand(
             rules.merge_hifi_read_asm_alignments.output, sm=SAMPLE_FLOWCELL_IDS.keys()
         ),
-        expand(rules.gen_nucfreq_plot.output, sm=SAMPLE_FLOWCELL_IDS.keys()),
+        expand(
+            rules.gen_nucfreq_plot.output, sm=SAMPLE_FLOWCELL_IDS.keys(), hap=HAPLOTYPE
+        ),
 
 
 rule all:
@@ -109,4 +113,5 @@ rule all:
         rules.extract_align_cens_only.input,
         rules.ident_cen_ctgs_all.input,
         rules.dna_brnn_only.input,
+        # rules.nuc_freq_only.input
     default_target: True

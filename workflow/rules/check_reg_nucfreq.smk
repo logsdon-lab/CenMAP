@@ -133,9 +133,15 @@ rule gen_nucfreq_plot:
         bam_file=rules.merge_hifi_read_asm_alignments.output.alignment,
         alr_regions=rules.make_bed_files_for_plot.output.alr_bed,
     output:
+        alr_hap_regions=temp(
+            os.path.join(
+                config["nuc_freq"]["output_dir"],
+                "{sm}_{hap}_ALR_regions.500kp.bed",
+            )
+        ),
         plot=os.path.join(
             config["nuc_freq"]["output_dir"],
-            "{sm}_hifi_cens.png",
+            "{sm}_{hap}_hifi_cens.png",
         ),
     conda:
         "../env/pysam.yaml"
@@ -143,16 +149,17 @@ rule gen_nucfreq_plot:
         ylim=100,
         height=4,
     log:
-        "logs/run_nucfreq_{sm}.log",
+        "logs/run_nucfreq_{sm}_{hap}.log",
     benchmark:
-        "benchmarks/run_nucfreq_{sm}.tsv"
+        "benchmarks/run_nucfreq_{sm}_{hap}.tsv"
     shell:
         """
+        grep "{wildcards.hap}" {input.alr_regions} > {output.alr_hap_regions}
         python {input.script} \
         -y {params.ylim} \
         {input.bam_file} \
         {output} \
-        --bed {input.alr_regions} \
+        --bed {output.alr_hap_regions} \
         --height {params.height} &> {log}
         """
 
