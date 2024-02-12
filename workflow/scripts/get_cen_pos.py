@@ -35,10 +35,10 @@ def main():
         rep_lens = df["end"] - df["start"]
         row = df.loc[rep_lens.idxmax()]
         cen_data["start"] = int(ctg_dst - row["start"])
-        cen_data["end"] = int(ctg_dst - row["end"])
+        cen_data["end"] = int(ctg_dst - row["end"] + 1)
     else:
         cen_data["start"] = int(df["start"].min())
-        cen_data["end"] = int(ctg_dst - df["end"].max())
+        cen_data["end"] = int(ctg_dst - df["end"].max() + 1)
 
     try:
         print(json.dumps(cen_data), file=args.output)
