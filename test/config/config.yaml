@@ -33,7 +33,7 @@ dna_brnn:
   default_repeat_len_thr: [1_000, null]
 
 nuc_freq:
-  hifi_reads_dir: "data/raw_data/hifi"
+  hifi_reads_dir: "test/data/raw_data/hifi"
   output_dir: "results/dna_brnn/nucfreq"
   threads: 4
   samtools_view_flag: 2308
