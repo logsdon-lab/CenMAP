@@ -28,10 +28,11 @@ rule make_bed_files_for_plot:
     log:
         "logs/make_{sm}_bed_files_for_plot.log",
     shell:
+        # Only filter for sample to avoid malformed output ref cols in alr bed.
         """
         {{ cat {input.faidx} | \
         sed -e 's/_/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
-        awk -v OFS="\\t" '{{print $3"-"$4, $5, $6, $2}}' | \
+        awk -v OFS="\\t" '{{if ($1 == "{wildcards.sm}") {{print $3"-"$4, $5, $6, $2}}}}' | \
         sort | \
         uniq;}} > {output.tmp_fmt_alr_bed} 2> {log}
 
