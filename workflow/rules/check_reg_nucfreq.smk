@@ -158,7 +158,7 @@ rule gen_nucfreq_plot:
         python {input.script} \
         -y {params.ylim} \
         {input.bam_file} \
-        {output} \
+        {output.plot} \
         --bed {output.alr_hap_regions} \
         --height {params.height} &> {log}
         """
