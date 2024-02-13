@@ -1,35 +1,27 @@
-import json
+
+use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
+    input:
+        fa=rules.concat_asm.output,
+        bed=lambda wc: CORRECT_ASSEMBLIES[str(wc.sm)],
+    output:
+        seq=os.path.join(
+            config["repeatmasker"]["output_dir"], "{sm}_correct_ALR_regions.500kbp.fa"
+        ),
+        idx=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "{sm}_correct_ALR_regions.500kbp.fa.fai",
+        ),
+    params:
+        added_cmds="",
+    log:
+        "logs/extract_alr_regions_repeatmasker_{sm}.log",
 
 
-def get_correct_alr_regions(wc):
-    """
-    Read correct_alr_regions json file.
-    {
-        "HG00171": "HG00171_correct_ALR_regions.500kbp.fa",
-        "HG00172": "HG00172_correct_ALR_regions.500kbp.fa"
-    }
-    """
-    if correct_samples := config.get("correct_samples_map"):
-        samples = correct_samples[wc.sm]
-    else:
-        with open(config["repeatmasker"]["correct_samples"]) as fh:
-            all_samples = json.load(fh)
-            config["correct_samples_map"] = all_samples
-            samples = all_samples[wc.sm]
-
-    return samples
-
-
-# TODO: Prior to this step we checked regions with NucFreq to determine if there was a misassembly.
-# * If it's good, do we take {sample}_ALR_regions.500kbp.bed and take subseq of ref?
-# * {sample}_correct_ALR_regions.500kbp.fa
-# * /net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/hgsvc3/repeatmasker
-# TODO: Need perl as well.
 # TODO: Doc uses modified version. May need to update ID length from 50 -> 70 so ask glennis.
 # https://github.com/search?q=repo%3Armhubley%2FRepeatMasker%20%2050&type=code
 rule run_repeatmasker:
     input:
-        seq=get_correct_alr_regions,
+        seq=rules.extract_correct_alr_regions_rm.output.seq,
     output:
         os.path.join(
             config["repeatmasker"]["output_dir"],

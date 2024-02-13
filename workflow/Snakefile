@@ -1,4 +1,5 @@
 import os
+import json
 import yaml
 import pandas as pd
 from collections import defaultdict
@@ -48,6 +49,7 @@ CHROMOSOMES = (
     "chrY",
 )
 SAMPLE_FLOWCELL_IDS = get_hifi_read_wildcards()
+CORRECT_ASSEMBLIES = config["repeatmasker"]["correct_asm"]
 
 
 wildcard_constraints:
@@ -85,10 +87,10 @@ rule repeatmasker_only:
     input:
         expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),
         rules.run_repeatmasker_ref.output,
-        rules.format_repeatmasker_output.output,
-        rules.format_add_control_repeatmasker_output.output,
-        rules.format_add_censat_annot_repeatmasker_output.output,
-        rules.reverse_complete_repeatmasker_output.output,
+        # rules.format_repeatmasker_output.output,
+        # rules.format_add_control_repeatmasker_output.output,
+        # rules.format_add_censat_annot_repeatmasker_output.output,
+        # rules.reverse_complete_repeatmasker_output.output,
 
 
 rule nuc_freq_only:
