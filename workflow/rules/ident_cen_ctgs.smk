@@ -203,42 +203,51 @@ rule reintersect_sort_uniq_cens_ctgs:
         """
 
 
-rule extract_cens_oriented_regions:
+rule filter_cens_oriented_regions:
     input:
         all_regions=lambda wc: expand(
             rules.reintersect_sort_uniq_cens_ctgs.output,
             ort=ORIENTATION,
             sm=[wc.sm],
         ),
-        combined_assembly=os.path.join(
-            config["ident_cen_ctgs"]["comb_assemblies_dir"],
-            "{sm}.vrk-ps-sseq.asm-comb-dedup.fasta.gz",
-        ),
     output:
         regions=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "{sm}_centromeric_regions.{ort}.bed",
         ),
-        seq=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "{sm}_centromeric_regions.{ort}.fa",
-        ),
     params:
         sign=lambda wc: "+" if wc.ort == "fwd" else "-",
-        added_cmds=lambda wc: "" if wc.ort == "fwd" else "| seqtk seq -r",
     log:
-        "logs/extract_{ort}_rev_regions_{sm}.log",
+        "logs/filter_{ort}_regions_{sm}.log",
     conda:
         "../env/tools.yaml"
     shell:
         """
-        awk -v OFS="\\t" '{{if ($6=="{params.sign}") print}}' {input.all_regions} > {output.regions}
-        seqtk subseq {input.combined_assembly} {output.regions} {params.added_cmds} > {output.seq}
+        awk -v OFS="\\t" '{{if ($6=="{params.sign}") print}}' {input.all_regions} > {output.regions} 2> {log}
         """
 
 
+use rule extract_and_index_fa as extract_cens_oriented_regions with:
+    input:
+        bed=rules.filter_cens_oriented_regions.output,
+        fa=rules.concat_asm.output,
+    output:
+        seq=os.path.join(
+            config["ident_cen_ctgs"]["output_dir"],
+            "{sm}_centromeric_regions.{ort}.fa",
+        ),
+        idx=os.path.join(
+            config["ident_cen_ctgs"]["output_dir"],
+            "{sm}_centromeric_regions.{ort}.fa.fai",
+        ),
+    params:
+        added_cmds=lambda wc: "" if wc.ort == "fwd" else "| seqtk seq -r",
+    log:
+        "logs/extract_{ort}_regions_{sm}.log",
+
+
 RENAME_CTGS_CFG = {
-    "bed_input_regions": rules.extract_cens_oriented_regions.output.regions,
+    "bed_input_regions": rules.filter_cens_oriented_regions.output.regions,
     "fa_assembly": rules.extract_cens_oriented_regions.output.seq,
     "output_dir": config["ident_cen_ctgs"]["output_dir"],
     "samples": SAMPLE_NAMES,
@@ -275,6 +284,11 @@ rule ident_cen_ctgs_all:
         expand(
             rules.reintersect_sort_uniq_cens_ctgs.output,
             sm=SAMPLE_NAMES,
+        ),
+        expand(
+            rules.filter_cens_oriented_regions.output,
+            sm=SAMPLE_NAMES,
+            ort=ORIENTATION,
         ),
         expand(
             rules.extract_cens_oriented_regions.output,

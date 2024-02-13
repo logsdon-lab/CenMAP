@@ -1,6 +1,3 @@
-import os
-
-
 # https://github.com/lh3/dna-nn/tree/master
 rule run_dna_brnn:
     input:
@@ -64,7 +61,8 @@ rule filter_dnabrnn_ref_cens_regions:
     shell:
         """
         {{ grep "{wildcards.chr}:" {input.repeats} | \
-        awk -v OFS="\\t" '{{print $1, $2, $3, $4, $3-$2}}' | \
+        sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
+        awk -v OFS="\\t" '{{print $1, $2+$4, $2+$5, $6, $5-$4}}' | \
         awk '$4=={params.repeat_type_filter} && $5>{params.repeat_len_thr}';}} > {output} 2> {log}
         """
 
@@ -90,7 +88,7 @@ rule filter_dnabrnn_sample_cens_regions:
         ),
     params:
         repeat_type_filter=2,
-        repeat_len_thr=1000,
+        awk_repeat_len_thr_stmt=lambda wc: build_awk_cen_region_length_thr(str(wc.chr)),
         awk_dst_calc_cols=lambda wc: "$4-$6, $4-$5"
         if wc.ort == "rev"
         else "$3+$5, $3+$6",
@@ -108,7 +106,7 @@ rule filter_dnabrnn_sample_cens_regions:
            {{ printf '%s\\n' "${{chr_repeats}}" | \
             sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
             awk -v OFS="\\t" '{{print $1"-"$2, {params.awk_dst_calc_cols}, $7, $6-$5}}' | \
-            awk '$4=={params.repeat_type_filter} && $5>{params.repeat_len_thr}';}} > {output.tmp_alr_ctgs} 2> {log}
+            awk '$4=={params.repeat_type_filter} && {params.awk_repeat_len_thr_stmt}';}} > {output.tmp_alr_ctgs} 2> {log}
         fi
         """
 
@@ -119,16 +117,25 @@ rule filter_dnabrnn_sample_cens_regions:
 rule get_dnabrnn_ref_cens_pos:
     input:
         script="workflow/scripts/get_cen_pos.py",
-        filt_repeats=rules.filter_dnabrnn_ref_cens_regions.output,
+        repeats=rules.run_dna_brnn_ref_cens.output
+        if config["dna_brnn"].get("ref_alr_file") is None
+        else config["dna_brnn"]["ref_alr_file"],
     output:
         os.path.join(config["dna_brnn"]["output_dir"], "{chr}_cens_data.json"),
     log:
         "logs/get_dnabrnn_ref_{chr}_cens_data.log",
+    params:
+        repeat_type_filter=2,
+        repeat_len_thr=1000,
     conda:
         "../env/py.yaml"
     shell:
+        # Read from stdin filtered ref alr repeats. Done separately from above because of formatting.
         """
-        python {input.script} -i {input.filt_repeats} -o {output} &> {log}
+        python {input.script} -o {output} -i &> {log} \
+        <(grep "{wildcards.chr}:" {input.repeats} | \
+        awk -v OFS="\\t" \
+        '{{len=$3-$2; rp_typ=$4; if (rp_typ=={params.repeat_type_filter} && len>{params.repeat_len_thr}) print}}')
         """
 
 
@@ -159,7 +166,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         ),
     params:
         repeat_len_thr=1_000_000,
-        io_cols=" ".join(
+        input_cols=" ".join(
             [
                 "chr",
                 "start",
@@ -168,8 +175,11 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
                 "repeat_length",
             ]
         ),
-        grp_cols=" ".join(["chr", "repeat_type", "repeat_length"]),
+        output_cols=" ".join(["chr", "start", "end", "repeat_type"]),
+        grp_cols=" ".join(["chr", "repeat_type"]),
         sort_cols=" ".join(["chr", "start"]),
+        # dna-brnn output may not contain repeats from a chr.
+        allow_empty="--allow_empty",
     log:
         "logs/aggregate_dnabrnn_alr_regions_by_{chr}_{ort}.log",
     conda:
@@ -183,10 +193,10 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         """
         {{ python {input.script} bedminmax \
             -i {input.sample_cens} {input.added_ref_cens} \
-            -ci {params.io_cols} \
-            -co {params.io_cols} \
+            -ci {params.input_cols} \
+            -co {params.output_cols} \
             -g {params.grp_cols} \
-            -s {params.sort_cols} | \
+            -s {params.sort_cols} {params.allow_empty} | \
         awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2}}' | \
         awk -v START_POS=$(jq .start {input.cen_pos}) \
             -v END_POS=$(jq .end {input.cen_pos}) \

@@ -8,19 +8,9 @@ align_asm_to_ref:
   # Output dir set to results
 
 concat_asm:
-  # Expects {input_dir}/{sm}/{sm}.vrk-ps-sseq.asm-{typ}.fasta.gz
+  # Expects {input_dir}/{sm}/*.gz
   input_dir: "data/assemblies"
   output_dir: "data/assemblies/combined"
-  # {asm}.vrk-ps-sseq.asm-{type}.fasta.gz
-  types:
-    - mito
-    - rdna
-    - disconnected
-    - ebv
-    - hap1
-    - hap2
-    - unassigned
-    - contaminants
 
 mask_hor_arrays:
   output_dir: "results/masked"
@@ -37,6 +27,13 @@ dna_brnn:
   # Optional.
   ref_alr_file: "data/annotations/chm13_cens.trimmed.bed"
   threads: 12
+  # repeat region thresholds which get formatted into awk cmd.
+  # [min, max]
+  repeat_len_thr:
+    chr9: [[9_000, 10_000], [1_000_000, null]]
+    chr10: [[2_000, null]]
+    chr16: [[1_000_000, null]]
+  default_repeat_len_thr: [1_000, null]
 
 nuc_freq:
   hifi_reads_dir: "data/raw_data/hifi"

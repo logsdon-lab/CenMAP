@@ -1,22 +1,14 @@
-CONCAT_ASM_INPUT_DIR = config["concat_asm"]["input_dir"]
-CONCAT_ASM_OUTPUT_DIR = config["concat_asm"]["output_dir"]
-
-
 rule concat_asm:
     input:
-        expand(
-            os.path.join(
-                CONCAT_ASM_INPUT_DIR, "{{sm}}", "{{sm}}.vrk-ps-sseq.{typ}.fasta.gz"
-            ),
-            typ=[
-                typ if typ == "contaminants" else f"asm-{typ}"
-                for typ in config["concat_asm"]["types"]
-            ],
-        ),
+        # Input directory per sample.
+        sm_dir=os.path.join(config["concat_asm"]["input_dir"], "{sm}"),
     output:
-        os.path.join(CONCAT_ASM_OUTPUT_DIR, "{sm}.vrk-ps-sseq.asm-comb-dedup.fasta.gz"),
+        os.path.join(
+            config["concat_asm"]["output_dir"], "{sm}.vrk-ps-sseq.asm-comb-dedup.fasta"
+        ),
     # https://bioinf.shenwei.me/seqkit/usage/#rmdup
     params:
+        assembly_fname_pattern="*.gz",
         by_seq="-s",
     # Only allow not hap names ex. HG00171 (Not H00171_1)
     wildcard_constraints:
@@ -27,7 +19,8 @@ rule concat_asm:
         "../env/tools.yaml"
     shell:
         """
-        {{ zcat {input} | seqkit rmdup {params.by_seq} | gzip;}} > {output} 2> {log}
+        {{ find {input.sm_dir} -name {params.assembly_fname_pattern} -exec zcat {{}} + | \
+        seqkit rmdup {params.by_seq};}} > {output} 2> {log}
         """
 
 

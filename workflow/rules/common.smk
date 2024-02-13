@@ -28,3 +28,23 @@ def load_samples_df() -> pd.DataFrame:
 
     df.set_index(new_index, inplace=True)
     return df
+
+
+def build_awk_cen_region_length_thr(chr_name: str) -> str:
+    region_thresholds: list[list[int | None, int | None]] = (
+        config["dna_brnn"]
+        .get("repeat_len_thr", {})
+        .get(
+            chr_name, [config["dna_brnn"].get("default_repeat_len_thr", [1_000, None])]
+        )
+    )
+    stmts = []
+    for thr_min, thr_max in region_thresholds:
+        if thr_min and thr_max:
+            stmts.append(f"$5>{thr_min} && $5<{thr_max}")
+        elif thr_min:
+            stmts.append(f"$5>{thr_min}")
+        else:
+            stmts.append(f"$5<{thr_max}")
+
+    return f"({' || '.join(stmts)})"
