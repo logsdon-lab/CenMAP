@@ -28,7 +28,7 @@ rule refmt_correct_alr_regions_for_rm:
         # Join fwd and rev alr regions fa.
         cat {input.seq} > {output.seq}
         # (sm)_(chr)_(ctg):(start)-(end)
-        awk -v OFS="\\t" '{{ print {wildcards.sm}"_"$5"_"$1":"$2"-"$3 }}' {input.bed} > {output.lst} 2> {log}
+        awk -v OFS="\\t" '{{ print "{wildcards.sm}_"$5"_"$1":"$2"-"$3 }}' {input.bed} > {output.lst} 2> {log}
         """
 
 
