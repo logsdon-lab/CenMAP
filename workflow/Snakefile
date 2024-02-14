@@ -85,6 +85,7 @@ rule dna_brnn_only:
 
 rule repeatmasker_only:
     input:
+        rules.count_complete_cens.output,
         expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),
         expand(rules.rename_contig_name_repeatmasker.output, sm=SAMPLE_NAMES),
         # rules.run_repeatmasker_ref.output,

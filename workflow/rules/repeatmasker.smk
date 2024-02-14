@@ -31,6 +31,31 @@ use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
         "logs/extract_alr_regions_repeatmasker_{sm}.log",
 
 
+rule count_complete_cens:
+    input:
+        expand(rules.extract_correct_alr_regions_rm.output.idx, sm=SAMPLE_NAMES),
+    output:
+        all_idx=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "all_correct_ALR_regions.500kbp.fa.fai",
+        ),
+        cmp_cnts=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "complete_cen_counts.tsv",
+        ),
+    params:
+        strip_dir=config["repeatmasker"]["output_dir"].replace("/", "\/") + "\/",
+    shell:
+        """
+        rm {output.all_idx}
+        cat {input} > {output.all_idx}
+
+        wc -l {input} {output.all_idx} | \
+        sed -e 's/{params.strip_dir}//g' -e 's/_/\\t/g' | \
+        awk -v OFS="\\t" '{{print $2, $1, $1/46*100}}' | head -n +2 > {output}
+        """
+
+
 # TODO: Doc uses modified version. May need to update ID length from 50 -> 70 so ask glennis.
 # https://github.com/search?q=repo%3Armhubley%2FRepeatMasker%20%2050&type=code
 rule run_repeatmasker:
