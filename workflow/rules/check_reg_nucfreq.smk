@@ -35,7 +35,7 @@ rule make_bed_files_for_plot:
         "logs/make_{sm}_bed_files_for_plot.log",
     message:
         f"""
-        Check {CORRECT_ALR_REGIONS_PATTERN} for copies of ALR regions per sample.
+        Check (sm)_correct_ALR_regions.500kbp.bed for copies of ALR regions per sample.
         Remove lines corresponding to incorrectly assembled contigs.
         Then update repeatmasker.correct_asm in config/config.yaml.
         An automated approach to missassembly identification is a WIP.
