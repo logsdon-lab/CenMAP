@@ -1,41 +1,22 @@
 
-rule refmt_correct_alr_regions_for_rm:
+rule get_valid_regions_for_rm:
     input:
-        seq=lambda wc: expand(
-            rules.extract_alr_region_sample_by_chr.output.seq,
-            ort=ORIENTATION,
-            chr=CHROMOSOMES,
-            sm=[wc.sm],
-        ),
         bed=get_correct_assembly_regions,
     output:
-        seq=temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "{sm}_joined_ALR_regions.500kbp.fa",
-            )
+        good_regions=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "{sm}_trimmed_correct_ALR_regions.500kbp.bed",
         ),
-        lst=temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "{sm}_ALR_regions.500kbp.lst",
-            )
-        ),
-    log:
-        "logs/refmt_alr_regions_repeatmasker_{sm}.log",
     shell:
         """
-        # Join fwd and rev alr regions fa.
-        cat {input.seq} > {output.seq}
-        # (sm)_(chr)_(ctg):(start)-(end)
-        awk -v OFS="\\t" '{{ print "{wildcards.sm}_"$5"_"$1":"$2"-"$3 }}' {input.bed} > {output.lst} 2> {log}
+        grep "good" {input.bed} > {output.good_regions}
         """
 
 
 use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
     input:
-        fa=rules.refmt_correct_alr_regions_for_rm.output.seq,
-        bed=rules.refmt_correct_alr_regions_for_rm.output.lst,
+        fa=rules.concat_asm.output,
+        bed=rules.get_valid_regions_for_rm.output,
     output:
         seq=os.path.join(
             config["repeatmasker"]["output_dir"], "{sm}_correct_ALR_regions.500kbp.fa"
@@ -54,13 +35,12 @@ use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
 # https://github.com/search?q=repo%3Armhubley%2FRepeatMasker%20%2050&type=code
 rule run_repeatmasker:
     input:
-        script="workflow/scripts/RepeatMasker/RepeatMasker",
         seq=rules.extract_correct_alr_regions_rm.output.seq,
     output:
         os.path.join(
             config["repeatmasker"]["output_dir"],
             "{sm}",
-            "{sm}_correct_ALR_regions.500kbp.fa.out",
+            "{sm}_correct_original_ctg_name_ALR_regions.500kbp.fa.out",
         ),
     conda:
         "../env/tools.yaml"
@@ -75,7 +55,7 @@ rule run_repeatmasker:
         "benchmarks/repeatmasker_{sm}.tsv"
     shell:
         """
-        perl {input.script} \
+        RepeatMasker \
         -engine {params.engine} \
         -species {params.species} \
         -dir {params.output_dir} \
@@ -84,7 +64,49 @@ rule run_repeatmasker:
         """
 
 
-# TODO: Grp by chr
+rule merge_legends_for_rm:
+    input:
+        lambda wc: expand(
+            rules.new_cens_create_oriented_ctg_name_legend.output,
+            sm=[wc.sm],
+            ort=ORIENTATION,
+        ),
+    output:
+        os.path.join(
+            config["repeatmasker"]["output_dir"], temp("{sm}_merged_legend.txt")
+        ),
+    shell:
+        """
+        cat {input} > {output}
+        """
+
+
+# TODO: use legend to replace contig name in
+rule rename_contig_name_repeatmasker:
+    input:
+        rm_out=rules.run_repeatmasker.output,
+        legend=rules.merge_legends_for_rm.output,
+    output:
+        renamed_out=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "{sm}",
+            "{sm}_correct_ALR_regions.500kbp.fa.out",
+        ),
+    run:
+        with (
+            open(input.legend, "rt") as legend_fh,
+            open(input.rm_out, "rt") as rm_out_fh,
+            open(output.renamed_out, "rt") as rm_renamed_out_fh,
+        ):
+            rm_out = rm_out_fh.read()
+
+            contig_name_legend = {
+                dict(line.strip().split("\t")) for line in legend_fh.readlines()
+            }
+            for contig, new_name in rm_out.items():
+                rm_out = rm_out.replace(contig, new_name)
+
+            rm_renamed_out_fh.write(rm_out)
 
 
 # Run repeatmasker on reference t2t-chm13 as a control.
@@ -108,7 +130,7 @@ use rule run_repeatmasker as run_repeatmasker_ref with:
 rule format_repeatmasker_output:
     input:
         expand(
-            rules.run_repeatmasker.output,
+            rules.rename_contig_name_repeatmasker.output,
             sm=SAMPLE_NAMES,
         ),
     output:

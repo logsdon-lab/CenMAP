@@ -2,8 +2,7 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - perl
-  - perl-text-soundex
+  - repeatmasker==4.1.0
   - bedtools
   - seqtk
   - samtools

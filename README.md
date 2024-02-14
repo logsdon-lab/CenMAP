@@ -8,6 +8,11 @@ Workflow for [HGSVC3](https://www.internationalgenome.org/human-genome-structura
 
 ### Usage
 
+#### Clone
+```bash
+git clone git@github.com:logsdon-lab/hgsvc3.git
+```
+
 #### Local
 ```bash
 # NOTE: dna-brnn must be installed locally
