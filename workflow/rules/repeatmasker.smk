@@ -54,6 +54,7 @@ use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
 # https://github.com/search?q=repo%3Armhubley%2FRepeatMasker%20%2050&type=code
 rule run_repeatmasker:
     input:
+        script="workflow/scripts/RepeatMasker/RepeatMasker",
         seq=rules.extract_correct_alr_regions_rm.output.seq,
     output:
         os.path.join(
@@ -74,7 +75,7 @@ rule run_repeatmasker:
         "benchmarks/repeatmasker_{sm}.tsv"
     shell:
         """
-        RepeatMasker \
+        perl {input.script} \
         -engine {params.engine} \
         -species {params.species} \
         -dir {params.output_dir} \
