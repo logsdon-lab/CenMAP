@@ -1,5 +1,5 @@
 CORRECT_ALR_REGIONS_PATTERN = os.path.join(
-    config["nuc_freq"]["output_dir"], "{sm}_correct_ALR_regions.500kp.bed"
+    config["nuc_freq"]["output_dir"], "{sm}_correct_ALR_regions.500kbp.bed"
 )
 
 
