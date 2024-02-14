@@ -47,7 +47,7 @@ repeatmasker:
     # HG00171: "HG00171_correct_ALR_regions.500kbp.bed"
   # /net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/t2t_chr8/chm13/centromeres/repeatmasker/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   censat_annot_hor_output: data/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
-  threads: 1
+  threads: 100
   output_dir: "results/repeatmasker"
 
 humas_hmmer:

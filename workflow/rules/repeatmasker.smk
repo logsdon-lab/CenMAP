@@ -1,8 +1,41 @@
 
+rule refmt_correct_alr_regions_for_rm:
+    input:
+        seq=lambda wc: expand(
+            rules.extract_alr_region_sample_by_chr.output.seq,
+            ort=ORIENTATION,
+            chr=CHROMOSOMES,
+            sm=[wc.sm],
+        ),
+        bed=get_correct_assembly_regions,
+    output:
+        seq=temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "{sm}_joined_ALR_regions.500kbp.fa",
+            )
+        ),
+        lst=temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "{sm}_ALR_regions.500kbp.lst",
+            )
+        ),
+    log:
+        "logs/refmt_alr_regions_repeatmasker_{sm}.log",
+    shell:
+        """
+        # Join fwd and rev alr regions fa.
+        cat {input.seq} > {output.seq}
+        # (sm)_(chr)_(ctg):(start)-(end)
+        awk -v OFS="\\t" '{{ print {wildcards.sm}"_"$5"_"$1":"$2"-"$3 }}' {input.bed} > {output.lst} 2> {log}
+        """
+
+
 use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
     input:
-        fa=rules.concat_asm.output,
-        bed=get_correct_assembly_regions,
+        fa=rules.refmt_correct_alr_regions_for_rm.output.seq,
+        bed=rules.refmt_correct_alr_regions_for_rm.output.lst,
     output:
         seq=os.path.join(
             config["repeatmasker"]["output_dir"], "{sm}_correct_ALR_regions.500kbp.fa"
@@ -34,7 +67,7 @@ rule run_repeatmasker:
     params:
         output_dir=lambda wc, output: os.path.dirname(str(output)),
         species="human",
-        engine="hmmer",
+        engine="rmblast",
     log:
         "logs/repeatmasker_{sm}.log",
     benchmark:
