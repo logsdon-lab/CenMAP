@@ -2,7 +2,7 @@
 use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
     input:
         fa=rules.concat_asm.output,
-        bed=lambda wc: CORRECT_ASSEMBLIES[str(wc.sm)],
+        bed=get_correct_assembly_regions,
     output:
         seq=os.path.join(
             config["repeatmasker"]["output_dir"], "{sm}_correct_ALR_regions.500kbp.fa"
