@@ -34,6 +34,7 @@ rule run_repeatmasker:
     params:
         output_dir=lambda wc, output: os.path.dirname(str(output)),
         species="human",
+        engine="hmmer",
     log:
         "logs/repeatmasker_{sm}.log",
     benchmark:
@@ -41,6 +42,7 @@ rule run_repeatmasker:
     shell:
         """
         RepeatMasker \
+        -engine {params.engine} \
         -species {params.species} \
         -dir {params.output_dir} \
         -pa {threads} \
