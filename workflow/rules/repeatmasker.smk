@@ -5,20 +5,20 @@ rule get_valid_regions_for_rm:
     output:
         good_regions=os.path.join(
             config["repeatmasker"]["output_dir"],
-            "{sm}_valid_ALR_regions.500kbp.lst",
+            "{sm}_valid_ALR_regions.500kbp.bed",
         ),
     params:
         assembly_filter="good",
     shell:
         """
-        grep "{params.assembly_filter}" {input.bed} | awk '{{print $1}}' > {output.good_regions}
+        grep "{params.assembly_filter}" {input.bed} > {output.good_regions}
         """
 
 
 rule merge_ort_alr_regions_for_rm:
     input:
         lambda wc: expand(
-            rules.extract_new_oriented_cens_regions.output,
+            rules.extract_new_oriented_cens_regions.output.seq,
             sm=[wc.sm],
             ort=ORIENTATION,
         ),
