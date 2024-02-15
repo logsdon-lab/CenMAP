@@ -65,7 +65,7 @@ rule run_repeatmasker:
         os.path.join(
             config["repeatmasker"]["output_dir"],
             "{sm}",
-            "{sm}_correct_original_ctg_name_ALR_regions.500kbp.fa.out",
+            "{sm}_correct_ALR_regions.500kbp.fa.out",
         ),
     conda:
         "../env/tools.yaml"
@@ -115,7 +115,7 @@ rule rename_contig_name_repeatmasker:
         renamed_out=os.path.join(
             config["repeatmasker"]["output_dir"],
             "{sm}",
-            "{sm}_correct_ALR_regions.500kbp.fa.out",
+            "{sm}_renamed_correct_ALR_regions.500kbp.fa.out",
         ),
     run:
         with (
