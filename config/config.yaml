@@ -49,7 +49,7 @@ repeatmasker:
   censat_annot_hor_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   # Optional.
   # Repeatmasker output on reference genome. Will prevent running step.
-  # ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.out
+  ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.out
   threads: 100
   output_dir: "results/repeatmasker"
 
