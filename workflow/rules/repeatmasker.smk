@@ -18,7 +18,7 @@ rule get_valid_regions_for_rm:
 rule merge_ort_alr_regions_for_rm:
     input:
         lambda wc: expand(
-            rules.new_cens_rename_oriented_ctgs.output,
+            rules.extract_new_oriented_cens_regions.output,
             sm=[wc.sm],
             ort=ORIENTATION,
         ),
