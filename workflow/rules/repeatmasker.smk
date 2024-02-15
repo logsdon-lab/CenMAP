@@ -280,3 +280,25 @@ $8-$7-$9+1, $11, $12, $13, $14, $15, $16, $17, $18}}' | \
         sed 's/chr/rc_chr/g' | \
         grep -v "chm13" > {output}
         """
+
+
+rule plot_cens_from_rm_by_chr:
+    input:
+        script="workflow/scripts/repeatStructure_onlyRM.R",
+        rm_out=rules.format_add_censat_annot_repeatmasker_output.output,
+    output:
+        rm_out_by_chr=os.path.join(
+            config["repeatmasker"]["output_dir"], "{chr}_cens.fa.out"
+        ),
+        repeat_plot_by_chr=os.path.join(
+            config["repeatmasker"]["output_dir"], "hgsvc3_{chr}_cens.additional.pdf"
+        ),
+    log:
+        "logs/plot_{chr}_cens_from_rm.log",
+    conda:
+        "../env/r.yaml"
+    shell:
+        """
+        grep "{wildcards.chr}[_|:]" {input.rm_out} > {output.rm_out_by_chr}
+        Rscript {input.script} {output.rm_out_by_chr} {output.repeat_plot_by_chr} 2> {log}
+        """
