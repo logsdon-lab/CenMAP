@@ -5,17 +5,39 @@ rule get_valid_regions_for_rm:
     output:
         good_regions=os.path.join(
             config["repeatmasker"]["output_dir"],
-            "{sm}_trimmed_correct_ALR_regions.500kbp.bed",
+            "{sm}_valid_ALR_regions.500kbp.lst",
+        ),
+    params:
+        assembly_filter="good",
+    shell:
+        """
+        grep "{params.assembly_filter}" {input.bed} | awk '{{print $1}}' > {output.good_regions}
+        """
+
+
+rule merge_ort_alr_regions_for_rm:
+    input:
+        lambda wc: expand(
+            rules.new_cens_rename_oriented_ctgs.output,
+            sm=[wc.sm],
+            ort=ORIENTATION,
+        ),
+    output:
+        temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "{sm}_merged_ALR_regions.500kbp.fa",
+            )
         ),
     shell:
         """
-        grep "good" {input.bed} > {output.good_regions}
+        cat {input} > {output}
         """
 
 
 use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
     input:
-        fa=rules.concat_asm.output,
+        fa=rules.merge_ort_alr_regions_for_rm.output,
         bed=rules.get_valid_regions_for_rm.output,
     output:
         seq=os.path.join(
@@ -57,7 +79,7 @@ rule count_complete_cens:
         {{ wc -l {input} {output.all_idx} | \
         sed -e 's/{params.strip_dir}//g' -e 's/_/\\t/g' | \
         awk -v OFS="\\t" '{{print $2, $1, $1/{params.num_chrs}*100}}' | \
-        head -n +2}} > {output.cmp_cnts} 2> {log}
+        head -n +2;}} > {output.cmp_cnts} 2> {log}
         """
 
 
