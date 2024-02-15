@@ -133,7 +133,6 @@ rule merge_legends_for_rm:
         """
 
 
-# TODO: use legend to replace contig name in
 rule rename_contig_name_repeatmasker:
     input:
         rm_out=rules.run_repeatmasker.output,
@@ -157,11 +156,14 @@ rule rename_contig_name_repeatmasker:
             )
             headers = [next(rm_out_fh) for _ in range(3)]
             rm_renamed_out_writer = csv.writer(rm_renamed_out_fh, delimiter="\t")
-            rm_renamed_out_writer.writerows(headers)
+            # Write headers to file handle without csv writer to not screw up formatting.
+            rm_renamed_out_fh.writelines(headers)
 
             for rm_row in rm_out_fh.readlines():
                 rm_row = rm_row.strip().split()
-                query_seq_name = rm_row[4]
+                # From: {ctg}:{start}-{end}
+                # To: {sm}_{chr}_{ctg}
+                query_seq_name, coords = rm_row[4].split(":")
                 new_query_seq_name = contig_name_legend[query_seq_name]
                 rm_row[4] = new_query_seq_name
                 rm_renamed_out_writer.writerow(rm_row)
