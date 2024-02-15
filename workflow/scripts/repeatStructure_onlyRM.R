@@ -1,3 +1,6 @@
+#!/usr/bin/env Rscript
+
+library(argparser, quietly=TRUE)
 library(ggplot2)
 library(directlabels)
 library(plyr)
@@ -9,10 +12,14 @@ library(data.table)
 library(dplyr)
 library(tidyr)
 
-#read in repeatmasker.out file
-rm(list=ls(all=TRUE))
+# Create a parser
+p <- arg_parser("Plot ALR region from RepeatMasker output.")
+p <- add_argument(p, "input", help="Input repeatmasker.out file", type="character")
+p <- add_argument(p, "output", help="Output plot file.", type="character")
+argv <- parse_args(p)
+
 setwd("~/Documents/Eichler Lab/Weekly plans/HGSVC3/RepeatMasker")
-df = fread(file.choose(), select = c(1:15), stringsAsFactors = FALSE, fill=TRUE, quote="", header=FALSE, skip=2)
+df = fread(argv$input, select = c(1:15), stringsAsFactors = FALSE, fill=TRUE, quote="", header=FALSE, skip=2)
 cols =  c("idx", "div", "deldiv", "insdiv", "contig", "start", "end", "left", "C", "type", "rClass", "right", "x", "y", "z")
 colnames(df) <- cols
 
@@ -124,4 +131,4 @@ ggplot() +
   guides(color = guide_legend(override.aes = list(size=6))) +
   xlab("Position (kbp)")
 
-ggsave(paste0("hgsvc3_chr21_cens.additional.pdf"), width=10, height=10)
+ggsave(argv$output, width=10, height=10)
