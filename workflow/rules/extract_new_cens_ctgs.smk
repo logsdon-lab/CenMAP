@@ -36,7 +36,7 @@ use rule extract_and_index_fa as extract_new_oriented_cens_regions with:
 # |HG00171|chr4|haplotype1-0000002|1892469-12648706|293621|293950|1
 RENAME_NEW_CTGS_CFG = {
     "bed_input_regions": rules.run_dna_brnn.output.repeat_regions,
-    "fa_assembly": rules.extract_new_oriented_cens_regions.output,
+    "fa_assembly": rules.extract_new_oriented_cens_regions.output.seq,
     "output_dir": NEW_CENS_OUTPUT_DIR,
     "samples": SAMPLE_NAMES,
     "log_dir": "logs/rename_cens",
