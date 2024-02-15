@@ -64,7 +64,7 @@ rule create_oriented_ctg_name_legend:
         {{ awk -v OFS="\\t" '{{print $0, "{params.file_bname}"}}' {input.regions} | \
         sed -e 's/_/\\t/g' -e 's/:/\\t/g' | \
         awk -v OFS="\\t" '{{print {params.legend_key},{params.legend_val}}}' | \
-        sort -k2,2;}} > {output} 2> {log}
+        sort -k2,2 | uniq ;}} > {output} 2> {log}
         """
 
 
