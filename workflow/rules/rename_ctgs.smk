@@ -28,6 +28,9 @@ LOG_DIR = config.get("logs_dir", "logs")
 BED_FIND_COL = config.get("bed_find_col", 1)
 BED_REPLACE_W_JOINED_COLS = config.get("bed_replace_w_joined_cols", (9, 5, 1))
 ORIENTATION = config.get("orientation", ("fwd", "rev"))
+SED_CMD = config.get(
+    "sed_cmd", "sed -e 's/> />/g' -e 's/\([0-9]\) \([0-9]\)/\\1:\\2/g'"
+)
 
 
 # 1. name: haplotype1-0000027
@@ -103,6 +106,8 @@ rule rename_oriented_ctgs:
         ),
     conda:
         "../env/tools.yaml"
+    params:
+        sed_cmd=SED_CMD,
     log:
         os.path.join(LOG_DIR, "rename_{ort}_ctgs_{sm}.log"),
     shell:
@@ -112,8 +117,7 @@ rule rename_oriented_ctgs:
         NR==FNR {{legend[$1]=$2; next}} \
         {{print ($1 in legend ? legend[$1] : $1)}}' {input.legend} {input.split_seq} | \
         awk '{{printf "%s%s", (/>/ ? ors : OFS), $0; ors=ORS}} END{{print ":"}}' | \
-        sed -e 's/> />/g' -e 's/\([0-9]\) \([0-9]\)/\\1:\\2/g' | \
-        tr " " "\\n";}} > {output} 2> {log}
+        {params.sed_cmd};}} > {output} 2> {log}
         """
 
 

@@ -42,6 +42,7 @@ RENAME_NEW_CTGS_CFG = {
     "log_dir": "logs/rename_cens",
     "bed_find_col": 3,
     "bed_replace_w_joined_cols": (1, 2, 3),
+    "sed_cmd": "sed 's/> />/g' | tr \" \" \"\\n\" | sed '$ s/.$//'",
 }
 
 
