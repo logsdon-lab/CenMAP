@@ -133,6 +133,7 @@ rule merge_legends_for_rm:
         """
 
 
+# TODO: rules.format_repeatmasker_output can be joined here probably.
 rule rename_contig_name_repeatmasker:
     input:
         rm_out=rules.run_repeatmasker.output,
@@ -170,6 +171,7 @@ rule rename_contig_name_repeatmasker:
 
 
 # Run repeatmasker on reference t2t-chm13 as a control.
+# TODO: Do I need to format this like below?
 use rule run_repeatmasker as run_repeatmasker_ref with:
     input:
         seq=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
@@ -214,7 +216,11 @@ $14, $15, $16, $17, $18}}' | \
 
 rule format_add_control_repeatmasker_output:
     input:
-        ref_rm_output=rules.run_repeatmasker_ref.output,
+        ref_rm_output=(
+            config["repeatmasker"]["ref_repeatmasker_output"]
+            if config["repeatmasker"].get("ref_repeatmasker_output")
+            else rules.run_repeatmasker_ref.output
+        ),
         sample_rm_output=rules.format_repeatmasker_output.output,
     output:
         os.path.join(
@@ -238,7 +244,6 @@ rule format_add_control_repeatmasker_output:
 
 rule format_add_censat_annot_repeatmasker_output:
     input:
-        # TODO: Where at? Should have rule for this as well?
         cen_sat_rm_output=config["repeatmasker"]["censat_annot_hor_output"],
         sample_ctrl_rm_output=rules.format_add_control_repeatmasker_output.output,
     output:
@@ -275,12 +280,12 @@ rule reverse_complete_repeatmasker_output:
         "../env/tools.yaml"
     shell:
         """
-        tac {input} | \
+        {{ tac {input} | \
         sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
         awk -v OFS="\\t" '{{print $1, $2, $3, $4, $5"-"$6":"$7"-"$8, $8-$7-$10+1,
 $8-$7-$9+1, $11, $12, $13, $14, $15, $16, $17, $18}}' | \
         sed 's/chr/rc_chr/g' | \
-        grep -v "chm13" > {output}
+        grep -v "chm13";}} > {output} 2> {log}
         """
 
 

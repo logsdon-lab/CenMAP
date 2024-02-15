@@ -88,11 +88,12 @@ rule repeatmasker_only:
         rules.count_complete_cens.output,
         expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),
         expand(rules.rename_contig_name_repeatmasker.output, sm=SAMPLE_NAMES),
-        # rules.run_repeatmasker_ref.output,
-        # rules.format_repeatmasker_output.output,
-        # rules.format_add_control_repeatmasker_output.output,
-        # rules.format_add_censat_annot_repeatmasker_output.output,
-        # rules.reverse_complete_repeatmasker_output.output,
+        rules.run_repeatmasker_ref.output,
+        rules.format_repeatmasker_output.output,
+        rules.format_add_control_repeatmasker_output.output,
+        rules.format_add_censat_annot_repeatmasker_output.output,
+        rules.reverse_complete_repeatmasker_output.output,
+        expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
 
 
 rule nuc_freq_only:
