@@ -306,6 +306,7 @@ rule plot_cens_from_rm_by_chr:
         "../env/r.yaml"
     shell:
         """
-        grep "{wildcards.chr}[_|:]" {input.rm_out} > {output.rm_out_by_chr}
+        grep "{wildcards.chr}_" {input.rm_out} > {output.rm_out_by_chr}
+        grep "{wildcards.chr}:" {input.rm_out} >> {output.rm_out_by_chr}
         Rscript {input.script} {output.rm_out_by_chr} {output.repeat_plot_by_chr} 2> {log}
         """

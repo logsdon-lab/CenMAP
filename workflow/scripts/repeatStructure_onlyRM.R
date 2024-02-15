@@ -18,7 +18,7 @@ p <- add_argument(p, "input", help="Input repeatmasker.out file", type="characte
 p <- add_argument(p, "output", help="Output plot file.", type="character")
 argv <- parse_args(p)
 
-setwd("~/Documents/Eichler Lab/Weekly plans/HGSVC3/RepeatMasker")
+# setwd("~/Documents/Eichler Lab/Weekly plans/HGSVC3/RepeatMasker")
 df = fread(argv$input, select = c(1:15), stringsAsFactors = FALSE, fill=TRUE, quote="", header=FALSE, skip=2)
 cols =  c("idx", "div", "deldiv", "insdiv", "contig", "start", "end", "left", "C", "type", "rClass", "right", "x", "y", "z")
 colnames(df) <- cols
