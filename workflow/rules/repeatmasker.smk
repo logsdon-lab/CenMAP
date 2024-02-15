@@ -47,12 +47,12 @@ rule count_complete_cens:
         strip_dir=config["repeatmasker"]["output_dir"].replace("/", "\/") + "\/",
     shell:
         """
-        rm {output.all_idx}
+        rm -f {output.all_idx}
         cat {input} > {output.all_idx}
 
         wc -l {input} {output.all_idx} | \
         sed -e 's/{params.strip_dir}//g' -e 's/_/\\t/g' | \
-        awk -v OFS="\\t" '{{print $2, $1, $1/46*100}}' | head -n +2 > {output}
+        awk -v OFS="\\t" '{{print $2, $1, $1/46*100}}' | head -n +2 > {output.cmp_cnts}
         """
 
 
@@ -118,20 +118,24 @@ rule rename_contig_name_repeatmasker:
             "{sm}_renamed_correct_ALR_regions.500kbp.fa.out",
         ),
     run:
+        import csv
+
         with (
-            open(input.legend, "rt") as legend_fh,
-            open(input.rm_out, "rt") as rm_out_fh,
-            open(output.renamed_out, "rt") as rm_renamed_out_fh,
+            open(str(input.legend), "rt") as legend_fh,
+            open(str(input.rm_out), "rt") as rm_out_fh,
+            open(str(output.renamed_out), "wt") as rm_renamed_out_fh,
         ):
-            rm_out = rm_out_fh.read()
+            contig_name_legend = dict(
+                tuple(line.strip().split("\t")) for line in legend_fh.readlines()
+            )
+            rm_out_reader = csv.reader(rm_out_fh, delimiter="\t")
+            rm_renamed_out_writer = csv.writer(rm_renamed_out_fh, delimiter="\t")
 
-            contig_name_legend = {
-                dict(line.strip().split("\t")) for line in legend_fh.readlines()
-            }
-            for contig, new_name in rm_out.items():
-                rm_out = rm_out.replace(contig, new_name)
-
-            rm_renamed_out_fh.write(rm_out)
+            for rm_row in rm_out_reader:
+                query_seq_name = rm_row[4]
+                new_query_seq_name = contig_name_legend[query_seq]
+                rm_row[4] = new_query_seq_name
+                rm_renamed_out_writer.writerow(rm_row)
 
 
 # Run repeatmasker on reference t2t-chm13 as a control.
