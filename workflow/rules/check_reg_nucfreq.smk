@@ -19,6 +19,9 @@ rule make_bed_files_for_plot:
         alr_bed=os.path.join(
             config["nuc_freq"]["output_dir"], "{sm}_ALR_regions.500kp.bed"
         ),
+        correct_alr_bed=os.path.join(
+            config["nuc_freq"]["output_dir"], "{sm}_correct_ALR_regions.500kbp.bed"
+        ),
     params:
         io_cols=" ".join(["ctg", "start", "end", "chr"]),
         grp_cols=" ".join(["ctg", "chr"]),
@@ -27,6 +30,13 @@ rule make_bed_files_for_plot:
         "../env/py.yaml"
     log:
         "logs/make_{sm}_bed_files_for_plot.log",
+    message:
+        f"""
+        Check (sm)_correct_ALR_regions.500kbp.bed for copies of ALR regions per sample.
+        Add a column labeling regions as "good" or "misassembled".
+        Then update repeatmasker.correct_asm in config/config.yaml.
+        An automated approach to missassembly identification is a WIP.
+        """
     shell:
         # Only filter for sample to avoid malformed output ref cols in alr bed.
         """
@@ -43,6 +53,9 @@ rule make_bed_files_for_plot:
             -g {params.grp_cols} \
             -s {params.sort_cols} | \
         awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2, $4}}';}} > {output.alr_bed} 2>> {log}
+
+        # Make copy.
+        cp {output.alr_bed} {output.correct_alr_bed}
         """
 
 

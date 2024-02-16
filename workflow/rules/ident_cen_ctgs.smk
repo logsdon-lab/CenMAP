@@ -252,6 +252,7 @@ RENAME_CTGS_CFG = {
     "output_dir": config["ident_cen_ctgs"]["output_dir"],
     "samples": SAMPLE_NAMES,
     "log_dir": "logs/rename_cens",
+    "sed_cmd": "sed -e 's/> />/g' -e 's/\([0-9]\) \([0-9]\)/\\1:\\2/g' | tr \" \" \"\\n\"",
 }
 
 

@@ -18,3 +18,5 @@ repos:
     hooks:
     -   id: ruff
     -   id: ruff-format
+
+exclude: "chm13_chm1_cens_v21.trimmed.fa.out"

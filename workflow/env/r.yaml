@@ -1,5 +1,17 @@
 channels:
   - conda-forge
+  - bioconda
+  - r
 dependencies:
   - r-base=4.3.2
   - r-ggplot2
+  - r-argparser
+  - r-directlabels
+  - r-plyr
+  - r-gridextra
+  - r-scales
+  - r-rcolorbrewer
+  - r-reshape2
+  - r-data.table
+  - r-dplyr
+  - r-tidyr

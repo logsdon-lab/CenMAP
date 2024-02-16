@@ -8,6 +8,8 @@ jobs:
     steps:
     - name: Checkout directory.
       uses: actions/checkout@v3
+      with:
+        submodules: 'true'
 
     - name: Set up Python.
       uses: actions/setup-python@v4
@@ -19,9 +21,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
 
-    - name: Test workflow.
+    - name: Test extract cens, dna-brnn, and nucfreq workflow.
       run: |
         snakemake -c 1 -np --configfile test/config/config.yaml
+
+    - name: Test repeatmasker workflow.
+      run: |
+        snakemake -c 1 -np --configfile test/config/config.yaml -U repeatmasker_only
 
     - name: Test scripts.
       run: |

@@ -48,6 +48,7 @@ CHROMOSOMES = (
     "chrY",
 )
 SAMPLE_FLOWCELL_IDS = get_hifi_read_wildcards()
+CORRECT_ASSEMBLIES = config["repeatmasker"]["correct_asm"]
 
 
 wildcard_constraints:
@@ -81,16 +82,6 @@ rule dna_brnn_only:
         rules.new_cens_rename_ctg_all.input,
 
 
-rule repeatmasker_only:
-    input:
-        expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),
-        rules.run_repeatmasker_ref.output,
-        rules.format_repeatmasker_output.output,
-        rules.format_add_control_repeatmasker_output.output,
-        rules.format_add_censat_annot_repeatmasker_output.output,
-        rules.reverse_complete_repeatmasker_output.output,
-
-
 rule nuc_freq_only:
     input:
         expand(
@@ -105,6 +96,29 @@ rule nuc_freq_only:
         ),
         expand(
             rules.gen_nucfreq_plot.output, sm=SAMPLE_FLOWCELL_IDS.keys(), hap=HAPLOTYPE
+        ),
+        # Then stop to inspect if correctly assembled.
+
+
+rule repeatmasker_only:
+    input:
+        rules.count_complete_cens.output,
+        expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),
+        expand(rules.rename_contig_name_repeatmasker.output, sm=SAMPLE_NAMES),
+        rules.format_repeatmasker_output.output,
+        rules.format_add_control_repeatmasker_output.output,
+        rules.format_add_censat_annot_repeatmasker_output.output,
+        rules.reverse_complete_repeatmasker_output.output,
+        expand(rules.extract_rm_out_by_chr.output, chr=CHROMOSOMES),
+        expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
+        # Then stop to inspect correctly oriented. Run rule below.
+
+
+rule repeatmasker_reoriented_only:
+    input:
+        expand(rules.create_correct_oriented_cens_list.output, chr=CHROMOSOMES),
+        expand(
+            rules.plot_corrected_oriented_cens_from_rm_by_chr.output, chr=CHROMOSOMES
         ),
 
 
