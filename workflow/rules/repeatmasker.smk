@@ -98,18 +98,42 @@ rule run_repeatmasker:
 
 rule merge_legends_for_rm:
     input:
-        lambda wc: expand(
+        legends=lambda wc: expand(
             rules.new_cens_create_oriented_ctg_name_legend.output,
             sm=[wc.sm],
             ort=ORIENTATION,
         ),
+        idxs=rules.extract_correct_alr_regions_rm.output.idx,
     output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"], temp("{sm}_merged_legend.txt")
+        merged_legends=temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"], "{sm}_merged_legend.txt"
+            )
         ),
+        sorted_idxs=temp(
+            os.path.join(config["repeatmasker"]["output_dir"], "{sm}_sorted.fa.fai")
+        ),
+        trimed_fmted_legend=os.path.join(
+            config["repeatmasker"]["output_dir"], "{sm}_fmt_merged_legend.txt"
+        ),
+    conda:
+        "../env/tools.yaml"
+    log:
+        "logs/merge_legends_for_rm_{sm}.log",
     shell:
         """
-        cat {input} | sort | uniq > {output}
+        # Merge legend with full contig name w/o coordinates.
+        cat {input.legends} | sort -k 1 | uniq > {output.merged_legends}
+
+        # Get contigs that are good and their coordinates.
+        {{ sed 's/:/\\t/g' {input.idxs} | \
+        awk -v OFS="\\t" '{{print $1, $2}}' | \
+        sort -k 1 | uniq;}} > {output.sorted_idxs} 2> {log}
+
+        # Join on original contig name and get final contig name.
+        # (sm)_(chr)_(ctg):(start)-(end)
+        {{ join -1 1 -2 1 {output.sorted_idxs} {output.merged_legends} | \
+        awk -v OFS="\\t" '{{ print $1, $3":"$2 }}';}} > {output.trimed_fmted_legend} 2>> {log}
         """
 
 
@@ -117,7 +141,7 @@ rule merge_legends_for_rm:
 rule rename_contig_name_repeatmasker:
     input:
         rm_out=rules.run_repeatmasker.output,
-        legend=rules.merge_legends_for_rm.output,
+        legend=rules.merge_legends_for_rm.output.trimed_fmted_legend,
     output:
         renamed_out=os.path.join(
             config["repeatmasker"]["output_dir"],
@@ -151,7 +175,6 @@ rule rename_contig_name_repeatmasker:
 
 
 # Run repeatmasker on reference t2t-chm13 as a control.
-# TODO: Do I need to format this like below?
 use rule run_repeatmasker as run_repeatmasker_ref with:
     input:
         seq=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
