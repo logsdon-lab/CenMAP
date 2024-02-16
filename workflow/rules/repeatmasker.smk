@@ -231,6 +231,8 @@ rule format_add_censat_annot_repeatmasker_output:
             config["repeatmasker"]["output_dir"],
             "all_correct_ALR_regions.500kbp.fa.out",
         ),
+    params:
+        chr_to_add="chrY",
     log:
         "logs/format_add_censat_annot_repeatmasker_output.log",
     conda:
@@ -239,7 +241,7 @@ rule format_add_censat_annot_repeatmasker_output:
         """
         cp {input.sample_ctrl_rm_output} {output} 2> {log}
 
-        {{ cat {input.cen_sat_rm_output} | \
+        {{ grep "{params.chr_to_add}" {input.cen_sat_rm_output} | \
         sed -e 's/chr/chm13_chr/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
         awk -v OFS="\\t" '{{print $1, $2, $3,
 $4, $5":"$6"-"$7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17}}';}} >> {output} 2> {log}
