@@ -1,4 +1,0 @@
-[submodule "workflow/scripts/RepeatMasker"]
-	path = workflow/scripts/RepeatMasker
-	url = https://github.com/logsdon-lab/RepeatMasker.git
-    branch = fix/v4.1.0-id-length-fix

@@ -1,8 +1,3 @@
-CORRECT_ALR_REGIONS_PATTERN = os.path.join(
-    config["nuc_freq"]["output_dir"], "{sm}_correct_ALR_regions.500kbp.bed"
-)
-
-
 # HG00171_chr4_haplotype1-0000002:1892469-12648706
 # |haplotype1-0000002|1892469|12648706|chr4|
 # |haplotype1-0000002|1892469|12648706|12648706-1892469|chr4|
@@ -24,7 +19,9 @@ rule make_bed_files_for_plot:
         alr_bed=os.path.join(
             config["nuc_freq"]["output_dir"], "{sm}_ALR_regions.500kp.bed"
         ),
-        correct_alr_bed=CORRECT_ALR_REGIONS_PATTERN,
+        correct_alr_bed=os.path.join(
+            config["nuc_freq"]["output_dir"], "{sm}_correct_ALR_regions.500kbp.bed"
+        ),
     params:
         io_cols=" ".join(["ctg", "start", "end", "chr"]),
         grp_cols=" ".join(["ctg", "chr"]),
@@ -36,7 +33,7 @@ rule make_bed_files_for_plot:
     message:
         f"""
         Check (sm)_correct_ALR_regions.500kbp.bed for copies of ALR regions per sample.
-        Remove lines corresponding to incorrectly assembled contigs.
+        Add a column labeling regions as "good" or "misassembled".
         Then update repeatmasker.correct_asm in config/config.yaml.
         An automated approach to missassembly identification is a WIP.
         """
