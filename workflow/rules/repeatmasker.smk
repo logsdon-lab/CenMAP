@@ -15,29 +15,9 @@ rule get_valid_regions_for_rm:
         """
 
 
-rule merge_ort_alr_regions_for_rm:
-    input:
-        lambda wc: expand(
-            rules.extract_new_oriented_cens_regions.output.seq,
-            sm=[wc.sm],
-            ort=ORIENTATION,
-        ),
-    output:
-        temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "{sm}_merged_ALR_regions.500kbp.fa",
-            )
-        ),
-    shell:
-        """
-        cat {input} > {output}
-        """
-
-
 use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
     input:
-        fa=rules.merge_ort_alr_regions_for_rm.output,
+        fa=rules.concat_asm.output,
         bed=rules.get_valid_regions_for_rm.output,
     output:
         seq=os.path.join(
@@ -129,7 +109,7 @@ rule merge_legends_for_rm:
         ),
     shell:
         """
-        cat {input} > {output}
+        cat {input} | sort | uniq > {output}
         """
 
 
