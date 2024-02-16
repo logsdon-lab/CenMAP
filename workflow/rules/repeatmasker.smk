@@ -378,12 +378,20 @@ rule create_correct_oriented_cens_list:
         "../env/tools.yaml"
     shell:
         """
-        rc_contigs=$(cat {input.rc_ctg_list} | cut -f5 | sort | uniq)
+        contigs_to_reverse=$(cat {input.rc_ctg_list} | cut -f5 | sort | uniq)
         # https://stackoverflow.com/a/9429887
-        joined_rc_contigs=$(IFS="|" ; echo "${{rc_contigs[*]}}")
-        # non-matching so everything correctly oriented
-        grep -vE "$joined_rc_contigs" {input.rm_chr_out} > {output.corrected_rm_out}
-        grep -E "$joined_rc_contigs" {input.rm_all_out} >> {output.corrected_rm_out}
+        joined_contigs_to_reverse=$(IFS="|" ; echo "${{contigs_to_reverse[*]}}")
+        joined_contigs_to_reverse_rc=$(echo "${{joined_contigs_to_reverse[@]}}" | sed 's/chr/rc_chr/g' )
+
+        # If nothing to reverse, just copy file.
+        if [ -z $joined_contigs_to_reverse ]; then
+            cp {input.rm_chr_out} {output.corrected_rm_out}
+        else
+            # non-matching so everything correctly oriented
+            grep -vE "$joined_contigs_to_reverse" {input.rm_chr_out} > {output.corrected_rm_out}
+            grep -E "$joined_contigs_to_reverse_rc" {input.rm_all_out} >> {output.corrected_rm_out}
+        fi
+
         cat {input.rc_ctg_list} | cut -f5 | sort | uniq > {output.corrected_cens_list}
         """
 
