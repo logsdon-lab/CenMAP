@@ -127,7 +127,7 @@ rule humas_hmmer_only:
     input:
         expand(rules.extract_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
         expand(rules.split_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
-        expand(rules.as_ident_humas_hmmer_all.output, chr=CHROMOSOMES),
+        expand(rules.run_humas_hmmer_for_anvil.output, chr=CHROMOSOMES),
 
 
 rule all:

@@ -54,9 +54,7 @@ repeatmasker:
   output_dir: "results/repeatmasker"
 
 humas_hmmer:
-  output_dir: "output/"
+  output_dir: "results/humas_hmmer"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
   threads: 30
-  model: "data/AS-HORs-hmmer3.0-170921.hmm"
-  # # {"AS-HOR": hmmer-run.sh, "SF": hmmer-run_SF.sh}
-  mode: "AS-HOR"
+  model: "workflow/scripts/HumAS-HMMER_for_AnVIL/AS-HORs-hmmer3.3.2-120124.hmm"

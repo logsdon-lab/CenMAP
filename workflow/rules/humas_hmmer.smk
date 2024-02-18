@@ -6,6 +6,7 @@ rule extract_cens_for_humas_hmmer:
         corrected_cens_list=rules.create_correct_oriented_cens_list.output.corrected_cens_list,
     output:
         cens=os.path.join(config["humas_hmmer"]["output_dir"], "{chr}_cens.fa"),
+        idx=os.path.join(config["humas_hmmer"]["output_dir"], "{chr}_cens.fa.fai"),
     log:
         "logs/extract_{chr}_cens_for_humas_hmmer.log",
     conda:
@@ -40,17 +41,19 @@ rule split_cens_for_humas_hmmer:
         """
 
 
-HUMAS_HMMER_CFG = {
-    "input_dir": rules.split_cens_for_humas_hmmer.output,
-    **config["humas_hmmer"],
-}
-
-
-module HumAS_HMMER:
-    snakefile:
-        github("koisland/Smk-HumAS-HMMER", path="workflow/Snakefile", branch="main")
-    config:
-        HUMAS_HMMER_CFG
-
-
-use rule * from HumAS_HMMER as as_ident_*
+rule run_humas_hmmer_for_anvil:
+    input:
+        script="workflow/scripts/HumAS-HMMER_for_AnVIL/hmmer-run.sh",
+        input_dir=rules.split_cens_for_humas_hmmer.output,
+        model=config["humas_hmmer"]["model"],
+    output:
+        directory(os.path.join(config["humas_hmmer"]["output_dir"], "results_{chr}")),
+    conda:
+        "../env/tools.yaml"
+    threads: config["humas_hmmer"]["threads"]
+    log:
+        "logs/run_humas_hmmer_for_anvil_{chr}.log",
+    shell:
+        """
+        ./{input.script} {input.input_dir} {output} {input.model}
+        """
