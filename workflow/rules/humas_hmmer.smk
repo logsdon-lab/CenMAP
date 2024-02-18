@@ -111,7 +111,7 @@ rule extract_cens_for_humas_hmmer:
 
 rule split_cens_for_humas_hmmer:
     input:
-        rules.extract_cens_for_humas_hmmer.output,
+        rules.extract_cens_for_humas_hmmer.output.cens,
     output:
         directory(os.path.join(config["humas_hmmer"]["output_dir"], "{chr}")),
     log:
