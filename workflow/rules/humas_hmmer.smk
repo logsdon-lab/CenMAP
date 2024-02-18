@@ -1,8 +1,98 @@
 
+rule fmt_correct_alr_regions:
+    input:
+        alr_fa=rules.extract_correct_alr_regions_rm.output.seq,
+        legend=rules.merge_legends_for_rm.output.merged_legends,
+    output:
+        fmt_alr_fa=temp(
+            os.path.join(
+                config["humas_hmmer"]["output_dir"],
+                "{sm}_fmt_correct_ALR_regions.500kbp.fa",
+            )
+        ),
+    run:
+        with open(str(input.legend)) as legend:
+            replacements = dict(tuple(l.strip().split()) for l in legend.readlines())
+
+        with (
+            open(str(input.alr_fa)) as input_fa,
+            open(str(output.fmt_alr_fa), "wt") as output_fa,
+        ):
+            for line in input_fa.readlines():
+                if line.startswith(">"):
+                    record_id, _, coords = line[1:].strip().partition(":")
+                    replacement = replacements.get(record_id, record_id)
+                    if coords:
+                        output_fa.write(f">{replacement}:{coords}\n")
+                    else:
+                        output_fa.write(f">{replacement}\n")
+                else:
+                    output_fa.write(line)
+
+
+rule create_rc_merged_legend:
+    input:
+        rules.merge_legends_for_rm.output.merged_legends,
+    output:
+        os.path.join(config["humas_hmmer"]["output_dir"], "{sm}_rc_merged_legend.txt"),
+    shell:
+        "sed 's/chr/rc_chr/g' {input} > {output}"
+
+
+use rule fmt_correct_alr_regions as fmt_rc_correct_alr_regions with:
+    input:
+        alr_fa=rules.rc_correct_alr_regions_rm.output.rc_seq,
+        legend=rules.create_rc_merged_legend.output,
+    output:
+        fmt_alr_fa=temp(
+            os.path.join(
+                config["humas_hmmer"]["output_dir"],
+                "{sm}_fmt_rc_correct_ALR_regions.500kbp.fa",
+            )
+        ),
+
+
+rule merge_correct_alr_regions:
+    input:
+        alr_fa=expand(rules.fmt_correct_alr_regions.output, sm=SAMPLE_NAMES),
+    output:
+        seq=os.path.join(
+            config["humas_hmmer"]["output_dir"], "all_correct_ALR_regions.500kbp.fa"
+        ),
+        idx=os.path.join(
+            config["humas_hmmer"]["output_dir"],
+            "all_correct_ALR_regions.500kbp.fa.fai",
+        ),
+    log:
+        "logs/merge_correct_alr_regions.log",
+    conda:
+        "../env/tools.yaml"
+    shell:
+        """
+        cat {input.alr_fa} > {output.seq} 2> {log}
+        samtools faidx {output.seq} 2> {log}
+        """
+
+
+use rule merge_correct_alr_regions as merge_correct_alr_regions_rc with:
+    input:
+        alr_fa=expand(rules.fmt_rc_correct_alr_regions.output, sm=SAMPLE_NAMES),
+    output:
+        seq=os.path.join(
+            config["humas_hmmer"]["output_dir"], "all_correct_ALR_regions.500kbp.rc.fa"
+        ),
+        idx=os.path.join(
+            config["humas_hmmer"]["output_dir"],
+            "all_correct_ALR_regions.500kbp.rc.fa.fai",
+        ),
+    log:
+        "logs/merge_rc_correct_alr_regions.log",
+
+
 rule extract_cens_for_humas_hmmer:
     input:
-        all_correct_alr_fa=rules.format_add_censat_annot_repeatmasker_output.output,
-        rc_all_correct_alr_fa=rules.reverse_complete_repeatmasker_output.output,
+        all_correct_alr_fa=rules.merge_correct_alr_regions.output,
+        rc_all_correct_alr_fa=rules.merge_correct_alr_regions_rc.output,
         corrected_cens_list=rules.create_correct_oriented_cens_list.output.corrected_cens_list,
     output:
         cens=os.path.join(config["humas_hmmer"]["output_dir"], "{chr}_cens.fa"),
