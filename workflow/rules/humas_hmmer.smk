@@ -145,5 +145,5 @@ rule run_humas_hmmer_for_anvil:
         "logs/run_humas_hmmer_for_anvil_{chr}.log",
     shell:
         """
-        ./{input.script} {input.input_dir} {output} {input.model}
+        ./{input.script} {input.input_dir} {output} {input.model} {threads} 2> {log}
         """
