@@ -141,6 +141,8 @@ rule run_humas_hmmer_for_anvil:
     conda:
         "../env/tools.yaml"
     threads: config["humas_hmmer"]["threads"]
+    benchmark:
+        "benchmarks/run_humas_hmmer_for_anvil_{chr}.tsv"
     log:
         "logs/run_humas_hmmer_for_anvil_{chr}.log",
     shell:
