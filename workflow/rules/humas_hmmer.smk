@@ -91,8 +91,8 @@ use rule merge_correct_alr_regions as merge_correct_alr_regions_rc with:
 
 rule extract_cens_for_humas_hmmer:
     input:
-        all_correct_alr_fa=rules.merge_correct_alr_regions.output,
-        rc_all_correct_alr_fa=rules.merge_correct_alr_regions_rc.output,
+        all_correct_alr_fa=rules.merge_correct_alr_regions.output.seq,
+        rc_all_correct_alr_fa=rules.merge_correct_alr_regions_rc.output.seq,
         corrected_cens_list=rules.create_correct_oriented_cens_list.output.corrected_cens_list,
     output:
         cens=os.path.join(config["humas_hmmer"]["output_dir"], "{chr}_cens.fa"),
