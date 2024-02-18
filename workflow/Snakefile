@@ -67,6 +67,7 @@ include: "rules/dna_brnn.smk"
 include: "rules/extract_new_cens_ctgs.smk"
 include: "rules/check_reg_nucfreq.smk"
 include: "rules/repeatmasker.smk"
+include: "rules/humas_hmmer.smk"
 
 
 rule extract_align_cens_only:
@@ -120,6 +121,13 @@ rule repeatmasker_reoriented_only:
         expand(
             rules.plot_corrected_oriented_cens_from_rm_by_chr.output, chr=CHROMOSOMES
         ),
+
+
+rule humas_hmmer_only:
+    input:
+        expand(rules.extract_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
+        expand(rules.split_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
+        expand(rules.as_ident_humas_hmmer_all.output, chr=CHROMOSOMES),
 
 
 rule all:

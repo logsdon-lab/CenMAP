@@ -54,7 +54,6 @@ repeatmasker:
   output_dir: "results/repeatmasker"
 
 humas_hmmer:
-  input_dir: "data/chr_cens"
   output_dir: "output/"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
   threads: 30
