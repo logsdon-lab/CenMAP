@@ -6,3 +6,4 @@ results/
 venv/
 __pycache__
 .Rproj.user
+*.Rproj
