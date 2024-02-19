@@ -392,7 +392,7 @@ rule create_correct_oriented_cens_list:
             grep -E "$joined_contigs_to_reverse_rc" {input.rm_all_out} >> {output.corrected_rm_out}
         fi
 
-        cat {input.rc_ctg_list} | cut -f5 | sort | uniq > {output.corrected_cens_list}
+        cat {output.corrected_rm_out} | cut -f5 | sort | uniq > {output.corrected_cens_list}
         """
 
 

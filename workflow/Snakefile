@@ -67,6 +67,7 @@ include: "rules/dna_brnn.smk"
 include: "rules/extract_new_cens_ctgs.smk"
 include: "rules/check_reg_nucfreq.smk"
 include: "rules/repeatmasker.smk"
+include: "rules/humas_hmmer.smk"
 
 
 rule extract_align_cens_only:
@@ -103,6 +104,8 @@ rule nuc_freq_only:
 rule repeatmasker_only:
     input:
         rules.count_complete_cens.output,
+        expand(rules.extract_correct_alr_regions_rm.output, sm=SAMPLE_NAMES),
+        expand(rules.rc_correct_alr_regions_rm.output, sm=SAMPLE_NAMES),
         expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),
         expand(rules.rename_contig_name_repeatmasker.output, sm=SAMPLE_NAMES),
         rules.format_repeatmasker_output.output,
@@ -120,6 +123,18 @@ rule repeatmasker_reoriented_only:
         expand(
             rules.plot_corrected_oriented_cens_from_rm_by_chr.output, chr=CHROMOSOMES
         ),
+
+
+rule humas_hmmer_only:
+    input:
+        expand(rules.fmt_correct_alr_regions.output, sm=SAMPLE_NAMES),
+        expand(rules.create_rc_merged_legend.output, sm=SAMPLE_NAMES),
+        expand(rules.fmt_rc_correct_alr_regions.output, sm=SAMPLE_NAMES),
+        rules.merge_correct_alr_regions.output,
+        rules.merge_correct_alr_regions_rc.output,
+        expand(rules.extract_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
+        expand(rules.split_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
+        expand(rules.run_humas_hmmer_for_anvil.output, chr=CHROMOSOMES),
 
 
 rule all:

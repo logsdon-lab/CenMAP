@@ -142,7 +142,7 @@ rule merge_hifi_read_asm_alignments:
 
 rule gen_nucfreq_plot:
     input:
-        script="workflow/scripts/NucPlot.py",
+        script="workflow/scripts/NucFreq/NucPlot.py",
         bam_file=rules.merge_hifi_read_asm_alignments.output.alignment,
         alr_regions=rules.make_bed_files_for_plot.output.alr_bed,
     output:

@@ -10,7 +10,7 @@ Workflow for [HGSVC3](https://www.internationalgenome.org/human-genome-structura
 
 #### Clone
 ```bash
-git clone git@github.com:logsdon-lab/hgsvc3.git
+git clone git@github.com:logsdon-lab/hgsvc3.git --recurse-submodules
 ```
 
 #### Local

@@ -1,4 +1,4 @@
-.PHONY: dockerfile singularity dockerhub venv dev
+.PHONY: dockerfile singularity dockerhub venv dev update_submodules
 
 tag_base="logsdonlab"
 dir_name="$(shell basename $(CURDIR))"
@@ -25,3 +25,6 @@ venv:
 dev:
 	$(MAKE) venv
 	$(bin)/python3 -m pip install -r requirements-dev.txt
+
+update_submodules:
+	git submodule update --remote --recursive
