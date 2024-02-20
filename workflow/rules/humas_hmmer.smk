@@ -176,6 +176,7 @@ rule get_stv_row_from_humas_hmmer_out:
         "../env/py.yaml"
     shell:
         """
+        mkdir -p {output}
         for fname_full in $(find {input.humas_hmmer_dir} -name 'AS-HOR-vs-*.bed'); do
             fname_base=$(basename $fname_full)
             fname="${{fname_base%.bed}}"
