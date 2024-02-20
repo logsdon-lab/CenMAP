@@ -135,6 +135,8 @@ rule humas_hmmer_only:
         expand(rules.extract_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
         expand(rules.split_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
         expand(rules.run_humas_hmmer_for_anvil.output, chr=CHROMOSOMES),
+        expand(rules.get_stv_row_from_humas_hmmer_out.output, chr=CHROMOSOMES),
+        expand(rules.aggregate_all_stv_row.output, chr=CHROMOSOMES),
 
 
 rule all:
