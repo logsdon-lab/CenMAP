@@ -319,52 +319,47 @@ rule extract_rm_out_by_chr:
         rm_out_by_chr=os.path.join(
             config["repeatmasker"]["output_dir"], "{chr}_cens.fa.out"
         ),
-        rc_cens_list_by_chr=os.path.join(
-            config["repeatmasker"]["output_dir"], "rc_{chr}_cens.list"
-        ),
     log:
-        "logs/plot_{chr}_cens_from_rm.log",
+        "logs/extract_{chr}_cens_from_rm.log",
     conda:
         "../env/tools.yaml"
-    message:
-        """
-        Modify rc_cens_list by removing contigs correctly oriented.
-        An automated reorienter is a WIP.
-        """
     shell:
         """
         grep "{wildcards.chr}_" {input.rm_out} > {output.rm_out_by_chr} 2> {log}
         grep "{wildcards.chr}:" {input.rm_out} >> {output.rm_out_by_chr} 2>> {log}
-        {{ cut -f 5 {output.rm_out_by_chr} | \
-        sort | \
-        uniq;}} > {output.rc_cens_list_by_chr} 2>> {log}
         """
 
 
-rule plot_cens_from_rm_by_chr:
+rule get_reversed_cens:
     input:
-        script="workflow/scripts/repeatStructure_onlyRM.R",
+        script="workflow/scripts/get_reversed_cens.py",
         rm_out=rules.extract_rm_out_by_chr.output.rm_out_by_chr,
     output:
-        repeat_plot_by_chr=os.path.join(
-            config["repeatmasker"]["output_dir"], "hgsvc3_{chr}_cens.additional.pdf"
+        rc_cens_list_by_chr=os.path.join(
+            config["repeatmasker"]["output_dir"], "rc_{chr}_cens.list"
         ),
+    params:
+        reference_prefix="chm13",
+        edge_len=500_000,
     log:
-        "logs/plot_{chr}_cens_from_rm.log",
+        "logs/get_reversed_{chr}_cens.log",
     conda:
-        "../env/r.yaml"
+        "../env/py.yaml"
     shell:
         """
-        Rscript {input.script} {input.rm_out} {output.repeat_plot_by_chr} 2> {log}
+        python {input.script} \
+        -i {input.rm_out} \
+        -o {output} \
+        --reference_prefix {params.reference_prefix} \
+        --edge_len {params.edge_len} 2> {log}
         """
 
 
-# TODO: Find automated approach.
 rule create_correct_oriented_cens_list:
     input:
         rm_chr_out=rules.extract_rm_out_by_chr.output.rm_out_by_chr,
         rm_all_out=rules.reverse_complete_repeatmasker_output.output,
-        rc_ctg_list=rules.extract_rm_out_by_chr.output.rc_cens_list_by_chr,
+        rc_ctg_list=rules.get_reversed_cens.output.rc_cens_list_by_chr,
     output:
         corrected_rm_out=os.path.join(
             config["repeatmasker"]["output_dir"], "corrected_{chr}_cens.fa.out"
@@ -378,7 +373,7 @@ rule create_correct_oriented_cens_list:
         "../env/tools.yaml"
     shell:
         """
-        contigs_to_reverse=$(cat {input.rc_ctg_list} | cut -f5 | sort | uniq)
+        contigs_to_reverse=$(cat {input.rc_ctg_list} | sort | uniq)
         # https://stackoverflow.com/a/9429887
         joined_contigs_to_reverse=$(IFS="|" ; echo "${{contigs_to_reverse[*]}}")
         joined_contigs_to_reverse_rc=$(echo "${{joined_contigs_to_reverse[@]}}" | sed 's/chr/rc_chr/g' )
@@ -396,14 +391,19 @@ rule create_correct_oriented_cens_list:
         """
 
 
-use rule plot_cens_from_rm_by_chr as plot_corrected_oriented_cens_from_rm_by_chr with:
+rule plot_cens_from_rm_by_chr:
     input:
         script="workflow/scripts/repeatStructure_onlyRM.R",
         rm_out=rules.create_correct_oriented_cens_list.output.corrected_rm_out,
     output:
         repeat_plot_by_chr=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "hgsvc3_{chr}_corrected_cens.additional.pdf",
+            config["repeatmasker"]["output_dir"], "hgsvc3_{chr}_cens.additional.pdf"
         ),
     log:
-        "logs/plot_corrected_{chr}_cens_from_rm.log",
+        "logs/plot_{chr}_cens_from_rm.log",
+    conda:
+        "../env/r.yaml"
+    shell:
+        """
+        Rscript {input.script} {input.rm_out} {output.repeat_plot_by_chr} 2> {log}
+        """

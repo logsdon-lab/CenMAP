@@ -113,16 +113,9 @@ rule repeatmasker_only:
         rules.format_add_censat_annot_repeatmasker_output.output,
         rules.reverse_complete_repeatmasker_output.output,
         expand(rules.extract_rm_out_by_chr.output, chr=CHROMOSOMES),
-        expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
-        # Then stop to inspect correctly oriented. Run rule below.
-
-
-rule repeatmasker_reoriented_only:
-    input:
+        expand(rules.get_reversed_cens.output, chr=CHROMOSOMES),
         expand(rules.create_correct_oriented_cens_list.output, chr=CHROMOSOMES),
-        expand(
-            rules.plot_corrected_oriented_cens_from_rm_by_chr.output, chr=CHROMOSOMES
-        ),
+        expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
 
 
 rule humas_hmmer_only:

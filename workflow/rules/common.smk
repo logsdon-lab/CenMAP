@@ -4,7 +4,9 @@ def get_hifi_read_wildcards() -> dict[str, list[str]]:
     Expects {hifi_reads_dir}/{sample}/*.bam
     """
     reads_dir = config["nuc_freq"]["hifi_reads_dir"]
-    path_pattern = os.path.join(reads_dir, "{sm}", "{flowcell_id}.bam")
+    # Avoid subdirs by constraining wildcards.
+    # https://stackoverflow.com/a/60744040
+    path_pattern = os.path.join(reads_dir, "{sm,[^/]+}", "{flowcell_id,[^/]+}.bam")
     reads_run_mdata_id = glob_wildcards(path_pattern)
 
     samples = defaultdict(list)
