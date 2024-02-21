@@ -19,4 +19,4 @@ repos:
     -   id: ruff
     -   id: ruff-format
 
-exclude: "chm13_chm1_cens_v21.trimmed.fa.out|chr21_cens.fa.out|chr22_cens.fa.out|.*\\.hmm"
+exclude: "data/annotations/.*"

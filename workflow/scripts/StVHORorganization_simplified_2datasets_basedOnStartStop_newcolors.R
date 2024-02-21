@@ -37,7 +37,7 @@ p <- add_argument(p, "--output_tbl",
 p <- add_argument(p, "--hor_filter",
                    help="Filter for HORs that occur at least 20 times (10 times per haplotype)",
                    type="numeric", default=0)
-p <- add_argument(p, "--order_hor",
+p <- add_argument(p, "--mer_order",
                   help="Reorder data to put 'large'-r or 'small'-r -mers on top.",
                   type="character", default='large')
 p <- add_argument(p,"--plot_width",
@@ -53,12 +53,12 @@ if (is.na(args$chr)) {
 
 # Create default output names.
 args$output_tbl <- ifelse(
-  !is.null(args$output_tbl),
+  is.na(args$output_tbl),
   paste0(args$chr, "_length.tsv"),
   args$output_tbl
 )
 args$output <- ifelse(
-  !is.null(args$output),
+  is.na(args$output),
   paste0(args$chr, "_hgsvc3_",
          args$order_hor,
          switch(args$order_hor, "small"="er", "large"="r"),
@@ -150,12 +150,12 @@ names(myColors) <- levels(as.factor(c("1", "10", "11", "12", "13", "14", "15", "
 
 # reorder data to put larger or smaller -mers on top
 df_final <- switch(
-  args$order_hor,
+  args$mer_order,
   # First sort by val. This sorts the dataframe but NOT the factor levels #larger HORs on top
   "large" = df_final %>% arrange(mer),
   # First sort by val. This sorts the dataframe but NOT the factor levels #smaller HORs on top
   "small" =  df_final %>% arrange(-mer),
-  stop(paste("Invalid mer reordering option:", args$order_hor)))
+  stop(paste("Invalid mer reordering option:", args$mer_order)))
 
 # Just the summary track
 ggplot(df_final) +
