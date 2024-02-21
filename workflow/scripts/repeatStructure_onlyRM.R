@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-
+# 231029 repeatStructure_onlyRM.R
 library(argparser, quietly=TRUE)
 library(ggplot2)
 library(directlabels)
@@ -131,4 +131,5 @@ ggplot() +
   guides(color = guide_legend(override.aes = list(size=6))) +
   xlab("Position (kbp)")
 
+if(!interactive()) pdf(NULL)
 ggsave(argv$output, width=10, height=10)
