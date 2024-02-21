@@ -57,4 +57,15 @@ humas_hmmer:
   output_dir: "results/humas_hmmer"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
   threads: 30
+  # NOTE: Change this later to data/models/AS-HORs-hmmer3.0-170921.hmm!
   model: "workflow/scripts/HumAS-HMMER_for_AnVIL/AS-HORs-hmmer3.3.2-120124.hmm"
+
+plot_hor_stv:
+  output_dir: "results/hor_stv"
+  chm1_stv: "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
+  chm13_stv: "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
+  # Reorder data to put 'large'-r or 'small'-r -mers on top.
+  # Specifying both creates both plots.
+  mer_order:
+    - small
+    - large

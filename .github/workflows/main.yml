@@ -29,6 +29,14 @@ jobs:
       run: |
         snakemake -c 1 -np --configfile test/config/config.yaml -U repeatmasker_only
 
+    - name: Test HumAS-HMMER workflow.
+      run: |
+        snakemake -c 1 -np --configfile test/config/config.yaml -U humas_hmmer_only
+
+    - name: Test plotting StV workflow.
+      run: |
+        snakemake -c 1 -np --configfile test/config/config.yaml -U plot_hor_stv_only
+
     - name: Test scripts.
       run: |
         pytest -s

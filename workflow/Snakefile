@@ -68,6 +68,7 @@ include: "rules/extract_new_cens_ctgs.smk"
 include: "rules/check_reg_nucfreq.smk"
 include: "rules/repeatmasker.smk"
 include: "rules/humas_hmmer.smk"
+include: "rules/plot_hor_stv.smk"
 
 
 rule extract_align_cens_only:
@@ -128,6 +129,17 @@ rule humas_hmmer_only:
         expand(rules.extract_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
         expand(rules.split_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
         expand(rules.run_humas_hmmer_for_anvil.output, chr=CHROMOSOMES),
+
+
+rule plot_hor_stv_only:
+    input:
+        expand(rules.get_stv_row_from_humas_hmmer_out.output, chr=CHROMOSOMES),
+        expand(rules.aggregate_all_stv_row.output, chr=CHROMOSOMES),
+        expand(
+            rules.plot_stv_with_order.output,
+            chr=CHROMOSOMES,
+            mer_order=config["plot_hor_stv"]["mer_order"],
+        ),
 
 
 rule all:
