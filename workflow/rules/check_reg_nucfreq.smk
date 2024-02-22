@@ -39,6 +39,7 @@ rule make_bed_files_for_plot:
         """
     shell:
         # Only filter for sample to avoid malformed output ref cols in alr bed.
+        # Also, filter starting position of 1 as likely only a fragment of ALR.
         """
         {{ cat {input.faidx} | \
         sed -e 's/_/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
@@ -52,7 +53,7 @@ rule make_bed_files_for_plot:
             -co {params.io_cols} \
             -g {params.grp_cols} \
             -s {params.sort_cols} | \
-        awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2, $4}}';}} > {output.alr_bed} 2>> {log}
+        awk -v OFS="\\t" '{{ if ($2 != 1) {{print $1, $2, $3, $3-$2, $4}}}}';}} > {output.alr_bed} 2>> {log}
 
         # Make copy.
         cp {output.alr_bed} {output.correct_alr_bed}
