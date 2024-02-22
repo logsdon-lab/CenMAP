@@ -13,11 +13,11 @@ rule make_bed_files_for_plot:
     output:
         tmp_fmt_alr_bed=temp(
             os.path.join(
-                config["nuc_freq"]["output_dir"], "fmt_{sm}_ALR_regions.500kp.bed"
+                config["nuc_freq"]["output_dir"], "fmt_{sm}_ALR_regions.500kbp.bed"
             )
         ),
         alr_bed=os.path.join(
-            config["nuc_freq"]["output_dir"], "{sm}_ALR_regions.500kp.bed"
+            config["nuc_freq"]["output_dir"], "{sm}_ALR_regions.500kbp.bed"
         ),
         correct_alr_bed=os.path.join(
             config["nuc_freq"]["output_dir"], "{sm}_correct_ALR_regions.500kbp.bed"
@@ -150,7 +150,7 @@ rule gen_nucfreq_plot:
         alr_hap_regions=temp(
             os.path.join(
                 config["nuc_freq"]["output_dir"],
-                "{sm}_{hap}_ALR_regions.500kp.bed",
+                "{sm}_{hap}_ALR_regions.500kbp.bed",
             )
         ),
         plot=os.path.join(
