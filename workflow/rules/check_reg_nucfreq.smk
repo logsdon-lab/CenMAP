@@ -13,11 +13,11 @@ rule make_bed_files_for_plot:
     output:
         tmp_fmt_alr_bed=temp(
             os.path.join(
-                config["nuc_freq"]["output_dir"], "fmt_{sm}_ALR_regions.500kp.bed"
+                config["nuc_freq"]["output_dir"], "fmt_{sm}_ALR_regions.500kbp.bed"
             )
         ),
         alr_bed=os.path.join(
-            config["nuc_freq"]["output_dir"], "{sm}_ALR_regions.500kp.bed"
+            config["nuc_freq"]["output_dir"], "{sm}_ALR_regions.500kbp.bed"
         ),
         correct_alr_bed=os.path.join(
             config["nuc_freq"]["output_dir"], "{sm}_correct_ALR_regions.500kbp.bed"
@@ -39,6 +39,7 @@ rule make_bed_files_for_plot:
         """
     shell:
         # Only filter for sample to avoid malformed output ref cols in alr bed.
+        # Also, filter starting position of 1 as likely only a fragment of ALR.
         """
         {{ cat {input.faidx} | \
         sed -e 's/_/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
@@ -52,7 +53,7 @@ rule make_bed_files_for_plot:
             -co {params.io_cols} \
             -g {params.grp_cols} \
             -s {params.sort_cols} | \
-        awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2, $4}}';}} > {output.alr_bed} 2>> {log}
+        awk -v OFS="\\t" '{{ if ($2 != 1) {{print $1, $2, $3, $3-$2, $4}}}}';}} > {output.alr_bed} 2>> {log}
 
         # Make copy.
         cp {output.alr_bed} {output.correct_alr_bed}
@@ -149,7 +150,7 @@ rule gen_nucfreq_plot:
         alr_hap_regions=temp(
             os.path.join(
                 config["nuc_freq"]["output_dir"],
-                "{sm}_{hap}_ALR_regions.500kp.bed",
+                "{sm}_{hap}_ALR_regions.500kbp.bed",
             )
         ),
         plot=os.path.join(
