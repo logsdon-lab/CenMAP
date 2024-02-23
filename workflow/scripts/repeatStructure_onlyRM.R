@@ -132,4 +132,5 @@ ggplot() +
   xlab("Position (kbp)")
 
 if(!interactive()) pdf(NULL)
-ggsave(argv$output, width=10, height=10)
+height = length(unique(df$contig)) * 0.5
+ggsave(argv$output, width=10, height=height + 3)
