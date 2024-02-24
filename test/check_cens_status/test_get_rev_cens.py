@@ -6,20 +6,20 @@ import subprocess
     "input_rm_out,expected_rc_list",
     [
         (
-            "test/get_rev_cens/chr21_cens.fa.out",
-            "test/get_rev_cens/correct_chr21_cens.tsv",
+            "test/check_cens_status/chr21_cens.fa.out",
+            "test/check_cens_status/correct_chr21_cens.tsv",
         ),
         (
-            "test/get_rev_cens/chr22_cens.fa.out",
-            "test/get_rev_cens/correct_chr22_cens.tsv",
+            "test/check_cens_status/chr22_cens.fa.out",
+            "test/check_cens_status/correct_chr22_cens.tsv",
         ),
     ],
 )
-def test_get_rev_cens(input_rm_out: str, expected_rc_list: str):
+def test_check_cens_status(input_rm_out: str, expected_rc_list: str):
     process = subprocess.run(
         [
             "python",
-            "workflow/scripts/get_reversed_cens.py",
+            "workflow/scripts/check_cens_status.py",
             "-i",
             input_rm_out,
             "-r",

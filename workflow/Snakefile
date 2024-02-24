@@ -114,8 +114,10 @@ rule repeatmasker_only:
         rules.format_add_censat_annot_repeatmasker_output.output,
         rules.reverse_complete_repeatmasker_output.output,
         expand(rules.extract_rm_out_by_chr.output, chr=CHROMOSOMES),
-        expand(rules.get_reversed_cens.output, chr=CHROMOSOMES),
-        expand(rules.create_correct_oriented_cens_list.output, chr=CHROMOSOMES),
+        expand(rules.check_cens_status.output, chr=CHROMOSOMES),
+        expand(rules.fix_incorrect_merged_legend.output, sm=SAMPLE_NAMES),
+        expand(rules.fix_incorrect_mapped_cens.output, chr=CHROMOSOMES),
+        expand(rules.create_correct_oriented_cens.output, chr=CHROMOSOMES),
         expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
 
 

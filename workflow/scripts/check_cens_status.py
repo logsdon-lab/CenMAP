@@ -179,8 +179,15 @@ def check_cens_status(
             # Extract chromosome name.
             final_chr=pl.when(pl.col("ref") == pl.col("ref_right"))
             .then(pl.col("ref").str.extract(RGX_CHR))
-            .otherwise(pl.col("contig").str.extract(RGX_CHR)),
+            # TODO: Fix later. Weird. Cannot use literal string since converted to colname.
+            .otherwise(0),
             reorient=pl.col("ort"),
+        )
+        # Replace chr name in original contig.
+        .with_columns(
+            final_chr=pl.when(pl.col("final_chr") != "0")
+            .then(pl.col("contig").str.replace(RGX_CHR, pl.col("final_chr")))
+            .otherwise(pl.col("contig"))
         )
         .write_csv(output, include_header=False, separator="\t")
     )

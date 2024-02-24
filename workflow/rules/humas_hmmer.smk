@@ -2,7 +2,7 @@
 rule fmt_correct_alr_regions:
     input:
         alr_fa=rules.extract_correct_alr_regions_rm.output.seq,
-        legend=rules.merge_legends_for_rm.output.merged_legends,
+        legend=rules.fix_incorrect_merged_legend.output.corrected_legend,
     output:
         fmt_alr_fa=temp(
             os.path.join(
@@ -20,19 +20,16 @@ rule fmt_correct_alr_regions:
         ):
             for line in input_fa.readlines():
                 if line.startswith(">"):
-                    record_id, _, coords = line[1:].strip().partition(":")
+                    record_id, _, _ = line[1:].strip().partition(":")
                     replacement = replacements.get(record_id, record_id)
-                    if coords:
-                        output_fa.write(f">{replacement}:{coords}\n")
-                    else:
-                        output_fa.write(f">{replacement}\n")
+                    output_fa.write(f">{replacement}\n")
                 else:
                     output_fa.write(line)
 
 
 rule create_rc_merged_legend:
     input:
-        rules.merge_legends_for_rm.output.merged_legends,
+        rules.fix_incorrect_merged_legend.output.corrected_legend,
     output:
         os.path.join(config["humas_hmmer"]["output_dir"], "{sm}_rc_merged_legend.txt"),
     shell:
@@ -93,7 +90,7 @@ rule extract_cens_for_humas_hmmer:
     input:
         all_correct_alr_fa=rules.merge_correct_alr_regions.output.seq,
         rc_all_correct_alr_fa=rules.merge_correct_alr_regions_rc.output.seq,
-        corrected_cens_list=rules.create_correct_oriented_cens_list.output.corrected_cens_list,
+        corrected_cens_list=rules.fix_incorrect_mapped_cens.output.corrected_cens_list,
     output:
         cens=os.path.join(config["humas_hmmer"]["output_dir"], "{chr}_cens.fa"),
         idx=os.path.join(config["humas_hmmer"]["output_dir"], "{chr}_cens.fa.fai"),
