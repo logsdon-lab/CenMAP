@@ -174,6 +174,8 @@ def check_cens_status(
     (
         # Join result df
         jindex_res.join(edit_distance_res, on="contig")
+        .group_by("contig")
+        .first()
         .select(
             contig=pl.col("contig"),
             # Extract chromosome name.
@@ -187,7 +189,11 @@ def check_cens_status(
         .with_columns(
             final_chr=pl.when(pl.col("final_chr") != "0")
             .then(pl.col("contig").str.replace(RGX_CHR, pl.col("final_chr")))
-            .otherwise(pl.col("contig"))
+            .otherwise(pl.col("contig")),
+            # Never reorient if reference.
+            reorient=pl.when(pl.col("contig").str.starts_with("chm13"))
+            .then(pl.col("reorient").str.replace("rev", "fwd"))
+            .otherwise(pl.col("reorient")),
         )
         .write_csv(output, include_header=False, separator="\t")
     )
