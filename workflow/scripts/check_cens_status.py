@@ -190,8 +190,11 @@ def check_cens_status(
             final_chr=pl.when(pl.col("final_chr") != "0")
             .then(pl.col("contig").str.replace(RGX_CHR, pl.col("final_chr")))
             .otherwise(pl.col("contig")),
-            # Never reorient if reference.
-            reorient=pl.when(pl.col("contig").str.starts_with("chm13"))
+            # Never reorient if reference or chrY (ref doesn't contain chrY)
+            reorient=pl.when(
+                (pl.col("contig").str.starts_with("chm13"))
+                | (pl.col("contig").str.contains("chrY"))
+            )
             .then(pl.col("reorient").str.replace("rev", "fwd"))
             .otherwise(pl.col("reorient")),
         )
