@@ -77,7 +77,7 @@ rule count_complete_cens:
         {{ wc -l {input} {output.all_idx} | \
         sed -e 's/{params.strip_dir}//g' -e 's/_/\\t/g' | \
         awk -v OFS="\\t" '{{print $2, $1, $1/{params.num_chrs}*100}}' | \
-        head -n +2;}} > {output.cmp_cnts} 2> {log}
+        head -n -1;}} > {output.cmp_cnts} 2> {log}
         """
 
 
