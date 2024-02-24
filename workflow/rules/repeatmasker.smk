@@ -409,7 +409,7 @@ rule fix_incorrect_merged_legend:
 
         with (
             open(str(input.merged_legend)) as merged_legend_fh,
-            open(str(output.corrected_legend)) as out_merged_legend_fh,
+            open(str(output.corrected_legend), "wt") as out_merged_legend_fh,
         ):
             # Write legend.
             writer_legend = csv.writer(out_merged_legend_fh, delimiter="\t")
@@ -435,8 +435,8 @@ rule fix_incorrect_mapped_cens:
         with (
             open(str(input.cens_correction_list)) as cens_list_fh,
             open(str(input.reoriented_rm_out)) as rm_fh,
-            open(str(output.corrected_cens_list)) as out_cens_list_fh,
-            open(str(output.corrected_rm_out)) as out_rm_fh,
+            open(str(output.corrected_cens_list), "wt") as out_cens_list_fh,
+            open(str(output.corrected_rm_out), "wt") as out_rm_fh,
         ):
             reader_cens_renamed = csv.reader(cens_list_fh, delimiter="\t")
             cens_renamed = {k: v for k, v, _ in reader_cens_renamed}
