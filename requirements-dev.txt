@@ -4,3 +4,4 @@ pytest
 pre-commit
 pandas
 polars
+edit-distance
