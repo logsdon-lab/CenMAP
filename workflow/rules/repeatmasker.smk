@@ -373,7 +373,7 @@ rule create_correct_oriented_cens:
         """
         contigs_to_reverse=$(awk '{{ if ($3=="rev") {{ print $1 }} }}' {input.cens_correction_list} | sort | uniq)
         # https://stackoverflow.com/a/9429887
-        joined_contigs_to_reverse=$(IFS="|" ; echo "${{contigs_to_reverse[*]}}")
+        joined_contigs_to_reverse=$(echo "${{contigs_to_reverse[*]}} | tr '\\n' '|'")
         joined_contigs_to_reverse_rc=$(echo "${{joined_contigs_to_reverse[@]}}" | sed 's/chr/rc_chr/g' )
 
         # If nothing to reverse, just copy file.
@@ -415,7 +415,7 @@ rule fix_incorrect_merged_legend:
             writer_legend = csv.writer(out_merged_legend_fh, delimiter="\t")
             for k, v in csv.reader(merged_legend_fh, delimiter="\t"):
                 new_contig_name = cens_renamed.get(v, v)
-                writer_legend.write((k, new_contig_name))
+                writer_legend.writerow((k, new_contig_name))
 
 
 rule fix_incorrect_mapped_cens:
@@ -449,7 +449,7 @@ rule fix_incorrect_mapped_cens:
                 new_contig_name = cens_renamed.get(contig_name, contig_name)
                 line[4] = new_contig_name
                 new_contigs.add(new_contig_name)
-                writer_rm_out.write(line)
+                writer_rm_out.writerow(line)
 
             for c in new_contigs:
                 out_cens_list_fh.write(f"{c}\n")
