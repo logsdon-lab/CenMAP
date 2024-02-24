@@ -389,6 +389,9 @@ rule create_correct_oriented_cens:
 
 rule fix_incorrect_merged_legend:
     input:
+        cens_correction_list=expand(
+            rules.check_cens_status.output.cens_status, chr=CHROMOSOMES
+        ),
         merged_legend=rules.merge_legends_for_rm.output.trimmed_fmted_legend,
     output:
         corrected_legend=os.path.join(
@@ -397,13 +400,17 @@ rule fix_incorrect_merged_legend:
     run:
         import csv
 
+        for file in input.cens_correction_list:
+            cens_renamed = {}
+            with open(str(file)) as cens_list_fh:
+                reader_cens_renamed = csv.reader(cens_list_fh, delimiter="\t")
+                for k, v, _ in reader_cens_renamed:
+                    cens_renamed[k] = v
+
         with (
-            open(str(input.cens_correction_list)) as cens_list_fh,
             open(str(input.merged_legend)) as merged_legend_fh,
             open(str(output.corrected_legend)) as out_merged_legend_fh,
         ):
-            reader_cens_renamed = csv.reader(cens_list_fh, delimiter="\t")
-            cens_renamed = {k: v for k, v, _ in reader_cens_renamed}
             # Write legend.
             writer_legend = csv.writer(out_merged_legend_fh, delimiter="\t")
             for k, v in csv.reader(merged_legend_fh, delimiter="\t"):
