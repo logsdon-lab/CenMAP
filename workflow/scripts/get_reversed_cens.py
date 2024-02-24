@@ -1,6 +1,8 @@
 import sys
 import argparse
-import pandas as pd
+import polars as pl
+import edit_distance
+from typing import TextIO
 
 
 RM_COLS = [
@@ -20,7 +22,7 @@ RM_COLS = [
     "y",
     "z",
 ]
-DEFAULT_EDGE_LEN = 500_000
+RGX_CHR = "(chr[0-9XY]+)"
 
 
 def jaccard_index(a: set[str], b: set[str]) -> float:
@@ -31,79 +33,206 @@ def jaccard_index(a: set[str], b: set[str]) -> float:
     return (len(a.intersection(b)) / len(a.union(b))) * 100.0
 
 
-def is_reversed_cens(
-    ref: pd.DataFrame, comp: pd.DataFrame, *, edge_len: int = DEFAULT_EDGE_LEN
-) -> bool:
-    """
-    Check if centromere RepeatMasker output is in the reverse orientation with respect to a reference centromere RepeatMasker output.
-    Determined via Jaccard similarity index computed from the unique repeat types at the edges of the central AS-HOR array.
+def format_rm_output(input_path: str) -> pl.LazyFrame:
+    return (
+        pl.scan_csv(input_path, separator="\t", has_header=False, new_columns=RM_COLS)
+        .filter(
+            (pl.col("rClass") == "Satellite/centr") | (pl.col("rClass") == "Satellite")
+        )
+        .with_columns(
+            pl.col("type")
+            .str.replace_many(
+                [
+                    "/ERVK",
+                    "/ERVL",
+                    "/ERV1",
+                    "/CR1",
+                    "/L1",
+                    "/L2",
+                    "/RTE-X",
+                    "/RTE-BovB",
+                    "/Gypsy",
+                    "-MaLR",
+                    "/Alu",
+                    "/Deu",
+                    "/MIR",
+                    "?",
+                    "/hAT",
+                    "/hAT-Blackjack",
+                    "/hAT-Charlie",
+                    "/MULE-MuDR",
+                    "/PiggyBac",
+                    "/TcMar-Mariner" "/TcMar",
+                    "/TcMar?",
+                    "/hAT-Tip100" "/TcMar-Tigger" "/Dong-R4" "/tRNA",
+                ],
+                "",
+            )
+            .str.replace_many(
+                [
+                    "DNA-Tc2",
+                    "DNA?",
+                    "DNA-Blackjack",
+                    "DNA-Charlie",
+                    "DNA-Tigger",
+                    "DNA-Tip100",
+                ],
+                "DNA",
+            )
+            .str.replace("GSATX", "GSAT")
+            .str.replace("LTR\\S", "LTR")
+            .str.replace("SAR", "HSat1A")
+            .str.replace("HSAT", "HSat1B")
+            .str.replace_many(["HSATII", "(CATTC)n", "(GAATG)n"], "HSat2")
+        )
+        .with_columns(dst=pl.col("end") - pl.col("start"))
+        # .with_columns(
+        #     start2=pl.when(pl.col("C")=="C").then(pl.col("end")).otherwise(pl.col("start")),
+        #     end2=pl.when(pl.col("C")=="C").then(pl.col("start")).otherwise(pl.col("end")),
+        # )
+        .drop("div", "deldiv", "insdiv", "x", "y", "z", "left", "right", "idx")
+    )
 
-    ### Params
-    * `ref`: Reference centromere RepeatMasker output.
-    * `comp`: Comparison centromere RepeatMasker output.
-    * `edge_len`: Edge length to evaluate.
 
-    ### Returns
-    * If `comp` centromeres should be reversed.
-    """
-    ref_ledge = ref.loc[ref["end"] < edge_len]
-    ref_redge = ref.loc[ref["end"] > ref.iloc[-1]["end"] - edge_len]
+def check_cens_status(
+    input_rm: str,
+    output: TextIO,
+    reference_rm: str,
+    *,
+    match_perc_thr: float = 0.7,
+    dst_perc_thr: float = 0.3,
+) -> int:
+    df_ctg = format_rm_output(input_rm).collect()
+    df_ref = (
+        format_rm_output(reference_rm)
+        .filter(~pl.col("contig").str.starts_with("chm1"))
+        .collect()
+    )
 
-    comp_ledge = comp.loc[comp["end"] < edge_len]
-    comp_redge = comp.loc[comp["end"] > comp.iloc[-1]["end"] - edge_len]
+    contigs, refs, dsts, matches, orts = [], [], [], [], []
+    jcontigs, jrefs, jindex = [], [], []
+    for ctg, df_ctg_grp in df_ctg.group_by(["contig"]):
+        ctg = ctg[0]
+        for ref, df_ref_grp in df_ref.group_by(["contig"]):
+            ref = ref[0]
+            dst_fwd, mtch_fwd = edit_distance.edit_distance(
+                df_ref_grp["type"].to_list(), df_ctg_grp["type"].to_list()
+            )
+            dst_rev, mtch_rev = edit_distance.edit_distance(
+                df_ref_grp["type"].to_list(), df_ctg_grp["type"].reverse().to_list()
+            )
 
-    ref_redge_types = set(ref_redge["type"].unique())
-    ref_ledge_types = set(ref_ledge["type"].unique())
+            repeat_type_jindex = jaccard_index(
+                set(df_ref_grp["type"]), set(df_ctg_grp["type"])
+            )
+            jcontigs.append(ctg)
+            jrefs.append(ref)
+            jindex.append(repeat_type_jindex)
 
-    comp_redge_types = set(comp_redge["type"].unique())
-    comp_ledge_types = set(comp_ledge["type"].unique())
+            contigs.append(ctg)
+            contigs.append(ctg)
+            refs.append(ref)
+            refs.append(ref)
+            orts.append("fwd")
+            orts.append("rev")
+            dsts.append(dst_fwd)
+            dsts.append(dst_rev)
+            matches.append(mtch_fwd)
+            matches.append(mtch_rev)
 
-    rl_cr = jaccard_index(ref_ledge_types, comp_redge_types)
-    rr_cl = jaccard_index(ref_redge_types, comp_ledge_types)
-    rr_cr = jaccard_index(ref_redge_types, comp_redge_types)
-    rl_cl = jaccard_index(ref_ledge_types, comp_ledge_types)
+    jindex_res = (
+        pl.LazyFrame({"contig": jcontigs, "ref": jrefs, "similarity": jindex})
+        .with_columns(
+            pl.col("similarity").max().over("contig").alias("highest_similarity")
+        )
+        .filter(pl.col("similarity") == pl.col("highest_similarity"))
+        .select(["contig", "ref", "similarity"])
+        .collect()
+    )
+    edit_distance_res = (
+        pl.LazyFrame(
+            {"contig": contigs, "ref": refs, "dst": dsts, "mtch": matches, "ort": orts}
+        )
+        # https://stackoverflow.com/a/74630403
+        # Calculate percentiles
+        .with_columns(
+            dst_perc=(pl.col("dst").rank() / pl.col("dst").count()).over("contig"),
+            mtch_perc=(pl.col("mtch").rank() / pl.col("mtch").count()).over("contig"),
+        )
+        # Filter results so only:
+        # * Matches gt x percentile.
+        # * Distances lt y percentile.
+        .filter(
+            (pl.col("mtch_perc") > match_perc_thr) & (pl.col("dst_perc") < dst_perc_thr)
+        )
+        # https://stackoverflow.com/a/74336952
+        .with_columns(pl.col("dst").min().over("contig").alias("lowest_dst"))
+        .filter(pl.col("dst") == pl.col("lowest_dst"))
+        .select(["contig", "ref", "dst", "mtch", "ort"])
+        .collect()
+    )
+    (
+        # Join result df
+        jindex_res.join(edit_distance_res, on="contig")
+        .select(
+            contig=pl.col("contig"),
+            # Extract chromosome name.
+            final_chr=pl.when(pl.col("ref") == pl.col("ref_right"))
+            .then(pl.col("ref").str.extract(RGX_CHR))
+            .otherwise(pl.col("contig").str.extract(RGX_CHR)),
+            reorient=pl.col("ort"),
+        )
+        .write_csv(output, include_header=False, separator="\t")
+    )
+    return 0
 
-    highest_similarity_score = max((rl_cr, rr_cl, rr_cr, rl_cl))
-    return highest_similarity_score in (rl_cr, rr_cl)
 
-
-def main():
+def main() -> int:
     ap = argparse.ArgumentParser(
-        description="Determines if centromeres are incorrectly oriented with respect to a reference."
+        description="Determines if centromeres are incorrectly oriented/mapped with respect to a reference."
     )
     ap.add_argument(
         "-i",
         "--input",
         help="Input RepeatMasker output. Should contain contig reference. Expects no header.",
-        default=sys.stdin,
-        type=argparse.FileType("rt"),
+        type=str,
+        required=True,
     )
     ap.add_argument(
         "-o",
         "--output",
-        help="List of contigs that are reversed.",
+        help="List of contigs with actions required to fix.",
         default=sys.stdout,
         type=argparse.FileType("wt"),
     )
     ap.add_argument(
-        "--reference_prefix", help="Reference contig name prefix.", default="chm13"
+        "-r",
+        "--reference",
+        required=True,
+        type=str,
+        help="Reference RM dataframe.",
     )
     ap.add_argument(
-        "--edge_len",
-        help="Edge length to along contigs to evaluate.",
-        default=DEFAULT_EDGE_LEN,
+        "--match_perc_thr",
+        default=0.7,
+        type=float,
+        help="Matches edit distance percentile threshold. Higher is more stringent.",
+    )
+    ap.add_argument(
+        "--dst_perc_thr",
+        default=0.3,
+        type=float,
+        help="Edit distance percentile threshold. Lower is more stringent.",
     )
     args = ap.parse_args()
 
-    df = pd.read_csv(args.input, sep="\t", header=None, names=RM_COLS)
-    ref_ctg_name = next(
-        (ctg for ctg in df["contig"].unique() if ctg.startswith(args.reference_prefix))
+    return check_cens_status(
+        args.input,
+        args.output,
+        args.reference,
+        match_perc_thr=args.match_perc_thr,
+        dst_perc_thr=args.dst_perc_thr,
     )
-    df_ref = df.loc[df["contig"] == ref_ctg_name]
-    for ctg in df["contig"].unique():
-        df_ctg = df.loc[df["contig"] == ctg]
-        if is_reversed_cens(ref=df_ref, comp=df_ctg):
-            args.output.write(f"{ctg}\n")
 
 
 if __name__ == "__main__":

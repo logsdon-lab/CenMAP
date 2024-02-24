@@ -3,3 +3,4 @@ snakemake==7.32.4
 pytest
 pre-commit
 pandas
+polars
