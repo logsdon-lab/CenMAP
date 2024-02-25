@@ -2,7 +2,7 @@ import sys
 import re
 import argparse
 import polars as pl
-import edit_distance
+import editdistance
 from typing import TextIO
 
 
@@ -85,10 +85,6 @@ def format_rm_output(input_path: str) -> pl.LazyFrame:
             .str.replace_many(["HSATII", "(CATTC)n", "(GAATG)n"], "HSat2")
         )
         .with_columns(dst=pl.col("end") - pl.col("start"))
-        # .with_columns(
-        #     start2=pl.when(pl.col("C")=="C").then(pl.col("end")).otherwise(pl.col("start")),
-        #     end2=pl.when(pl.col("C")=="C").then(pl.col("start")).otherwise(pl.col("end")),
-        # )
         .drop("div", "deldiv", "insdiv", "x", "y", "z", "left", "right", "idx")
     )
 
@@ -98,45 +94,35 @@ def check_cens_status(
     output: TextIO,
     reference_rm: str,
     *,
-    match_perc_thr: float = 0.7,
     dst_perc_thr: float = 0.3,
     edge_perc_alr_thr: float = 0.7,
     edge_len: int = EDGE_LEN,
 ) -> int:
-    # Unfiltered ctg dataframe including non-satellite class repeats.
-    # Need to check ends.
     df_ctg = format_rm_output(input_rm).collect()
-    df_ref_filtered = (
+    df_ref = (
         format_rm_output(reference_rm)
-        .filter(
-            (pl.col("rClass") == "Satellite/centr") | (pl.col("rClass") == "Satellite")
-        )
         .filter(~pl.col("contig").str.starts_with("chm1"))
         .collect()
     )
 
-    contigs, refs, dsts, matches, orts = [], [], [], [], []
+    contigs, refs, dsts, orts = [], [], [], []
     jcontigs, jrefs, jindex = [], [], []
     pcontigs, pstatus = [], []
     for ctg, df_ctg_grp in df_ctg.group_by(["contig"]):
-        # Now filter here for distance and similarity calculations.
-        df_ctg_grp_filtered = df_ctg_grp.filter(
-            (pl.col("rClass") == "Satellite/centr") | (pl.col("rClass") == "Satellite")
-        )
         ctg = ctg[0]
-        for ref, df_ref_grp_filtered in df_ref_filtered.group_by(["contig"]):
+        for ref, df_ref_grp in df_ref.group_by(["contig"]):
             ref = ref[0]
-            dst_fwd, mtch_fwd = edit_distance.edit_distance(
-                df_ref_grp_filtered["type"].to_list(),
-                df_ctg_grp_filtered["type"].to_list(),
+            dst_fwd = editdistance.eval(
+                df_ref_grp["type"].to_list(),
+                df_ctg_grp["type"].to_list(),
             )
-            dst_rev, mtch_rev = edit_distance.edit_distance(
-                df_ref_grp_filtered["type"].to_list(),
-                df_ctg_grp_filtered["type"].reverse().to_list(),
+            dst_rev = editdistance.eval(
+                df_ref_grp["type"].to_list(),
+                df_ctg_grp["type"].reverse().to_list(),
             )
 
             repeat_type_jindex = jaccard_index(
-                set(df_ref_grp_filtered["type"]), set(df_ctg_grp_filtered["type"])
+                set(df_ref_grp["type"]), set(df_ctg_grp["type"])
             )
             jcontigs.append(ctg)
             jrefs.append(ref)
@@ -150,8 +136,6 @@ def check_cens_status(
             orts.append("rev")
             dsts.append(dst_fwd)
             dsts.append(dst_rev)
-            matches.append(mtch_fwd)
-            matches.append(mtch_rev)
 
         # Check if partial centromere based on ALR perc on ends.
         # Check 500 kbp from start and end of contig.
@@ -191,10 +175,9 @@ def check_cens_status(
         .collect()
     )
     df_edit_distance_res = pl.DataFrame(
-        {"contig": contigs, "ref": refs, "dst": dsts, "mtch": matches, "ort": orts}
+        {"contig": contigs, "ref": refs, "dst": dsts, "ort": orts}
     ).with_columns(
         dst_perc=(pl.col("dst").rank() / pl.col("dst").count()).over("contig"),
-        mtch_perc=(pl.col("mtch").rank() / pl.col("mtch").count()).over("contig"),
     )
 
     # Filter results so only:
@@ -203,10 +186,8 @@ def check_cens_status(
     dfs_filtered_edit_distance_res = []
     dfs_filtered_ort_same_chr_res = []
 
-    edit_distance_thr_filter = (pl.col("mtch_perc") > match_perc_thr) & (
-        pl.col("dst_perc") < dst_perc_thr
-    )
-    edit_distance_highest_mtch_filter = pl.col("mtch_perc") == pl.col("mtch_perc").max()
+    edit_distance_thr_filter = pl.col("dst_perc") < dst_perc_thr
+    edit_distance_highest_dst_filter = pl.col("dst_perc") == pl.col("dst_perc").min()
 
     rgx_chr = re.compile(RGX_CHR)
     for contig, df_edit_distance_res_grp in df_edit_distance_res.group_by(["contig"]):
@@ -226,12 +207,12 @@ def check_cens_status(
         # If none found, default to highest number of matches.
         if df_filter_edit_distance_res_grp.is_empty():
             df_filter_edit_distance_res_grp = df_edit_distance_res_grp.filter(
-                edit_distance_highest_mtch_filter
+                edit_distance_highest_dst_filter
             )
 
         if df_filter_ort_res_same_chr_grp.is_empty():
             df_filter_ort_res_same_chr_grp = df_edit_distance_res_same_chr_grp.filter(
-                edit_distance_highest_mtch_filter
+                edit_distance_highest_dst_filter
             )
 
         dfs_filtered_edit_distance_res.append(df_filter_edit_distance_res_grp)
@@ -247,7 +228,7 @@ def check_cens_status(
         # https://stackoverflow.com/a/74336952
         .with_columns(pl.col("dst").min().over("contig").alias("lowest_dst"))
         .filter(pl.col("dst") == pl.col("lowest_dst"))
-        .select(["contig", "ref", "dst", "mtch", "ort"])
+        .select(["contig", "ref", "dst", "ort"])
     )
     # Get pair with lowest dst to get default ort.
     df_filter_ort_same_chr_res = (
@@ -328,12 +309,6 @@ def main() -> int:
         help="Reference RM dataframe.",
     )
     ap.add_argument(
-        "--match_perc_thr",
-        default=0.7,
-        type=float,
-        help="Matches edit distance percentile threshold. Higher is more stringent.",
-    )
-    ap.add_argument(
         "--dst_perc_thr",
         default=0.3,
         type=float,
@@ -357,7 +332,6 @@ def main() -> int:
         args.input,
         args.output,
         args.reference,
-        match_perc_thr=args.match_perc_thr,
         dst_perc_thr=args.dst_perc_thr,
         edge_len=args.edge_len,
         edge_perc_alr_thr=args.edge_perc_alr_thr,

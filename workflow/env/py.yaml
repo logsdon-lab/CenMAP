@@ -10,4 +10,4 @@ dependencies:
     - numpy
     - seaborn
     - polars
-    - edit-distance
+    - editdistance
