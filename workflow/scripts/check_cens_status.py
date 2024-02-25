@@ -105,7 +105,7 @@ def check_cens_status(
     # Unfiltered ctg dataframe including non-satellite class repeats.
     # Need to check ends.
     df_ctg = format_rm_output(input_rm).collect()
-    df_ref = (
+    df_ref_filtered = (
         format_rm_output(reference_rm)
         .filter(
             (pl.col("rClass") == "Satellite/centr") | (pl.col("rClass") == "Satellite")
@@ -123,18 +123,19 @@ def check_cens_status(
             (pl.col("rClass") == "Satellite/centr") | (pl.col("rClass") == "Satellite")
         )
         ctg = ctg[0]
-        for ref, df_ref_grp in df_ref.group_by(["contig"]):
+        for ref, df_ref_grp_filtered in df_ref_filtered.group_by(["contig"]):
             ref = ref[0]
             dst_fwd, mtch_fwd = edit_distance.edit_distance(
-                df_ref_grp["type"].to_list(), df_ctg_grp_filtered["type"].to_list()
+                df_ref_grp_filtered["type"].to_list(),
+                df_ctg_grp_filtered["type"].to_list(),
             )
             dst_rev, mtch_rev = edit_distance.edit_distance(
-                df_ref_grp["type"].to_list(),
+                df_ref_grp_filtered["type"].to_list(),
                 df_ctg_grp_filtered["type"].reverse().to_list(),
             )
 
             repeat_type_jindex = jaccard_index(
-                set(df_ref_grp["type"]), set(df_ctg_grp_filtered["type"])
+                set(df_ref_grp_filtered["type"]), set(df_ctg_grp_filtered["type"])
             )
             jcontigs.append(ctg)
             jrefs.append(ref)
@@ -179,7 +180,7 @@ def check_cens_status(
             ledge_perc_alr > edge_perc_alr_thr or redge_perc_alr > edge_perc_alr_thr
         )
 
-    jindex_res = (
+    df_jindex_res = (
         pl.LazyFrame({"contig": jcontigs, "ref": jrefs, "similarity": jindex})
         .with_columns(
             pl.col("similarity").max().over("contig").alias("highest_similarity")
@@ -188,51 +189,69 @@ def check_cens_status(
         .select(["contig", "ref", "similarity"])
         .collect()
     )
-    edit_distance_res = (
-        pl.LazyFrame(
-            {"contig": contigs, "ref": refs, "dst": dsts, "mtch": matches, "ort": orts}
-        )
-        # https://stackoverflow.com/a/74630403
-        # Calculate percentiles
-        .with_columns(
-            dst_perc=(pl.col("dst").rank() / pl.col("dst").count()).over("contig"),
-            mtch_perc=(pl.col("mtch").rank() / pl.col("mtch").count()).over("contig"),
-        )
-        # Filter results so only:
-        # * Matches gt x percentile.
-        # * Distances lt y percentile.
-        .filter(
+    df_edit_distance_res = pl.DataFrame(
+        {"contig": contigs, "ref": refs, "dst": dsts, "mtch": matches, "ort": orts}
+    ).with_columns(
+        dst_perc=(pl.col("dst").rank() / pl.col("dst").count()).over("contig"),
+        mtch_perc=(pl.col("mtch").rank() / pl.col("mtch").count()).over("contig"),
+    )
+
+    # Filter results so only:
+    # * Matches gt x percentile.
+    # * Distances lt y percentile.
+    dfs_filtered_edit_distance_res = []
+    for _, df_edit_distance_res_grp in df_edit_distance_res.group_by(["contig"]):
+        df_filter_edit_distance_res_grp = df_edit_distance_res_grp.filter(
             (pl.col("mtch_perc") > match_perc_thr) & (pl.col("dst_perc") < dst_perc_thr)
         )
+        # If none found, default to highest number of matches.
+        if df_filter_edit_distance_res_grp.is_empty():
+            df_filter_edit_distance_res_grp = df_edit_distance_res_grp.filter(
+                pl.col("mtch_perc") == pl.col("mtch_perc").max()
+            )
+
+        dfs_filtered_edit_distance_res.append(df_filter_edit_distance_res_grp)
+
+    df_filter_edit_distance_res: pl.DataFrame = pl.concat(
+        dfs_filtered_edit_distance_res
+    )
+
+    df_filter_edit_distance_res = (
+        df_filter_edit_distance_res
         # https://stackoverflow.com/a/74336952
         .with_columns(pl.col("dst").min().over("contig").alias("lowest_dst"))
         .filter(pl.col("dst") == pl.col("lowest_dst"))
         .select(["contig", "ref", "dst", "mtch", "ort"])
-        .collect()
     )
-    partial_contig_res = pl.DataFrame({"contig": pcontigs, "partial": pstatus})
+    df_partial_contig_res = pl.DataFrame({"contig": pcontigs, "partial": pstatus})
 
     (
-        # Join result df
-        jindex_res.join(edit_distance_res, on="contig")
-        .group_by("contig")
-        .first()
-        .join(partial_contig_res, on="contig")
+        # Join result dfs.
+        # use partial contig res so always get all contigs.
+        df_partial_contig_res.join(
+            df_jindex_res.join(df_filter_edit_distance_res, on="contig")
+            .group_by("contig")
+            .first(),
+            on="contig",
+            how="left",
+        )
         .select(
             contig=pl.col("contig"),
             # Extract chromosome name.
-            final_chr=pl.when(pl.col("ref") == pl.col("ref_right"))
+            # Both results must concur.
+            final_contig=pl.when(pl.col("ref") == pl.col("ref_right"))
             .then(pl.col("ref").str.extract(RGX_CHR))
-            # TODO: Fix later. Weird. Cannot use literal string since converted to colname.
-            .otherwise(0),
-            reorient=pl.col("ort"),
+            .otherwise(pl.col("contig").str.extract(RGX_CHR)),
+            # Only use orientation if both agree. Otherwise, replace later.
+            reorient=pl.when(pl.col("ref") == pl.col("ref_right"))
+            .then(pl.col("ort"))
+            .otherwise(None)
+            .fill_null("fwd"),
             partial=pl.col("partial"),
         )
         # Replace chr name in original contig.
         .with_columns(
-            final_chr=pl.when(pl.col("final_chr") != "0")
-            .then(pl.col("contig").str.replace(RGX_CHR, pl.col("final_chr")))
-            .otherwise(pl.col("contig")),
+            final_contig=pl.col("contig").str.replace(RGX_CHR, pl.col("final_contig")),
             # Never reorient if reference or chrY (ref doesn't contain chrY)
             reorient=pl.when(
                 (pl.col("contig").str.starts_with("chm13"))
