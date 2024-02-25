@@ -122,6 +122,7 @@ rule repeatmasker_only:
         expand(rules.fix_incorrect_mapped_cens.output, chr=CHROMOSOMES),
         expand(rules.create_correct_oriented_cens.output, chr=CHROMOSOMES),
         expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
+        expand(rules.plot_og_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
 
 
 rule humas_hmmer_only:

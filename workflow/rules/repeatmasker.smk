@@ -359,7 +359,7 @@ rule check_cens_status:
 rule create_correct_oriented_cens:
     input:
         rm_chr_out=rules.extract_rm_out_by_chr.output.rm_out_by_chr,
-        rm_all_out=rules.reverse_complete_repeatmasker_output.output,
+        rm_rev_out=rules.reverse_complete_repeatmasker_output.output,
         cens_correction_list=rules.check_cens_status.output.cens_status,
     output:
         reoriented_rm_out=os.path.join(
@@ -381,7 +381,7 @@ rule create_correct_oriented_cens:
         else
             # non-matching so everything correctly oriented
             grep -vE "$joined_contigs_to_reverse" {input.rm_chr_out} > {output.reoriented_rm_out}
-            grep -E "$joined_contigs_to_reverse_rc" {input.rm_all_out} >> {output.reoriented_rm_out}
+            grep -E "$joined_contigs_to_reverse_rc" {input.rm_rev_out} >> {output.reoriented_rm_out}
         fi
         """
 
@@ -399,12 +399,15 @@ rule fix_incorrect_merged_legend:
     run:
         import csv
 
+        cens_renamed = {}
+        incomplete_cens = set()
         for file in input.cens_correction_list:
-            cens_renamed = {}
             with open(str(file)) as cens_list_fh:
                 reader_cens_renamed = csv.reader(cens_list_fh, delimiter="\t")
-                for k, v, _ in reader_cens_renamed:
-                    cens_renamed[k] = v
+                for old, new, ort, is_partial in reader_cens_renamed:
+                    cens_renamed[old] = new
+                    if is_partial == "true":
+                        incomplete_cens.add(old)
 
         with (
             open(str(input.merged_legend)) as merged_legend_fh,
@@ -412,9 +415,12 @@ rule fix_incorrect_merged_legend:
         ):
             # Write legend.
             writer_legend = csv.writer(out_merged_legend_fh, delimiter="\t")
-            for k, v in csv.reader(merged_legend_fh, delimiter="\t"):
-                new_contig_name = cens_renamed.get(v, v)
-                writer_legend.writerow((k, new_contig_name))
+            for old, new in csv.reader(merged_legend_fh, delimiter="\t"):
+                # Skip incomplete cens.
+                if new in incomplete_cens:
+                    continue
+                new_contig_name = cens_renamed.get(new, new)
+                writer_legend.writerow((old, new_contig_name))
 
 
 rule fix_incorrect_mapped_cens:
@@ -438,13 +444,22 @@ rule fix_incorrect_mapped_cens:
             open(str(output.corrected_rm_out), "wt") as out_rm_fh,
         ):
             reader_cens_renamed = csv.reader(cens_list_fh, delimiter="\t")
-            cens_renamed = {k: v for k, v, _ in reader_cens_renamed}
+            cens_renamed = {}
+            incomplete_cens = set()
+            for old, new, ort, is_partial in reader_cens_renamed:
+                cens_renamed[old] = new
+                if is_partial == "true":
+                    incomplete_cens.add(old)
 
             writer_rm_out = csv.writer(out_rm_fh, delimiter="\t")
             reader_rm_out = csv.reader(rm_fh, delimiter="\t")
             new_contigs = set()
             for line in reader_rm_out:
                 contig_name = line[4]
+                # Skip incomplete cens.
+                if contig_name in incomplete_cens:
+                    continue
+
                 new_contig_name = cens_renamed.get(contig_name, contig_name)
                 line[4] = new_contig_name
                 new_contigs.add(new_contig_name)
@@ -470,3 +485,15 @@ rule plot_cens_from_rm_by_chr:
         """
         Rscript {input.script} {input.rm_out} {output.repeat_plot_by_chr} 2> {log}
         """
+
+
+use rule plot_cens_from_rm_by_chr as plot_og_cens_from_rm_by_chr with:
+    input:
+        script="workflow/scripts/repeatStructure_onlyRM.R",
+        rm_out=rules.extract_rm_out_by_chr.output.rm_out_by_chr,
+    output:
+        repeat_plot_by_chr=os.path.join(
+            config["repeatmasker"]["output_dir"], "hgsvc3_{chr}_cens.original.pdf"
+        ),
+    log:
+        "logs/plot_{chr}_cens_from_rm_og.log",
