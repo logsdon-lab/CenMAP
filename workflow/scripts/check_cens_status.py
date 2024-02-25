@@ -1,4 +1,5 @@
 import sys
+import re
 import argparse
 import polars as pl
 import edit_distance
@@ -22,7 +23,7 @@ RM_COLS = [
     "y",
     "z",
 ]
-RGX_CHR = "(chr[0-9XY]+)"
+RGX_CHR = r"(chr[0-9XY]+)"
 EDGE_LEN = 500_000
 
 
@@ -200,21 +201,46 @@ def check_cens_status(
     # * Matches gt x percentile.
     # * Distances lt y percentile.
     dfs_filtered_edit_distance_res = []
-    for _, df_edit_distance_res_grp in df_edit_distance_res.group_by(["contig"]):
-        df_filter_edit_distance_res_grp = df_edit_distance_res_grp.filter(
-            (pl.col("mtch_perc") > match_perc_thr) & (pl.col("dst_perc") < dst_perc_thr)
+    dfs_filtered_ort_same_chr_res = []
+
+    edit_distance_thr_filter = (pl.col("mtch_perc") > match_perc_thr) & (
+        pl.col("dst_perc") < dst_perc_thr
+    )
+    edit_distance_highest_mtch_filter = pl.col("mtch_perc") == pl.col("mtch_perc").max()
+
+    rgx_chr = re.compile(RGX_CHR)
+    for contig, df_edit_distance_res_grp in df_edit_distance_res.group_by(["contig"]):
+        chr_name = re.search(rgx_chr, contig[0]).group()
+        # Only look at same chr to determine default ort.
+        df_edit_distance_res_same_chr_grp = df_edit_distance_res_grp.filter(
+            pl.col("ref").str.contains(f"{chr_name}:")
         )
+
+        df_filter_edit_distance_res_grp = df_edit_distance_res_grp.filter(
+            edit_distance_thr_filter
+        )
+        df_filter_ort_res_same_chr_grp = df_edit_distance_res_same_chr_grp.filter(
+            edit_distance_thr_filter
+        )
+
         # If none found, default to highest number of matches.
         if df_filter_edit_distance_res_grp.is_empty():
             df_filter_edit_distance_res_grp = df_edit_distance_res_grp.filter(
-                pl.col("mtch_perc") == pl.col("mtch_perc").max()
+                edit_distance_highest_mtch_filter
+            )
+
+        if df_filter_ort_res_same_chr_grp.is_empty():
+            df_filter_ort_res_same_chr_grp = df_edit_distance_res_same_chr_grp.filter(
+                edit_distance_highest_mtch_filter
             )
 
         dfs_filtered_edit_distance_res.append(df_filter_edit_distance_res_grp)
+        dfs_filtered_ort_same_chr_res.append(df_filter_ort_res_same_chr_grp)
 
     df_filter_edit_distance_res: pl.DataFrame = pl.concat(
         dfs_filtered_edit_distance_res
     )
+    df_filter_ort_same_chr_res: pl.DataFrame = pl.concat(dfs_filtered_ort_same_chr_res)
 
     df_filter_edit_distance_res = (
         df_filter_edit_distance_res
@@ -222,6 +248,15 @@ def check_cens_status(
         .with_columns(pl.col("dst").min().over("contig").alias("lowest_dst"))
         .filter(pl.col("dst") == pl.col("lowest_dst"))
         .select(["contig", "ref", "dst", "mtch", "ort"])
+    )
+    # Get pair with lowest dst to get default ort.
+    df_filter_ort_same_chr_res = (
+        df_filter_ort_same_chr_res.with_columns(
+            pl.col("dst").min().over("contig").alias("lowest_dst")
+        )
+        .filter(pl.col("dst") == pl.col("lowest_dst"))
+        .select(["contig", "ort"])
+        .rename({"ort": "ort_same_chr"})
     )
     df_partial_contig_res = pl.DataFrame({"contig": pcontigs, "partial": pstatus})
 
@@ -235,6 +270,8 @@ def check_cens_status(
             on="contig",
             how="left",
         )
+        # Add default ort per contig.
+        .join(df_filter_ort_same_chr_res, on="contig", how="left")
         .select(
             contig=pl.col("contig"),
             # Extract chromosome name.
@@ -242,11 +279,11 @@ def check_cens_status(
             final_contig=pl.when(pl.col("ref") == pl.col("ref_right"))
             .then(pl.col("ref").str.extract(RGX_CHR))
             .otherwise(pl.col("contig").str.extract(RGX_CHR)),
-            # Only use orientation if both agree. Otherwise, replace later.
+            # Only use orientation if both agree. Otherwise, replace with best same chr ort.
             reorient=pl.when(pl.col("ref") == pl.col("ref_right"))
             .then(pl.col("ort"))
             .otherwise(None)
-            .fill_null("fwd"),
+            .fill_null(pl.col("ort_same_chr")),
             partial=pl.col("partial"),
         )
         # Replace chr name in original contig.
