@@ -23,6 +23,7 @@ RM_COLS = [
     "z",
 ]
 RGX_CHR = "(chr[0-9XY]+)"
+EDGE_LEN = 500_000
 
 
 def jaccard_index(a: set[str], b: set[str]) -> float:
@@ -36,9 +37,6 @@ def jaccard_index(a: set[str], b: set[str]) -> float:
 def format_rm_output(input_path: str) -> pl.LazyFrame:
     return (
         pl.scan_csv(input_path, separator="\t", has_header=False, new_columns=RM_COLS)
-        .filter(
-            (pl.col("rClass") == "Satellite/centr") | (pl.col("rClass") == "Satellite")
-        )
         .with_columns(
             pl.col("type")
             .str.replace_many(
@@ -101,29 +99,42 @@ def check_cens_status(
     *,
     match_perc_thr: float = 0.7,
     dst_perc_thr: float = 0.3,
+    edge_perc_alr_thr: float = 0.7,
+    edge_len: int = EDGE_LEN,
 ) -> int:
+    # Unfiltered ctg dataframe including non-satellite class repeats.
+    # Need to check ends.
     df_ctg = format_rm_output(input_rm).collect()
     df_ref = (
         format_rm_output(reference_rm)
+        .filter(
+            (pl.col("rClass") == "Satellite/centr") | (pl.col("rClass") == "Satellite")
+        )
         .filter(~pl.col("contig").str.starts_with("chm1"))
         .collect()
     )
 
     contigs, refs, dsts, matches, orts = [], [], [], [], []
     jcontigs, jrefs, jindex = [], [], []
+    pcontigs, pstatus = [], []
     for ctg, df_ctg_grp in df_ctg.group_by(["contig"]):
+        # Now filter here for distance and similarity calculations.
+        df_ctg_grp_filtered = df_ctg_grp.filter(
+            (pl.col("rClass") == "Satellite/centr") | (pl.col("rClass") == "Satellite")
+        )
         ctg = ctg[0]
         for ref, df_ref_grp in df_ref.group_by(["contig"]):
             ref = ref[0]
             dst_fwd, mtch_fwd = edit_distance.edit_distance(
-                df_ref_grp["type"].to_list(), df_ctg_grp["type"].to_list()
+                df_ref_grp["type"].to_list(), df_ctg_grp_filtered["type"].to_list()
             )
             dst_rev, mtch_rev = edit_distance.edit_distance(
-                df_ref_grp["type"].to_list(), df_ctg_grp["type"].reverse().to_list()
+                df_ref_grp["type"].to_list(),
+                df_ctg_grp_filtered["type"].reverse().to_list(),
             )
 
             repeat_type_jindex = jaccard_index(
-                set(df_ref_grp["type"]), set(df_ctg_grp["type"])
+                set(df_ref_grp["type"]), set(df_ctg_grp_filtered["type"])
             )
             jcontigs.append(ctg)
             jrefs.append(ref)
@@ -139,6 +150,34 @@ def check_cens_status(
             dsts.append(dst_rev)
             matches.append(mtch_fwd)
             matches.append(mtch_rev)
+
+        # Check if partial centromere based on ALR perc on ends.
+        # Check 500 kbp from start and end of contig.
+        ledge = df_ctg_grp.filter(pl.col("end") < edge_len)
+        redge = df_ctg_grp.filter(pl.col("end") > df_ctg_grp[-1]["end"] - edge_len)
+        try:
+            ledge_perc_alr = (
+                ledge.group_by("type")
+                .agg(pl.col("dst").sum() / ledge["dst"].sum())
+                .filter(pl.col("type") == "ALR/Alpha")
+                .row(0)[1]
+            )
+        except Exception:
+            ledge_perc_alr = 0.0
+        try:
+            redge_perc_alr = (
+                redge.group_by("type")
+                .agg(pl.col("dst").sum() / redge["dst"].sum())
+                .filter(pl.col("type") == "ALR/Alpha")
+                .row(0)[1]
+            )
+        except Exception:
+            redge_perc_alr = 0.0
+
+        pcontigs.append(ctg)
+        pstatus.append(
+            ledge_perc_alr > edge_perc_alr_thr or redge_perc_alr > edge_perc_alr_thr
+        )
 
     jindex_res = (
         pl.LazyFrame({"contig": jcontigs, "ref": jrefs, "similarity": jindex})
@@ -171,11 +210,14 @@ def check_cens_status(
         .select(["contig", "ref", "dst", "mtch", "ort"])
         .collect()
     )
+    partial_contig_res = pl.DataFrame({"contig": pcontigs, "partial": pstatus})
+
     (
         # Join result df
         jindex_res.join(edit_distance_res, on="contig")
         .group_by("contig")
         .first()
+        .join(partial_contig_res, on="contig")
         .select(
             contig=pl.col("contig"),
             # Extract chromosome name.
@@ -184,6 +226,7 @@ def check_cens_status(
             # TODO: Fix later. Weird. Cannot use literal string since converted to colname.
             .otherwise(0),
             reorient=pl.col("ort"),
+            partial=pl.col("partial"),
         )
         # Replace chr name in original contig.
         .with_columns(
@@ -240,6 +283,18 @@ def main() -> int:
         type=float,
         help="Edit distance percentile threshold. Lower is more stringent.",
     )
+    ap.add_argument(
+        "--edge_perc_alr_thr",
+        default=0.7,
+        type=float,
+        help="Percent ALR on edges of contig to be considered a partial centromere.",
+    )
+    ap.add_argument(
+        "--edge_len",
+        default=EDGE_LEN,
+        type=int,
+        help="Edge len to calculate edge_perc_alr_thr.",
+    )
     args = ap.parse_args()
 
     return check_cens_status(
@@ -248,6 +303,8 @@ def main() -> int:
         args.reference,
         match_perc_thr=args.match_perc_thr,
         dst_perc_thr=args.dst_perc_thr,
+        edge_len=args.edge_len,
+        edge_perc_alr_thr=args.edge_perc_alr_thr,
     )
 
 
