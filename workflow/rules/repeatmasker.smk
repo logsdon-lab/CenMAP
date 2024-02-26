@@ -325,8 +325,8 @@ rule extract_rm_out_by_chr:
         "../env/tools.yaml"
     shell:
         """
-        grep "{wildcards.chr}_" {input.rm_out} > {output.rm_out_by_chr} 2> {log}
-        grep "{wildcards.chr}:" {input.rm_out} >> {output.rm_out_by_chr} 2>> {log}
+        {{ grep "{wildcards.chr}_" {input.rm_out} || true; }}> {output.rm_out_by_chr} 2> {log}
+        {{ grep "{wildcards.chr}:" {input.rm_out} || true; }} >> {output.rm_out_by_chr} 2>> {log}
         """
 
 
@@ -386,93 +386,92 @@ rule create_correct_oriented_cens:
         """
 
 
+rule merge_corrections_list:
+    input:
+        expand(rules.check_cens_status.output.cens_status, chr=CHROMOSOMES),
+    output:
+        os.path.join(config["repeatmasker"]["output_dir"], "all_cen_corrections.tsv"),
+    shell:
+        """
+        cat {input} > {output}
+        """
+
+
 rule fix_incorrect_merged_legend:
     input:
-        cens_correction_list=expand(
-            rules.check_cens_status.output.cens_status, chr=CHROMOSOMES
-        ),
+        script="workflow/scripts/fix_incorrect_merged_legend.py",
+        cens_correction_list=rules.merge_corrections_list.output,
         merged_legend=rules.merge_legends_for_rm.output.trimmed_fmted_legend,
     output:
         corrected_legend=os.path.join(
             config["repeatmasker"]["output_dir"], "{sm}_corrected_merged_legend.txt"
         ),
-    run:
-        import csv
-
-        cens_renamed = {}
-        incomplete_cens = set()
-        for file in input.cens_correction_list:
-            with open(str(file)) as cens_list_fh:
-                reader_cens_renamed = csv.reader(cens_list_fh, delimiter="\t")
-                for old, new, ort, is_partial in reader_cens_renamed:
-                    cens_renamed[old] = new
-                    if is_partial == "true":
-                        incomplete_cens.add(old)
-
-        with (
-            open(str(input.merged_legend)) as merged_legend_fh,
-            open(str(output.corrected_legend), "wt") as out_merged_legend_fh,
-        ):
-            # Write legend.
-            writer_legend = csv.writer(out_merged_legend_fh, delimiter="\t")
-            for old, new in csv.reader(merged_legend_fh, delimiter="\t"):
-                # Skip incomplete cens.
-                if new in incomplete_cens:
-                    continue
-                new_contig_name = cens_renamed.get(new, new)
-                writer_legend.writerow((old, new_contig_name))
+    conda:
+        "../env/py.yaml"
+    log:
+        "logs/fix_incorrect_merged_legend_{sm}.log",
+    shell:
+        """
+        python {input.script} \
+        -ic {input.cens_correction_list} \
+        -l {input.merged_legend} > {output}
+        """
 
 
 rule fix_incorrect_mapped_cens:
     input:
-        cens_correction_list=rules.check_cens_status.output.cens_status,
-        reoriented_rm_out=rules.create_correct_oriented_cens.output,
+        script="workflow/scripts/fix_incorrect_mapped_cens.py",
+        cens_correction_list=rules.merge_corrections_list.output,
+        reoriented_rm_out=expand(
+            rules.create_correct_oriented_cens.output, chr=CHROMOSOMES
+        ),
     output:
         corrected_cens_list=os.path.join(
-            config["repeatmasker"]["output_dir"], "corrected_{chr}_cens.list"
+            config["repeatmasker"]["output_dir"], "all_corrected_cens.list"
         ),
+        corrected_rm_out=os.path.join(
+            config["repeatmasker"]["output_dir"], "all_corrected_cens.fa.out"
+        ),
+    conda:
+        "../env/py.yaml"
+    log:
+        "logs/fix_incorrect_mapped_cens.log",
+    shell:
+        """
+        python {input.script} \
+        -ic {input.cens_correction_list} \
+        -ir {input.reoriented_rm_out} > {output.corrected_rm_out} 2> {log}
+
+        cut -f 4 {output.corrected_rm_out} | sort | uniq > {output.corrected_cens_list}
+        """
+
+
+rule split_corrected_rm_output:
+    input:
+        corrected_cens_list=rules.fix_incorrect_mapped_cens.output.corrected_cens_list,
+        corrected_rm_out=rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
+    output:
         corrected_rm_out=os.path.join(
             config["repeatmasker"]["output_dir"], "corrected_{chr}_cens.fa.out"
         ),
-    run:
-        import csv
-
-        with (
-            open(str(input.cens_correction_list)) as cens_list_fh,
-            open(str(input.reoriented_rm_out)) as rm_fh,
-            open(str(output.corrected_cens_list), "wt") as out_cens_list_fh,
-            open(str(output.corrected_rm_out), "wt") as out_rm_fh,
-        ):
-            reader_cens_renamed = csv.reader(cens_list_fh, delimiter="\t")
-            cens_renamed = {}
-            incomplete_cens = set()
-            for old, new, ort, is_partial in reader_cens_renamed:
-                cens_renamed[old] = new
-                if is_partial == "true":
-                    incomplete_cens.add(old)
-
-            writer_rm_out = csv.writer(out_rm_fh, delimiter="\t")
-            reader_rm_out = csv.reader(rm_fh, delimiter="\t")
-            new_contigs = set()
-            for line in reader_rm_out:
-                contig_name = line[4]
-                # Skip incomplete cens.
-                if contig_name in incomplete_cens:
-                    continue
-
-                new_contig_name = cens_renamed.get(contig_name, contig_name)
-                line[4] = new_contig_name
-                new_contigs.add(new_contig_name)
-                writer_rm_out.writerow(line)
-
-            for c in new_contigs:
-                out_cens_list_fh.write(f"{c}\n")
+        corrected_cens_list=os.path.join(
+            config["repeatmasker"]["output_dir"], "corrected_{chr}_cens.list"
+        ),
+    log:
+        "logs/split_corrected_{chr}_rm_output.log",
+    conda:
+        "../env/tools.yaml"
+    shell:
+        """
+        {{ grep "{wildcards.chr}[_:]" {input.corrected_rm_out} || true; }} > {output.corrected_rm_out}
+        {{ grep "{wildcards.chr}[_:]" {input.corrected_cens_list} || true; }} > {output.corrected_cens_list}
+        """
 
 
 rule plot_cens_from_rm_by_chr:
     input:
         script="workflow/scripts/repeatStructure_onlyRM.R",
-        rm_out=rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
+        rm_out=rules.split_corrected_rm_output.output.corrected_rm_out,
     output:
         repeat_plot_by_chr=os.path.join(
             config["repeatmasker"]["output_dir"], "hgsvc3_{chr}_cens.additional.pdf"
