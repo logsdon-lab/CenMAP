@@ -24,7 +24,7 @@ RM_COLS = [
     "z",
 ]
 RGX_CHR = r"(chr[0-9XY]+)"
-EDGE_LEN = 500_000
+EDGE_LEN = 100_000
 
 
 def jaccard_index(a: set[str], b: set[str]) -> float:
@@ -138,8 +138,8 @@ def check_cens_status(
             dsts.append(dst_rev)
 
         # Check if partial centromere based on ALR perc on ends.
-        # Check 500 kbp from start and end of contig.
-        ledge = df_ctg_grp.filter(pl.col("end") < edge_len)
+        # Check N kbp from start and end of contig.
+        ledge = df_ctg_grp.filter(pl.col("end") < df_ctg_grp[0]["end"] + edge_len)
         redge = df_ctg_grp.filter(pl.col("end") > df_ctg_grp[-1]["end"] - edge_len)
         try:
             ledge_perc_alr = (

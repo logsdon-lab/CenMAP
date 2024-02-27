@@ -90,7 +90,7 @@ rule extract_cens_for_humas_hmmer:
     input:
         all_correct_alr_fa=rules.merge_correct_alr_regions.output.seq,
         rc_all_correct_alr_fa=rules.merge_correct_alr_regions_rc.output.seq,
-        corrected_cens_list=rules.fix_incorrect_mapped_cens.output.corrected_cens_list,
+        corrected_cens_list=rules.split_corrected_rm_output.output.corrected_cens_list,
     output:
         cens=os.path.join(config["humas_hmmer"]["output_dir"], "{chr}_cens.fa"),
         idx=os.path.join(config["humas_hmmer"]["output_dir"], "{chr}_cens.fa.fai"),
