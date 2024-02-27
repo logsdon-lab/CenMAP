@@ -142,8 +142,10 @@ use rule * from HumAS_HMMER as cens_*
 
 # https://stackoverflow.com/a/63040288
 def humas_hmmer_outputs(wc):
-    fa_dir = checkpoints.split_cens_for_humas_hmmer.get(**wc).params.split_dir
-    fnames, _ = glob_wildcards(os.path.join(fa_dir, "{fname}.fa"))
+    _ = checkpoints.split_cens_for_humas_hmmer.get(**wc).output
+    fnames = glob_wildcards(
+        os.path.join(config["humas_hmmer"]["input_dir"], "{fname}.fa")
+    ).fname
     return {
         "overlaps": expand(
             rules.cens_filter_hmm_res_overlaps_as_hor.output, fname=fnames
@@ -157,24 +159,3 @@ rule run_humas_hmmer_for_anvil:
         unpack(humas_hmmer_outputs),
     output:
         temp(touch("/tmp/humas_hmmer_{chr}.done")),
-
-
-# rule run_humas_hmmer_for_anvil:
-#     input:
-#         script="workflow/scripts/HumAS-HMMER_for_AnVIL/hmmer-run.sh",
-#         input_dir=rules.split_cens_for_humas_hmmer.output,
-#         model=config["humas_hmmer"]["model"],
-#     output:
-#         directory(os.path.join(config["humas_hmmer"]["output_dir"], "results_{chr}")),
-#     conda:
-#         "../env/tools.yaml"
-#     threads: config["humas_hmmer"]["threads"]
-#     benchmark:
-#         "benchmarks/run_humas_hmmer_for_anvil_{chr}.tsv"
-#     log:
-#         "logs/run_humas_hmmer_for_anvil_{chr}.log",
-#     shell:
-#         """
-#         mkdir -p {output}
-#         ./{input.script} {input.input_dir} {output} {input.model} {threads} 2> {log}
-#         """

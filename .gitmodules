@@ -1,6 +1,3 @@
-[submodule "workflow/scripts/HumAS-HMMER_for_AnVIL"]
-	path = workflow/scripts/HumAS-HMMER_for_AnVIL
-	url = git@github.com:koisland/HumAS-HMMER_for_AnVIL.git
 [submodule "workflow/scripts/NucFreq"]
 	path = workflow/scripts/NucFreq
 	url = git@github.com:mrvollger/NucFreq.git

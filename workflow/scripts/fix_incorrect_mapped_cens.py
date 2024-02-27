@@ -33,6 +33,7 @@ def main() -> int:
         for old, new, ort, is_partial in reader_cens_renamed:
             if ort == "rev":
                 old = old.replace("chr", "rc_chr")
+                new = new.replace("chr", "rc_chr")
 
             cens_renamed[old] = new
             if is_partial == "true":
