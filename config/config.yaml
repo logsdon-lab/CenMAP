@@ -80,6 +80,8 @@ repeatmasker:
   output_dir: "results/repeatmasker"
 
 humas_hmmer:
+  # Dir where split cens placed.
+  input_dir: "results/humas_hmmer/cens"
   output_dir: "results/humas_hmmer"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
   threads: 30
