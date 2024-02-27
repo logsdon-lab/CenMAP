@@ -442,7 +442,7 @@ rule fix_incorrect_mapped_cens:
         -ic {input.cens_correction_list} \
         -ir {input.reoriented_rm_out} > {output.corrected_rm_out} 2> {log}
 
-        cut -f 4 {output.corrected_rm_out} | sort | uniq > {output.corrected_cens_list}
+        cut -f 5 {output.corrected_rm_out} | sort | uniq > {output.corrected_cens_list}
         """
 
 
