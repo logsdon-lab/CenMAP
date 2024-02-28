@@ -77,7 +77,7 @@ rule count_complete_cens:
         {{ wc -l {input} {output.all_idx} | \
         sed -e 's/{params.strip_dir}//g' -e 's/_/\\t/g' | \
         awk -v OFS="\\t" '{{print $2, $1, $1/{params.num_chrs}*100}}' | \
-        head -n +2;}} > {output.cmp_cnts} 2> {log}
+        head -n -1;}} > {output.cmp_cnts} 2> {log}
         """
 
 
@@ -131,7 +131,7 @@ rule merge_legends_for_rm:
         sorted_idxs=temp(
             os.path.join(config["repeatmasker"]["output_dir"], "{sm}_sorted.fa.fai")
         ),
-        trimed_fmted_legend=os.path.join(
+        trimmed_fmted_legend=os.path.join(
             config["repeatmasker"]["output_dir"], "{sm}_fmt_merged_legend.txt"
         ),
     conda:
@@ -151,7 +151,7 @@ rule merge_legends_for_rm:
         # Join on original contig name and get final contig name.
         # (sm)_(chr)_(ctg):(start)-(end)
         {{ join -1 1 -2 1 {output.sorted_idxs} {output.merged_legends} | \
-        awk -v OFS="\\t" '{{ print $1, $3":"$2 }}';}} > {output.trimed_fmted_legend} 2>> {log}
+        awk -v OFS="\\t" '{{ print $1, $3":"$2 }}';}} > {output.trimmed_fmted_legend} 2>> {log}
         """
 
 
@@ -159,7 +159,7 @@ rule merge_legends_for_rm:
 rule rename_contig_name_repeatmasker:
     input:
         rm_out=rules.run_repeatmasker.output,
-        legend=rules.merge_legends_for_rm.output.trimed_fmted_legend,
+        legend=rules.merge_legends_for_rm.output.trimmed_fmted_legend,
     output:
         renamed_out=os.path.join(
             config["repeatmasker"]["output_dir"],
@@ -325,41 +325,131 @@ rule extract_rm_out_by_chr:
         "../env/tools.yaml"
     shell:
         """
-        grep "{wildcards.chr}_" {input.rm_out} > {output.rm_out_by_chr} 2> {log}
-        grep "{wildcards.chr}:" {input.rm_out} >> {output.rm_out_by_chr} 2>> {log}
+        {{ grep "{wildcards.chr}_" {input.rm_out} || true; }}> {output.rm_out_by_chr} 2> {log}
+        {{ grep "{wildcards.chr}:" {input.rm_out} || true; }} >> {output.rm_out_by_chr} 2>> {log}
         """
 
 
-rule get_reversed_cens:
+rule check_cens_status:
     input:
-        script="workflow/scripts/get_reversed_cens.py",
+        script="workflow/scripts/check_cens_status.py",
         rm_out=rules.extract_rm_out_by_chr.output.rm_out_by_chr,
-    output:
-        rc_cens_list_by_chr=os.path.join(
-            config["repeatmasker"]["output_dir"], "rc_{chr}_cens.list"
+        rm_ref=(
+            config["repeatmasker"]["ref_repeatmasker_output"]
+            if config["repeatmasker"].get("ref_repeatmasker_output")
+            else rules.run_repeatmasker_ref.output
         ),
-    params:
-        reference_prefix="chm13",
-        edge_len=500_000,
+    output:
+        cens_status=os.path.join(
+            config["repeatmasker"]["output_dir"], "{chr}_cens_status.tsv"
+        ),
     log:
-        "logs/get_reversed_{chr}_cens.log",
+        "logs/check_cens_status_{chr}.log",
     conda:
         "../env/py.yaml"
     shell:
         """
         python {input.script} \
         -i {input.rm_out} \
-        -o {output} \
-        --reference_prefix {params.reference_prefix} \
-        --edge_len {params.edge_len} 2> {log}
+        -r {input.rm_ref} \
+        -o {output} 2> {log}
         """
 
 
-rule create_correct_oriented_cens_list:
+rule create_correct_oriented_cens:
     input:
         rm_chr_out=rules.extract_rm_out_by_chr.output.rm_out_by_chr,
-        rm_all_out=rules.reverse_complete_repeatmasker_output.output,
-        rc_ctg_list=rules.get_reversed_cens.output.rc_cens_list_by_chr,
+        rm_rev_out=rules.reverse_complete_repeatmasker_output.output,
+        cens_correction_list=rules.check_cens_status.output.cens_status,
+    output:
+        reoriented_rm_out=os.path.join(
+            config["repeatmasker"]["output_dir"], "reoriented_{chr}_cens.fa.out"
+        ),
+    log:
+        "logs/create_correct_oriented_{chr}_cens_list.log",
+    conda:
+        "../env/tools.yaml"
+    shell:
+        """
+        contigs_to_reverse=$(awk '{{ if ($3=="rev") {{ print $1 }} }}' {input.cens_correction_list} | sort | uniq)
+        joined_contigs_to_reverse=$(echo "${{contigs_to_reverse[*]}}" | tr '\\n' '|' | sed 's/.$//')
+        joined_contigs_to_reverse_rc=$(echo "${{joined_contigs_to_reverse[@]}}" | sed 's/chr/rc_chr/g' )
+
+        # If nothing to reverse, just copy file.
+        if [ -z $joined_contigs_to_reverse ]; then
+            cp {input.rm_chr_out} {output.reoriented_rm_out}
+        else
+            # non-matching so everything correctly oriented
+            grep -vE "$joined_contigs_to_reverse" {input.rm_chr_out} > {output.reoriented_rm_out}
+            grep -E "$joined_contigs_to_reverse_rc" {input.rm_rev_out} >> {output.reoriented_rm_out}
+        fi
+        """
+
+
+rule merge_corrections_list:
+    input:
+        expand(rules.check_cens_status.output.cens_status, chr=CHROMOSOMES),
+    output:
+        os.path.join(config["repeatmasker"]["output_dir"], "all_cen_corrections.tsv"),
+    shell:
+        """
+        cat {input} > {output}
+        """
+
+
+rule fix_incorrect_merged_legend:
+    input:
+        script="workflow/scripts/fix_incorrect_merged_legend.py",
+        cens_correction_list=rules.merge_corrections_list.output,
+        merged_legend=rules.merge_legends_for_rm.output.trimmed_fmted_legend,
+    output:
+        corrected_legend=os.path.join(
+            config["repeatmasker"]["output_dir"], "{sm}_corrected_merged_legend.txt"
+        ),
+    conda:
+        "../env/py.yaml"
+    log:
+        "logs/fix_incorrect_merged_legend_{sm}.log",
+    shell:
+        """
+        python {input.script} \
+        -ic {input.cens_correction_list} \
+        -l {input.merged_legend} > {output}
+        """
+
+
+rule fix_incorrect_mapped_cens:
+    input:
+        script="workflow/scripts/fix_incorrect_mapped_cens.py",
+        cens_correction_list=rules.merge_corrections_list.output,
+        reoriented_rm_out=expand(
+            rules.create_correct_oriented_cens.output, chr=CHROMOSOMES
+        ),
+    output:
+        corrected_cens_list=os.path.join(
+            config["repeatmasker"]["output_dir"], "all_corrected_cens.list"
+        ),
+        corrected_rm_out=os.path.join(
+            config["repeatmasker"]["output_dir"], "all_corrected_cens.fa.out"
+        ),
+    conda:
+        "../env/py.yaml"
+    log:
+        "logs/fix_incorrect_mapped_cens.log",
+    shell:
+        """
+        python {input.script} \
+        -ic {input.cens_correction_list} \
+        -ir {input.reoriented_rm_out} > {output.corrected_rm_out} 2> {log}
+
+        cut -f 5 {output.corrected_rm_out} | sort | uniq > {output.corrected_cens_list}
+        """
+
+
+rule split_corrected_rm_output:
+    input:
+        corrected_cens_list=rules.fix_incorrect_mapped_cens.output.corrected_cens_list,
+        corrected_rm_out=rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
     output:
         corrected_rm_out=os.path.join(
             config["repeatmasker"]["output_dir"], "corrected_{chr}_cens.fa.out"
@@ -368,33 +458,20 @@ rule create_correct_oriented_cens_list:
             config["repeatmasker"]["output_dir"], "corrected_{chr}_cens.list"
         ),
     log:
-        "logs/create_correct_oriented_{chr}_cens_list.log",
+        "logs/split_corrected_{chr}_rm_output.log",
     conda:
         "../env/tools.yaml"
     shell:
         """
-        contigs_to_reverse=$(cat {input.rc_ctg_list} | sort | uniq)
-        # https://stackoverflow.com/a/9429887
-        joined_contigs_to_reverse=$(IFS="|" ; echo "${{contigs_to_reverse[*]}}")
-        joined_contigs_to_reverse_rc=$(echo "${{joined_contigs_to_reverse[@]}}" | sed 's/chr/rc_chr/g' )
-
-        # If nothing to reverse, just copy file.
-        if [ -z $joined_contigs_to_reverse ]; then
-            cp {input.rm_chr_out} {output.corrected_rm_out}
-        else
-            # non-matching so everything correctly oriented
-            grep -vE "$joined_contigs_to_reverse" {input.rm_chr_out} > {output.corrected_rm_out}
-            grep -E "$joined_contigs_to_reverse_rc" {input.rm_all_out} >> {output.corrected_rm_out}
-        fi
-
-        cat {output.corrected_rm_out} | cut -f5 | sort | uniq > {output.corrected_cens_list}
+        {{ grep "{wildcards.chr}[_:]" {input.corrected_rm_out} || true; }} > {output.corrected_rm_out}
+        {{ grep "{wildcards.chr}[_:]" {input.corrected_cens_list} || true; }} > {output.corrected_cens_list}
         """
 
 
 rule plot_cens_from_rm_by_chr:
     input:
         script="workflow/scripts/repeatStructure_onlyRM.R",
-        rm_out=rules.create_correct_oriented_cens_list.output.corrected_rm_out,
+        rm_out=rules.split_corrected_rm_output.output.corrected_rm_out,
     output:
         repeat_plot_by_chr=os.path.join(
             config["repeatmasker"]["output_dir"], "hgsvc3_{chr}_cens.additional.pdf"
@@ -407,3 +484,15 @@ rule plot_cens_from_rm_by_chr:
         """
         Rscript {input.script} {input.rm_out} {output.repeat_plot_by_chr} 2> {log}
         """
+
+
+use rule plot_cens_from_rm_by_chr as plot_og_cens_from_rm_by_chr with:
+    input:
+        script="workflow/scripts/repeatStructure_onlyRM.R",
+        rm_out=rules.extract_rm_out_by_chr.output.rm_out_by_chr,
+    output:
+        repeat_plot_by_chr=os.path.join(
+            config["repeatmasker"]["output_dir"], "hgsvc3_{chr}_cens.original.pdf"
+        ),
+    log:
+        "logs/plot_{chr}_cens_from_rm_og.log",

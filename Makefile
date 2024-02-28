@@ -27,4 +27,5 @@ dev:
 	$(bin)/python3 -m pip install -r requirements-dev.txt
 
 update_submodules:
+	git submodule init
 	git submodule update --remote --recursive

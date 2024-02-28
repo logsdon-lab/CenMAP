@@ -9,3 +9,5 @@ dependencies:
     - matplotlib
     - numpy
     - seaborn
+    - polars
+    - editdistance

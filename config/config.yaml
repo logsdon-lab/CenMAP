@@ -1,3 +1,29 @@
+chromosomes:
+  - "chr1"
+  - "chr2"
+  - "chr3"
+  - "chr4"
+  - "chr5"
+  - "chr6"
+  - "chr7"
+  - "chr8"
+  - "chr9"
+  - "chr10"
+  - "chr11"
+  - "chr12"
+  - "chr13"
+  - "chr14"
+  - "chr15"
+  - "chr16"
+  - "chr17"
+  - "chr18"
+  - "chr19"
+  - "chr20"
+  - "chr21"
+  - "chr22"
+  - "chrX"
+  - "chrY"
+
 align_asm_to_ref:
   # This config specifies the assemblies in `tbl`
   config: "config/asm_to_ref_config.yaml"
@@ -49,11 +75,13 @@ repeatmasker:
   censat_annot_hor_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   # Optional.
   # Repeatmasker output on reference genome. Will prevent running step.
-  ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.out
+  ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
   threads: 100
   output_dir: "results/repeatmasker"
 
 humas_hmmer:
+  # Dir where split cens placed.
+  input_dir: "results/humas_hmmer/cens"
   output_dir: "results/humas_hmmer"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
   threads: 30
