@@ -158,4 +158,5 @@ rule run_humas_hmmer_for_anvil:
     input:
         unpack(humas_hmmer_outputs),
     output:
+        # TODO: Sort maybe?
         temp(touch("/tmp/humas_hmmer_{chr}.done")),

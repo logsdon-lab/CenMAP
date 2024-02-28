@@ -1,7 +1,7 @@
 
 rule get_stv_row_from_humas_hmmer_out:
     input:
-        humas_hmmer_dir=rules.run_humas_hmmer_for_anvil.output,
+        humas_hmmer_done=rules.run_humas_hmmer_for_anvil.output,
         script_filter_live_hor="workflow/scripts/stv/scripts/live_HORs_filter.py",
         script_mon_to_stv="workflow/scripts/stv/scripts/mon2stv.py",
     output:
@@ -9,6 +9,7 @@ rule get_stv_row_from_humas_hmmer_out:
             os.path.join(config["plot_hor_stv"]["output_dir"], "results_{chr}_stv")
         ),
     params:
+        humas_hmmer_dir=lambda wc: config["humas_hmmer"]["output_dir"],
         renamed_bed=lambda wc, output: os.path.join(str(output), "${fname}_renamed.bed"),
         live_hor_bed=lambda wc, output: os.path.join(
             str(output), "${fname}_liveHORs.bed"
@@ -24,7 +25,7 @@ rule get_stv_row_from_humas_hmmer_out:
     shell:
         """
         mkdir -p {output}
-        for fname_full in $(find {input.humas_hmmer_dir} -name 'AS-HOR-vs-*.bed'); do
+        for fname_full in $(find {params.humas_hmmer_dir} -name 'AS-HOR-vs-*.bed'); do
             fname_base=$(basename $fname_full)
             fname="${{fname_base%.bed}}"
             awk -v OFS="\\t" '{{print "{wildcards.chr}", $2, $3, $4, $5, $6, $7, $8, $9, $1}}' $fname_full > "{params.renamed_bed}" 2> {log}
