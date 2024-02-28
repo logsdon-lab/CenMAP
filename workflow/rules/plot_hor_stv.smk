@@ -25,7 +25,7 @@ rule get_stv_row_from_humas_hmmer_out:
     shell:
         """
         mkdir -p {output}
-        for fname_full in $(find {params.humas_hmmer_dir} -name 'AS-HOR-vs-*.bed'); do
+        for fname_full in $(find {params.humas_hmmer_dir} -name 'AS-HOR-vs-*{wildcards.chr}_*.bed'); do
             fname_base=$(basename $fname_full)
             fname="${{fname_base%.bed}}"
             awk -v OFS="\\t" '{{print "{wildcards.chr}", $2, $3, $4, $5, $6, $7, $8, $9, $1}}' $fname_full > "{params.renamed_bed}" 2> {log}
