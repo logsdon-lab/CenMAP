@@ -176,4 +176,4 @@ if (is.na(args$plot_height)) {
 
 # Prevent ggplot from creating Rplots.pdf when calling ggsave.
 if(!interactive()) pdf(NULL)
-ggsave(args$output, width=args$plot_width, height=args$plot_height, limitsize = FALSE)
+ggsave(args$output, width=args$plot_width, height=args$plot_height + 3, limitsize = FALSE)
