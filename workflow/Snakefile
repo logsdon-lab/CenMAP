@@ -72,7 +72,7 @@ include: "rules/check_reg_nucfreq.smk"
 include: "rules/repeatmasker.smk"
 include: "rules/humas_hmmer.smk"
 include: "rules/plot_hor_stv.smk"
-include: "rules/satellite_repeatmasker_annotations.smk"
+include: "rules/plot_repeatmasker_sat_annot.smk"
 
 
 rule extract_align_cens_only:
