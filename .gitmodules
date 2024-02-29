@@ -4,3 +4,6 @@
 [submodule "workflow/scripts/stv"]
 	path = workflow/scripts/stv
 	url = git@github.com:fedorrik/stv.git
+[submodule "workflow/scripts/StainedGlass"]
+	path = workflow/scripts/StainedGlass
+	url = git@github.com:mrvollger/StainedGlass.git
