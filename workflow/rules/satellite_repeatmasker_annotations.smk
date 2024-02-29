@@ -1,4 +1,4 @@
-ANNOTATE_REPEATS = config["simplify_repeatmasker_annotations"][
+ANNOTATE_SAT_REPEATS = config["repeatmasker_sat_annot"][
     "repeat_name_pattern_replacement"
 ]
 
@@ -8,15 +8,15 @@ rule create_annotated_satellites:
         rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
     output:
         os.path.join(
-            config["repeatmasker_simplified"]["output_dir"],
+            config["repeatmasker_sat_annot"]["output_dir"],
             "all_cens_{repeat}.satellites.bed",
         ),
     params:
-        pattern=lambda wc: ANNOTATE_REPEATS[str(wc.repeat)]["pattern"],
-        color=lambda wc: ANNOTATE_REPEATS[str(wc.repeat)]["color"],
+        pattern=lambda wc: ANNOTATE_SAT_REPEATS[str(wc.repeat)]["pattern"],
+        color=lambda wc: ANNOTATE_SAT_REPEATS[str(wc.repeat)]["color"],
     shell:
         """
-        grep "{params.pattern}" cens_to_annotate.fa.out | \
+        grep "{params.pattern}" {input} | \
         sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
         awk -v OFS="\\t" '{{print $5"-"$6, $7+$9, $7+$10, "{wildcards.repeat}", "0", ".", $7+$9, $7+$10, "{params.color}"}}' > {output}
         """
@@ -26,9 +26,9 @@ rule create_ct_track:
     input:
         rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
     output:
-        os.path.join(config["repeatmasker_simplified"]["output_dir"], "all_cens.ct.bed"),
+        os.path.join(config["repeatmasker_sat_annot"]["output_dir"], "all_cens.ct.bed"),
     params:
-        color=config["simplify_repeatmasker_annotations"]["ct_track_color"],
+        color=config["repeatmasker_sat_annot"]["ct_track_color"],
     log:
         "logs/create_ct_track.log",
     conda:
@@ -43,11 +43,14 @@ rule create_ct_track:
 
 rule aggregate_rm_satellite_annotations:
     input:
-        satellites=rules.create_annotated_satellites.output,
+        satellites=expand(
+            rules.create_annotated_satellites.output,
+            repeat=ANNOTATE_SAT_REPEATS.keys(),
+        ),
         ct_track=rules.create_ct_track.output,
     output:
         os.path.join(
-            config["repeatmasker_simplified"]["output_dir"], "all_cens.annotation.bed"
+            config["repeatmasker_sat_annot"]["output_dir"], "all_cens.annotation.bed"
         ),
     shell:
         """
@@ -60,14 +63,22 @@ rule plot_satellite_annotations:
         script="workflow/scripts/repeatStructure_satellites.R",
         all_annotations=rules.aggregate_rm_satellite_annotations.output,
     output:
-        os.path.join(
-            config["repeatmasker_simplified"]["output_dir"], "all_cens.annotation.plot"
+        chr_annot=temp(
+            os.path.join(
+                config["repeatmasker_sat_annot"]["output_dir"],
+                "all_cens_{chr}.annotation.fa.out",
+            )
+        ),
+        chr_plot=os.path.join(
+            config["repeatmasker_sat_annot"]["output_dir"],
+            "all_cens_{chr}.annotation.png",
         ),
     log:
-        "logs/plot_satellite_annotations.log",
+        "logs/plot_{chr}_satellite_annotations.log",
     conda:
-        "../env/tools.yaml"
+        "../env/r.yaml"
     shell:
         """
-        Rscript {input.script} {input.all_annotations} {output} 2> {log}
+        grep "{wildcards.chr}[_:]" {input.all_annotations} > {output.chr_annot}
+        Rscript {input.script} {output.chr_annot} {output.chr_plot} 2> {log}
         """

@@ -11,8 +11,8 @@ library(dplyr)
 library(tidyr)
 library(argparser, quietly=TRUE)
 
-p <- arg_parser("Plot simplified RepeatMasker output.")
-p <- add_argument(p, "input", help="Input bed file made from simplified RM output.", type="character")
+p <- arg_parser("Plot satellite RepeatMasker output.")
+p <- add_argument(p, "input", help="Input bed file made from annotated satellite RM output.", type="character")
 p <- add_argument(p, "output", help="Output plot file.", type="character")
 argv <- parse_args(p)
 

@@ -79,8 +79,8 @@ repeatmasker:
   threads: 100
   output_dir: "results/repeatmasker"
 
-simplify_repeatmasker_annotations:
-  output_dir: "results/repeatmasker_simplified"
+repeatmasker_sat_annot:
+  output_dir: "results/repeatmasker_sat_annot"
   # Parse lines in RepeatMasker output and turn to bed file with colors.
   repeat_name_pattern_replacement:
     "asat":
@@ -96,13 +96,13 @@ simplify_repeatmasker_annotations:
       pattern: "SAR"
       color: "70,150,139"
     "hsat2":
-      pattern: "HSATII"
+      pattern: "HSATII\\b"
       color: "49,53,100"
     "hsat1B":
-      pattern: "HSATI\t"
+      pattern: "HSATI\\b"
       color: "70,150,139"
     "hsat3":
-      pattern: "(CATTC)n|(GAATG)n"
+      pattern: "(CATTC)n\\|(GAATG)n"
       color: "127,159,184"
   ct_track_color: "209,211,212"
 
