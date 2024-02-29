@@ -72,6 +72,7 @@ include: "rules/check_reg_nucfreq.smk"
 include: "rules/repeatmasker.smk"
 include: "rules/humas_hmmer.smk"
 include: "rules/plot_hor_stv.smk"
+include: "rules/plot_repeatmasker_sat_annot.smk"
 
 
 rule extract_align_cens_only:
@@ -149,6 +150,13 @@ rule plot_hor_stv_only:
             chr=CHROMOSOMES,
             mer_order=config["plot_hor_stv"]["mer_order"],
         ),
+
+
+rule plot_repeatmasker_sat_only:
+    input:
+        rules.create_ct_track.output,
+        rules.aggregate_rm_satellite_annotations.output,
+        expand(rules.plot_satellite_annotations.output, chr=CHROMOSOMES),
 
 
 rule all:
