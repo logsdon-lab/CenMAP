@@ -13,3 +13,4 @@ __pycache__
 renv/
 renv.lock
 temp/
+Rplots.pdf

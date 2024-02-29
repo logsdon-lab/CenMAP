@@ -47,6 +47,35 @@ repeatmasker:
   threads: 40
   output_dir: "results/repeatmasker"
 
+
+repeatmasker_sat_annot:
+  output_dir: "results/repeatmasker_sat_annot"
+  # Parse lines in RepeatMasker output and turn to bed file with colors.
+  repeat_name_pattern_replacement:
+    "asat":
+      pattern: "ALR"
+      color: "244,219,112"
+    "bsat":
+      pattern: "BSR"
+      color: "213,177,206"
+    "gsat":
+      pattern: "GSAT"
+      color: "133,117,170"
+    "hsat1A":
+      pattern: "SAR"
+      color: "70,150,139"
+    "hsat2":
+      pattern: "HSATII\\b"
+      color: "49,53,100"
+    "hsat1B":
+      pattern: "HSATI\\b"
+      color: "70,150,139"
+    "hsat3":
+      pattern: "(CATTC)n\\|(GAATG)n"
+      color: "127,159,184"
+  ct_track_color: "209,211,212"
+
+
 humas_hmmer:
   input_dir: "data/chr_cens"
   output_dir: "output/"
