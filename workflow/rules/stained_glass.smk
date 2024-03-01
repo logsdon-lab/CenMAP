@@ -1,11 +1,30 @@
 
+
+rule index_fa_for_stained_glass:
+    input:
+        fa=os.path.join(config["humas_hmmer"]["input_dir"], "{fname}.fa"),
+    output:
+        idx=os.path.join(config["humas_hmmer"]["input_dir"], "{fname}.fa.fai"),
+    conda:
+        "../env/stained_glass.yaml"
+    log:
+        "logs/index_fa_for_stained_glass+{fname}.log",
+    shell:
+        """
+        # Index file.
+        samtools faidx {input.fa} 2>> {log}
+        """
+
+
 rule run_stained_glass:
     input:
         snakefile="workflow/scripts/StainedGlass/workflow/Snakefile",
         fa=os.path.join(config["humas_hmmer"]["input_dir"], "{fname}.fa"),
+        idx=rules.index_fa_for_stained_glass.output,
     output:
         directory(
-            f"{{fname}}.{config['stained_glass']['window']}.{config['stained_glass']['mm_f']}_figures"
+            "{fname}"
+            + f".{config['stained_glass']['window']}.{config['stained_glass']['mm_f']}_figures"
         ),
     conda:
         "../env/stained_glass.yaml"
@@ -22,10 +41,7 @@ rule run_stained_glass:
     shell:
         """
         # Remove lock.
-        snakemake --configfile config/config.yaml --unlock 2> {log}
-
-        # Index file.
-        samtools faidx {input.fa} 2>> {log}
+        # snakemake --configfile config/config.yaml --unlock 2> {log}
 
         # Run StainedGlass
         snakemake -s workflow/scripts/StainedGlass/workflow/Snakefile \
