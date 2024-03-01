@@ -64,8 +64,16 @@ rule run_stained_glass:
 
 # https://stackoverflow.com/a/63040288
 def stained_glass_outputs_no_input_dir(wc):
+    # Wait until done.
     _ = checkpoints.split_cens_for_humas_hmmer.get(**wc).output
-    fnames = glob_wildcards(os.path.join(INPUT_FA_DIR, "{fname}.fa")).fname
+
+    fnames = (
+        os.path.splitext(os.path.split(file)[1])[0]
+        for file in glob.glob(
+            os.path.join(config["humas_hmmer"]["input_dir"], f"*{wc.chr}_*.fa")
+        )
+    )
+
     return expand(rules.run_stained_glass.output, fname=fnames)
 
 
