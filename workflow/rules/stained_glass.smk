@@ -50,9 +50,10 @@ def stained_glass_outputs(wc):
     ).fname
 
     return expand(rules.run_stained_glass.output, fname=fnames)
-# rule all:
-#     input:
-#         expand(
-#             rules.run_stained_glass.output, fname=["NA19240_rc_chr9_haplotype2-0000100:10693477-13672460"]
-#         )
-#     default_target: True
+
+
+rule stained_glass_all:
+    input:
+        stained_glass_outputs,
+    output:
+        temp(touch("/tmp/stained_glass_{chr}.done")),
