@@ -21,6 +21,9 @@ rule index_fa_for_stained_glass:
 
 
 rule run_stained_glass:
+    # Run an older fork (v5.0) of StainedGlass because of module issues in Snakemake > v8.0 and version requirement in StainedGlass v6.0.
+    # Cannot --use-conda as would create a conda env per sequence so all deps stuffed in one conda env.
+    # Specific versions of pysam also enforces Python 3.9 which would pull a version of Snakemake < v8.0.
     input:
         snakefile="workflow/scripts/StainedGlassV5/workflow/Snakefile",
         fa=os.path.join(INPUT_FA_DIR, "{fname}.fa"),
