@@ -27,8 +27,11 @@ rule run_stained_glass:
         idx=rules.index_fa_for_stained_glass.output,
     output:
         directory(
-            "{fname}"
-            + f".{config['stained_glass']['window']}.{config['stained_glass']['mm_f']}_figures"
+            os.path.join(
+                "results",
+                "{fname}"
+                + f".{config['stained_glass']['window']}.{config['stained_glass']['mm_f']}_figures",
+            )
         ),
     conda:
         "../env/stained_glass.yaml"
@@ -44,12 +47,8 @@ rule run_stained_glass:
         "benchmarks/stained_glass_{fname}.txt"
     shell:
         """
-        # Remove lock.
-        # snakemake --configfile config/config.yaml --unlock 2> {log}
-
-        # Run StainedGlass
         snakemake -s workflow/scripts/StainedGlass/workflow/Snakefile \
-        --use-conda \
+        -p \
         --config \
         sample="{wildcards.fname}" \
         fasta={input.fa} \
@@ -57,7 +56,6 @@ rule run_stained_glass:
         mm_f={params.mm_f} \
         nbatch={params.nbatch} \
         --cores {threads} \
-        -p \
         {params.target_rule} 2>> {log}
         """
 
@@ -87,8 +85,10 @@ if config["stained_glass"]["input_dir"] is None:
             temp(touch("/tmp/stained_glass_{chr}.done")),
 
 else:
-    fnames = glob_wildcards(os.path.join(INPUT_FA_DIR, "{fname}.fa")).fname
 
     rule stained_glass_all:
         input:
-            expand(rules.run_stained_glass.output, fname=fnames),
+            expand(
+                rules.run_stained_glass.output,
+                fname=glob_wildcards(os.path.join(INPUT_FA_DIR, "{fname}.fa")).fname,
+            ),
