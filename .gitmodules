@@ -1,9 +1,10 @@
 [submodule "workflow/scripts/NucFreq"]
 	path = workflow/scripts/NucFreq
 	url = git@github.com:mrvollger/NucFreq.git
-[submodule "workflow/scripts/StainedGlass"]
-	path = workflow/scripts/StainedGlass
-	url = git@github.com:mrvollger/StainedGlass.git
 [submodule "workflow/scripts/stv_fix"]
 	path = workflow/scripts/stv_fix
 	url = git@github.com:koisland/stv.git
+[submodule "workflow/scripts/StainedGlassV5"]
+	path = workflow/scripts/StainedGlassV5
+	url = git@github.com:koisland/StainedGlass.git
+	branch = fix/pre-v8

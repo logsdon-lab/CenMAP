@@ -22,7 +22,7 @@ rule index_fa_for_stained_glass:
 
 rule run_stained_glass:
     input:
-        snakefile="workflow/scripts/StainedGlass/workflow/Snakefile",
+        snakefile="workflow/scripts/StainedGlassV5/workflow/Snakefile",
         fa=os.path.join(INPUT_FA_DIR, "{fname}.fa"),
         idx=rules.index_fa_for_stained_glass.output,
     output:
@@ -47,8 +47,9 @@ rule run_stained_glass:
         "benchmarks/stained_glass_{fname}.txt"
     shell:
         """
-        snakemake -s workflow/scripts/StainedGlass/workflow/Snakefile \
+        snakemake -s {input.snakefile} \
         -p \
+        --profile none \
         --config \
         sample="{wildcards.fname}" \
         fasta={input.fa} \
