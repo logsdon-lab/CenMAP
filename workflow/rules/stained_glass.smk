@@ -63,15 +63,24 @@ rule run_stained_glass:
 
 
 # https://stackoverflow.com/a/63040288
-def stained_glass_outputs(wc):
-    if config["stained_glass"]["input_dir"] is None:
-        _ = checkpoints.split_cens_for_humas_hmmer.get(**wc).output
+def stained_glass_outputs_no_input_dir(wc):
+    _ = checkpoints.split_cens_for_humas_hmmer.get(**wc).output
     fnames = glob_wildcards(os.path.join(INPUT_FA_DIR, "{fname}.fa")).fname
     return expand(rules.run_stained_glass.output, fname=fnames)
 
 
-rule stained_glass_all:
-    input:
-        stained_glass_outputs,
-    output:
-        temp(touch("/tmp/stained_glass_{chr}.done")),
+# Conditionally change based on provided input dir.
+if config["stained_glass"]["input_dir"] is None:
+
+    rule stained_glass_all:
+        input:
+            stained_glass_outputs_no_input_dir,
+        output:
+            temp(touch("/tmp/stained_glass_{chr}.done")),
+
+else:
+    fnames = glob_wildcards(os.path.join(INPUT_FA_DIR, "{fname}.fa")).fname
+
+    rule stained_glass_all:
+        input:
+            expand(rules.run_stained_glass.output, fname=fnames),

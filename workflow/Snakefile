@@ -162,7 +162,11 @@ rule plot_repeatmasker_sat_only:
 
 rule stained_glass_only:
     input:
-        expand(rules.stained_glass_all.output, chr=CHROMOSOMES),
+        (
+            expand(rules.stained_glass_all.output, chr=CHROMOSOMES)
+            if config["stained_glass"]["input_dir"] is None
+            else rules.stained_glass_all.input
+        ),
 
 
 rule all:
