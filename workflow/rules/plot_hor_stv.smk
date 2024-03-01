@@ -2,8 +2,8 @@
 rule get_stv_row_from_humas_hmmer_out:
     input:
         humas_hmmer_done=rules.run_humas_hmmer_for_anvil.output,
-        script_filter_live_hor="workflow/scripts/stv/scripts/live_HORs_filter.py",
-        script_mon_to_stv="workflow/scripts/stv/scripts/mon2stv.py",
+        script_filter_live_hor="workflow/scripts/stv_fix/scripts/live_HORs_filter.py",
+        script_mon_to_stv="workflow/scripts/stv_fix/scripts/mon2stv.py",
     output:
         directory(
             os.path.join(config["plot_hor_stv"]["output_dir"], "results_{chr}_stv")
@@ -18,6 +18,12 @@ rule get_stv_row_from_humas_hmmer_out:
         as_hor_stv_row_bed=lambda wc, output: os.path.join(
             str(output), "AS-HOR_${fname}_stv_row.bed"
         ),
+        # Fix inversion for chromosome 1 and 19.
+        inversion_fix_cmd=lambda wc: (
+            "| sed 's+S1C1/5/19H1L.6/4+S1C1/5/19H1L.6+g'"
+            if wc.chr == "chr1" or wc.chr == "chr19"
+            else ""
+        ),
     log:
         "logs/get_stv_row_from_{chr}_humas_hmmer_out.log",
     conda:
@@ -29,7 +35,7 @@ rule get_stv_row_from_humas_hmmer_out:
             fname_base=$(basename $fname_full)
             fname="${{fname_base%.bed}}"
             awk -v OFS="\\t" '{{print "{wildcards.chr}", $2, $3, $4, $5, $6, $7, $8, $9, $1}}' $fname_full > "{params.renamed_bed}" 2> {log}
-            python3 {input.script_filter_live_hor} "{params.renamed_bed}" > "{params.live_hor_bed}" 2>> {log}
+            {{ python3 {input.script_filter_live_hor} "{params.renamed_bed}" {params.inversion_fix_cmd} ;}} > "{params.live_hor_bed}" 2>> {log}
             python3 {input.script_mon_to_stv} "{params.live_hor_bed}" > "{params.stv_row_bed}" 2>> {log}
             awk -v OFS="\\t" 'FNR==NR{{a[NR]=$10;next}}{{$1=a[FNR]}}1' "{params.renamed_bed}" "{params.stv_row_bed}" > "{params.as_hor_stv_row_bed}" 2>> {log}
         done
