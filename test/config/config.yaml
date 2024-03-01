@@ -94,6 +94,7 @@ plot_hor_stv:
     - large
 
 stained_glass:
+  input_dir: null
   threads: 10
   window: 5000
   mm_f: 5000

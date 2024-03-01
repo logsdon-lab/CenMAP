@@ -1,10 +1,14 @@
+if config["stained_glass"]["input_dir"]:
+    INPUT_FA_DIR = config["stained_glass"]["input_dir"]
+else:
+    INPUT_FA_DIR = config["humas_hmmer"]["input_dir"]
 
 
 rule index_fa_for_stained_glass:
     input:
-        fa=os.path.join(config["humas_hmmer"]["input_dir"], "{fname}.fa"),
+        fa=os.path.join(INPUT_FA_DIR, "{fname}.fa"),
     output:
-        idx=os.path.join(config["humas_hmmer"]["input_dir"], "{fname}.fa.fai"),
+        idx=os.path.join(INPUT_FA_DIR, "{fname}.fa.fai"),
     conda:
         "../env/stained_glass.yaml"
     log:
@@ -19,7 +23,7 @@ rule index_fa_for_stained_glass:
 rule run_stained_glass:
     input:
         snakefile="workflow/scripts/StainedGlass/workflow/Snakefile",
-        fa=os.path.join(config["humas_hmmer"]["input_dir"], "{fname}.fa"),
+        fa=os.path.join(INPUT_FA_DIR, "{fname}.fa"),
         idx=rules.index_fa_for_stained_glass.output,
     output:
         directory(
@@ -60,11 +64,9 @@ rule run_stained_glass:
 
 # https://stackoverflow.com/a/63040288
 def stained_glass_outputs(wc):
-    _ = checkpoints.split_cens_for_humas_hmmer.get(**wc).output
-    fnames = glob_wildcards(
-        os.path.join(config["humas_hmmer"]["input_dir"], "{fname}.fa")
-    ).fname
-
+    if config["stained_glass"]["input_dir"] is None:
+        _ = checkpoints.split_cens_for_humas_hmmer.get(**wc).output
+    fnames = glob_wildcards(os.path.join(INPUT_FA_DIR, "{fname}.fa")).fname
     return expand(rules.run_stained_glass.output, fname=fnames)
 
 
