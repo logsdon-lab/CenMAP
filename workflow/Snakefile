@@ -1,4 +1,5 @@
 import os
+import glob
 import yaml
 import pandas as pd
 from collections import defaultdict
@@ -73,6 +74,7 @@ include: "rules/repeatmasker.smk"
 include: "rules/humas_hmmer.smk"
 include: "rules/plot_hor_stv.smk"
 include: "rules/plot_repeatmasker_sat_annot.smk"
+include: "rules/stained_glass.smk"
 
 
 rule extract_align_cens_only:
@@ -157,6 +159,15 @@ rule plot_repeatmasker_sat_only:
         rules.create_ct_track.output,
         rules.aggregate_rm_satellite_annotations.output,
         expand(rules.plot_satellite_annotations.output, chr=CHROMOSOMES),
+
+
+rule stained_glass_only:
+    input:
+        (
+            expand(rules.stained_glass_all.output, chr=CHROMOSOMES)
+            if config["stained_glass"]["input_dir"] is None
+            else rules.stained_glass_all.input
+        ),
 
 
 rule all:

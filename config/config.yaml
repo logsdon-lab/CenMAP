@@ -125,3 +125,10 @@ plot_hor_stv:
   mer_order:
     - small
     - large
+
+stained_glass:
+  input_dir: null
+  threads: 10
+  window: 5000
+  mm_f: 5000
+  # Always will be in workflow/scripts/StainedGlass/results

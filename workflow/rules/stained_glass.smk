@@ -1,0 +1,98 @@
+if config["stained_glass"]["input_dir"]:
+    INPUT_FA_DIR = config["stained_glass"]["input_dir"]
+else:
+    INPUT_FA_DIR = config["humas_hmmer"]["input_dir"]
+
+
+rule index_fa_for_stained_glass:
+    input:
+        fa=os.path.join(INPUT_FA_DIR, "{fname}.fa"),
+    output:
+        idx=os.path.join(INPUT_FA_DIR, "{fname}.fa.fai"),
+    conda:
+        "../env/stained_glass.yaml"
+    log:
+        "logs/index_fa_for_stained_glass+{fname}.log",
+    shell:
+        """
+        # Index file.
+        samtools faidx {input.fa} 2>> {log}
+        """
+
+
+rule run_stained_glass:
+    # Run an older fork (v5.0) of StainedGlass because of module issues in Snakemake > v8.0 and version requirement in StainedGlass v6.0.
+    # Cannot --use-conda as would create a conda env per sequence so all deps stuffed in one conda env.
+    # Specific versions of pysam also enforces Python 3.9 which would pull a version of Snakemake < v8.0.
+    input:
+        snakefile="workflow/scripts/StainedGlassV5/workflow/Snakefile",
+        fa=os.path.join(INPUT_FA_DIR, "{fname}.fa"),
+        idx=rules.index_fa_for_stained_glass.output,
+    output:
+        directory(
+            os.path.join(
+                "results",
+                "{fname}"
+                + f".{config['stained_glass']['window']}.{config['stained_glass']['mm_f']}_figures",
+            )
+        ),
+    conda:
+        "../env/stained_glass.yaml"
+    threads: config["stained_glass"]["threads"]
+    params:
+        window=config["stained_glass"]["window"],
+        mm_f=config["stained_glass"]["mm_f"],
+        nbatch=4,
+        target_rule="make_figures",
+    log:
+        "logs/stained_glass_{fname}.log",
+    benchmark:
+        "benchmarks/stained_glass_{fname}.txt"
+    shell:
+        """
+        snakemake -s {input.snakefile} \
+        -p \
+        --profile none \
+        --config \
+        sample="{wildcards.fname}" \
+        fasta={input.fa} \
+        window={params.window} \
+        mm_f={params.mm_f} \
+        nbatch={params.nbatch} \
+        --cores {threads} \
+        {params.target_rule} 2>> {log}
+        """
+
+
+# https://stackoverflow.com/a/63040288
+def stained_glass_outputs_no_input_dir(wc):
+    # Wait until done.
+    _ = checkpoints.split_cens_for_humas_hmmer.get(**wc).output
+
+    fnames = (
+        os.path.splitext(os.path.split(file)[1])[0]
+        for file in glob.glob(
+            os.path.join(config["humas_hmmer"]["input_dir"], f"*{wc.chr}_*.fa")
+        )
+    )
+
+    return expand(rules.run_stained_glass.output, fname=fnames)
+
+
+# Conditionally change based on provided input dir.
+if config["stained_glass"]["input_dir"] is None:
+
+    rule stained_glass_all:
+        input:
+            stained_glass_outputs_no_input_dir,
+        output:
+            temp(touch("/tmp/stained_glass_{chr}.done")),
+
+else:
+
+    rule stained_glass_all:
+        input:
+            expand(
+                rules.run_stained_glass.output,
+                fname=glob_wildcards(os.path.join(INPUT_FA_DIR, "{fname}.fa")).fname,
+            ),
