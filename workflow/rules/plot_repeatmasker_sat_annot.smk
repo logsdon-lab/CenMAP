@@ -58,9 +58,8 @@ rule aggregate_rm_satellite_annotations:
         """
 
 
-rule plot_satellite_annotations:
+rule split_rm_satellite_annotations:
     input:
-        script="workflow/scripts/repeatStructure_satellites.R",
         all_annotations=rules.aggregate_rm_satellite_annotations.output,
     output:
         chr_annot=temp(
@@ -69,6 +68,17 @@ rule plot_satellite_annotations:
                 "all_cens_{chr}.annotation.fa.out",
             )
         ),
+    shell:
+        """
+        grep "{wildcards.chr}[_:]" {input.all_annotations} > {output.chr_annot}
+        """
+
+
+rule plot_satellite_annotations:
+    input:
+        script="workflow/scripts/repeatStructure_satellites.R",
+        chr_annot=rules.split_rm_satellite_annotations.output,
+    output:
         chr_plot=os.path.join(
             config["repeatmasker_sat_annot"]["output_dir"],
             "all_cens_{chr}.annotation.png",
@@ -79,6 +89,5 @@ rule plot_satellite_annotations:
         "../env/r.yaml"
     shell:
         """
-        grep "{wildcards.chr}[_:]" {input.all_annotations} > {output.chr_annot}
-        Rscript {input.script} {output.chr_annot} {output.chr_plot} 2> {log}
+        Rscript {input.script} {input.chr_annot} {output.chr_plot} 2> {log}
         """
