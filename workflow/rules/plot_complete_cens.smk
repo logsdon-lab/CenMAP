@@ -1,5 +1,5 @@
 
-rule plot_complete_cen:
+rule plot_complete_cens:
     input:
         rm_out=rules.split_corrected_rm_output.output.corrected_rm_out,
         rm_sat_out=rules.split_rm_satellite_annotations.output,

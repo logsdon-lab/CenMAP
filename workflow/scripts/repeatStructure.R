@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
 library(argparser, quietly = TRUE)
 library(ggplot2)
-library(directlabels)
 library(plyr)
+library(ggnewscale)
 require(gridExtra)
 require(scales)
 library(RColorBrewer)
@@ -10,140 +10,211 @@ library(reshape2)
 library(data.table)
 library(dplyr)
 library(tidyr)
+library(stringr)
 
 # Create a parser
-p <- arg_parser("Plot ALR region from RepeatMasker output.")
-p <- add_argument(p, "--input_rm", help="Input repeatmasker.out file", type="character")
-p <- add_argument(p, "--input_rm_sat", help="Input bed file made from annotated satellite RM output.", type="character")
-p <- add_argument(p, "--input_chm13",
-                  help="Input CHM13 HumAS-HMMER formatted output",
-                  type="character")
-p <- add_argument(p, "--input_chm1",
-                  help="Input CHM1 HumAS-HMMER formatted output",
-                  type="character")
+p <- arg_parser("Plot combined SF + satellites")
+p <- add_argument(p, "--input_rm_sat", help = "Input bed file made from annotated satellite RM output.", type = "character")
+
+p <- add_argument(p, "--input_sf",
+  help = "Input HGSVC3 HumAS-HMMER formatted output.",
+  type = "character"
+)
+p <- add_argument(p, "--input_sf_chm13",
+  help = "Input CHM13 HumAS-HMMER formatted output",
+  type = "character"
+)
+p <- add_argument(p, "--input_sf_chm1",
+  help = "Input CHM1 HumAS-HMMER formatted output",
+  type = "character"
+)
+
 p <- add_argument(p, "--chr",
-                  help="Chromosome to plot. ex. chrX",
-                  type="character")
+  help = "Chromosome to plot. ex. chrX",
+  type = "character"
+)
 p <- add_argument(p, "--output",
-                  help="Output plot file. Defaults to {chr}_hgsvc3_{order_hor}erontop.png.",
-                  type="character", default=NA)
+  help = "Output plot file. Defaults to {chr}_hgsvc3_{order_hor}erontop.png.",
+  type = "character", default = NA
+)
 p <- add_argument(p, "--hor_filter",
-                   help="Filter for HORs that occur at least 20 times (10 times per haplotype)",
-                   type="numeric", default=0)
+  help = "Filter for HORs that occur at least 20 times (10 times per haplotype)",
+  type = "numeric", default = 0
+)
 p <- add_argument(p, "--mer_order",
-                  help="Reorder data to put 'large'-r or 'small'-r -mers on top.",
-                  type="character", default='large')
+  help = "Reorder data to put 'large'-r or 'small'-r -mers on top.",
+  type = "character", default = "large"
+)
 
 argv <- parse_args(p)
 
-df = fread(argv$input, select = c(1:15), stringsAsFactors = FALSE, fill=TRUE, quote="", header=FALSE, skip=2)
-cols =  c("idx", "div", "deldiv", "insdiv", "contig", "start", "end", "left", "C", "type", "rClass", "right", "x", "y", "z")
-colnames(df) <- cols
+# test_chr <- "chr3"
+# {
+#   argv$input_rm_sat <- paste0("results/repeatmasker_sat_annot/all_cens_", test_chr, ".annotation.fa.out")
+#   argv$input_sf <- paste0("results/hor_stv/", test_chr, "_AS-HOR_stv_row.all.bed")
+#   argv$input_sf_chm13 <- "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
+#   argv$input_sf_chm1 <- "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
+#   argv$chr <- test_chr
+#   argv$mer_order <- "small"
+# }
 
-#filter by length
-df2 = df %>%
-  group_by(contig) %>%
-  filter(last(end) >0000)
+read_repeatmasker_sat_input <- function(input_file) {
+  # read in BED file
+  df <- fread(input_file, select = c(1:9), stringsAsFactors = TRUE, fill = TRUE, quote = "", header = FALSE)
+  cols <- c("chr", "start", "stop", "region", "value", "strand", "start2", "stop2", "rgb")
+  colnames(df) <- cols
 
-#rename type as rClass
-{ mask = (df2$rClass == "Satellite/centr") | (df2$rClass == "Satellite")
-df2$rClass[mask] = df2$type[mask]
-df2$rClass <- sub("/ERVK", "", df2$rClass)
-df2$rClass <- sub("/ERVL", "", df2$rClass)
-df2$rClass <- sub("/ERV1", "", df2$rClass)
-df2$rClass <- sub("/CR1", "", df2$rClass)
-df2$rClass <- sub("/L1", "", df2$rClass)
-df2$rClass <- sub("/L2", "", df2$rClass)
-df2$rClass <- sub("/RTE-X", "", df2$rClass)
-df2$rClass <- sub("/RTE-BovB", "", df2$rClass)
-df2$rClass <- sub("/Gypsy", "", df2$rClass)
-df2$rClass <- sub("-MaLR", "", df2$rClass)
-df2$rClass <- sub("/Alu", "", df2$rClass)
-df2$rClass <- sub("/Deu", "", df2$rClass)
-df2$rClass <- sub("/MIR", "", df2$rClass)
-df2$rClass <- sub("?", "", df2$rClass)
-df2$rClass <- sub("/hAT", "", df2$rClass)
-df2$rClass <- sub("/hAT-Blackjack", "", df2$rClass)
-df2$rClass <- sub("/hAT-Charlie", "", df2$rClass)
-df2$rClass <- sub("/MULE-MuDR", "", df2$rClass)
-df2$rClass <- sub("/PiggyBac", "", df2$rClass)
-df2$rClass <- sub("/TcMar-Mariner", "", df2$rClass)
-df2$rClass <- sub("/TcMar", "", df2$rClass)
-df2$rClass <- sub("/TcMar?", "", df2$rClass)
-df2$rClass <- sub("/hAT-Tip100", "", df2$rClass)
-df2$rClass <- sub("/TcMar-Tigger", "", df2$rClass)
-df2$rClass <- sub("/Dong-R4", "", df2$rClass)
-df2$rClass <- sub("/tRNA", "", df2$rClass)
-df2$rClass <- sub("DNA-Tc2", "DNA", df2$rClass)
-df2$rClass <- sub("DNA?", "DNA", df2$rClass)
-df2$rClass <- sub("DNA-Blackjack", "DNA", df2$rClass)
-df2$rClass <- sub("DNA-Charlie", "DNA", df2$rClass)
-df2$rClass <- sub("DNA-Tigger", "DNA", df2$rClass)
-df2$rClass <- sub("DNA-Tip100", "DNA", df2$rClass)
-df2$rClass <- sub("GSATX", "GSAT", df2$rClass)
-df2$rClass <- sub("LTR\\S", "LTR", df2$rClass)
-df2$type = as.factor(df2$type)
+  # reorder rows so that live arrays are plotted on top
+  df$region <- factor(df$region, levels = c("ct", "asat", "bsat", "gsat", "hsat1A", "hsat1B", "hsat2", "hsat3"), ordered = T)
 
-df2$start2 = df2$start
-df2$end2 = df2$end
-mask = df2$C == "C"
-df2$start2[mask] = df2$end[mask]
-df2$end2[mask] = df2$start[mask]
+  return(df)
 }
 
-#rename contigs for easy comparison of structure
-df2$contig <- gsub('chm1_cen', 'chr', df2$contig)
-
-#rename certain repeat types
-{df2$rClass <- sub("SAR", "HSat1A", df2$rClass)
-df2$rClass <- sub("HSAT", "HSat1B", df2$rClass)
-df2$rClass <- sub("HSATII", "HSat2", df2$rClass)
-df2$rClass <- sub("(CATTC)n", "HSat2", df2$rClass)
-df2$rClass <- sub("(GAATG)n", "HSat2", df2$rClass)}
-
-#### assign colors to rClassses
-
-#centromere colors (original)
-{ myColors <- c("#522758", "#5188c9",
-                "#4ea836", "#FFFFFF",
-                "#FFFFFF", "#FFFFFF",
-              "#FFFFFF", "#FFFFFF",
-              "#FFFFFF", "#FFFFFF",
-              "#9370af", "#9370af",
-              "#84bac6", "#84bac6",
-              "#f2b80b", "#ad8c2a",
-              "#E571AB", "#E571AB", "#E571AB",
-              "#FFFFFF", "#FFFFFF",
-              "#e1665e", "#FFFFFF",
-              "#FFFFFF", "#FFFFFF",
-              "#FFFFFF", "#FFFFFF",
-              "#FFFFFF", "#FFFFFF",
-              "#FFFFFF", "#508f52",
-              "#47b1b5", "#47b1b5",
-              "#47b1b5", "#FFFFFF",
-              "#FFFFFF", "#FFFFFF",
-              "#FFFFFF", "#FFFFFF",
-              "#FFFFFF", "#FFFFFF", "#FFFFFF",
-              "#FFFFFF", "#FFFFFF", "#FFFFFF",
-              "#FFFFFF", "#FFFFFF", "#FFFFFF",
-              "#FFFFFF", "#FFFFFF", "#FFFFFF",
-              "#ad8c2a", "#136aaf")
-names(myColors) <- levels(as.factor(c("ALR/Alpha", "BSR/Beta", "CER", "DNA", "DNA-Ac", "DNA-Tag1", "DNA-Tc1", "DNA?", "DNA/Merlin", "DNA/PIF-Harbinger", "GSAT", "GSATII", "HSat1A", "HSat1B", "HSat2", "HSat3", "LINE", "LINE-Tx1", "LINE/Penelope", "Low_complexity", "LSAU", "LTR", "RC/Helitron", "Retroposon/SVA", "rRNA", "Satellite/acro", "Satellite/subtelo", "SATR1", "SATR2", "scRNA", "Simple_repeat", "SINE", "SINE-RTE", "SINE/5S-Deu-L2", "snRNA", "srpRNA", "SST1", "tRNA")))
+get_humas_hmmer_sf_annot_colors <- function() {
+  myColors <- c(
+    "#A8275C", "#9AC78A", "#A53D63", "#3997C6", "#29A3CE", "#5EB2A7", "#38A49B", "#45B4CE", "#A53D63", "#AA1B63", "#3F66A0",
+    "#D66C54", "#BFDD97", "#C0D875", "#E5E57A", "#B75361", "#F9E193", "#C6625D", "#E5D1A1", "#A1B5E5", "#9F68A5", "#81B25B",
+    "#F4DC78", "#7EC0B3", "#A8275C", "#8CC49F", "#893F89", "#6565AA"
+  )
+  names(myColors) <- levels(as.factor(c(
+    "1", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
+    "2", "20", "21", "22", "24", "26", "3", "30", "32", "34", "35",
+    "4", "5", "6", "7", "8", "9"
+  )))
+  return(myColors)
 }
 
-height=5
-ggplot() +
-  geom_segment(data=df2, aes(x=start2/1000, y=contig, xend=(end2/1000)+1, yend=contig, color=rClass), size=height*2 ) +
-  #geom_segment(data=df2, aes(x=start2/1000, y=contig, xend=(end2/1000)+50, yend=contig), size=.05, arrow=arrow(angle=40, length=unit(0.02, "npc"))) +
-  #geom_segment(data=df2, aes(x=86095438/1000, y=contig, xend=(86102489/1000), yend=contig), size=.1) +
-  #geom_segment(data=df2, aes(x=86102270/1000, y=contig, xend=(86109326/1000), yend=contig), size=.1) +
-  scale_color_manual(values=myColors) +
+get_rm_sat_annot_colors <- function() {
+  myColors <- c(
+    "#58245B",
+    "#3A3A3A",
+    "#DDDDDD", # lighter gray
+    # "#C2C2C2", #darker gray
+    "#3A3A3A",
+    "#3A3A3A", "#3A3A3A",
+    "#3A3A3A", "#3A3A3A"
+  )
+  names(myColors) <- levels(as.factor(c(
+    "asat",
+    "bsat",
+    "ct",
+    "gsat",
+    "hsat1A", "hsat1B",
+    "hsat2", "hsat3"
+  )))
+  return(myColors)
+}
+
+
+read_humas_hmmer_input <- function(input_chr, input_chm1, input_chm13, chr_name, mer_order = "large", hor_filter = 0) {
+  cols_to_take <- seq(5)
+  monomer_len <- 170
+  cols <- c("chr", "start", "stop", "hor", "strand")
+
+  chm13 <- fread(input_chm13,
+    sep = "\t",
+    stringsAsFactors = TRUE,
+    fill = TRUE, quote = "",
+    header = FALSE, select = cols_to_take
+  )
+  chm1 <- fread(input_chm1,
+    sep = "\t",
+    stringsAsFactors = TRUE,
+    fill = TRUE, quote = "",
+    header = FALSE, select = cols_to_take
+  )
+  hgsvc3 <- fread(input_chr,
+    sep = "\t",
+    stringsAsFactors = TRUE,
+    fill = TRUE, quote = "",
+    header = FALSE, select = cols_to_take
+  )
+
+  colnames(chm13) <- cols
+  colnames(chm1) <- cols
+  colnames(hgsvc3) <- cols
+
+  # select the chr
+  chm13_select <- chm13 %>%
+    filter(str_detect(chr, paste0(chr_name, "$")))
+  chm1_select <- chm1 %>%
+    filter(str_detect(chr, paste0(chr_name, "$")))
+
+  # combine the CHM1 and HGSVC3 centromeres
+  chm13_select$chr <- gsub("chr", "chm13_chr", chm13_select$chr)
+  chm1_select$chr <- gsub("chr", "chm1_chr", chm1_select$chr)
+  chm13_chm1_hgsvc3 <- rbind(chm13_select, chm1_select, hgsvc3)
+
+  # determine distance between start and stop
+  chm13_chm1_hgsvc3$length <- chm13_chm1_hgsvc3$stop - chm13_chm1_hgsvc3$start
+
+  # calculate monomer size and round
+  chm13_chm1_hgsvc3$mer <- as.numeric(round(chm13_chm1_hgsvc3$length / monomer_len))
+
+  # filter monomers
+  chm13_chm1_hgsvc3 <- switch(chr_name,
+    "chr10" = subset(chm13_chm1_hgsvc3, as.numeric(mer) >= 5),
+    "chr20" = subset(chm13_chm1_hgsvc3, as.numeric(mer) >= 5),
+    "chrY" = subset(chm13_chm1_hgsvc3, as.numeric(mer) >= 30),
+    "chr17" = subset(chm13_chm1_hgsvc3, as.numeric(mer) >= 4),
+    chm13_chm1_hgsvc3
+  )
+
+  # filter for HORs that occur at least 20 times (10 times per haplotype)
+  df_mer <- chm13_chm1_hgsvc3 %>%
+    group_by(mer) %>%
+    filter(n() > hor_filter) #
+
+  # Add contig length to start and stop so aligns with repeatmasker annotations.
+  df_final <- df_mer %>%
+    separate_wider_delim(chr, delim = ":", names = c("chr", "range"), too_few = "align_start") %>%
+    separate_wider_delim(range, delim = "-", names = c("ctg_start", "ctg_stop"), too_few = "align_start") %>%
+    mutate(
+      ctg_start = replace_na(as.numeric(ctg_start), 0),
+      ctg_stop = replace_na(as.numeric(ctg_stop), 0)
+    ) %>%
+    mutate(
+      start = ctg_start + start,
+      stop = ctg_start + stop
+    ) %>%
+    mutate(new_chr = str_extract(chr, "([\\w_-]*?):", group = 1))
+
+  # reorder data to put larger or smaller -mers on top
+  df_final <- switch(mer_order,
+    # First sort by val. This sorts the dataframe but NOT the factor levels #larger HORs on top
+    "large" = df_final %>% arrange(mer),
+    # First sort by val. This sorts the dataframe but NOT the factor levels #smaller HORs on top
+    "small" = df_final %>% arrange(-mer),
+    stop(paste("Invalid mer reordering option:", mer_order))
+  )
+
+  return(df_final)
+}
+
+df_rm_sat_out <- read_repeatmasker_sat_input(argv$input_rm_sat)
+df_humas_hmmer_sf_out <- read_humas_hmmer_input(argv$input_sf, argv$input_sf_chm1, argv$input_sf_chm13, argv$chr, argv$mer_order, argv$hor_filter) %>%
+  filter(str_detect(chr, "^chm", negate = TRUE))
+
+
+height <- 5
+ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
+  geom_segment(aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region), alpha = 1, size = height * 2) +
+  scale_color_manual(values = get_rm_sat_annot_colors()) +
   scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
-  theme_classic() + theme(axis.line.y=element_line(colour="white")) +
-  theme(legend.position="bottom") + theme(legend.key.width = unit(1,"cm")) + theme(legend.title = element_blank()) +
-  guides(color = guide_legend(override.aes = list(size=6))) +
+  # Single column.
+  facet_wrap(~chr, scales = "free", ncol = 1) +
+  # New colorscale.
+  new_scale_color() +
+  geom_segment(data = df_humas_hmmer_sf_out, aes(x = start, xend = stop + 2000, y = chr, yend = chr, color = as.factor(mer)), linewidth = 9) +
+  scale_color_manual(values = get_humas_hmmer_sf_annot_colors()) +
+  theme_classic() +
+  theme(axis.line.y = element_line(colour = "white")) +
+  theme(legend.position = "bottom") +
+  theme(legend.key.width = unit(1, "cm")) +
+  theme(legend.title = element_blank()) +
+  guides(color = guide_legend(override.aes = list(size = 6))) +
   xlab("Position (kbp)")
 
-if(!interactive()) pdf(NULL)
-height = length(unique(df$contig)) * 0.5
-ggsave(argv$output, width=10, height=height + 4)
+
+if (!interactive()) pdf(NULL)
+ggsave(argv$output, width = 10, height = 22)

@@ -75,6 +75,7 @@ include: "rules/humas_hmmer.smk"
 include: "rules/plot_hor_stv.smk"
 include: "rules/plot_repeatmasker_sat_annot.smk"
 include: "rules/stained_glass.smk"
+include: "rules/plot_complete_cens.smk"
 
 
 rule extract_align_cens_only:
@@ -168,6 +169,11 @@ rule stained_glass_only:
             if config["stained_glass"]["input_dir"] is None
             else rules.stained_glass_all.input
         ),
+
+
+rule plot_cens_only:
+    input:
+        expand(rules.plot_complete_cens.output, chr=CHROMOSOMES),
 
 
 rule all:
