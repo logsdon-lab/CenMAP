@@ -1,3 +1,8 @@
+
+
+include: "common.smk"
+
+
 ANNOTATE_SAT_REPEATS = config["repeatmasker_sat_annot"][
     "repeat_name_pattern_replacement"
 ]
@@ -5,7 +10,11 @@ ANNOTATE_SAT_REPEATS = config["repeatmasker_sat_annot"][
 
 rule create_annotated_satellites:
     input:
-        rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
+        ref_rm_out=config["repeatmasker"]["ref_repeatmasker_output"],
+        # corrected_rm_out=rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
+        corrected_rm_out=os.path.join(
+            config["repeatmasker"]["output_dir"], "all_corrected_cens.fa.out"
+        ),
     output:
         os.path.join(
             config["repeatmasker_sat_annot"]["output_dir"],
@@ -16,7 +25,8 @@ rule create_annotated_satellites:
         color=lambda wc: ANNOTATE_SAT_REPEATS[str(wc.repeat)]["color"],
     shell:
         """
-        grep "{params.pattern}" {input} | \
+        cat {input} | \
+        grep "{params.pattern}" | \
         sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
         awk -v OFS="\\t" '{{print $5"-"$6, $7+$9, $7+$10, "{wildcards.repeat}", "0", ".", $7+$9, $7+$10, "{params.color}"}}' > {output}
         """
@@ -24,7 +34,11 @@ rule create_annotated_satellites:
 
 rule create_ct_track:
     input:
-        rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
+        ref_rm_out=config["repeatmasker"]["ref_repeatmasker_output"],
+        # corrected_rm_out=rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
+        corrected_rm_out=os.path.join(
+            config["repeatmasker"]["output_dir"], "all_corrected_cens.fa.out"
+        ),
     output:
         os.path.join(config["repeatmasker_sat_annot"]["output_dir"], "all_cens.ct.bed"),
     params:
@@ -35,7 +49,8 @@ rule create_ct_track:
         "../env/tools.yaml"
     shell:
         """
-        sed -e 's/:/\\t/g' -e 's/-/\\t/g' {input} | \
+        cat {input} | \
+        sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
         awk -v OFS="\\t" '{{print $5"-"$6, $7, $8, "ct", "0", ".", $7, $8, "{params.color}"}}' | \
         sort | uniq | grep "chr" > {output}
         """
@@ -70,7 +85,7 @@ rule split_rm_satellite_annotations:
         ),
     shell:
         """
-        grep "{wildcards.chr}[_:]" {input.all_annotations} > {output.chr_annot}
+        grep "{wildcards.chr}[_:-]" {input.all_annotations} > {output.chr_annot}
         """
 
 
@@ -91,3 +106,11 @@ rule plot_satellite_annotations:
         """
         Rscript {input.script} {input.chr_annot} {output.chr_plot} 2> {log}
         """
+
+
+rule plot_repeatmasker_sat_only:
+    input:
+        rules.create_ct_track.output,
+        rules.aggregate_rm_satellite_annotations.output,
+        expand(rules.plot_satellite_annotations.output, chr=CHROMOSOMES),
+    default_target: True

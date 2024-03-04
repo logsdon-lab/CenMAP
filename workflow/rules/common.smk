@@ -1,3 +1,14 @@
+import os
+import glob
+import yaml
+import pandas as pd
+from collections import defaultdict
+
+
+with open(config["align_asm_to_ref"]["config"], "r") as file:
+    config["align_asm_to_ref"]["config"] = yaml.safe_load(file)
+
+
 def get_hifi_read_wildcards() -> dict[str, list[str]]:
     """
     Get hifi reads by sample automatically from hifi_reads_dir.
@@ -57,3 +68,7 @@ def build_awk_cen_region_length_thr(chr_name: str) -> str:
             stmts.append(f"$5<{thr_max}")
 
     return f"({' || '.join(stmts)})"
+
+
+# Include contants so can run individual smk files without main Snakefile.
+include: "constants.smk"

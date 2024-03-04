@@ -77,7 +77,8 @@ repeatmasker:
   # Repeatmasker output on reference genome. Will prevent running step.
   ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
   threads: 100
-  output_dir: "results/repeatmasker"
+  # output_dir: "results/repeatmasker"
+  output_dir: "/home/keith/Downloads/hgsvc3/repeatmasker"
 
 repeatmasker_sat_annot:
   output_dir: "results/repeatmasker_sat_annot"

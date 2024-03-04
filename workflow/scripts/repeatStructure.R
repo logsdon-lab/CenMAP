@@ -196,6 +196,7 @@ df_humas_hmmer_sf_out <- read_humas_hmmer_input(argv$input_sf, argv$input_sf_chm
   filter(str_detect(chr, "^chm", negate = TRUE))
 
 
+# TODO: Hide all x-axis except one. rename
 height <- 5
 ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
   geom_segment(aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region), alpha = 1, size = height * 2) +
