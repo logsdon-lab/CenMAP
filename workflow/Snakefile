@@ -135,15 +135,6 @@ rule stained_glass_only:
         ),
 
 
-rule plot_cens_only:
-    input:
-        expand(
-            rules.plot_complete_cens.output,
-            chr=CHROMOSOMES,
-            mer_order=config["plot_hor_stv"]["mer_order"],
-        ),
-
-
 rule all:
     input:
         rules.extract_align_cens_only.input,

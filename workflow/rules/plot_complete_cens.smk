@@ -1,9 +1,17 @@
 
+include: "common.smk"
+
+
 rule plot_complete_cens:
     input:
         script="workflow/scripts/repeatStructure.R",
-        rm_sat_out=rules.split_rm_satellite_annotations.output,
-        hor_stv_out=rules.aggregate_all_stv_row.output,
+        rm_sat_out=os.path.join(
+            config["repeatmasker_sat_annot"]["output_dir"],
+            "all_cens_{chr}.annotation.fa.out",
+        ),
+        hor_stv_out=os.path.join(
+            config["plot_hor_stv"]["output_dir"], "{chr}_AS-HOR_stv_row.all.bed"
+        ),
         chm1_stv=config["plot_hor_stv"]["chm1_stv"],
         chm13_stv=config["plot_hor_stv"]["chm13_stv"],
     output:
@@ -28,3 +36,12 @@ rule plot_complete_cens:
         --hor_filter {params.hor_filter} \
         --mer_order {wildcards.mer_order} 2> {log}
         """
+
+
+rule plot_cens_only:
+    input:
+        expand(
+            rules.plot_complete_cens.output,
+            chr=CHROMOSOMES,
+            mer_order=config["plot_hor_stv"]["mer_order"],
+        ),

@@ -21,6 +21,7 @@ p <- add_argument(p, "--bp_jump_thr",
 )
 
 argv <- parse_args(p)
+# argv$input <- "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
 
 cols <- c("chr", "start", "stop", "hor", "strand")
 df <- fread(
@@ -75,6 +76,9 @@ for (chr_name in unique(df$chr)) {
       ) %>%
       select(start_pos, stop_pos)
   )
+
+  # TODO: Each row should be contiguous and
+  # if greater than 10bp between rows, should be filtered.
 
   hor_array_lengths[[chr_name]] <- df_ranges %>%
     rowwise() %>%

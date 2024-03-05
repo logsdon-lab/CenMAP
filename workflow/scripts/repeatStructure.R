@@ -194,6 +194,16 @@ p <- add_argument(p, "--mer_order",
 )
 
 argv <- parse_args(p)
+# test_chr <- "chr3"
+# {
+#   argv$input_rm_sat <- paste0("results/repeatmasker_sat_annot/all_cens_", test_chr, ".annotation.fa.out")
+#   argv$input_sf <- paste0("results/hor_stv/", test_chr, "_AS-HOR_stv_row.all.bed")
+#   argv$input_sf_chm13 <- "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all2.bed"
+#   argv$input_sf_chm1 <- "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all2.bed"
+#   argv$chr <- test_chr
+#   argv$mer_order <- "small"
+# }
+
 
 df_rm_sat_out <- read_repeatmasker_sat_input(argv$input_rm_sat)
 df_humas_hmmer_sf_out <- read_humas_hmmer_input(argv$input_sf, argv$input_sf_chm1, argv$input_sf_chm13, argv$chr, argv$mer_order, argv$hor_filter) %>%
