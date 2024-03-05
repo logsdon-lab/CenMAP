@@ -114,11 +114,16 @@ rule plot_hor_stv_only:
         ),
 
 
-rule plot_repeatmasker_sat_only:
+# rule plot_repeatmasker_sat_only:
+#     input:
+#         rules.create_ct_track.output,
+#         rules.aggregate_rm_satellite_annotations.output,
+#         expand(rules.plot_satellite_annotations.output, chr=CHROMOSOMES),
+
+
+rule get_hor_length_only:
     input:
-        rules.create_ct_track.output,
-        rules.aggregate_rm_satellite_annotations.output,
-        expand(rules.plot_satellite_annotations.output, chr=CHROMOSOMES),
+        expand(rules.calculate_as_hor_length.output, chr=CHROMOSOMES),
 
 
 rule stained_glass_only:

@@ -59,6 +59,24 @@ rule aggregate_all_stv_row:
         """
 
 
+rule calculate_as_hor_length:
+    input:
+        script="workflow/scripts/calculate_HOR_length.R",
+        fmt_hmmer_output=rules.aggregate_all_stv_row.output,
+    output:
+        os.path.join(config["plot_hor_stv"]["output_dir"], "{chr}_AS-HOR_lengths.tsv"),
+    conda:
+        "../env/r.yaml"
+    log:
+        "logs/calculate_{chr}_as_hor_length.log",
+    params:
+        bp_jump_thr=100_000,
+    shell:
+        """
+        Rscript {input.script} --input {input.fmt_hmmer_output} --bp_jump_thr {params.bp_jump_thr} > {output} 2> {log}
+        """
+
+
 rule plot_stv_with_order:
     input:
         script="workflow/scripts/StVHORorganization_simplified_2datasets_basedOnStartStop_newcolors.R",

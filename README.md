@@ -39,3 +39,4 @@ bsub -e hgsvc3.err -o hgsvc3.out \
 
 ### TODO
 * Remove old bedminmax scripts. Only leaving in until output discrepancies finished.
+* Add test/move calculate HOR length script to new repo.

@@ -12,55 +12,18 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 
-# Create a parser
-p <- arg_parser("Plot combined SF + satellites")
-p <- add_argument(p, "--input_rm_sat", help = "Input bed file made from annotated satellite RM output.", type = "character")
-
-p <- add_argument(p, "--input_sf",
-  help = "Input HGSVC3 HumAS-HMMER formatted output.",
-  type = "character"
-)
-p <- add_argument(p, "--input_sf_chm13",
-  help = "Input CHM13 HumAS-HMMER formatted output",
-  type = "character"
-)
-p <- add_argument(p, "--input_sf_chm1",
-  help = "Input CHM1 HumAS-HMMER formatted output",
-  type = "character"
-)
-
-p <- add_argument(p, "--chr",
-  help = "Chromosome to plot. ex. chrX",
-  type = "character"
-)
-p <- add_argument(p, "--output",
-  help = "Output plot file. Defaults to {chr}_hgsvc3_{order_hor}erontop.png.",
-  type = "character", default = NA
-)
-p <- add_argument(p, "--hor_filter",
-  help = "Filter for HORs that occur at least 20 times (10 times per haplotype)",
-  type = "numeric", default = 0
-)
-p <- add_argument(p, "--mer_order",
-  help = "Reorder data to put 'large'-r or 'small'-r -mers on top.",
-  type = "character", default = "large"
-)
-
-argv <- parse_args(p)
-
-# test_chr <- "chr3"
-# {
-#   argv$input_rm_sat <- paste0("results/repeatmasker_sat_annot/all_cens_", test_chr, ".annotation.fa.out")
-#   argv$input_sf <- paste0("results/hor_stv/", test_chr, "_AS-HOR_stv_row.all.bed")
-#   argv$input_sf_chm13 <- "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
-#   argv$input_sf_chm1 <- "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
-#   argv$chr <- test_chr
-#   argv$mer_order <- "small"
-# }
 
 read_repeatmasker_sat_input <- function(input_file) {
   # read in BED file
-  df <- fread(input_file, select = c(1:9), stringsAsFactors = TRUE, fill = TRUE, quote = "", header = FALSE)
+  df <- fread(
+    input_file,
+    select = c(1:9),
+    stringsAsFactors = TRUE,
+    fill = TRUE,
+    sep = "\t",
+    quote = "",
+    header = FALSE
+  )
   cols <- c("chr", "start", "stop", "region", "value", "strand", "start2", "stop2", "rgb")
   colnames(df) <- cols
 
@@ -106,7 +69,13 @@ get_rm_sat_annot_colors <- function() {
 }
 
 
-read_humas_hmmer_input <- function(input_chr, input_chm1, input_chm13, chr_name, mer_order = "large", hor_filter = 0) {
+read_humas_hmmer_input <- function(
+    input_chr,
+    input_chm1,
+    input_chm13,
+    chr_name,
+    mer_order = "large",
+    hor_filter = 0) {
   cols_to_take <- seq(5)
   monomer_len <- 170
   cols <- c("chr", "start", "stop", "hor", "strand")
@@ -191,19 +160,78 @@ read_humas_hmmer_input <- function(input_chr, input_chm1, input_chm13, chr_name,
   return(df_final)
 }
 
+# Create a parser
+p <- arg_parser("Plot combined SF + satellites")
+p <- add_argument(p, "--input_rm_sat", help = "Input bed file made from annotated satellite RM output.", type = "character")
+
+p <- add_argument(p, "--input_sf",
+  help = "Input HGSVC3 HumAS-HMMER formatted output.",
+  type = "character"
+)
+p <- add_argument(p, "--input_sf_chm13",
+  help = "Input CHM13 HumAS-HMMER formatted output",
+  type = "character"
+)
+p <- add_argument(p, "--input_sf_chm1",
+  help = "Input CHM1 HumAS-HMMER formatted output",
+  type = "character"
+)
+p <- add_argument(p, "--chr",
+  help = "Chromosome to plot. ex. chrX",
+  type = "character"
+)
+p <- add_argument(p, "--output",
+  help = "Output plot file. Defaults to {chr}_hgsvc3_{order_hor}erontop.png.",
+  type = "character", default = NA
+)
+p <- add_argument(p, "--hor_filter",
+  help = "Filter for HORs that occur at least 20 times (10 times per haplotype)",
+  type = "numeric", default = 0
+)
+p <- add_argument(p, "--mer_order",
+  help = "Reorder data to put 'large'-r or 'small'-r -mers on top.",
+  type = "character", default = "large"
+)
+
+argv <- parse_args(p)
+
 df_rm_sat_out <- read_repeatmasker_sat_input(argv$input_rm_sat)
 df_humas_hmmer_sf_out <- read_humas_hmmer_input(argv$input_sf, argv$input_sf_chm1, argv$input_sf_chm13, argv$chr, argv$mer_order, argv$hor_filter) %>%
   filter(str_detect(chr, "^chm", negate = TRUE))
 
+# Set new minimum and standardize scales.
+new_min <- min(df_rm_sat_out$start2)
+df_rm_sat_out <- df_rm_sat_out %>%
+  join(
+    df_rm_sat_out %>% group_by(chr) %>% summarize(dst_diff = min(start2) - new_min),
+    by = "chr"
+  ) %>%
+  filter(!dst_diff == 0) %>%
+  group_by(chr) %>%
+  arrange(start2) %>%
+  mutate(
+    start2 = start2 - dst_diff,
+    stop2 = stop - dst_diff
+  )
 
-# TODO: Hide all x-axis except one. rename
+df_humas_hmmer_sf_out <- df_humas_hmmer_sf_out %>%
+  join(
+    df_rm_sat_out %>% group_by(chr) %>% summarize(dst_diff = min(start) - new_min),
+    by = "chr"
+  ) %>%
+  filter(!dst_diff == 0) %>%
+  group_by(chr) %>%
+  arrange(start) %>%
+  mutate(
+    start = start - dst_diff,
+    stop = stop - dst_diff
+  )
+
 height <- 5
 ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
   geom_segment(aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region), alpha = 1, size = height * 2) +
   scale_color_manual(values = get_rm_sat_annot_colors()) +
   scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
-  # Single column.
-  facet_wrap(~chr, scales = "free", ncol = 1) +
   # New colorscale.
   new_scale_color() +
   geom_segment(data = df_humas_hmmer_sf_out, aes(x = start, xend = stop + 2000, y = chr, yend = chr, color = as.factor(mer)), linewidth = 9) +
@@ -218,4 +246,5 @@ ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
 
 
 if (!interactive()) pdf(NULL)
-ggsave(argv$output, width = 10, height = 22)
+height <- length(unique(df_humas_hmmer_sf_out$chr)) * 0.5
+ggsave(argv$output, width = 10, height = height + 4)

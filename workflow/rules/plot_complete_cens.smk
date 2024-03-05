@@ -1,12 +1,15 @@
 
 rule plot_complete_cens:
     input:
+        script="workflow/scripts/repeatStructure.R",
         rm_sat_out=rules.split_rm_satellite_annotations.output,
         hor_stv_out=rules.aggregate_all_stv_row.output,
         chm1_stv=config["plot_hor_stv"]["chm1_stv"],
         chm13_stv=config["plot_hor_stv"]["chm13_stv"],
     output:
-        plot=os.path.join("all_cens_{chr}_{mer_order}.png"),
+        plot=os.path.join(
+            config["plot_hor_stv"]["output_dir"], "all_cens_{chr}_{mer_order}.png"
+        ),
     log:
         "logs/plot_{chr}_{mer_order}_complete_cens.log",
     conda:
@@ -15,7 +18,7 @@ rule plot_complete_cens:
         hor_filter=0,
     shell:
         """
-        Rscript \
+        Rscript {input.script} \
         --input_rm_sat {input.rm_sat_out} \
         --input_sf {input.hor_stv_out} \
         --input_sf_chm13 {input.chm13_stv} \
