@@ -21,8 +21,6 @@ p <- add_argument(p, "--bp_jump_thr",
 )
 
 argv <- parse_args(p)
-# argv$input <- "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
-
 cols <- c("chr", "start", "stop", "hor", "strand")
 df <- fread(
   argv$input,
@@ -35,7 +33,6 @@ colnames(df) <- cols
 
 hor_array_lengths <- list()
 for (chr_name in unique(df$chr)) {
-  chr_name <- "chr5"
   df_chr <- df %>% filter(chr == chr_name)
 
   df_bp_jumps <- df_chr %>%
@@ -77,28 +74,27 @@ for (chr_name in unique(df$chr)) {
       select(start_pos, stop_pos)
   )
 
-  # TODO: Each row should be contiguous and
-  # if greater than 10bp between rows, should be filtered.
-
+  # Each row should be contiguous.
+  # If distance between prev row greater than 10bp, filtered out.
   hor_array_lengths[[chr_name]] <- df_ranges %>%
     rowwise() %>%
     summarise(
       chr_name = chr_name,
-      # Reset position with bed
+      # Reset position with bed.
       start_pos = df_chr %>%
-        filter(start >= start_pos & stop <= stop_pos) %>%
+        filter(
+          start >= start_pos & stop < stop_pos & start - lag(stop) < 10
+        ) %>%
         pull(start) %>%
         first(),
       stop_pos = df_chr %>%
-        filter(start >= start_pos & stop <= stop_pos) %>%
+        filter(
+          start >= start_pos & stop < stop_pos & start - lag(stop) < 10
+        ) %>%
         pull(stop) %>%
         last(),
-      len = df_chr %>%
-        filter(start >= start_pos & stop <= stop_pos) %>%
-        mutate(len = stop - start) %>%
-        pull(len) %>%
-        sum()
     ) %>%
+    mutate(len = stop_pos - start_pos) %>%
     filter(
       len != 0
     )
