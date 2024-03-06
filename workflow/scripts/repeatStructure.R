@@ -26,6 +26,12 @@ read_repeatmasker_sat_input <- function(input_file) {
   )
   cols <- c("chr", "start", "stop", "region", "value", "strand", "start2", "stop2", "rgb")
   colnames(df) <- cols
+  # Filter duplicated chm13 rows.
+  df <- df %>%
+    filter(!str_detect(chr, "^chr[0-9XY]+$")) %>%
+    # Correct for version and different naming of chr. ex. chm1_cen1v8 -> chm1_chr1
+    mutate(chr=str_replace(chr, "cen", "chr")) %>%
+    mutate(chr=str_remove(chr, "v\\d+"))
 
   # reorder rows so that live arrays are plotted on top
   df$region <- factor(df$region, levels = c("ct", "asat", "bsat", "gsat", "hsat1A", "hsat1B", "hsat2", "hsat3"), ordered = T)
@@ -104,10 +110,17 @@ read_humas_hmmer_input <- function(
   colnames(hgsvc3) <- cols
 
   # select the chr
+  # Requires coordinates in name. ex. chr?:1-2
   chm13_select <- chm13 %>%
-    filter(str_detect(chr, paste0(chr_name, "$")))
+    filter(str_detect(chr, paste0(chr_name, ":"))) %>%
+    # Correct for coords start/stop with ctg length.
+    separate_wider_delim(chr, ":", names=c("chr_name", "coord"), cols_remove=FALSE) %>%
+    separate_wider_delim(coord, "-", names=c("ctg_start", "ctg_stop")) %>%
+    mutate(start=start-as.numeric(ctg_start), stop=stop-as.numeric(ctg_start)) %>%
+    select(chr, start, stop, hor, strand)
+
   chm1_select <- chm1 %>%
-    filter(str_detect(chr, paste0(chr_name, "$")))
+    filter(str_detect(chr, paste0(chr_name, ":")))
 
   # combine the CHM1 and HGSVC3 centromeres
   chm13_select$chr <- gsub("chr", "chm13_chr", chm13_select$chr)
@@ -201,13 +214,19 @@ argv <- parse_args(p)
 #   argv$input_sf_chm13 <- "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all2.bed"
 #   argv$input_sf_chm1 <- "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all2.bed"
 #   argv$chr <- test_chr
-#   argv$mer_order <- "small"
+#   argv$mer_order <- "large"
+# }
+# {
+#   input_file <- argv$input_rm_sat
+#   input_chr <- argv$input_sf
+#   input_chm1 <- argv$input_sf_chm1
+#   input_chm13 <- argv$input_sf_chm13
+#   chr_name <- test_chr
 # }
 
 
 df_rm_sat_out <- read_repeatmasker_sat_input(argv$input_rm_sat)
-df_humas_hmmer_sf_out <- read_humas_hmmer_input(argv$input_sf, argv$input_sf_chm1, argv$input_sf_chm13, argv$chr, argv$mer_order, argv$hor_filter) %>%
-  filter(str_detect(chr, "^chm", negate = TRUE))
+df_humas_hmmer_sf_out <- read_humas_hmmer_input(argv$input_sf, argv$input_sf_chm1, argv$input_sf_chm13, argv$chr, argv$mer_order, argv$hor_filter)
 
 # Set new minimum and standardize scales.
 new_min <- min(df_rm_sat_out$start2)

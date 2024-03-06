@@ -35,7 +35,7 @@ rule create_annotated_satellites:
         grep "{params.pattern}" | \
         sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
         awk -v OFS="\\t" '{{
-            if ($5 ~ /^chm/ || $5 ~ /^chr[0-9XY]+$/ ) {{
+            if ($5 ~ /chm/ || $5 ~ /^chr[0-9XY]+$/ ) {{
                 print $5, $6+$8, $6+$9, "{wildcards.repeat}", "0", ".", $6+$8, $6+$9, "{params.color}"
             }} else {{
                 print $5"-"$6, $7+$9, $7+$10, "{wildcards.repeat}", "0", ".", $7+$9, $7+$10, "{params.color}"
@@ -67,13 +67,13 @@ rule create_ct_track:
         {{ cat {input} | \
         sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
         awk -v OFS="\\t" '{{
-            if ($5 ~ /^chm/ || $5 ~ /^chr[0-9XY]+$/) {{
+            if ($5 ~ /chm/ || $5 ~ /^chr[0-9XY]+$/ ) {{
                 print $5, $6, $7, "ct", "0", ".", $6, $7, "{params.color}"
             }} else {{
                 print $5"-"$6, $7, $8, "ct", "0", ".", $7, $8, "{params.color}"
             }}
         }}' | \
-        sort | uniq | grep "chr";}} > {output} 2> {log}
+        sort | uniq | grep -P "chr|cen";}} > {output} 2> {log}
         """
 
 
@@ -102,9 +102,11 @@ rule split_rm_satellite_annotations:
             config["repeatmasker_sat_annot"]["output_dir"],
             "all_cens_{chr}.annotation.fa.out",
         ),
+    params:
+        chr_pattern=lambda wc: str(wc.chr).replace("chr", "(chr|cen)") + "[_:\-\\tv]",
     shell:
         """
-        grep -P "{wildcards.chr}[_:\-\\t]" {input.all_annotations} > {output.chr_annot}
+        grep -P "{params.chr_pattern}" {input.all_annotations} > {output.chr_annot}
         """
 
 
