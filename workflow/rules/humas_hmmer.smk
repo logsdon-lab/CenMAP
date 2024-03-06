@@ -33,7 +33,7 @@ rule create_rc_merged_legend:
     output:
         os.path.join(config["humas_hmmer"]["output_dir"], "{sm}_rc_merged_legend.txt"),
     shell:
-        "sed 's/chr/rc_chr/g' {input} > {output}"
+        "grep 'rc_chr' {input} > {output}"
 
 
 use rule fmt_correct_alr_regions as fmt_rc_correct_alr_regions with:
