@@ -25,7 +25,7 @@ def main():
         "--arr_len_thr",
         help="Length threshold to filter out",
         type=int,
-        default=500,
+        default=10000,
     )
 
     args = ap.parse_args()
@@ -84,8 +84,21 @@ def main():
                 )
 
         lens = []
+        new_starts = []
         for start, stop in zip(starts, stops):
-            df_slice = df_chr.filter(pl.col("start") >= start, pl.col("stop") <= stop)
+            df_slice = (
+                df_chr.filter(pl.col("start") >= start, pl.col("stop") <= stop)
+                .with_columns(bp_jump=pl.col("start") - pl.col("stop").shift(1))
+                .fill_null(0)
+            )
+            max_bp_jump_idx = df_slice.get_column("bp_jump").arg_max()
+
+            # Exception for chr8 which needs a smaller jump thr to include correct start.
+            if chr_name == "chr8" and max_bp_jump_idx:
+                df_slice = df_slice[max_bp_jump_idx : df_slice.shape[0]]
+                new_starts.append(df_slice.row(0, named=True)["start"])
+            else:
+                new_starts.append(start)
 
             if df_slice.is_empty():
                 lens.append(0)
