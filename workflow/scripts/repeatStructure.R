@@ -80,7 +80,6 @@ read_humas_hmmer_input <- function(
     input_chm1,
     input_chm13,
     chr_name,
-    mer_order = "large",
     hor_filter = 0) {
   cols_to_take <- seq(5)
   monomer_len <- 170
@@ -161,15 +160,6 @@ read_humas_hmmer_input <- function(
     ) %>%
     mutate(new_chr = str_extract(chr, "([\\w_-]*?):", group = 1))
 
-  # reorder data to put larger or smaller -mers on top
-  df_final <- switch(mer_order,
-    # First sort by val. This sorts the dataframe but NOT the factor levels #larger HORs on top
-    "large" = df_final %>% arrange(mer),
-    # First sort by val. This sorts the dataframe but NOT the factor levels #smaller HORs on top
-    "small" = df_final %>% arrange(-mer),
-    stop(paste("Invalid mer reordering option:", mer_order))
-  )
-
   return(df_final)
 }
 
@@ -207,7 +197,7 @@ p <- add_argument(p, "--mer_order",
 )
 
 argv <- parse_args(p)
-# test_chr <- "chr3"
+# test_chr <- "chr8"
 # {
 #   argv$input_rm_sat <- paste0("results/repeatmasker_sat_annot/all_cens_", test_chr, ".annotation.fa.out")
 #   argv$input_sf <- paste0("results/hor_stv/", test_chr, "_AS-HOR_stv_row.all.bed")
@@ -226,7 +216,7 @@ argv <- parse_args(p)
 
 
 df_rm_sat_out <- read_repeatmasker_sat_input(argv$input_rm_sat)
-df_humas_hmmer_sf_out <- read_humas_hmmer_input(argv$input_sf, argv$input_sf_chm1, argv$input_sf_chm13, argv$chr, argv$mer_order, argv$hor_filter)
+df_humas_hmmer_sf_out <- read_humas_hmmer_input(argv$input_sf, argv$input_sf_chm1, argv$input_sf_chm13, argv$chr, argv$hor_filter)
 
 # Set new minimum and standardize scales.
 new_min <- min(df_rm_sat_out$start2)
@@ -254,6 +244,15 @@ df_humas_hmmer_sf_out <- df_humas_hmmer_sf_out %>%
   mutate(
     start = start - dst_diff,
     stop = stop - dst_diff
+  ) %>%
+  ungroup(chr)
+
+df_humas_hmmer_sf_out <- switch(argv$mer_order,
+    # First sort by val. This sorts the dataframe but NOT the factor levels #larger HORs on top
+    "large" = df_humas_hmmer_sf_out %>% arrange(mer),
+    # First sort by val. This sorts the dataframe but NOT the factor levels #smaller HORs on top
+    "small" = df_humas_hmmer_sf_out %>% arrange(-mer),
+    stop(paste("Invalid mer reordering option:", argv$mer_order))
   )
 
 height <- 5
