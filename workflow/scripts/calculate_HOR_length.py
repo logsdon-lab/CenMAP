@@ -19,7 +19,13 @@ def main():
         "--bp_jump_thr",
         help="Base pair jump threshold to group by",
         type=int,
-        default=20000,
+        default=100000,
+    )
+    ap.add_argument(
+        "--arr_len_thr",
+        help="Length threshold to filter out",
+        type=int,
+        default=500,
     )
 
     args = ap.parse_args()
@@ -43,31 +49,75 @@ def main():
 
         if df_bp_jumps.is_empty():
             dfs.append(
-                df_live_hor.with_columns(
-                    chr_name=pl.lit(chr_name),
-                    start_pos=pl.col("start").min(),
-                    stop_pos=pl.col("stop").min(),
-                    len=pl.col("stop").max() - pl.col("start").min(),
+                pl.DataFrame(
+                    {
+                        "chr_name": chr_name,
+                        "start_pos": df_live_hor.get_column("start").min(),
+                        "stop_pos": df_live_hor.get_column("stop").min(),
+                        "len": df_live_hor.get_column("stop").max()
+                        - df_live_hor.get_column("start").min(),
+                    }
                 )
             )
             continue
 
-        range_coords = []
+        starts, stops = [], []
         for i, row in enumerate(df_bp_jumps.iter_rows()):
             prev_row = pl.DataFrame() if i == 0 else df_bp_jumps.slice(i - 1)
             next_row = df_bp_jumps.slice(i + 1)
 
             if prev_row.is_empty():
-                range_coords.append((df_chr.get_column("start").min(), row[1]))
-
-            range_coords.append((row[1], row[2]))
+                starts.append(df_chr.get_column("start").min())
+                stops.append(
+                    df_chr.filter(pl.col("start") < row[1]).row(-1, named=True)["stop"]
+                )
 
             if next_row.is_empty():
-                range_coords.append((row[2], df_chr.get_column("stop").max()))
+                starts.append(row[1])
+                stops.append(df_chr.get_column("stop").max())
             else:
-                range_coords.append((row[2], next_row.get_column("start")[0]))
+                starts.append(row[1])
+                stops.append(
+                    df_chr.filter(
+                        pl.col("start") < next_row.get_column("start")[0]
+                    ).row(-1, named=True)["stop"]
+                )
 
-        breakpoint()
+        lens = []
+        for start, stop in zip(starts, stops):
+            df_slice = df_chr.filter(pl.col("start") >= start, pl.col("stop") <= stop)
+
+            if df_slice.is_empty():
+                lens.append(0)
+                continue
+            df_slice_dst = (
+                # df_slice.with_columns(len=pl.col("stop") - pl.col("start")).get_column("len").sum()
+                df_slice.get_column("stop").max() - df_slice.get_column("start").min()
+            )
+            lens.append(df_slice_dst)
+
+        lf = pl.LazyFrame(
+            {
+                "chr_name": chr_name,
+                "start_pos": starts,
+                "stop_pos": stops,
+                "len": lens,
+            }
+        )
+        dfs.append(lf.filter(pl.col("len") > args.arr_len_thr).collect())
+
+    df_all_dsts: pl.DataFrame = pl.concat(dfs)
+    (
+        df_all_dsts.with_columns(
+            sort_idx=pl.col("chr_name")
+            .str.extract("chr([0-9XY]+)")
+            .replace({"X": "23", "Y": "24"})
+            .cast(pl.Int32)
+        )
+        .sort(by="sort_idx")
+        .select(["chr_name", "start_pos", "stop_pos", "len"])
+        .write_csv(args.output, include_header=False, separator="\t")
+    )
 
 
 if __name__ == "__main__":
