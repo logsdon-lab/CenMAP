@@ -1,4 +1,4 @@
-if config["stained_glass"]["input_dir"]:
+if config["stained_glass"].get("input_dir"):
     INPUT_FA_DIR = config["stained_glass"]["input_dir"]
 else:
     INPUT_FA_DIR = config["humas_hmmer"]["input_dir"]
@@ -80,7 +80,7 @@ def stained_glass_outputs_no_input_dir(wc):
 
 
 # Conditionally change based on provided input dir.
-if config["stained_glass"]["input_dir"] is None:
+if config["stained_glass"].get("input_dir") is None:
 
     rule stained_glass_all:
         input:
