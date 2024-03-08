@@ -1,3 +1,7 @@
+
+include: "common.smk"
+
+
 if config["stained_glass"].get("input_dir"):
     INPUT_FA_DIR = config["stained_glass"]["input_dir"]
 else:
@@ -96,3 +100,12 @@ else:
                 rules.run_stained_glass.output,
                 fname=glob_wildcards(os.path.join(INPUT_FA_DIR, "{fname}.fa")).fname,
             ),
+
+
+rule stained_glass_only:
+    input:
+        (
+            expand(rules.stained_glass_all.output, chr=CHROMOSOMES)
+            if config["stained_glass"].get("input_dir") is None
+            else rules.stained_glass_all.input
+        ),

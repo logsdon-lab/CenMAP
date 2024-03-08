@@ -1,4 +1,7 @@
 
+include: "common.smk"
+
+
 rule fmt_correct_alr_regions:
     input:
         alr_fa=rules.extract_correct_alr_regions_rm.output.seq,
@@ -160,3 +163,15 @@ rule run_humas_hmmer_for_anvil:
     output:
         # TODO: Sort maybe?
         temp(touch("/tmp/humas_hmmer_{chr}.done")),
+
+
+rule humas_hmmer_only:
+    input:
+        expand(rules.fmt_correct_alr_regions.output, sm=SAMPLE_NAMES),
+        expand(rules.create_rc_merged_legend.output, sm=SAMPLE_NAMES),
+        expand(rules.fmt_rc_correct_alr_regions.output, sm=SAMPLE_NAMES),
+        rules.merge_correct_alr_regions.output,
+        rules.merge_correct_alr_regions_rc.output,
+        expand(rules.extract_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
+        expand(rules.split_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
+        expand(rules.run_humas_hmmer_for_anvil.output, chr=CHROMOSOMES),
