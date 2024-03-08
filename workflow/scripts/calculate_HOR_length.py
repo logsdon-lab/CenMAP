@@ -53,7 +53,7 @@ def main():
                     {
                         "chr_name": chr_name,
                         "start_pos": df_live_hor.get_column("start").min(),
-                        "stop_pos": df_live_hor.get_column("stop").min(),
+                        "stop_pos": df_live_hor.get_column("stop").max(),
                         "len": df_live_hor.get_column("stop").max()
                         - df_live_hor.get_column("start").min(),
                     }

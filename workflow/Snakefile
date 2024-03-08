@@ -103,22 +103,6 @@ rule humas_hmmer_only:
         expand(rules.run_humas_hmmer_for_anvil.output, chr=CHROMOSOMES),
 
 
-rule plot_hor_stv_only:
-    input:
-        expand(rules.get_stv_row_from_humas_hmmer_out.output, chr=CHROMOSOMES),
-        expand(rules.aggregate_all_stv_row.output, chr=CHROMOSOMES),
-        expand(
-            rules.plot_stv_with_order.output,
-            chr=CHROMOSOMES,
-            mer_order=config["plot_hor_stv"]["mer_order"],
-        ),
-
-
-rule get_hor_length_only:
-    input:
-        expand(rules.calculate_as_hor_length.output, chr=CHROMOSOMES),
-
-
 rule stained_glass_only:
     input:
         (
