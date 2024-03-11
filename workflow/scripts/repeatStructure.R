@@ -28,9 +28,9 @@ read_repeatmasker_sat_input <- function(input_file) {
   colnames(df) <- cols
   # Filter duplicated chm13 rows.
   df <- df %>%
+    mutate(chr=str_replace(chr, "cen", "chr")) %>%
     filter(!str_detect(chr, "^chr[0-9XY]+$")) %>%
     # Correct for version and different naming of chr. ex. chm1_cen1v8 -> chm1_chr1
-    mutate(chr=str_replace(chr, "cen", "chr")) %>%
     mutate(chr=str_remove(chr, "v\\d+"))
 
   # reorder rows so that live arrays are plotted on top
@@ -197,7 +197,7 @@ p <- add_argument(p, "--mer_order",
 )
 
 argv <- parse_args(p)
-# test_chr <- "chr8"
+# test_chr <- "chr17"
 # {
 #   argv$input_rm_sat <- paste0("results/repeatmasker_sat_annot/all_cens_", test_chr, ".annotation.fa.out")
 #   argv$input_sf <- paste0("results/hor_stv/", test_chr, "_AS-HOR_stv_row.all.bed")
@@ -225,7 +225,6 @@ df_rm_sat_out <- df_rm_sat_out %>%
     df_rm_sat_out %>% group_by(chr) %>% summarize(dst_diff = min(start2) - new_min),
     by = "chr"
   ) %>%
-  filter(!dst_diff == 0) %>%
   group_by(chr) %>%
   arrange(start2) %>%
   mutate(
@@ -238,7 +237,6 @@ df_humas_hmmer_sf_out <- df_humas_hmmer_sf_out %>%
     df_rm_sat_out %>% group_by(chr) %>% summarize(dst_diff = min(start) - new_min),
     by = "chr"
   ) %>%
-  filter(!dst_diff == 0) %>%
   group_by(chr) %>%
   arrange(start) %>%
   mutate(
@@ -275,4 +273,4 @@ ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
 
 if (!interactive()) pdf(NULL)
 height <- length(unique(df_humas_hmmer_sf_out$chr)) * 0.5
-ggsave(argv$output, width = 10, height = height + 4)
+ggsave(argv$output, width = 14, height = height + 4)
