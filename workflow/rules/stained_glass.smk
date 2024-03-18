@@ -7,6 +7,8 @@ if config["stained_glass"].get("input_dir"):
 else:
     INPUT_FA_DIR = config["humas_hmmer"]["input_dir"]
 
+OUTPUT_STAINED_GLASS_DIR = config["stained_glass"]["output_dir"]
+
 
 rule index_fa_for_stained_glass:
     input:
@@ -35,7 +37,7 @@ rule run_stained_glass:
     output:
         directory(
             os.path.join(
-                "results",
+                OUTPUT_STAINED_GLASS_DIR,
                 "{fname}"
                 + f".{config['stained_glass']['window']}.{config['stained_glass']['mm_f']}_figures",
             )
@@ -48,6 +50,7 @@ rule run_stained_glass:
         mm_f=config["stained_glass"]["mm_f"],
         nbatch=4,
         target_rule="make_figures",
+        outdir=OUTPUT_STAINED_GLASS_DIR,
     log:
         "logs/stained_glass_{fname}.log",
     benchmark:
@@ -63,6 +66,7 @@ rule run_stained_glass:
         window={params.window} \
         mm_f={params.mm_f} \
         nbatch={params.nbatch} \
+        outdir={params.outdir} \
         --cores {threads} \
         {params.target_rule} 2>> {log}
         """

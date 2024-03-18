@@ -129,6 +129,7 @@ plot_hor_stv:
 
 stained_glass:
   input_dir: null
+  output_dir: "results/stained_glass"
   threads: 10
   window: 5000
   mm_f: 5000
