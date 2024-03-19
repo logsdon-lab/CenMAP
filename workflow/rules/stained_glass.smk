@@ -7,7 +7,7 @@ if config["stained_glass"].get("input_dir"):
 else:
     INPUT_FA_DIR = config["humas_hmmer"]["input_dir"]
 
-OUTPUT_STAINED_GLASS_DIR = config["stained_glass"]["output_dir"]
+OUTPUT_STAINED_GLASS_DIR = config["stained_glass"].get("output_dir", "results")
 
 
 rule index_fa_for_stained_glass:
