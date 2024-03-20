@@ -28,9 +28,9 @@ rule plot_complete_cens:
         """
         Rscript {input.script} \
         --input_rm_sat {input.rm_sat_out} \
-        --input_sf {input.hor_stv_out} \
-        --input_sf_chm13 {input.chm13_stv} \
-        --input_sf_chm1 {input.chm1_stv} \
+        --input_stv {input.hor_stv_out} \
+        --input_stv_chm13 {input.chm13_stv} \
+        --input_stv_chm1 {input.chm1_stv} \
         --chr {wildcards.chr} \
         --output {output} \
         --hor_filter {params.hor_filter} \

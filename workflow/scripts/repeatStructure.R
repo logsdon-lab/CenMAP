@@ -39,7 +39,7 @@ read_repeatmasker_sat_input <- function(input_file) {
   return(df)
 }
 
-get_humas_hmmer_sf_annot_colors <- function() {
+get_humas_hmmer_stv_annot_colors <- function() {
   myColors <- c(
     "#A8275C", "#9AC78A", "#A53D63", "#3997C6", "#29A3CE", "#5EB2A7", "#38A49B", "#45B4CE", "#A53D63", "#AA1B63", "#3F66A0",
     "#D66C54", "#BFDD97", "#C0D875", "#E5E57A", "#B75361", "#F9E193", "#C6625D", "#E5D1A1", "#A1B5E5", "#9F68A5", "#81B25B",
@@ -142,12 +142,12 @@ read_humas_hmmer_input <- function(
   )
 
   # filter for HORs that occur at least 20 times (10 times per haplotype)
-  df_mer <- chm13_chm1_hgsvc3 %>%
+  df_stv <- chm13_chm1_hgsvc3 %>%
     group_by(mer) %>%
     filter(n() > hor_filter) #
 
   # Add contig length to start and stop so aligns with repeatmasker annotations.
-  df_final <- df_mer %>%
+  df_final <- df_stv %>%
     separate_wider_delim(chr, delim = ":", names = c("chr", "range"), too_few = "align_start") %>%
     separate_wider_delim(range, delim = "-", names = c("ctg_start", "ctg_stop"), too_few = "align_start") %>%
     mutate(
@@ -167,15 +167,15 @@ read_humas_hmmer_input <- function(
 p <- arg_parser("Plot combined SF + satellites")
 p <- add_argument(p, "--input_rm_sat", help = "Input bed file made from annotated satellite RM output.", type = "character")
 
-p <- add_argument(p, "--input_sf",
+p <- add_argument(p, "--input_stv",
   help = "Input HGSVC3 HumAS-HMMER formatted output.",
   type = "character"
 )
-p <- add_argument(p, "--input_sf_chm13",
+p <- add_argument(p, "--input_stv_chm13",
   help = "Input CHM13 HumAS-HMMER formatted output",
   type = "character"
 )
-p <- add_argument(p, "--input_sf_chm1",
+p <- add_argument(p, "--input_stv_chm1",
   help = "Input CHM1 HumAS-HMMER formatted output",
   type = "character"
 )
@@ -200,23 +200,23 @@ argv <- parse_args(p)
 # test_chr <- "chr17"
 # {
 #   argv$input_rm_sat <- paste0("results/repeatmasker_sat_annot/all_cens_", test_chr, ".annotation.fa.out")
-#   argv$input_sf <- paste0("results/hor_stv/", test_chr, "_AS-HOR_stv_row.all.bed")
-#   argv$input_sf_chm13 <- "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all2.bed"
-#   argv$input_sf_chm1 <- "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all2.bed"
+#   argv$input_stv <- paste0("results/hor_stv/", test_chr, "_AS-HOR_stv_row.all.bed")
+#   argv$input_stv_chm13 <- "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all2.bed"
+#   argv$input_stv_chm1 <- "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all2.bed"
 #   argv$chr <- test_chr
 #   argv$mer_order <- "large"
 # }
 # {
 #   input_file <- argv$input_rm_sat
-#   input_chr <- argv$input_sf
-#   input_chm1 <- argv$input_sf_chm1
-#   input_chm13 <- argv$input_sf_chm13
+#   input_chr <- argv$input_stv
+#   input_chm1 <- argv$input_stv_chm1
+#   input_chm13 <- argv$input_stv_chm13
 #   chr_name <- test_chr
 # }
 
 
 df_rm_sat_out <- read_repeatmasker_sat_input(argv$input_rm_sat)
-df_humas_hmmer_sf_out <- read_humas_hmmer_input(argv$input_sf, argv$input_sf_chm1, argv$input_sf_chm13, argv$chr, argv$hor_filter)
+df_humas_hmmer_stv_out <- read_humas_hmmer_input(argv$input_stv, argv$input_stv_chm1, argv$input_stv_chm13, argv$chr, argv$hor_filter)
 
 # Set new minimum and standardize scales.
 new_min <- min(df_rm_sat_out$start2)
@@ -232,7 +232,7 @@ df_rm_sat_out <- df_rm_sat_out %>%
     stop2 = stop - dst_diff
   )
 
-df_humas_hmmer_sf_out <- df_humas_hmmer_sf_out %>%
+df_humas_hmmer_stv_out <- df_humas_hmmer_stv_out %>%
   join(
     df_rm_sat_out %>% group_by(chr) %>% summarize(dst_diff = min(start) - new_min),
     by = "chr"
@@ -245,11 +245,11 @@ df_humas_hmmer_sf_out <- df_humas_hmmer_sf_out %>%
   ) %>%
   ungroup(chr)
 
-df_humas_hmmer_sf_out <- switch(argv$mer_order,
+df_humas_hmmer_stv_out <- switch(argv$mer_order,
     # First sort by val. This sorts the dataframe but NOT the factor levels #larger HORs on top
-    "large" = df_humas_hmmer_sf_out %>% arrange(mer),
+    "large" = df_humas_hmmer_stv_out %>% arrange(mer),
     # First sort by val. This sorts the dataframe but NOT the factor levels #smaller HORs on top
-    "small" = df_humas_hmmer_sf_out %>% arrange(-mer),
+    "small" = df_humas_hmmer_stv_out %>% arrange(-mer),
     stop(paste("Invalid mer reordering option:", argv$mer_order))
   )
 
@@ -260,8 +260,8 @@ ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
   scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
   # New colorscale.
   new_scale_color() +
-  geom_segment(data = df_humas_hmmer_sf_out, aes(x = start, xend = stop + 2000, y = chr, yend = chr, color = as.factor(mer)), linewidth = 9) +
-  scale_color_manual(values = get_humas_hmmer_sf_annot_colors()) +
+  geom_segment(data = df_humas_hmmer_stv_out, aes(x = start, xend = stop + 2000, y = chr, yend = chr, color = as.factor(mer)), linewidth = 9) +
+  scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
   theme_classic() +
   theme(axis.line.y = element_line(colour = "white")) +
   theme(legend.position = "bottom") +
@@ -272,5 +272,5 @@ ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
 
 
 if (!interactive()) pdf(NULL)
-height <- length(unique(df_humas_hmmer_sf_out$chr)) * 0.5
+height <- length(unique(df_humas_hmmer_stv_out$chr)) * 0.5
 ggsave(argv$output, width = 14, height = height + 4)
