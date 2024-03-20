@@ -1,7 +1,15 @@
-if config["stained_glass"]["input_dir"]:
+
+include: "common.smk"
+
+
+if config["stained_glass"].get("input_dir"):
     INPUT_FA_DIR = config["stained_glass"]["input_dir"]
 else:
     INPUT_FA_DIR = config["humas_hmmer"]["input_dir"]
+
+OUTPUT_STAINED_GLASS_DIR = config["stained_glass"].get(
+    "output_dir", "results/stained_glass"
+)
 
 
 rule index_fa_for_stained_glass:
@@ -31,7 +39,7 @@ rule run_stained_glass:
     output:
         directory(
             os.path.join(
-                "results",
+                OUTPUT_STAINED_GLASS_DIR,
                 "{fname}"
                 + f".{config['stained_glass']['window']}.{config['stained_glass']['mm_f']}_figures",
             )
@@ -44,6 +52,7 @@ rule run_stained_glass:
         mm_f=config["stained_glass"]["mm_f"],
         nbatch=4,
         target_rule="make_figures",
+        outdir=OUTPUT_STAINED_GLASS_DIR,
     log:
         "logs/stained_glass_{fname}.log",
     benchmark:
@@ -59,6 +68,7 @@ rule run_stained_glass:
         window={params.window} \
         mm_f={params.mm_f} \
         nbatch={params.nbatch} \
+        outdir={params.outdir} \
         --cores {threads} \
         {params.target_rule} 2>> {log}
         """
@@ -80,13 +90,17 @@ def stained_glass_outputs_no_input_dir(wc):
 
 
 # Conditionally change based on provided input dir.
-if config["stained_glass"]["input_dir"] is None:
+if config["stained_glass"].get("input_dir") is None:
 
     rule stained_glass_all:
         input:
             stained_glass_outputs_no_input_dir,
         output:
-            temp(touch("/tmp/stained_glass_{chr}.done")),
+            temp(
+                touch(
+                    os.path.join(OUTPUT_STAINED_GLASS_DIR, "stained_glass_{chr}.done")
+                )
+            ),
 
 else:
 
@@ -96,3 +110,12 @@ else:
                 rules.run_stained_glass.output,
                 fname=glob_wildcards(os.path.join(INPUT_FA_DIR, "{fname}.fa")).fname,
             ),
+
+
+rule stained_glass_only:
+    input:
+        (
+            expand(rules.stained_glass_all.output, chr=CHROMOSOMES)
+            if config["stained_glass"].get("input_dir") is None
+            else rules.stained_glass_all.input
+        ),

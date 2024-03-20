@@ -77,7 +77,8 @@ repeatmasker:
   # Repeatmasker output on reference genome. Will prevent running step.
   ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
   threads: 100
-  output_dir: "results/repeatmasker"
+  # output_dir: "results/repeatmasker"
+  output_dir: "/home/koisland/Projects/hgsvc3/results/repeatmasker"
 
 repeatmasker_sat_annot:
   output_dir: "results/repeatmasker_sat_annot"
@@ -118,8 +119,8 @@ humas_hmmer:
 
 plot_hor_stv:
   output_dir: "results/hor_stv"
-  chm1_stv: "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
-  chm13_stv: "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
+  chm1_stv: "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all2.bed"
+  chm13_stv: "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all2.bed"
   # Reorder data to put 'large'-r or 'small'-r -mers on top.
   # Specifying both creates both plots.
   mer_order:
@@ -128,6 +129,7 @@ plot_hor_stv:
 
 stained_glass:
   input_dir: null
+  output_dir: "results/stained_glass"
   threads: 10
   window: 5000
   mm_f: 5000

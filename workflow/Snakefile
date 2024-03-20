@@ -5,54 +5,13 @@ import pandas as pd
 from collections import defaultdict
 from snakemake.utils import min_version
 
+
 min_version("6.0")
 shell.prefix("set -euo pipefail; ")
 
 
-with open(config["align_asm_to_ref"]["config"], "r") as file:
-    config["align_asm_to_ref"]["config"] = yaml.safe_load(file)
-
-
+# Constants loaded here.
 include: "rules/common.smk"
-
-
-# Globals shared throughout workflow.
-SAMPLES_DF = load_samples_df()
-REF_NAME = config["align_asm_to_ref"]["ref_key"]
-SAMPLE_NAMES = SAMPLES_DF.index
-ORIENTATION = ("fwd", "rev")
-HAPLOTYPE = ("haplotype1", "haplotype2")
-CHROMOSOMES = config.get(
-    "chromosomes",
-    (
-        "chr1",
-        "chr2",
-        "chr3",
-        "chr4",
-        "chr5",
-        "chr6",
-        "chr7",
-        "chr8",
-        "chr9",
-        "chr10",
-        "chr11",
-        "chr12",
-        "chr13",
-        "chr14",
-        "chr15",
-        "chr16",
-        "chr17",
-        "chr18",
-        "chr19",
-        "chr20",
-        "chr21",
-        "chr22",
-        "chrX",
-        "chrY",
-    ),
-)
-SAMPLE_FLOWCELL_IDS = get_hifi_read_wildcards()
-CORRECT_ASSEMBLIES = config["repeatmasker"]["correct_asm"]
 
 
 wildcard_constraints:
@@ -75,6 +34,7 @@ include: "rules/humas_hmmer.smk"
 include: "rules/plot_hor_stv.smk"
 include: "rules/plot_repeatmasker_sat_annot.smk"
 include: "rules/stained_glass.smk"
+include: "rules/plot_complete_cens.smk"
 
 
 rule extract_align_cens_only:
@@ -108,68 +68,6 @@ rule nuc_freq_only:
         # Then stop to inspect if correctly assembled.
 
 
-rule repeatmasker_only:
-    input:
-        rules.count_complete_cens.output,
-        expand(rules.extract_correct_alr_regions_rm.output, sm=SAMPLE_NAMES),
-        expand(rules.rc_correct_alr_regions_rm.output, sm=SAMPLE_NAMES),
-        expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),
-        expand(rules.rename_contig_name_repeatmasker.output, sm=SAMPLE_NAMES),
-        rules.format_repeatmasker_output.output,
-        rules.format_add_control_repeatmasker_output.output,
-        rules.format_add_censat_annot_repeatmasker_output.output,
-        rules.reverse_complete_repeatmasker_output.output,
-        expand(rules.extract_rm_out_by_chr.output, chr=CHROMOSOMES),
-        expand(rules.check_cens_status.output, chr=CHROMOSOMES),
-        rules.merge_corrections_list.output,
-        expand(rules.fix_incorrect_merged_legend.output, sm=SAMPLE_NAMES),
-        expand(rules.fix_incorrect_mapped_cens.output, chr=CHROMOSOMES),
-        expand(rules.create_correct_oriented_cens.output, chr=CHROMOSOMES),
-        expand(rules.fix_incorrect_mapped_cens.output, chr=CHROMOSOMES),
-        expand(rules.split_corrected_rm_output.output, chr=CHROMOSOMES),
-        expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
-        expand(rules.plot_og_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
-
-
-rule humas_hmmer_only:
-    input:
-        expand(rules.fmt_correct_alr_regions.output, sm=SAMPLE_NAMES),
-        expand(rules.create_rc_merged_legend.output, sm=SAMPLE_NAMES),
-        expand(rules.fmt_rc_correct_alr_regions.output, sm=SAMPLE_NAMES),
-        rules.merge_correct_alr_regions.output,
-        rules.merge_correct_alr_regions_rc.output,
-        expand(rules.extract_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
-        expand(rules.split_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
-        expand(rules.run_humas_hmmer_for_anvil.output, chr=CHROMOSOMES),
-
-
-rule plot_hor_stv_only:
-    input:
-        expand(rules.get_stv_row_from_humas_hmmer_out.output, chr=CHROMOSOMES),
-        expand(rules.aggregate_all_stv_row.output, chr=CHROMOSOMES),
-        expand(
-            rules.plot_stv_with_order.output,
-            chr=CHROMOSOMES,
-            mer_order=config["plot_hor_stv"]["mer_order"],
-        ),
-
-
-rule plot_repeatmasker_sat_only:
-    input:
-        rules.create_ct_track.output,
-        rules.aggregate_rm_satellite_annotations.output,
-        expand(rules.plot_satellite_annotations.output, chr=CHROMOSOMES),
-
-
-rule stained_glass_only:
-    input:
-        (
-            expand(rules.stained_glass_all.output, chr=CHROMOSOMES)
-            if config["stained_glass"]["input_dir"] is None
-            else rules.stained_glass_all.input
-        ),
-
-
 rule all:
     input:
         rules.extract_align_cens_only.input,
@@ -177,3 +75,13 @@ rule all:
         rules.dna_brnn_only.input,
         rules.nuc_freq_only.input,
     default_target: True
+
+
+rule all_plotting:
+    input:
+        rules.repeatmasker_only.input,
+        rules.humas_hmmer_only.input,
+        rules.plot_hor_stv_only.input,
+        rules.get_hor_length_only.input,
+        rules.stained_glass_only.input,
+        rules.plot_cens_only.input,

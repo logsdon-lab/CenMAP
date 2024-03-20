@@ -88,6 +88,7 @@ rule align_reads_to_asm:
         ),
     threads: config["nuc_freq"]["threads"]
     resources:
+        mem_mb=40_000,
         sort_mem=4,
     params:
         # https://broadinstitute.github.io/picard/explain-flags.html
@@ -159,6 +160,8 @@ rule gen_nucfreq_plot:
         ),
     conda:
         "../env/pysam.yaml"
+    resources:
+        mem_mb=60_000,
     params:
         ylim=100,
         height=4,

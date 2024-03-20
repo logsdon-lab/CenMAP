@@ -1,4 +1,7 @@
 
+include: "common.smk"
+
+
 rule get_valid_regions_for_rm:
     input:
         bed=get_correct_assembly_regions,
@@ -99,6 +102,8 @@ rule run_repeatmasker:
         output_dir=lambda wc, output: os.path.dirname(str(output)),
         species="human",
         engine="rmblast",
+    singularity:
+        "docker://logsdonlab/repeatmasker70:latest"
     log:
         "logs/repeatmasker_{sm}.log",
     benchmark:
@@ -496,3 +501,26 @@ use rule plot_cens_from_rm_by_chr as plot_og_cens_from_rm_by_chr with:
         ),
     log:
         "logs/plot_{chr}_cens_from_rm_og.log",
+
+
+rule repeatmasker_only:
+    input:
+        rules.count_complete_cens.output,
+        expand(rules.extract_correct_alr_regions_rm.output, sm=SAMPLE_NAMES),
+        expand(rules.rc_correct_alr_regions_rm.output, sm=SAMPLE_NAMES),
+        expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),
+        expand(rules.rename_contig_name_repeatmasker.output, sm=SAMPLE_NAMES),
+        rules.format_repeatmasker_output.output,
+        rules.format_add_control_repeatmasker_output.output,
+        rules.format_add_censat_annot_repeatmasker_output.output,
+        rules.reverse_complete_repeatmasker_output.output,
+        expand(rules.extract_rm_out_by_chr.output, chr=CHROMOSOMES),
+        expand(rules.check_cens_status.output, chr=CHROMOSOMES),
+        rules.merge_corrections_list.output,
+        expand(rules.fix_incorrect_merged_legend.output, sm=SAMPLE_NAMES),
+        expand(rules.fix_incorrect_mapped_cens.output, chr=CHROMOSOMES),
+        expand(rules.create_correct_oriented_cens.output, chr=CHROMOSOMES),
+        expand(rules.fix_incorrect_mapped_cens.output, chr=CHROMOSOMES),
+        expand(rules.split_corrected_rm_output.output, chr=CHROMOSOMES),
+        expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
+        expand(rules.plot_og_cens_from_rm_by_chr.output, chr=CHROMOSOMES),

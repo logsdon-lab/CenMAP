@@ -15,27 +15,23 @@ git clone git@github.com:logsdon-lab/hgsvc3.git --recurse-submodules
 
 #### Local
 ```bash
-# NOTE: dna-brnn must be installed locally
 snakemake --use-conda -np --configfile config/config.yaml
 ```
 
-#### Cluster via `singularity`.
-* Must be in project dir.
-
+If `dna-brnn` is not installed locally and/or assembly IDs are too long for `RepeatMasker`.
 ```bash
-module load singularity
-singularity pull docker://logsdonlab/hgsvc3:latest
+snakemake --use-conda -np --configfile config/config.yaml --use-singularity
 ```
 
+#### Cluster.
 ```bash
-max_mem=61440
-num_cores=12
-
-bsub -e hgsvc3.err -o hgsvc3.out \
--n $num_cores \
--M $max_mem -R "rusage [mem=$max_mem] span[hosts=1]" \
-"./run_singularity.sh -np -c $num_cores"
+snakemake -j 100 \
+--cluster "bsub -M 40000 -n {threads} -o /dev/null" \
+--rerun-triggers mtime \
+--configfile config/config.yaml \
+--use-conda -n
 ```
 
 ### TODO
 * Remove old bedminmax scripts. Only leaving in until output discrepancies finished.
+* Add test/move calculate HOR length script to new repo.

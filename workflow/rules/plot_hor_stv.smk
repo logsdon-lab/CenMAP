@@ -1,3 +1,5 @@
+include: "common.smk"
+
 
 rule get_stv_row_from_humas_hmmer_out:
     input:
@@ -59,6 +61,28 @@ rule aggregate_all_stv_row:
         """
 
 
+rule calculate_as_hor_length:
+    input:
+        script="workflow/scripts/calculate_HOR_length.py",
+        fmt_hmmer_output=rules.aggregate_all_stv_row.output,
+    output:
+        os.path.join(config["plot_hor_stv"]["output_dir"], "{chr}_AS-HOR_lengths.tsv"),
+    conda:
+        "../env/py.yaml"
+    log:
+        "logs/calculate_{chr}_as_hor_length.log",
+    params:
+        bp_jump_thr=100_000,
+        arr_len_thr=10_000,
+    shell:
+        """
+        python {input.script} \
+        --input {input.fmt_hmmer_output} \
+        --bp_jump_thr {params.bp_jump_thr} \
+        --arr_len_thr {params.arr_len_thr} > {output} 2> {log}
+        """
+
+
 rule plot_stv_with_order:
     input:
         script="workflow/scripts/StVHORorganization_simplified_2datasets_basedOnStartStop_newcolors.R",
@@ -87,3 +111,19 @@ rule plot_stv_with_order:
         --chr {wildcards.chr} \
         --mer_order {wildcards.mer_order} 2> {log}
         """
+
+
+rule plot_hor_stv_only:
+    input:
+        expand(rules.get_stv_row_from_humas_hmmer_out.output, chr=CHROMOSOMES),
+        expand(rules.aggregate_all_stv_row.output, chr=CHROMOSOMES),
+        expand(
+            rules.plot_stv_with_order.output,
+            chr=CHROMOSOMES,
+            mer_order=config["plot_hor_stv"]["mer_order"],
+        ),
+
+
+rule get_hor_length_only:
+    input:
+        expand(rules.calculate_as_hor_length.output, chr=CHROMOSOMES),

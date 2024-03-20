@@ -1,4 +1,7 @@
 
+include: "common.smk"
+
+
 rule fmt_correct_alr_regions:
     input:
         alr_fa=rules.extract_correct_alr_regions_rm.output.seq,
@@ -33,7 +36,7 @@ rule create_rc_merged_legend:
     output:
         os.path.join(config["humas_hmmer"]["output_dir"], "{sm}_rc_merged_legend.txt"),
     shell:
-        "sed 's/chr/rc_chr/g' {input} > {output}"
+        "grep 'rc_chr' {input} > {output}"
 
 
 use rule fmt_correct_alr_regions as fmt_rc_correct_alr_regions with:
@@ -110,7 +113,14 @@ checkpoint split_cens_for_humas_hmmer:
     input:
         rules.extract_cens_for_humas_hmmer.output.cens,
     output:
-        temp(touch("/tmp/split_cens_for_humas_hmmer_{chr}.done")),
+        temp(
+            touch(
+                os.path.join(
+                    config["humas_hmmer"]["output_dir"],
+                    "split_cens_for_humas_hmmer_{chr}.done",
+                )
+            )
+        ),
     log:
         "logs/split_{chr}_cens_for_humas_hmmer.log",
     params:
@@ -159,4 +169,22 @@ rule run_humas_hmmer_for_anvil:
         unpack(humas_hmmer_outputs),
     output:
         # TODO: Sort maybe?
-        temp(touch("/tmp/humas_hmmer_{chr}.done")),
+        temp(
+            touch(
+                os.path.join(
+                    config["humas_hmmer"]["input_dir"], "humas_hmmer_{chr}.done"
+                )
+            )
+        ),
+
+
+rule humas_hmmer_only:
+    input:
+        expand(rules.fmt_correct_alr_regions.output, sm=SAMPLE_NAMES),
+        expand(rules.create_rc_merged_legend.output, sm=SAMPLE_NAMES),
+        expand(rules.fmt_rc_correct_alr_regions.output, sm=SAMPLE_NAMES),
+        rules.merge_correct_alr_regions.output,
+        rules.merge_correct_alr_regions_rc.output,
+        expand(rules.extract_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
+        expand(rules.split_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
+        expand(rules.run_humas_hmmer_for_anvil.output, chr=CHROMOSOMES),

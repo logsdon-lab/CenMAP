@@ -36,7 +36,6 @@ def main() -> int:
         reader_cens_renamed = csv.reader(cens_list_fh, delimiter="\t")
         for old, new, ort, is_partial in reader_cens_renamed:
             if ort == "rev":
-                old = old.replace("chr", "rc_chr")
                 new = new.replace("chr", "rc_chr")
 
             cens_renamed[old] = new

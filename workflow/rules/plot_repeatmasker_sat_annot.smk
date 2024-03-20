@@ -1,3 +1,8 @@
+
+
+include: "common.smk"
+
+
 ANNOTATE_SAT_REPEATS = config["repeatmasker_sat_annot"][
     "repeat_name_pattern_replacement"
 ]
@@ -5,7 +10,15 @@ ANNOTATE_SAT_REPEATS = config["repeatmasker_sat_annot"][
 
 rule create_annotated_satellites:
     input:
-        rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
+        ref_rm_out=(
+            config["repeatmasker"]["ref_repeatmasker_output"]
+            if config["repeatmasker"].get("ref_repeatmasker_output")
+            else rules.run_repeatmasker_ref.output
+        ),
+        # corrected_rm_out=rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
+        corrected_rm_out=os.path.join(
+            config["repeatmasker"]["output_dir"], "all_corrected_cens.fa.out"
+        ),
     output:
         os.path.join(
             config["repeatmasker_sat_annot"]["output_dir"],
@@ -14,17 +27,33 @@ rule create_annotated_satellites:
     params:
         pattern=lambda wc: ANNOTATE_SAT_REPEATS[str(wc.repeat)]["pattern"],
         color=lambda wc: ANNOTATE_SAT_REPEATS[str(wc.repeat)]["color"],
+    log:
+        "logs/create_{repeat}_annotated_satellites.log",
     shell:
         """
-        grep "{params.pattern}" {input} | \
+        {{ cat {input} | \
+        grep "{params.pattern}" | \
         sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
-        awk -v OFS="\\t" '{{print $5"-"$6, $7+$9, $7+$10, "{wildcards.repeat}", "0", ".", $7+$9, $7+$10, "{params.color}"}}' > {output}
+        awk -v OFS="\\t" '{{
+            if ($5 ~ /chm/ || $5 ~ /^chr[0-9XY]+$/ ) {{
+                print $5, $6+$8, $6+$9, "{wildcards.repeat}", "0", ".", $6+$8, $6+$9, "{params.color}"
+            }} else {{
+                print $5"-"$6, $7+$9, $7+$10, "{wildcards.repeat}", "0", ".", $7+$9, $7+$10, "{params.color}"
+            }}
+        }}';}} > {output} 2> {log}
         """
 
 
 rule create_ct_track:
     input:
-        rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
+        ref_rm_out=(
+            config["repeatmasker"]["ref_repeatmasker_output"]
+            if config["repeatmasker"].get("ref_repeatmasker_output")
+            else rules.run_repeatmasker_ref.output
+        ),
+        corrected_rm_out=os.path.join(
+            config["repeatmasker"]["output_dir"], "all_corrected_cens.fa.out"
+        ),
     output:
         os.path.join(config["repeatmasker_sat_annot"]["output_dir"], "all_cens.ct.bed"),
     params:
@@ -35,9 +64,16 @@ rule create_ct_track:
         "../env/tools.yaml"
     shell:
         """
-        sed -e 's/:/\\t/g' -e 's/-/\\t/g' {input} | \
-        awk -v OFS="\\t" '{{print $5"-"$6, $7, $8, "ct", "0", ".", $7, $8, "{params.color}"}}' | \
-        sort | uniq | grep "chr" > {output}
+        {{ cat {input} | \
+        sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
+        awk -v OFS="\\t" '{{
+            if ($5 ~ /chm/ || $5 ~ /^chr[0-9XY]+$/ ) {{
+                print $5, $6, $7, "ct", "0", ".", $6, $7, "{params.color}"
+            }} else {{
+                print $5"-"$6, $7, $8, "ct", "0", ".", $7, $8, "{params.color}"
+            }}
+        }}' | \
+        sort | uniq | grep -P "chr|cen";}} > {output} 2> {log}
         """
 
 
@@ -58,17 +94,27 @@ rule aggregate_rm_satellite_annotations:
         """
 
 
+rule split_rm_satellite_annotations:
+    input:
+        all_annotations=rules.aggregate_rm_satellite_annotations.output,
+    output:
+        chr_annot=os.path.join(
+            config["repeatmasker_sat_annot"]["output_dir"],
+            "all_cens_{chr}.annotation.fa.out",
+        ),
+    params:
+        chr_pattern=lambda wc: str(wc.chr).replace("chr", "(chr|cen)") + "[_:\-\\tv]",
+    shell:
+        """
+        grep -P "{params.chr_pattern}" {input.all_annotations} > {output.chr_annot}
+        """
+
+
 rule plot_satellite_annotations:
     input:
         script="workflow/scripts/repeatStructure_satellites.R",
-        all_annotations=rules.aggregate_rm_satellite_annotations.output,
+        chr_annot=rules.split_rm_satellite_annotations.output,
     output:
-        chr_annot=temp(
-            os.path.join(
-                config["repeatmasker_sat_annot"]["output_dir"],
-                "all_cens_{chr}.annotation.fa.out",
-            )
-        ),
         chr_plot=os.path.join(
             config["repeatmasker_sat_annot"]["output_dir"],
             "all_cens_{chr}.annotation.png",
@@ -79,6 +125,14 @@ rule plot_satellite_annotations:
         "../env/r.yaml"
     shell:
         """
-        grep "{wildcards.chr}[_:]" {input.all_annotations} > {output.chr_annot}
-        Rscript {input.script} {output.chr_annot} {output.chr_plot} 2> {log}
+        Rscript {input.script} {input.chr_annot} {output.chr_plot} 2> {log}
         """
+
+
+rule plot_repeatmasker_sat_only:
+    input:
+        rules.create_ct_track.output,
+        rules.aggregate_rm_satellite_annotations.output,
+        expand(rules.split_rm_satellite_annotations.output, chr=CHROMOSOMES),
+        expand(rules.plot_satellite_annotations.output, chr=CHROMOSOMES),
+    default_target: True

@@ -9,13 +9,15 @@ rule run_dna_brnn:
             "{sm}_centromeric_regions.renamed.{ort}.bed",
         ),
     threads: config["dna_brnn"]["threads"]
+    resources:
+        mem_mb=30_000,
     log:
         "logs/dna_brnn_{ort}_{sm}.log",
     benchmark:
         "benchmarks/dna_brnn_{ort}_{sm}.tsv"
-    # No conda recipe. Use Dockerfile if not installed locally.
+    # No conda recipe. Use singularity if not installed locally.
     singularity:
-        "docker://koisland/hgsvc3:latest"
+        "docker://logsdonlab/hgsvc3:latest"
     shell:
         """
         dna-brnn -t {threads} -Ai {input.model} {input.seqs} > {output} 2> {log}
