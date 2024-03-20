@@ -102,6 +102,8 @@ rule run_repeatmasker:
         output_dir=lambda wc, output: os.path.dirname(str(output)),
         species="human",
         engine="rmblast",
+    singularity:
+        "docker://logsdonlab/repeatmasker70:latest"
     log:
         "logs/repeatmasker_{sm}.log",
     benchmark:

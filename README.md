@@ -15,8 +15,12 @@ git clone git@github.com:logsdon-lab/hgsvc3.git --recurse-submodules
 
 #### Local
 ```bash
-# NOTE: dna-brnn must be installed locally otherwise use --use-singularity
 snakemake --use-conda -np --configfile config/config.yaml
+```
+
+If `dna-brnn` is not installed locally and/or assembly IDs are too long for `RepeatMasker`.
+```bash
+snakemake --use-conda -np --configfile config/config.yaml --use-singularity
 ```
 
 #### Cluster.

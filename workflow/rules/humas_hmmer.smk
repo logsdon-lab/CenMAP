@@ -113,7 +113,14 @@ checkpoint split_cens_for_humas_hmmer:
     input:
         rules.extract_cens_for_humas_hmmer.output.cens,
     output:
-        temp(touch("/tmp/split_cens_for_humas_hmmer_{chr}.done")),
+        temp(
+            touch(
+                os.path.join(
+                    config["humas_hmmer"]["output_dir"],
+                    "split_cens_for_humas_hmmer_{chr}.done",
+                )
+            )
+        ),
     log:
         "logs/split_{chr}_cens_for_humas_hmmer.log",
     params:
@@ -162,7 +169,13 @@ rule run_humas_hmmer_for_anvil:
         unpack(humas_hmmer_outputs),
     output:
         # TODO: Sort maybe?
-        temp(touch("/tmp/humas_hmmer_{chr}.done")),
+        temp(
+            touch(
+                os.path.join(
+                    config["humas_hmmer"]["input_dir"], "humas_hmmer_{chr}.done"
+                )
+            )
+        ),
 
 
 rule humas_hmmer_only:
