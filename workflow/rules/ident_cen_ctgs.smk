@@ -2,7 +2,6 @@
 # Extract centromeric regions
 
 OUTPUT_DIR_T2T_REF_REGIONS = f"results/{REF_NAME}/bed"
-OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS = f"results/{REF_NAME}_cens/bed"
 
 
 # Get centromeric regions from alignments to t2t-chm13 ONLY
@@ -49,164 +48,32 @@ rule collapse_cens_contigs:
             )
         ),
         regions=os.path.join(OUTPUT_DIR_T2T_REF_REGIONS, "{sm}_centromeric_contigs.bed"),
+    params:
+        len_thr=1_000_000
     conda:
         "../env/py.yaml"
-    params:
-        awk_in_cols_cmd="'{ print $6, $7, $8, $1, $5 }'",
-        awk_out_cols_cmd="'{ print $1, $2, $3, $4, $5, $3-$2 }'",
     log:
         "logs/collapse_cent_ctgs_{sm}.log",
     shell:
         """
-        awk -v OFS="\\t" {params.awk_in_cols_cmd} \
+        awk -v OFS="\\t" '{{ print $6, $7, $8, $1, $5 }}' \
         {input.regions} > {output.refmt_regions} 2> {log}
 
         # Calculate length of ref region.
         {{ python {input.script} -i {output.refmt_regions} | \
-        awk -v OFS="\\t" {params.awk_out_cols_cmd} | \
+        awk -v OFS="\\t" '{{
+            contig_len=$3-$2
+            if (contig_len > {params.len_thr} ) {{ print $1, $2, $3, $4, $5, contig_len }}
+        }}' |  \
         sort -k1,1;}} > {output.regions} 2> {log}
         """
 
 
-# 1st awk
-# 6. query_name
-# 7. query_start
-# 8. query_end
-# 9. query_length
-# 1. reference_name
-# 5. strand
-
-
-# 2nd awk (# relative to 1st)
-# 1. query_name
-# 2. query_start
-# 3. query_end
-# 4. query_length
-# 5. reference_name
-# 6. strand
-# +. sub(query_end, query_start)
-# T2T-CHM13 CENS ONLY
-use rule collapse_cens_contigs as collapse_cens_contigs_only_t2t_cens with:
-    input:
-        script="workflow/scripts/bedminmax_cens.py",
-        # asm aligned to t2t_chm13_v2.hor_arrays_masked.500kbp.fa
-        regions=lambda wc: expand(
-            rules.asm_ref_aln_to_bed.output,
-            ref=[f"{REF_NAME}_cens"],
-            sm=wc.sm,
-        ),
-    output:
-        refmt_regions=temp(
-            os.path.join(
-                OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS,
-                "len_calc_{sm}_centromeric_contigs.bed",
-            )
-        ),
-        regions=os.path.join(
-            OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS, "{sm}_centromeric_contigs.bed"
-        ),
-    params:
-        awk_in_cols_cmd="'NR>1 {print $6, $7, $8, $9, $1, $5}'",
-        awk_out_cols_cmd="'{print $1, $2, $3, $4, $5, $6, $3-$2}'",
-    log:
-        "logs/collapse_cent_ctgs_only_t2t_cens_{sm}.log",
-
-
-# TODO: can awk comp be collapsed?
-#  awk -F"," -v OFS="," '{dst=($2-$1)} {if (dst > 5 && $2=$3) print $1,$2,$3,$4, dst } ' test.tsv
-rule intersect_filter_both_cens_ctgs:
-    input:
-        left=os.path.join(
-            OUTPUT_DIR_T2T_REF_CENS_ONLY_REGIONS, "{sm}_centromeric_contigs.bed"
-        ),
-        right=os.path.join(OUTPUT_DIR_T2T_REF_REGIONS, "{sm}_centromeric_contigs.bed"),
-    output:
-        filt_regions=temp(
-            os.path.join(
-                config["ident_cen_ctgs"]["output_dir"],
-                "{sm}_centromeric_regions.inter_filt.bed",
-            )
-        ),
-    conda:
-        "../env/tools.yaml"
-    params:
-        # Left-outer-join. Each feat in A, report each overlap w/B.
-        # No overlaps, return NULL feat for B
-        intersect_params="-loj",
-        thr=1_000_000,
-    log:
-        "logs/intersect_filter_both_cens_ctgs_{sm}.log",
-    shell:
-        """
-        {{ bedtools intersect {params.intersect_params} \
-            -a {input.left} \
-            -b {input.right} | \
-        awk -v OFS="\\t" -F"\\t" '{{if ($6==$12) print $1, $2, $3, $4, $5, $6, $3-$2}}' | \
-        awk '$7>{params.thr}' | \
-        uniq;}} > {output} 2> {log}
-        """
-
-
-rule collapse_intersected_filtered_cen_ctgs:
-    input:
-        script="workflow/scripts/bedminmax2.py",
-        filt_regions=rules.intersect_filter_both_cens_ctgs.output,
-    output:
-        collapsed_regions=temp(
-            os.path.join(
-                config["ident_cen_ctgs"]["output_dir"],
-                "{sm}_centromeric_regions.collapsed.bed",
-            )
-        ),
-    log:
-        "logs/collapse_intersected_filtered_cen_ctgs_{sm}.log",
-    conda:
-        "../env/py.yaml"
-    shell:
-        """
-        # Collapse ctgs grouped by label.
-        python {input.script} \
-        -i {input.filt_regions} \
-        -o {output.collapsed_regions} 2> {log}
-        """
-
-
-# Exp:
-# coll_name
-# coll_start
-# coll_end
-# coll_length
-# inter_name
-# inter_strand
-# coll_diff
-rule reintersect_sort_uniq_cens_ctgs:
-    input:
-        collapsed_regions=rules.collapse_intersected_filtered_cen_ctgs.output,
-        filt_regions=rules.intersect_filter_both_cens_ctgs.output,
-    output:
-        os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "{sm}_centromeric_regions.all.bed",
-        ),
-    params:
-        intersect_params="-loj",
-    conda:
-        "../env/tools.yaml"
-    log:
-        "logs/reintersect_sort_uniq_cens_ctgs_{sm}.log",
-    shell:
-        """
-        {{ bedtools intersect {params.intersect_params} -a {input.collapsed_regions} -b {input.filt_regions}| \
-        awk -v OFS="\\t" '{{print $1, $2, $3, $4, $5, $11, $3-$2}}' | \
-        sort -k5,5 | \
-        uniq;}} > {output} 2> {log}
-        """
-
-
+# TODO: Filter 1_000_000 thr.
 rule filter_cens_oriented_regions:
     input:
         all_regions=lambda wc: expand(
-            rules.reintersect_sort_uniq_cens_ctgs.output,
+            rules.collapse_cens_contigs.output.regions,
             ort=ORIENTATION,
             sm=[wc.sm],
         ),
@@ -270,22 +137,6 @@ rule ident_cen_ctgs_all:
     input:
         expand(rules.intersect_cen_regions.output, sm=SAMPLE_NAMES),
         expand(rules.collapse_cens_contigs.output, sm=SAMPLE_NAMES),
-        expand(
-            rules.collapse_cens_contigs_only_t2t_cens.output,
-            sm=SAMPLE_NAMES,
-        ),
-        expand(
-            rules.intersect_filter_both_cens_ctgs.output,
-            sm=SAMPLE_NAMES,
-        ),
-        expand(
-            rules.collapse_intersected_filtered_cen_ctgs.output,
-            sm=SAMPLE_NAMES,
-        ),
-        expand(
-            rules.reintersect_sort_uniq_cens_ctgs.output,
-            sm=SAMPLE_NAMES,
-        ),
         expand(
             rules.filter_cens_oriented_regions.output,
             sm=SAMPLE_NAMES,

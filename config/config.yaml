@@ -35,7 +35,7 @@ align_asm_to_ref:
 
 concat_asm:
   # Expects {input_dir}/{sm}/*.gz
-  input_dir: "data/assemblies"
+  input_dir: "data/assemblies_link"
   output_dir: "data/assemblies/combined"
 
 mask_hor_arrays:
@@ -133,4 +133,3 @@ stained_glass:
   threads: 10
   window: 5000
   mm_f: 5000
-  # Always will be in workflow/scripts/StainedGlass/results

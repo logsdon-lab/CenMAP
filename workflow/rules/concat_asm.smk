@@ -4,7 +4,7 @@ rule concat_asm:
         sm_dir=os.path.join(config["concat_asm"]["input_dir"], "{sm}"),
     output:
         os.path.join(
-            config["concat_asm"]["output_dir"], "{sm}.vrk-ps-sseq.asm-comb-dedup.fasta"
+            config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fasta"
         ),
     # https://bioinf.shenwei.me/seqkit/usage/#rmdup
     params:
