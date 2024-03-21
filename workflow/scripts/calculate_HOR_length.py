@@ -40,6 +40,11 @@ def main():
 
     dfs = []
     for chr_name, df_chr in df.group_by(["chr"]):
+        df_chr = (
+            df_chr
+            .with_columns(len=pl.col("stop") - pl.col("start"))
+            .with_columns(mer=(pl.col("len") / 170).round())
+        )
         chr_name = chr_name[0]
         df_live_hor = df_chr.filter(pl.col("hor").str.contains("L"))
 
@@ -85,12 +90,24 @@ def main():
 
         lens = []
         new_starts = []
+        chr_mer_filter = None
+        if chr_name == "chr10" or chr_name == "chr20":
+            chr_mer_filter = (pl.col("mer") >= 5)
+        elif chr_name == "chrY":
+            chr_mer_filter = (pl.col("mer") >= 30)
+        elif chr_name == "chr17":
+            chr_mer_filter = (pl.col("mer") >= 4)
+
         for start, stop in zip(starts, stops):
             df_slice = (
                 df_chr.filter(pl.col("start") >= start, pl.col("stop") <= stop)
                 .with_columns(bp_jump=pl.col("start") - pl.col("stop").shift(1))
                 .fill_null(0)
             )
+            # Filter out mers based on chr.
+            if chr_mer_filter is not None:
+                df_slice = df_slice.filter(chr_mer_filter)
+
             max_bp_jump_idx = df_slice.get_column("bp_jump").arg_max()
 
             # Exception for chr8 which needs a smaller jump thr to include correct start.
