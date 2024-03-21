@@ -73,7 +73,7 @@ rule calculate_as_hor_length:
         "logs/calculate_{chr}_as_hor_length.log",
     params:
         bp_jump_thr=100_000,
-        arr_len_thr=10_000,
+        arr_len_thr=30_000,
     shell:
         """
         python {input.script} \

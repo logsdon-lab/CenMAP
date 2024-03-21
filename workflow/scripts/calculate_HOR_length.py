@@ -19,13 +19,13 @@ def main():
         "--bp_jump_thr",
         help="Base pair jump threshold to group by",
         type=int,
-        default=100000,
+        default=100_000,
     )
     ap.add_argument(
         "--arr_len_thr",
         help="Length threshold to filter out",
         type=int,
-        default=10000,
+        default=30_000,
     )
 
     args = ap.parse_args()
