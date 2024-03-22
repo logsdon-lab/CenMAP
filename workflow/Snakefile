@@ -27,7 +27,7 @@ wildcard_constraints:
 include: "rules/utils.smk"
 include: "rules/concat_asm.smk"
 include: "rules/align_asm_to_ref.smk"
-include: "rules/mask_hor_arrays.smk"
+include: "rules/extract_hor_arrays.smk"
 include: "rules/ident_cen_ctgs.smk"
 include: "rules/dna_brnn.smk"
 include: "rules/extract_new_cens_ctgs.smk"
@@ -42,7 +42,7 @@ include: "rules/plot_complete_cens.smk"
 
 rule extract_align_cens_only:
     input:
-        rules.extract_hor_arrays_all.input,
+        rules.extract_ref_hor_arrays_all.input,
         rules.concat_asm_all.input,
         rules.align_asm_ref_all.input,
 
@@ -57,17 +57,13 @@ rule nuc_freq_only:
     input:
         expand(
             rules.extract_new_cens_all.input,
-            sm=SAMPLE_FLOWCELL_IDS.keys(),
+            sm=SAMPLE_NAMES,
             chr=CHROMOSOMES,
             ort=ORIENTATION,
         ),
-        expand(rules.make_bed_files_for_plot.output, sm=SAMPLE_FLOWCELL_IDS.keys()),
-        expand(
-            rules.merge_hifi_read_asm_alignments.output, sm=SAMPLE_FLOWCELL_IDS.keys()
-        ),
-        expand(
-            rules.gen_nucfreq_plot.output, sm=SAMPLE_FLOWCELL_IDS.keys(), hap=HAPLOTYPE
-        ),
+        expand(rules.make_bed_files_for_plot.output, sm=SAMPLE_NAMES),
+        expand(rules.merge_hifi_read_asm_alignments.output, sm=SAMPLE_NAMES),
+        expand(rules.gen_nucfreq_plot.output, sm=SAMPLE_NAMES, hap=HAPLOTYPE),
         # Then stop to inspect if correctly assembled.
 
 

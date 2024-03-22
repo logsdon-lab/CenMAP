@@ -1,19 +1,19 @@
 # Extract HOR arrays from reference.
-rule extract_hor_arrays:
+rule extract_ref_hor_arrays:
     input:
         ref=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
         cens_regions=config["align_asm_to_ref"]["cens_500kbp_regions"],
     output:
         seq=os.path.join(
-            config["mask_hor_arrays"]["output_dir"],
+            config["extract_ref_hor_arrays"]["output_dir"],
             f"{REF_NAME}.hor_arrays.500kbp.fa",
         ),
         idx=os.path.join(
-            config["mask_hor_arrays"]["output_dir"],
+            config["extract_ref_hor_arrays"]["output_dir"],
             f"{REF_NAME}.hor_arrays.500kbp.fa.fai",
         ),
     log:
-        "logs/extract_hor_arrays.log",
+        "logs/extract_ref_hor_arrays.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -23,6 +23,6 @@ rule extract_hor_arrays:
         """
 
 
-rule extract_hor_arrays_all:
+rule extract_ref_hor_arrays_all:
     input:
-        rules.extract_hor_arrays.output,
+        rules.extract_ref_hor_arrays.output,
