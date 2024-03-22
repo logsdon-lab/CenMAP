@@ -197,22 +197,6 @@ rule rename_contig_name_repeatmasker:
                 rm_renamed_out_writer.writerow(rm_row)
 
 
-# Run repeatmasker on reference t2t-chm13 as a control.
-use rule run_repeatmasker as run_repeatmasker_ref with:
-    input:
-        seq=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
-    output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
-            REF_NAME,
-            f"{REF_NAME}_correct_ALR_regions.500kbp.fa.out",
-        ),
-    log:
-        f"logs/repeatmasker_{REF_NAME}.log",
-    benchmark:
-        f"benchmarks/repeatmasker_{REF_NAME}.tsv"
-
-
 # Reformat repeatmasker
 # |1259|28.4|7.4|5.3|GM18989_chr1_hap1-0000003:9717731-15372230|8|560|(5653940)|+|Charlie2b|DNA/hAT-Charlie|120|683|(2099)|1|
 rule format_repeatmasker_output:
@@ -240,13 +224,24 @@ $14, $15, $16, $17, $18}}' | \
         """
 
 
+# Format repeatmasker reference output.
+use rule format_repeatmasker_output as format_merge_control_repeatmasker_output with:
+    input:
+        # Contains header. Should be first.
+        config["repeatmasker"]["ref_repeatmasker_chrY_output"],
+        config["repeatmasker"]["ref_repeatmasker_output"],
+    output:
+        os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "ref_ALR_regions.fa.out",
+        ),
+    log:
+        "logs/format_repeatmasker_output_all_samples.log",
+
+
 rule format_add_control_repeatmasker_output:
     input:
-        ref_rm_output=(
-            config["repeatmasker"]["ref_repeatmasker_output"]
-            if config["repeatmasker"].get("ref_repeatmasker_output")
-            else rules.run_repeatmasker_ref.output
-        ),
+        ref_rm_output=rules.format_merge_control_repeatmasker_output.output,
         sample_rm_output=rules.format_repeatmasker_output.output,
     output:
         os.path.join(
@@ -268,35 +263,9 @@ rule format_add_control_repeatmasker_output:
         """
 
 
-rule format_add_censat_annot_repeatmasker_output:
-    input:
-        cen_sat_rm_output=config["repeatmasker"]["censat_annot_hor_output"],
-        sample_ctrl_rm_output=rules.format_add_control_repeatmasker_output.output,
-    output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "all_correct_ALR_regions.500kbp.fa.out",
-        ),
-    params:
-        chr_to_add="chrY",
-    log:
-        "logs/format_add_censat_annot_repeatmasker_output.log",
-    conda:
-        "../env/tools.yaml"
-    shell:
-        """
-        cp {input.sample_ctrl_rm_output} {output} 2> {log}
-
-        {{ grep "{params.chr_to_add}" {input.cen_sat_rm_output} | \
-        sed -e 's/chr/chm13_chr/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
-        awk -v OFS="\\t" '{{print $1, $2, $3,
-$4, $5":"$6"-"$7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17}}';}} >> {output} 2> {log}
-        """
-
-
 rule reverse_complete_repeatmasker_output:
     input:
-        rules.format_add_censat_annot_repeatmasker_output.output,
+        rules.format_add_control_repeatmasker_output.output,
     output:
         os.path.join(
             config["repeatmasker"]["output_dir"],
@@ -319,7 +288,7 @@ $8-$7-$9+1, $11, $12, $13, $14, $15, $16, $17, $18}}' | \
 
 rule extract_rm_out_by_chr:
     input:
-        rm_out=rules.format_add_censat_annot_repeatmasker_output.output,
+        rm_out=rules.format_add_control_repeatmasker_output.output,
     output:
         rm_out_by_chr=os.path.join(
             config["repeatmasker"]["output_dir"], "{chr}_cens.fa.out"
@@ -339,11 +308,7 @@ rule check_cens_status:
     input:
         script="workflow/scripts/check_cens_status.py",
         rm_out=rules.extract_rm_out_by_chr.output.rm_out_by_chr,
-        rm_ref=(
-            config["repeatmasker"]["ref_repeatmasker_output"]
-            if config["repeatmasker"].get("ref_repeatmasker_output")
-            else rules.run_repeatmasker_ref.output
-        ),
+        rm_ref=rules.format_merge_control_repeatmasker_output.output,
     output:
         cens_status=os.path.join(
             config["repeatmasker"]["output_dir"], "{chr}_cens_status.tsv"
@@ -511,8 +476,8 @@ rule repeatmasker_only:
         expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),
         expand(rules.rename_contig_name_repeatmasker.output, sm=SAMPLE_NAMES),
         rules.format_repeatmasker_output.output,
+        rules.format_merge_control_repeatmasker_output.output,
         rules.format_add_control_repeatmasker_output.output,
-        rules.format_add_censat_annot_repeatmasker_output.output,
         rules.reverse_complete_repeatmasker_output.output,
         expand(rules.extract_rm_out_by_chr.output, chr=CHROMOSOMES),
         expand(rules.check_cens_status.output, chr=CHROMOSOMES),

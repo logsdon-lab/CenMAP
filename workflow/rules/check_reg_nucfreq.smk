@@ -112,7 +112,7 @@ rule align_reads_to_asm:
         samtools view -F {params.samtools_view_flag} -u - | \
         samtools sort -m {resources.sort_mem}G -@ {threads} -;}} > {output.alignment} 2> {log}
 
-        samtools index {output.alignment} 2> {log}
+        samtools index {output.alignment} 2>> {log}
         """
 
 
