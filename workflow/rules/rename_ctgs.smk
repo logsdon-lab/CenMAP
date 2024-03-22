@@ -16,7 +16,7 @@
 #       * Default: 1
 #   * bed_replace_w_joined_cols
 #       * Columns of values to join into string to replace bed_find_col. After filename split
-#       * Default: (9,5,1))
+#       * Default: (9,4,1))
 #       * Delimited by '_'
 
 import os
@@ -26,7 +26,7 @@ SAMPLES = config["samples"]
 OUTPUT_DIR = config.get("output_dir", "output")
 LOG_DIR = config.get("logs_dir", "logs")
 BED_FIND_COL = config.get("bed_find_col", 1)
-BED_REPLACE_W_JOINED_COLS = config.get("bed_replace_w_joined_cols", (9, 5, 1))
+BED_REPLACE_W_JOINED_COLS = config.get("bed_replace_w_joined_cols", (7, 4, 1))
 ORIENTATION = config.get("orientation", ("fwd", "rev"))
 SED_CMD = config.get(
     "sed_cmd", "sed -e 's/> />/g' -e 's/\([0-9]\) \([0-9]\)/\\1:\\2/g'"
@@ -36,12 +36,10 @@ SED_CMD = config.get(
 # 1. name: haplotype1-0000027
 # 2. start: 96023560
 # 3. end: 101450776
-# 4. length: 158780978
-# 5. chr: chr7
-# 6. chr_coords: 58924390-64604808
-# 7. orientation: +
-# 8. start_end_diff: 5427216
-# 9-12. results/cens/HG00171    1       centromeric     regions.fwd.bed
+# 4. chr: chr7
+# 5. orientation: +
+# 6. start_end_diff: 5427216
+# 7-9. results/cens/HG00171    centromeric regions.fwd.bed
 # haplotype1-0000027    HG00171_chr7_haplotype1-0000027
 rule create_oriented_ctg_name_legend:
     input:

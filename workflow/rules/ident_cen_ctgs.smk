@@ -38,38 +38,22 @@ rule intersect_cen_regions:
 # +. sub(query_end, query_start)
 rule collapse_cens_contigs:
     input:
-        script="workflow/scripts/bedminmax.py",
+        script="workflow/scripts/map_cens.py",
         regions=rules.intersect_cen_regions.output,
     output:
-        refmt_regions=temp(
-            os.path.join(
-                OUTPUT_DIR_T2T_REF_REGIONS,
-                "len_calc_{sm}_centromeric_contigs.bed",
-            )
-        ),
         regions=os.path.join(OUTPUT_DIR_T2T_REF_REGIONS, "{sm}_centromeric_contigs.bed"),
     params:
-        len_thr=1_000_000
+        len_thr=1_000_000,
     conda:
         "../env/py.yaml"
     log:
         "logs/collapse_cent_ctgs_{sm}.log",
     shell:
         """
-        awk -v OFS="\\t" '{{ print $6, $7, $8, $1, $5 }}' \
-        {input.regions} > {output.refmt_regions} 2> {log}
-
-        # Calculate length of ref region.
-        {{ python {input.script} -i {output.refmt_regions} | \
-        awk -v OFS="\\t" '{{
-            contig_len=$3-$2
-            if (contig_len > {params.len_thr} ) {{ print $1, $2, $3, $4, $5, contig_len }}
-        }}' |  \
-        sort -k1,1;}} > {output.regions} 2> {log}
+        python {input.script} -i {input.regions} -t {params.len_thr} > {output.regions} 2> {log}
         """
 
 
-# TODO: Filter 1_000_000 thr.
 rule filter_cens_oriented_regions:
     input:
         all_regions=lambda wc: expand(
@@ -90,7 +74,7 @@ rule filter_cens_oriented_regions:
         "../env/tools.yaml"
     shell:
         """
-        awk -v OFS="\\t" '{{if ($6=="{params.sign}") print}}' {input.all_regions} > {output.regions} 2> {log}
+        awk -v OFS="\\t" '{{if ($5=="{params.sign}") print}}' {input.all_regions} > {output.regions} 2> {log}
         """
 
 
