@@ -27,7 +27,7 @@ wildcard_constraints:
 include: "rules/utils.smk"
 include: "rules/concat_asm.smk"
 include: "rules/align_asm_to_ref.smk"
-include: "rules/extract_hor_arrays.smk"
+include: "rules/extract_ref_hor_arrays.smk"
 include: "rules/ident_cen_ctgs.smk"
 include: "rules/dna_brnn.smk"
 include: "rules/extract_new_cens_ctgs.smk"
