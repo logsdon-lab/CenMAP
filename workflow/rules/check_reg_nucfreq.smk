@@ -60,39 +60,19 @@ rule make_bed_files_for_plot:
         """
 
 
-rule convert_hifi_reads_to_fq:
-    input:
-        os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}.bam"),
-    output:
-        os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.fq"),
-    conda:
-        "../env/tools.yaml"
-    log:
-        "logs/convert_{sm}_{id}_hifi_reads_to_fq.log",
-    shell:
-        """
-        samtools bam2fq {input} > {output} 2> {log}
-        """
-
-
 rule align_reads_to_asm:
     input:
         asm=rules.concat_asm.output,
-        reads=rules.convert_hifi_reads_to_fq.output,
+        reads=os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}.bam"),
     output:
         alignment=temp(
             os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")
         ),
-        alignment_idx=temp(
-            os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam.bai")
-        ),
     threads: config["nuc_freq"]["threads"]
     resources:
-        mem_mb=40_000,
+        mem_mb=180_000,
         sort_mem=4,
     params:
-        # https://broadinstitute.github.io/picard/explain-flags.html
-        samtools_view_flag=config["nuc_freq"]["samtools_view_flag"],
         aln_log_level="DEBUG",
         aln_preset="SUBREAD",
         aln_min_length=5000,
@@ -104,22 +84,42 @@ rule align_reads_to_asm:
         "benchmarks/align_{sm}_{id}_hifi_reads_to_asm.tsv"
     shell:
         """
-        {{ pbmm2 align \
+        pbmm2 align \
         --log-level {params.aln_log_level} \
         --preset {params.aln_preset} \
         --min-length {params.aln_min_length} \
-        -j {threads} {input.asm} {input.reads} | \
-        samtools view -F {params.samtools_view_flag} -u - | \
-        samtools sort -m {resources.sort_mem}G -@ {threads} -;}} > {output.alignment} 2> {log}
+        -j {threads} {input.asm} {input.reads} \
+        --sort \
+        --sort-memory {resources.sort_mem}G \
+        --sort-threads {threads} > {output.alignment} 2> {log}
+        """
 
-        samtools index {output.alignment} 2>> {log}
+
+# Get error when trying to pipe ^ to samtools view. No header. Separate step works.
+rule filter_align_reads_to_asm:
+    input:
+        rules.align_reads_to_asm.output,
+    output:
+        alignment=temp(
+            os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi_view.bam")
+        ),
+    params:
+        # https://broadinstitute.github.io/picard/explain-flags.html
+        samtools_view_flag=config["nuc_freq"]["samtools_view_flag"],
+    conda:
+        "../env/tools.yaml"
+    log:
+        "logs/filter_align_{sm}_{id}_hifi_reads_to_asm.log",
+    shell:
+        """
+        samtools view -bo {output.alignment} -F {params.samtools_view_flag} {input} 2> {log}
         """
 
 
 rule merge_hifi_read_asm_alignments:
     input:
         lambda wc: expand(
-            rules.align_reads_to_asm.output.alignment,
+            rules.filter_align_reads_to_asm.output.alignment,
             sm=[wc.sm],
             id=SAMPLE_FLOWCELL_IDS[str(wc.sm)],
         ),
