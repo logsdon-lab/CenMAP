@@ -70,8 +70,7 @@ rule align_reads_to_asm:
         ),
     threads: config["nuc_freq"]["threads"]
     resources:
-        mem_mb=180_000,
-        sort_mem=4,
+        mem_mb=60_000,
     params:
         aln_log_level="DEBUG",
         aln_preset="SUBREAD",
@@ -88,10 +87,7 @@ rule align_reads_to_asm:
         --log-level {params.aln_log_level} \
         --preset {params.aln_preset} \
         --min-length {params.aln_min_length} \
-        -j {threads} {input.asm} {input.reads} \
-        --sort \
-        --sort-memory {resources.sort_mem}G \
-        --sort-threads {threads} > {output.alignment} 2> {log}
+        -j {threads} {input.asm} {input.reads} > {output.alignment} 2> {log}
         """
 
 
@@ -106,13 +102,17 @@ rule filter_align_reads_to_asm:
     params:
         # https://broadinstitute.github.io/picard/explain-flags.html
         samtools_view_flag=config["nuc_freq"]["samtools_view_flag"],
+    resources:
+        sort_mem=4,
+    threads: config["nuc_freq"]["threads"]
     conda:
         "../env/tools.yaml"
     log:
         "logs/filter_align_{sm}_{id}_hifi_reads_to_asm.log",
     shell:
         """
-        samtools view -bo {output.alignment} -F {params.samtools_view_flag} {input} 2> {log}
+        {{ samtools view -b -F {params.samtools_view_flag} {input} | \
+        samtools sort -m {resources.sort_mem}G -@ {threads} -o {output.alignment};}} 2> {log}
         """
 
 
