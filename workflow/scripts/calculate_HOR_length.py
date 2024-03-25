@@ -1,6 +1,9 @@
+import re
 import sys
 import argparse
 import polars as pl
+
+RGX_CHR = re.compile(r"chr[0-9XY]{1,2}")
 
 
 def main():
@@ -39,24 +42,31 @@ def main():
     )
 
     dfs = []
-    for chr_name, df_chr in df.group_by(["chr"]):
-        df_chr = (
-            df_chr
-            .with_columns(len=pl.col("stop") - pl.col("start"))
-            .with_columns(mer=(pl.col("len") / 170).round())
+    for ctg_name, df_chr in df.group_by(["chr"]):
+        df_chr = df_chr.with_columns(len=pl.col("stop") - pl.col("start")).with_columns(
+            mer=(pl.col("len") / 170).round()
         )
-        chr_name = chr_name[0]
+        ctg_name = ctg_name[0]
+        chr_name = re.search(RGX_CHR, ctg_name).group()
         df_live_hor = df_chr.filter(pl.col("hor").str.contains("L"))
 
+        # Specific edge case for chr8.
+        if chr_name == "chr8" or chr_name == "chr10" or chr_name == "chr16":
+            bp_jump_thr = 10_000
+        elif chr_name == "chrY":
+            bp_jump_thr = 2_000
+        else:
+            bp_jump_thr = args.bp_jump_thr
+
         df_bp_jumps = df_live_hor.with_columns(
-            diff=pl.col("start") - pl.col("start").shift(1)
-        ).filter(pl.col("diff") > args.bp_jump_thr)
+            diff=pl.col("start") - pl.col("stop").shift(1)
+        ).filter(pl.col("diff") > bp_jump_thr)
 
         if df_bp_jumps.is_empty():
             dfs.append(
                 pl.DataFrame(
                     {
-                        "chr_name": chr_name,
+                        "chr_name": ctg_name,
                         "start_pos": df_live_hor.get_column("start").min(),
                         "stop_pos": df_live_hor.get_column("stop").max(),
                         "len": df_live_hor.get_column("stop").max()
@@ -89,14 +99,13 @@ def main():
                 )
 
         lens = []
-        new_starts = []
         chr_mer_filter = None
         if chr_name == "chr10" or chr_name == "chr20":
-            chr_mer_filter = (pl.col("mer") >= 5)
+            chr_mer_filter = pl.col("mer") >= 5
         elif chr_name == "chrY":
-            chr_mer_filter = (pl.col("mer") >= 30)
+            chr_mer_filter = pl.col("mer") >= 30
         elif chr_name == "chr17":
-            chr_mer_filter = (pl.col("mer") >= 4)
+            chr_mer_filter = pl.col("mer") >= 4
 
         for start, stop in zip(starts, stops):
             df_slice = (
@@ -107,15 +116,6 @@ def main():
             # Filter out mers based on chr.
             if chr_mer_filter is not None:
                 df_slice = df_slice.filter(chr_mer_filter)
-
-            max_bp_jump_idx = df_slice.get_column("bp_jump").arg_max()
-
-            # Exception for chr8 which needs a smaller jump thr to include correct start.
-            if chr_name == "chr8" and max_bp_jump_idx:
-                df_slice = df_slice[max_bp_jump_idx : df_slice.shape[0]]
-                new_starts.append(df_slice.row(0, named=True)["start"])
-            else:
-                new_starts.append(start)
 
             if df_slice.is_empty():
                 lens.append(0)
@@ -128,13 +128,23 @@ def main():
 
         lf = pl.LazyFrame(
             {
-                "chr_name": chr_name,
+                "chr_name": ctg_name,
                 "start_pos": starts,
                 "stop_pos": stops,
                 "len": lens,
             }
         )
-        dfs.append(lf.filter(pl.col("len") > args.arr_len_thr).collect())
+        if (
+            chr_name == "chr8"
+            or chr_name == "chr10"
+            or chr_name == "chr17"
+            or chr_name == "chrY"
+        ):
+            arr_len_thr = 100_000
+        else:
+            arr_len_thr = args.arr_len_thr
+
+        dfs.append(lf.filter(pl.col("len") > arr_len_thr).collect())
 
     df_all_dsts: pl.DataFrame = pl.concat(dfs)
     (

@@ -161,17 +161,19 @@ rule gen_nucfreq_plot:
     conda:
         "../env/pysam.yaml"
     resources:
-        mem_mb=60_000,
+        mem_mb=90_000,
     params:
         ylim=100,
         height=4,
+        # haplotype1 or h1
+        hap_pattern=lambda wc: f"{wc.hap}|{str(wc.hap)[0]}{str(wc.hap)[-1]}",
     log:
         "logs/run_nucfreq_{sm}_{hap}.log",
     benchmark:
         "benchmarks/run_nucfreq_{sm}_{hap}.tsv"
     shell:
         """
-        grep "{wildcards.hap}" {input.alr_regions} > {output.alr_hap_regions}
+        grep -P "{params.hap_pattern}" {input.alr_regions} > {output.alr_hap_regions}
         python {input.script} \
         -y {params.ylim} \
         {input.bam_file} \
