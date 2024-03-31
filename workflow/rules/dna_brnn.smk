@@ -2,7 +2,7 @@
 rule run_dna_brnn:
     input:
         model=config["dna_brnn"]["model"],
-        seqs=rules.cens_rename_oriented_ctgs.output,
+        seqs=rules.asm_rename_ctgs.output,
     output:
         repeat_regions=os.path.join(
             config["dna_brnn"]["output_dir"],
@@ -48,9 +48,11 @@ use rule run_dna_brnn as run_dna_brnn_ref_cens with:
 # awk -v OFS="\t" '{print $1, $2+$4, $2+$5, $6, $5-$4}' | awk '$4==2' | awk '$5>1000' > chr1_tmp.fwd.bed
 rule filter_dnabrnn_ref_cens_regions:
     input:
-        repeats=rules.run_dna_brnn_ref_cens.output
-        if config["dna_brnn"].get("ref_alr_file") is None
-        else config["dna_brnn"]["ref_alr_file"],
+        repeats=(
+            rules.run_dna_brnn_ref_cens.output
+            if config["dna_brnn"].get("ref_alr_file") is None
+            else config["dna_brnn"]["ref_alr_file"]
+        ),
     output:
         temp(os.path.join(config["dna_brnn"]["output_dir"], "{chr}_tmp.fwd.bed")),
     params:
@@ -91,9 +93,9 @@ rule filter_dnabrnn_sample_cens_regions:
     params:
         repeat_type_filter=2,
         awk_repeat_len_thr_stmt=lambda wc: build_awk_cen_region_length_thr(str(wc.chr)),
-        awk_dst_calc_cols=lambda wc: "$4-$6, $4-$5"
-        if wc.ort == "rev"
-        else "$3+$5, $3+$6",
+        awk_dst_calc_cols=lambda wc: (
+            "$4-$6, $4-$5" if wc.ort == "rev" else "$3+$5, $3+$6"
+        ),
     log:
         "logs/filter_dnabrnn_{ort}_{sm}_{chr}_cens_regions.log",
     conda:
@@ -119,9 +121,11 @@ rule filter_dnabrnn_sample_cens_regions:
 rule get_dnabrnn_ref_cens_pos:
     input:
         script="workflow/scripts/get_cen_pos.py",
-        repeats=rules.run_dna_brnn_ref_cens.output
-        if config["dna_brnn"].get("ref_alr_file") is None
-        else config["dna_brnn"]["ref_alr_file"],
+        repeats=(
+            rules.run_dna_brnn_ref_cens.output
+            if config["dna_brnn"].get("ref_alr_file") is None
+            else config["dna_brnn"]["ref_alr_file"]
+        ),
     output:
         os.path.join(config["dna_brnn"]["output_dir"], "{chr}_cens_data.json"),
     log:

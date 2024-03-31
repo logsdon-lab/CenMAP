@@ -3,9 +3,7 @@ rule concat_asm:
         # Input directory per sample.
         sm_dir=os.path.join(config["concat_asm"]["input_dir"], "{sm}"),
     output:
-        os.path.join(
-            config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fasta"
-        ),
+        os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fasta"),
     # https://bioinf.shenwei.me/seqkit/usage/#rmdup
     params:
         assembly_fname_pattern="*.gz",

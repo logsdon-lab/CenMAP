@@ -84,7 +84,7 @@ use rule extract_and_index_fa as extract_alr_region_ref_by_chr with:
 
 use rule extract_and_index_fa as extract_alr_region_sample_by_chr with:
     input:
-        fa=rules.new_cens_rename_oriented_ctgs.output,
+        fa=rules.new_cens_rename_ctgs.output,
         bed=rules.aggregate_dnabrnn_alr_regions_by_chr.output,
     output:
         seq=temp(os.path.join(NEW_CENS_OUTPUT_DIR, "{chr}_{sm}_contigs.{ort}.ALR.fa")),

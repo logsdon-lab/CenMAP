@@ -71,8 +71,8 @@ rule all:
     input:
         rules.extract_align_cens_only.input,
         rules.ident_cen_ctgs_all.input,
-        rules.dna_brnn_only.input,
-        rules.nuc_freq_only.input,
+        # rules.dna_brnn_only.input,
+        # rules.nuc_freq_only.input,
     default_target: True
 
 

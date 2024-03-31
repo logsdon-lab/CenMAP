@@ -2,7 +2,7 @@
 rule extract_ref_hor_arrays:
     input:
         ref=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
-        cens_regions=config["align_asm_to_ref"]["cens_500kbp_regions"],
+        cens_regions=config["ident_cen_ctgs"]["ref_cens_500kbp_regions"],
     output:
         seq=os.path.join(
             config["extract_ref_hor_arrays"]["output_dir"],
