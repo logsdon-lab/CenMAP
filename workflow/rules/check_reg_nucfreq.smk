@@ -62,7 +62,7 @@ rule make_bed_files_for_plot:
 
 rule align_reads_to_asm:
     input:
-        asm=rules.concat_asm.output,
+        asm=rules.asm_rename_ctgs.output,
         reads=os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}.bam"),
     output:
         alignment=temp(

@@ -25,11 +25,14 @@ snakemake --use-conda -np --configfile config/config.yaml --use-singularity
 
 #### Cluster.
 ```bash
+module load singularity
+
 snakemake -j 100 \
---cluster "bsub -M 40000 -n {threads} -o /dev/null" \
+--cluster "bsub -M {resources.mem_mb} -R 'rusage[mem={resources.mem_mb}]' -n {threads} -o /dev/null" \
 --rerun-triggers mtime \
 --configfile config/config.yaml \
---use-conda -n
+--use-conda \
+--use-singularity -np
 ```
 
 ### TODO

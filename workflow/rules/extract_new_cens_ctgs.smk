@@ -22,7 +22,7 @@ rule create_format_orient_cens_list:
 use rule extract_and_index_fa as extract_new_oriented_cens_regions with:
     input:
         bed=rules.create_format_orient_cens_list.output,
-        fa=rules.concat_asm.output,
+        fa=rules.asm_rename_ctgs.output,
     output:
         seq=os.path.join(NEW_CENS_OUTPUT_DIR, "{sm}_contigs.{ort}.fa"),
         idx=os.path.join(NEW_CENS_OUTPUT_DIR, "{sm}_contigs.{ort}.fa.fai"),
@@ -30,30 +30,6 @@ use rule extract_and_index_fa as extract_new_oriented_cens_regions with:
         added_cmds=lambda wc: "" if wc.ort == "fwd" else "| seqtk seq -r",
     log:
         "logs/extract_new_{ort}_cens_regions_{sm}.log",
-
-
-# HG00171_chr4_haplotype1-0000002:1892469-12648706        293621  293950  1
-# |HG00171|chr4|haplotype1-0000002|1892469-12648706|293621|293950|1
-RENAME_NEW_CTGS_CFG = {
-    "bed_input_regions": rules.run_dna_brnn.output.repeat_regions,
-    "fa_assembly": rules.extract_new_oriented_cens_regions.output.seq,
-    "output_dir": NEW_CENS_OUTPUT_DIR,
-    "samples": SAMPLE_NAMES,
-    "log_dir": "logs/rename_cens",
-    "bed_find_col": 3,
-    "bed_replace_w_joined_cols": (1, 2, 3),
-    "sed_cmd": "sed 's/> />/g' | tr \" \" \"\\n\" | sed '$ s/.$//'",
-}
-
-
-module rename_new_cens_ctgs:
-    snakefile:
-        "rename_ctgs.smk"
-    config:
-        RENAME_NEW_CTGS_CFG
-
-
-use rule * from rename_new_cens_ctgs as new_cens_*
 
 
 # Corresponds to
@@ -84,7 +60,7 @@ use rule extract_and_index_fa as extract_alr_region_ref_by_chr with:
 
 use rule extract_and_index_fa as extract_alr_region_sample_by_chr with:
     input:
-        fa=rules.new_cens_rename_ctgs.output,
+        fa=rules.extract_new_oriented_cens_regions.output.seq,
         bed=rules.aggregate_dnabrnn_alr_regions_by_chr.output,
     output:
         seq=temp(os.path.join(NEW_CENS_OUTPUT_DIR, "{chr}_{sm}_contigs.{ort}.ALR.fa")),

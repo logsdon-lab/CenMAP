@@ -20,7 +20,7 @@ rule get_valid_regions_for_rm:
 
 use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
     input:
-        fa=rules.concat_asm.output,
+        fa=rules.asm_rename_ctgs.output,
         bed=rules.get_valid_regions_for_rm.output,
     output:
         seq=os.path.join(
