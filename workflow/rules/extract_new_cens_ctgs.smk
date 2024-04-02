@@ -1,6 +1,8 @@
 NEW_CENS_OUTPUT_DIR = os.path.join(config["dna_brnn"]["output_dir"], "new_cens")
 
 
+# HG00171_chr22_h2tg000021l#1-94189493:1993043-3660421
+# HG00171_chr22_h2tg000021l#1-94189493
 rule create_format_orient_cens_list:
     input:
         regions=rules.run_dna_brnn.output.repeat_regions,
@@ -15,7 +17,7 @@ rule create_format_orient_cens_list:
         "../env/tools.yaml"
     shell:
         """
-        {{ cut -f 1 {input} | sort | uniq;}} > {output} 2> {log}
+        {{  sed -e 's/:/\\t/g' {input} | cut -f 1 | sort | uniq;}} > {output} 2> {log}
         """
 
 

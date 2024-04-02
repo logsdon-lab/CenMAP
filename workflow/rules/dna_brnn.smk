@@ -6,6 +6,7 @@ rule run_dna_brnn:
     output:
         repeat_regions=os.path.join(
             config["dna_brnn"]["output_dir"],
+            "{sm}",
             "{sm}_centromeric_regions.renamed.{ort}.bed",
         ),
     threads: config["dna_brnn"]["threads"]
@@ -34,7 +35,7 @@ use rule run_dna_brnn as run_dna_brnn_ref_cens with:
         seqs=rules.extract_ref_hor_arrays.output,
     output:
         cens=os.path.join(
-            config["dna_brnn"]["output_dir"], f"{REF_NAME}_cens.trimmed.bed"
+            config["dna_brnn"]["output_dir"], REF_NAME, f"{REF_NAME}_cens.trimmed.bed"
         ),
     log:
         f"logs/dna_brnn_{REF_NAME}_cens.log",
@@ -54,7 +55,11 @@ rule filter_dnabrnn_ref_cens_regions:
             else config["dna_brnn"]["ref_alr_file"]
         ),
     output:
-        temp(os.path.join(config["dna_brnn"]["output_dir"], "{chr}_tmp.fwd.bed")),
+        temp(
+            os.path.join(
+                config["dna_brnn"]["output_dir"], REF_NAME, "{chr}_tmp.fwd.bed"
+            )
+        ),
     params:
         repeat_type_filter=2,
         repeat_len_thr=1000,
@@ -89,15 +94,13 @@ rule filter_dnabrnn_sample_cens_regions:
         tmp_alr_ctgs=temp(
             os.path.join(
                 config["dna_brnn"]["output_dir"],
+                "{sm}",
                 "{chr}_{sm}_contigs.{ort}.ALR.bed",
             )
         ),
     params:
         repeat_type_filter=2,
         awk_repeat_len_thr_stmt=lambda wc: build_awk_cen_region_length_thr(str(wc.chr)),
-        awk_dst_calc_cols=lambda wc: (
-            "$4-$6, $4-$5" if wc.ort == "rev" else "$3+$5, $3+$6"
-        ),
     log:
         "logs/filter_dnabrnn_{ort}_{sm}_{chr}_cens_regions.log",
     conda:
@@ -111,14 +114,33 @@ rule filter_dnabrnn_sample_cens_regions:
         else
            {{ printf '%s\\n' "${{chr_repeats}}" | \
             sed -e 's/h1tg/h1-tg/g' -e 's/h2tg/h2-tg/g' | \
-            sed -e 's/#/\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
+            sed -e 's/#/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
             awk -v OFS="\\t" '{{
-                if ($1 ~ "h1" || $1 ~ "h2") {{
+                is_hifiasm=$1 ~ "h1" || $1 ~ "h2"
+                if ("{wildcards.ort}" == "rev") {{
+                    if (is_hifiasm) {{
+                        new_start=$6-$7
+                        new_stop=$6-$8
+                    }} else {{
+                        new_start=$4-$5
+                        new_stop=$4-$6
+                    }}
+                }} else {{
+                    if (is_hifiasm) {{
+                        new_start=$5+$7
+                        new_stop=$5+$8
+                    }} else {{
+                        new_start=$3+$5
+                        new_stop=$3+$6
+                    }}
+                }}
+                if (is_hifiasm) {{
                     contig_name=$1""$2"#"$3"-"$4
+                    print contig_name, new_start, new_stop, $9, $8-$7
                 }} else {{
                     contig_name=$1"-"$2":"$3"-"$4
+                    print contig_name, new_start, new_stop, $7, $6-$5
                 }}
-                print contig_name, {params.awk_dst_calc_cols}, $7, $6-$5
             }}' | \
             awk '$4=={params.repeat_type_filter} && {params.awk_repeat_len_thr_stmt}';}} > {output.tmp_alr_ctgs} 2> {log}
         fi
@@ -137,7 +159,7 @@ rule get_dnabrnn_ref_cens_pos:
             else config["dna_brnn"]["ref_alr_file"]
         ),
     output:
-        os.path.join(config["dna_brnn"]["output_dir"], "{chr}_cens_data.json"),
+        os.path.join(config["dna_brnn"]["output_dir"], REF_NAME, "{chr}_cens_data.json"),
     log:
         "logs/get_dnabrnn_ref_{chr}_cens_data.log",
     params:
