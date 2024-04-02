@@ -2,7 +2,7 @@
 rule run_dna_brnn:
     input:
         model=config["dna_brnn"]["model"],
-        seqs=rules.asm_rename_ctgs.output,
+        seqs=rules.extract_cens_oriented_regions.output.seq,
     output:
         repeat_regions=os.path.join(
             config["dna_brnn"]["output_dir"],
@@ -71,7 +71,9 @@ rule filter_dnabrnn_ref_cens_regions:
         """
 
 
+# ex. >HG00171_chr19_h1tg000004l#1-58112442
 # ex. >HG00171_chr16_haplotype1-0000003:4-8430174
+# HG00171_chr16_haplotype1|0000003|4|8430174|start|end|type
 # (Per chr + sample)
 # grep "chr2_" ${sample}.renamed.fwd.bed | \
 # sed 's/:/\t/g' | \
@@ -108,8 +110,16 @@ rule filter_dnabrnn_sample_cens_regions:
             touch {output.tmp_alr_ctgs}
         else
            {{ printf '%s\\n' "${{chr_repeats}}" | \
-            sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
-            awk -v OFS="\\t" '{{print $1"-"$2, {params.awk_dst_calc_cols}, $7, $6-$5}}' | \
+            sed -e 's/h1tg/h1-tg/g' -e 's/h2tg/h2-tg/g' | \
+            sed -e 's/#/\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
+            awk -v OFS="\\t" '{{
+                if ($1 ~ "h1" || $1 ~ "h2") {{
+                    contig_name=$1""$2"#"$3"-"$4
+                }} else {{
+                    contig_name=$1"-"$2":"$3"-"$4
+                }}
+                print contig_name, {params.awk_dst_calc_cols}, $7, $6-$5
+            }}' | \
             awk '$4=={params.repeat_type_filter} && {params.awk_repeat_len_thr_stmt}';}} > {output.tmp_alr_ctgs} 2> {log}
         fi
         """

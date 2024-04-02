@@ -63,7 +63,7 @@ dna_brnn:
 
 nuc_freq:
   hifi_reads_dir: "data/raw_data_link"
-  output_dir: "results/dna_brnn/nucfreq"
+  output_dir: "results/nucfreq"
   threads: 4
   samtools_view_flag: 2308
 

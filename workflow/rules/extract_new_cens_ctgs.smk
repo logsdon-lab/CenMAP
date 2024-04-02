@@ -15,7 +15,7 @@ rule create_format_orient_cens_list:
         "../env/tools.yaml"
     shell:
         """
-        {{ sed -e 's/_/\\t/g' -e 's/:/\\t/g' {input} | cut -f 3 | sort | uniq;}} > {output} 2> {log}
+        {{ cut -f 1 {input} | sort | uniq;}} > {output} 2> {log}
         """
 
 

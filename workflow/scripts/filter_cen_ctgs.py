@@ -1,6 +1,6 @@
 import sys
 import argparse
-import pandas as pd
+import polars as pl
 from io import IOBase
 from typing import Any, Iterable, TextIO, TYPE_CHECKING
 
@@ -70,62 +70,6 @@ def add_bedminmax_args(sub_ap: SubArgumentParser) -> None:
     return None
 
 
-def add_filt_dna_brnn_args(sub_ap: SubArgumentParser) -> None:
-    ap = sub_ap.add_parser(
-        "filtdnabrnn",
-        description="Script to automatically filter valid repeat contigs from dna-brnn's output.",
-    )
-    ap.add_argument(
-        "-i",
-        "--input",
-        default=sys.stdin,
-        type=argparse.FileType("r"),
-        help='Input bed file. Expected to have ("name", "start", "end", "type") columns.',
-    )
-    ap.add_argument(
-        "-o",
-        "--output",
-        type=argparse.FileType("w"),
-        help="Output bed file.",
-        default=sys.stdout,
-    )
-    ap.add_argument(
-        "-c", "--chr", required=True, type=str, help="Chromosome to filter for."
-    )
-    ap.add_argument(
-        "--forward",
-        action="store_true",
-        help="If sequence orientation is forward (+). Alters repeat length calculation.",
-    )
-    ap.add_argument(
-        "-ci",
-        "--columns_in",
-        nargs="+",
-        help="Input bed cols for dna-nn output. Defaults to (name, repeat_start, repeat_end, repeat_type)",
-        default=DEF_DNA_BRNN_COLS,
-    )
-    ap.add_argument(
-        "-cs",
-        "--columns_split",
-        nargs="+",
-        help="Cols created on splitting `name` field by `-` and `:`. Defaults to (ctg_label, ctg_num, ctg_start, ctg_end)",
-        default=DEF_DNA_BRNN_NAME_SPLIT_COLS,
-    )
-    ap.add_argument(
-        "--repeat_type",
-        type=int,
-        default=2,
-        help="Repeat type to filter. Defaults to 2 for alpha satellite.",
-    )
-    ap.add_argument(
-        "--repeat_gt_length",
-        type=int,
-        default=1000,
-        help="Repeat length filter. Must be greater than value.",
-    )
-    return None
-
-
 def first_line_sv(fh: TextIO, *, delim: str = "\t") -> list[str]:
     first_line = next(fh).strip()
     return first_line.split(delim)
@@ -136,30 +80,32 @@ def is_header(first_line: str) -> bool:
     return first_line.replace("#", "").replace("_", "").isalpha()
 
 
-def read_bed_df(input: TextIO, *, input_cols: Iterable[str]) -> pd.DataFrame:
+def read_bed_df(input: TextIO, *, input_cols: Iterable[str]) -> pl.DataFrame:
     # If empty, return empty df. Jank ik.
     try:
         first_line = first_line_sv(input)
     except StopIteration:
-        return pd.DataFrame()
+        return pl.DataFrame()
 
     num_cols = len(first_line)
     has_header = is_header(first_line="".join(first_line))
 
     if has_header:
         # Let pandas infer.
-        return pd.read_csv(input.name, sep="\t")
+        return pl.read_csv(input.name, separator="\t")
     else:
         num_input_cols = len(input_cols)
         assert (
             num_cols == len(input_cols)
         ), f"Number of cols not equal to input columns. ({num_cols} != {num_input_cols})"
 
-        return pd.read_csv(input.name, sep="\t", header=None, names=input_cols)
+        return pl.read_csv(
+            input.name, separator="\t", has_header=False, new_columns=input_cols
+        )
 
 
 def bedminmax(
-    input: TextIO | Iterable[TextIO] | pd.DataFrame,
+    input: TextIO | Iterable[TextIO] | pl.DataFrame,
     output_path: str | None,
     *,
     input_cols: Iterable[str] = DEF_BEDMINMAX_IN_COLS,
@@ -167,7 +113,7 @@ def bedminmax(
     grpby_cols: Iterable[str] = DEF_BEDMINMAX_GRP_COLS,
     sortby_cols: Iterable[str] = DEF_BEDMINMAX_SORT_COLS,
     allow_empty: bool = False,
-) -> pd.DataFrame | None:
+) -> pl.DataFrame | None:
     """
     Collapse records in a bed file by grouping by a series
     of provided columns and merging them based on the
@@ -197,136 +143,32 @@ def bedminmax(
     ### Returns:
     * `None` or `pd.DataFrame`
     """
-    if isinstance(input, pd.DataFrame):
+    if isinstance(input, pl.DataFrame):
         bed_df = input
     elif isinstance(input, IOBase):
         bed_df = read_bed_df(input, input_cols=input_cols)
     else:
-        bed_df = pd.concat(
-            (read_bed_df(i, input_cols=input_cols) for i in input), axis=0
-        )
+        bed_df = pl.concat(read_bed_df(i, input_cols=input_cols) for i in input)
 
     # Allow empty df as output.
-    if bed_df.empty and allow_empty:
-        bed_df.to_csv(output_path, sep="\t", header=False, index=False)
+    if bed_df.is_empty() and allow_empty:
+        bed_df.write_csv(output_path, separator="\t", include_header=False)
         return None
-
-    bed_df.reset_index(drop=True, inplace=True)
 
     assert (
         "start" in bed_df.columns and "end" in bed_df.columns
     ), "Missing required start/end cols."
-    bed_out = pd.merge(
-        bed_df.groupby(list(grpby_cols)).min()["start"],
-        bed_df.groupby(list(grpby_cols)).max()["end"],
-        left_index=True,
-        right_index=True,
-    ).reset_index()
 
-    bed_out = bed_out[list(output_cols)].sort_values(by=list(sortby_cols))
+    bed_out = bed_df.group_by(grpby_cols).agg(
+        [pl.col("start").min(), pl.col("end").max()]
+    )
+
+    bed_out = bed_out.select(output_cols).sort(by=sortby_cols)
     if output_path:
-        bed_out.to_csv(output_path, sep="\t", header=False, index=False)
+        bed_out.write_csv(output_path, separator="\t", include_header=False)
         return None
     else:
         return bed_out
-
-
-def filtdnabrnn(
-    input_path: TextIO,
-    output_path: TextIO,
-    *,
-    chr: str,
-    forward: bool,
-    input_cols: Iterable[str] = DEF_DNA_BRNN_COLS,
-    name_split_cols: Iterable[str] = DEF_DNA_BRNN_NAME_SPLIT_COLS,
-    repeat_type_filter: int = 2,
-    repeat_length_filter: int = 1000,
-) -> None:
-    """
-    Filters the identified repeat output of `dna-nn`.
-
-    ### Args
-    * `input`:
-            * Bed file output from `dna-nn`,
-    * `output_path`:
-            * Output filtered bed file
-    * `chr`:
-            * Chromosome to filter
-    * `forward`:
-            * If sequences are forward oriented.
-    * `input_cols`
-            * Columns of input file. Expects the following:
-                * `name`
-                * `repeat_start`
-                * `repeat_stop`
-                * `repeat_type`
-    * `name_split_cols`:
-            * Columns created after splitting `name` col by `-` and `:`.
-            * Defaults to (`ctg_label`, `ctg_num`, `ctg_start`, `ctg_stop`)
-    * `repeat_type_filter`
-            * A label 1 on the 4th column indicates the interval is a region of (AATTC)n ;
-            label 2 indicates a region of alpha satellites. [1]
-            * Defaults to alpha satellites, a value of 2.
-    * `repeat_length_filter`
-            * Keep repeats this many bases.
-            * Defaults to 1000 bases.
-
-    ### Return
-    * `None`
-
-    ### Raise
-    * `AssertionError` if not a valid `repeat_type_filter`.
-
-    ### Sources:
-    * [1] - https://github.com/lh3/dna-nn#applying-a-trained-model
-    """
-    assert (
-        repeat_type_filter == 1 or repeat_type_filter == 2
-    ), f"Invalid repeat type filter. {repeat_type_filter}"
-
-    df_bed = read_bed_df(input_path, input_cols=input_cols)
-    # Only look at single chr and only take a specific repeat type.
-    df_bed = df_bed.loc[
-        df_bed["name"].str.contains(chr) & (df_bed["repeat_type"] == repeat_type_filter)
-    ]
-
-    # Split name col. EXPECTS 4 COLS BY DEFAULT.
-    # |HG00171_chr16_haplotype1-0000003:4-8430174| -> |HG00171_chr16_haplotype1|0000003|4|8430174|
-    df_bed[name_split_cols] = df_bed["name"].str.split(":|-", expand=True, regex=True)
-    df_bed.drop(columns=["name"], inplace=True)
-    df_bed[["ctg_start", "ctg_stop"]] = df_bed[["ctg_start", "ctg_stop"]].astype(
-        "int64"
-    )
-
-    # |ooo|x|o|
-    # fwd: $3+$5, $3+$6
-    # rev: $4-$6, $4-$5
-    if forward:
-        calc_dst_cols = (
-            df_bed["ctg_start"] + df_bed["repeat_start"],
-            df_bed["ctg_start"] + df_bed["repeat_stop"],
-        )
-    else:
-        calc_dst_cols = (
-            df_bed["ctg_stop"] - df_bed["repeat_stop"],
-            df_bed["ctg_stop"] - df_bed["repeat_start"],
-        )
-
-    cols = {
-        "ctg_label": df_bed["ctg_label"] + "-" + df_bed["ctg_num"]
-        if "ctg_num" in df_bed.columns
-        else df_bed["ctg_label"],
-        **dict(zip(("dst_to_repeat", "dst_to_end_repeat"), calc_dst_cols)),
-        "repeat_type": df_bed["repeat_type"],
-        "repeat_length": df_bed["repeat_stop"] - df_bed["repeat_start"],
-    }
-
-    df_bed = pd.DataFrame(cols)
-
-    # Keep desired repeats above a len.
-    df_bed = df_bed.loc[df_bed["repeat_length"] > repeat_length_filter]
-    df_bed.to_csv(output_path, sep="\t", header=False, index=False)
-    return None
 
 
 def main() -> int:
@@ -335,7 +177,6 @@ def main() -> int:
     )
     sub_ap = ap.add_subparsers(dest="cmd")
     add_bedminmax_args(sub_ap)
-    add_filt_dna_brnn_args(sub_ap)
 
     args = ap.parse_args()
     if args.cmd == "bedminmax":
@@ -347,17 +188,6 @@ def main() -> int:
             grpby_cols=args.groupby,
             sortby_cols=args.sortby,
             allow_empty=args.allow_empty,
-        )
-    elif args.cmd == "filtdnabrnn":
-        filtdnabrnn(
-            args.input,
-            args.output,
-            chr=args.chr,
-            forward=args.forward,
-            input_cols=args.columns_in,
-            name_split_cols=args.columns_split,
-            repeat_type_filter=args.repeat_type,
-            repeat_length_filter=args.repeat_gt_length,
         )
     return 0
 

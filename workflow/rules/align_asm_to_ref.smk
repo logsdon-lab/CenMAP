@@ -1,3 +1,9 @@
+# Add reference cens alignment.
+config["align_asm_to_ref"]["config"]["ref"][
+    f"{REF_NAME}_cens"
+] = rules.extract_ref_hor_arrays.output.seq
+
+
 # Align assemblies to reference.
 # Pull alignment workflow from github.
 # See output files here. Most of everything gets dumped in subdirs from results/{ref}/{ftype}/{asm}.{ftype}:
@@ -6,7 +12,6 @@ module align_asm_to_ref:
     snakefile:
         github(
             "koisland/asm-to-reference-alignment",
-            # "mrvollger/asm-to-reference-alignment",
             path="workflow/Snakefile",
             branch="remove_sm_num_index",
         )
@@ -23,6 +28,8 @@ use rule alignment from align_asm_to_ref as asm_ref_alignment with:
         ref=lambda wc: config["align_asm_to_ref"]["config"]["ref"][wc.ref],
         # Take concat asm with all types included.
         query=rules.concat_asm.output,
+    resources:
+        mem_mb=120_000,
 
 
 use rule alignment2 from align_asm_to_ref as asm_ref_alignment2 with:

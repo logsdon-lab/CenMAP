@@ -1,6 +1,5 @@
-# HG00171_chr4_haplotype1-0000002:1892469-12648706
-# |haplotype1-0000002|1892469|12648706|chr4|
-# |haplotype1-0000002|1892469|12648706|12648706-1892469|chr4|
+# ex. NA12329 chrX    haplotype1      0000017 92036218        98212716        6176499 4617952 6176499 6176500
+# ex. HG00171 chr22   h1tg000027l     1       26260313        1       4719177 4719177 48      4719177 4719178
 rule make_bed_files_for_plot:
     input:
         script="workflow/scripts/filter_cen_ctgs.py",
@@ -23,27 +22,30 @@ rule make_bed_files_for_plot:
             config["nuc_freq"]["output_dir"], "{sm}_correct_ALR_regions.500kbp.bed"
         ),
     params:
-        io_cols=" ".join(["ctg", "start", "end", "chr"]),
-        grp_cols=" ".join(["ctg", "chr"]),
+        io_cols=" ".join(["ctg", "start", "end"]),
+        grp_cols=" ".join(["ctg"]),
         sort_cols=" ".join(["ctg", "start"]),
     conda:
         "../env/py.yaml"
     log:
         "logs/make_{sm}_bed_files_for_plot.log",
-    message:
-        f"""
-        Check (sm)_correct_ALR_regions.500kbp.bed for copies of ALR regions per sample.
-        Add a column labeling regions as "good" or "misassembled".
-        Then update repeatmasker.correct_asm in config/config.yaml.
-        An automated approach to missassembly identification is a WIP.
-        """
     shell:
         # Only filter for sample to avoid malformed output ref cols in alr bed.
         # Also, filter starting position of 1 as likely only a fragment of ALR.
         """
         {{ cat {input.faidx} | \
-        sed -e 's/_/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
-        awk -v OFS="\\t" '{{if ($1 == "{wildcards.sm}") {{print $3"-"$4, $5, $6, $2}}}}' | \
+        sed -e 's/_/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' -e 's/#/\\t/g' | \
+        awk -v OFS="\\t" '{{
+            if ($1 == "{wildcards.sm}") {{
+                if ($3 ~ "h1" || $3 ~ "h2") {{
+                    contig_name=$1"_"$2"_"$3"#"$4"-"$5
+                    print contig_name, $6, $7
+                }} else {{
+                    contig_name=$1"_"$2"_"$3"-"$4
+                    print contig_name, $5, $6
+                }}
+            }}
+        }}' | \
         sort | \
         uniq;}} > {output.tmp_fmt_alr_bed} 2> {log}
 
@@ -70,7 +72,7 @@ rule align_reads_to_asm:
         ),
     threads: config["nuc_freq"]["threads"]
     resources:
-        mem_mb=60_000,
+        mem_mb=120_000,
     params:
         aln_log_level="DEBUG",
         aln_preset="SUBREAD",
@@ -104,6 +106,7 @@ rule filter_align_reads_to_asm:
         samtools_view_flag=config["nuc_freq"]["samtools_view_flag"],
     resources:
         sort_mem=4,
+        mem_mb=20_000,
     threads: config["nuc_freq"]["threads"]
     conda:
         "../env/tools.yaml"
