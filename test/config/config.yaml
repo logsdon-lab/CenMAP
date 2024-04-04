@@ -32,17 +32,19 @@ dna_brnn:
     chr16: [[1_000_000, null]]
   default_repeat_len_thr: [1_000, null]
 
+new_cens:
+  output_dir: "results/cens_new"
+
 nuc_freq:
   hifi_reads_dir: "test/data/raw_data/hifi"
   output_dir: "results/dna_brnn/nucfreq"
-  threads: 4
+  config_nucfreq: "config/nucfreq.toml"
+  ignore_regions: "config/nucfreq_ignore.bed"
+  threads_aln: 4
+  processes_nucfreq: 12
   samtools_view_flag: 2308
 
 repeatmasker:
-  # Map of paths to correct samples according to nuc_freq.
-  correct_asm:
-    test_1: "test/config/test_1_correct.bed"
-  # /net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/t2t_chr8/chm13/centromeres/repeatmasker/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
   ref_repeatmasker_chrY_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   threads: 40

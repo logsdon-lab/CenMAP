@@ -61,22 +61,23 @@ dna_brnn:
     chr16: [[1_000_000, null]]
   default_repeat_len_thr: [1_000, null]
 
+new_cens:
+  output_dir: "results/cens_new"
+
 nuc_freq:
   hifi_reads_dir: "data/raw_data_link"
   output_dir: "results/nucfreq"
-  threads: 4
+  config_nucfreq: "config/nucfreq.toml"
+  ignore_regions: "config/nucfreq_ignore.bed"
+  threads_aln: 4
+  processes_nucfreq: 12
   samtools_view_flag: 2308
 
 repeatmasker:
-  # Map of paths to correct samples according to nuc_freq.
-  correct_asm:
-    HG00171: "results/dna_brnn/nucfreq/HG00171_correct_ALR_regions.500kbp.bed"
-  # /net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/t2t_chr8/chm13/centromeres/repeatmasker/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   ref_repeatmasker_chrY_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
   threads: 100
-  # output_dir: "results/repeatmasker"
-  output_dir: "/home/koisland/Projects/hgsvc3/results/repeatmasker"
+  output_dir: "results/repeatmasker"
 
 repeatmasker_sat_annot:
   output_dir: "results/repeatmasker_sat_annot"

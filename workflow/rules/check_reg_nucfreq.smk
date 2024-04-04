@@ -1,76 +1,16 @@
-# ex. NA12329 chrX    haplotype1      0000017 92036218        98212716        6176499 4617952 6176499 6176500
-# ex. HG00171 chr22   h1tg000027l     1       26260313        1       4719177 4719177 48      4719177 4719178
-rule make_bed_files_for_plot:
-    input:
-        script="workflow/scripts/filter_cen_ctgs.py",
-        faidx=expand(
-            rules.merge_alr_regions_by_chr.output.idx,
-            ort=ORIENTATION,
-            sm=SAMPLE_NAMES,
-            chr=CHROMOSOMES,
-        ),
-    output:
-        tmp_fmt_alr_bed=temp(
-            os.path.join(
-                config["nuc_freq"]["output_dir"], "fmt_{sm}_ALR_regions.500kbp.bed"
-            )
-        ),
-        alr_bed=os.path.join(
-            config["nuc_freq"]["output_dir"], "{sm}_ALR_regions.500kbp.bed"
-        ),
-        correct_alr_bed=os.path.join(
-            config["nuc_freq"]["output_dir"], "{sm}_correct_ALR_regions.500kbp.bed"
-        ),
-    params:
-        io_cols=" ".join(["ctg", "start", "end"]),
-        grp_cols=" ".join(["ctg"]),
-        sort_cols=" ".join(["ctg", "start"]),
-    conda:
-        "../env/py.yaml"
-    log:
-        "logs/make_{sm}_bed_files_for_plot.log",
-    shell:
-        # Only filter for sample to avoid malformed output ref cols in alr bed.
-        # Also, filter starting position of 1 as likely only a fragment of ALR.
-        """
-        {{ cat {input.faidx} | \
-        sed -e 's/_/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' -e 's/#/\\t/g' | \
-        awk -v OFS="\\t" '{{
-            if ($1 == "{wildcards.sm}") {{
-                if ($3 ~ "h1" || $3 ~ "h2") {{
-                    contig_name=$1"_"$2"_"$3"#"$4"-"$5
-                    print contig_name, $6, $7
-                }} else {{
-                    contig_name=$1"_"$2"_"$3"-"$4
-                    print contig_name, $5, $6
-                }}
-            }}
-        }}' | \
-        sort | \
-        uniq;}} > {output.tmp_fmt_alr_bed} 2> {log}
-
-        {{ python {input.script} bedminmax \
-            -i {output.tmp_fmt_alr_bed} \
-            -ci {params.io_cols} \
-            -co {params.io_cols} \
-            -g {params.grp_cols} \
-            -s {params.sort_cols} | \
-        awk -v OFS="\\t" '{{ if ($2 != 1) {{print $1, $2, $3, $3-$2, $4}}}}';}} > {output.alr_bed} 2>> {log}
-
-        # Make copy.
-        cp {output.alr_bed} {output.correct_alr_bed}
-        """
-
-
 rule align_reads_to_asm:
     input:
-        asm=rules.asm_rename_ctgs.output,
+        asm=os.path.join(
+            config["concat_asm"]["output_dir"],
+            "{sm}",
+            "{sm}_regions.renamed.fa",
+        ),
         reads=os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}.bam"),
     output:
         alignment=temp(
             os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")
         ),
-    threads: config["nuc_freq"]["threads"]
+    threads: config["nuc_freq"]["threads_aln"]
     resources:
         mem_mb=120_000,
     params:
@@ -107,7 +47,7 @@ rule filter_align_reads_to_asm:
     resources:
         sort_mem=4,
         mem_mb=20_000,
-    threads: config["nuc_freq"]["threads"]
+    threads: config["nuc_freq"]["threads_aln"]
     conda:
         "../env/tools.yaml"
     log:
@@ -131,7 +71,9 @@ rule merge_hifi_read_asm_alignments:
         alignment_idx=os.path.join(
             config["nuc_freq"]["output_dir"], "{sm}_hifi.bam.bai"
         ),
-    threads: config["nuc_freq"]["threads"]
+    threads: config["nuc_freq"]["threads_aln"]
+    resources:
+        mem_mb=10_000,
     conda:
         "../env/tools.yaml"
     log:
@@ -145,45 +87,48 @@ rule merge_hifi_read_asm_alignments:
         """
 
 
-rule gen_nucfreq_plot:
+rule check_asm_nucfreq:
     input:
         script="workflow/scripts/NucFreq/NucPlot.py",
         bam_file=rules.merge_hifi_read_asm_alignments.output.alignment,
-        alr_regions=rules.make_bed_files_for_plot.output.alr_bed,
+        alr_regions=rules.make_new_cens_bed_file.output.alr_bed,
+        config=config["nuc_freq"]["config_nucfreq"],
+        ignore_regions=config["nuc_freq"]["ignore_regions"],
     output:
-        alr_hap_regions=temp(
-            os.path.join(
-                config["nuc_freq"]["output_dir"],
-                "{sm}_{hap}_ALR_regions.500kbp.bed",
-            )
-        ),
-        plot=os.path.join(
+        plot_dir=directory(os.path.join(config["nuc_freq"]["output_dir"], "{sm}")),
+        misassemblies=os.path.join(
             config["nuc_freq"]["output_dir"],
-            "{sm}_{hap}_hifi_cens.png",
+            "{sm}_cen_misassemblies.bed",
         ),
+        asm_status=os.path.join(
+            config["nuc_freq"]["output_dir"],
+            "{sm}_cen_status.bed",
+        ),
+    threads: config["nuc_freq"]["processes_nucfreq"]
     conda:
-        "../env/pysam.yaml"
+        "../env/nucfreq.yaml"
     resources:
-        mem_mb=90_000,
-    params:
-        ylim=100,
-        height=4,
-        # haplotype1 or h1
-        hap_pattern=lambda wc: f"{wc.hap}|{str(wc.hap)[0]}{str(wc.hap)[-1]}",
+        mem_mb=50_000,
     log:
-        "logs/run_nucfreq_{sm}_{hap}.log",
+        "logs/run_nucfreq_{sm}.log",
     benchmark:
-        "benchmarks/run_nucfreq_{sm}_{hap}.tsv"
+        "benchmarks/run_nucfreq_{sm}.tsv"
     shell:
         """
-        grep -P "{params.hap_pattern}" {input.alr_regions} > {output.alr_hap_regions}
-        python {input.script} \
-        -y {params.ylim} \
-        {input.bam_file} \
-        {output.plot} \
-        --bed {output.alr_hap_regions} \
-        --height {params.height} &> {log}
+        nucfreq \
+        -i {input.bam_file} \
+        -b {input.alr_regions} \
+        -d {output.plot_dir} \
+        -o {output.misassemblies} \
+        -t {threads} \
+        -p {threads} \
+        -s {output.asm_status} \
+        -c {input.config} \
+        --ignore_regions {input.ignore_regions} &> {log}
         """
 
 
-# Then review plots manually.
+rule nuc_freq_only:
+    input:
+        expand(rules.merge_hifi_read_asm_alignments.output, sm=SAMPLE_NAMES),
+        expand(rules.check_asm_nucfreq.output, sm=SAMPLE_NAMES),

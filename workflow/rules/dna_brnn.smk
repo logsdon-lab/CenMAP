@@ -253,12 +253,6 @@ rule dna_brnn_all:
             chr=CHROMOSOMES,
         ),
         expand(
-            rules.filter_dnabrnn_sample_cens_regions.output,
-            sm=SAMPLE_NAMES,
-            ort=ORIENTATION,
-            chr=CHROMOSOMES,
-        ),
-        expand(
             rules.get_dnabrnn_ref_cens_pos.output,
             chr=CHROMOSOMES,
         ),

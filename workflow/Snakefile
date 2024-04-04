@@ -47,39 +47,17 @@ rule extract_align_cens_only:
         rules.align_asm_ref_all.input,
 
 
-rule dna_brnn_only:
-    input:
-        rules.dna_brnn_all.input,
-
-
-rule nuc_freq_only:
-    input:
-        expand(
-            rules.extract_new_cens_all.input,
-            sm=SAMPLE_NAMES,
-            chr=CHROMOSOMES,
-            ort=ORIENTATION,
-        ),
-        expand(rules.make_bed_files_for_plot.output, sm=SAMPLE_NAMES),
-        expand(rules.merge_hifi_read_asm_alignments.output, sm=SAMPLE_NAMES),
-        expand(rules.gen_nucfreq_plot.output, sm=SAMPLE_NAMES, hap=HAPLOTYPE),
-        # Then stop to inspect if correctly assembled.
-
-
 rule all:
     input:
         rules.extract_align_cens_only.input,
         rules.ident_cen_ctgs_all.input,
-        rules.dna_brnn_only.input,
-        # rules.nuc_freq_only.input,
-    default_target: True
-
-
-rule all_plotting:
-    input:
+        rules.dna_brnn_all.input,
+        rules.extract_new_cens_all.input,
+        rules.nuc_freq_only.input,
         rules.repeatmasker_only.input,
-        rules.humas_hmmer_only.input,
-        rules.plot_hor_stv_only.input,
-        rules.get_hor_length_only.input,
-        rules.stained_glass_only.input,
-        rules.plot_cens_only.input,
+        # rules.humas_hmmer_only.input,
+        # rules.plot_hor_stv_only.input,
+        # rules.get_hor_length_only.input,
+        # rules.stained_glass_only.input,
+        # rules.plot_cens_only.input,
+    default_target: True

@@ -34,4 +34,3 @@ CHROMOSOMES = config.get(
     ),
 )
 SAMPLE_FLOWCELL_IDS = get_hifi_read_wildcards()
-CORRECT_ASSEMBLIES = config["repeatmasker"]["correct_asm"]

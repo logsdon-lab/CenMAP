@@ -7,6 +7,9 @@ benchmarks/
 venv/
 temp/
 
+RM_*
+.RepeatMaskerCache/
+
 __pycache__
 .ipynb_checkpoints
 

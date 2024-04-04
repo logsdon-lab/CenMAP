@@ -26,13 +26,6 @@ def get_hifi_read_wildcards() -> dict[str, list[str]]:
     return samples
 
 
-def get_correct_assembly_regions(wc):
-    try:
-        return CORRECT_ASSEMBLIES[str(wc.sm)]
-    except KeyError:
-        raise ValueError(f"No correct assemblies found for {wc.sm}")
-
-
 def load_samples_df() -> pd.DataFrame:
     # Load samples.
     # https://github.com/mrvollger/asm-to-reference-alignment/blob/fe0d4d5f1ccfd28bc1e3d926df83d64f18047e92/workflow/rules/reference_alignment.smk#L7-L12
