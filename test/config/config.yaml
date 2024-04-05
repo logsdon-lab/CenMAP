@@ -1,11 +1,8 @@
+samples:
+- test_1
+
 align_asm_to_ref:
-  # This config specifies the assemblies in `tbl`
-  config: "test/config/asm_to_ref_config.yaml"
-  # Reference in asm_to_ref_config.yaml
-  ref_key: "t2t_chm13_v2.0"
-  asat_annotations: "data/annotations/chm13_v2.0_hor_arrays.bed"
-  cens_500kbp_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
-  # Output dir set to results
+  reference: "test/data/test.fasta"
 
 concat_asm:
   input_dir: "test/data/assemblies"
@@ -17,6 +14,8 @@ extract_ref_hor_arrays:
 ident_cen_ctgs:
   comb_assemblies_dir: "data/assemblies/combined"
   output_dir: "results/cens"
+  ref_cens_500kbp_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
+  ref_cens_monomeric_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
 
 dna_brnn:
   output_dir: "results/dna_brnn"

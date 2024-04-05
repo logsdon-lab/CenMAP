@@ -1,7 +1,7 @@
 # Extract HOR arrays from reference.
 rule extract_ref_hor_arrays:
     input:
-        ref=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
+        ref=REF_FA,
         cens_regions=config["ident_cen_ctgs"]["ref_cens_500kbp_regions"],
     output:
         seq=os.path.join(

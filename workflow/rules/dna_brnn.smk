@@ -88,7 +88,6 @@ rule filter_dnabrnn_ref_cens_regions:
 # awk '$5>1000' >> chr2_tmp.fwd.bed
 rule filter_dnabrnn_sample_cens_regions:
     input:
-        script="workflow/scripts/filter_cen_ctgs.py",
         repeats=rules.run_dna_brnn.output,
     output:
         tmp_alr_ctgs=temp(

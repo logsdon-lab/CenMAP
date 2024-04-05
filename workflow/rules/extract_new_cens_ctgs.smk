@@ -41,7 +41,7 @@ use rule extract_and_index_fa as extract_new_oriented_cens_regions with:
 # ...map_align_t2t_chm13/results/t2t_chm13_v2.0_cens/bed/centromeres/dna-brnn/centromeric_regions/extract_ALR_regions.bash
 use rule extract_and_index_fa as extract_alr_region_ref_by_chr with:
     input:
-        fa=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
+        fa=REF_FA,
         bed=lambda wc: expand(
             rules.aggregate_dnabrnn_alr_regions_by_chr.output,
             chr=[wc.chr],

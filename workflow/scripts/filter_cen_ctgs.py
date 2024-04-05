@@ -9,9 +9,6 @@ if TYPE_CHECKING:
 else:
     SubArgumentParser = Any
 
-DEF_DNA_BRNN_COLS = ("name", "repeat_start", "repeat_stop", "repeat_type")
-DEF_DNA_BRNN_NAME_SPLIT_COLS = ("ctg_label", "ctg_num", "ctg_start", "ctg_stop")
-
 DEF_BEDMINMAX_IN_COLS = ("chr", "start", "end", "length", "name", "orientation")
 DEF_BEDMINMAX_OUT_COLS = ("chr", "start", "end", "length", "name", "orientation")
 DEF_BEDMINMAX_GRP_COLS = ("chr", "length", "name", "orientation")
@@ -65,6 +62,16 @@ def add_bedminmax_args(sub_ap: SubArgumentParser) -> None:
         default=DEF_BEDMINMAX_SORT_COLS,
     )
     ap.add_argument(
+        "--start_col",
+        help="Start column to get min.",
+        default="start",
+    )
+    ap.add_argument(
+        "--end_col",
+        help="End column to get max.",
+        default="end",
+    )
+    ap.add_argument(
         "--allow_empty", action="store_true", help="Allow an output df to be empty."
     )
     return None
@@ -108,6 +115,8 @@ def bedminmax(
     input: TextIO | Iterable[TextIO] | pl.DataFrame,
     output_path: str | None,
     *,
+    start_col: str = "start",
+    end_col: str = "end",
     input_cols: Iterable[str] = DEF_BEDMINMAX_IN_COLS,
     output_cols: Iterable[str] = DEF_BEDMINMAX_OUT_COLS,
     grpby_cols: Iterable[str] = DEF_BEDMINMAX_GRP_COLS,
@@ -124,9 +133,12 @@ def bedminmax(
             * Input bed file, bed files, or `pd.DataFrame`.
     * `output_path`:
             * Output bed file or `pd.DataFrame` if `None`.
+    * `start_col`:
+            * Start column to get min.
+    * `end_col`:
+            * End column to get max.
     * `input_cols`:
             * Input columns.
-            * Expects that a `start` and `end` column exist.
     * `output_cols`:
             * Output columns
     * `grpby_cols`:
@@ -156,11 +168,11 @@ def bedminmax(
         return None
 
     assert (
-        "start" in bed_df.columns and "end" in bed_df.columns
+        start_col in bed_df.columns and end_col in bed_df.columns
     ), "Missing required start/end cols."
 
     bed_out = bed_df.group_by(grpby_cols).agg(
-        [pl.col("start").min(), pl.col("end").max()]
+        [pl.col(start_col).min(), pl.col(end_col).max()]
     )
 
     bed_out = bed_out.select(output_cols).sort(by=sortby_cols)
@@ -188,6 +200,8 @@ def main() -> int:
             grpby_cols=args.groupby,
             sortby_cols=args.sortby,
             allow_empty=args.allow_empty,
+            start_col=args.start_col,
+            end_col=args.end_col,
         )
     return 0
 

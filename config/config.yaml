@@ -24,17 +24,17 @@ chromosomes:
   - "chrX"
   - "chrY"
 
-align_asm_to_ref:
-  # This config specifies the assemblies in `tbl`
-  config: "config/asm_to_ref_config.yaml"
-  # Reference in asm_to_ref_config.yaml
-  ref_key: "t2t_chm13_v2.0"
-  # Output dir set to results
+samples:
+  - HG00171
 
 concat_asm:
   # Expects {input_dir}/{sm}/*.gz
   input_dir: "data/assemblies_link"
   output_dir: "data/assemblies/combined"
+
+align_asm_to_ref:
+  reference: "data/reference_link/T2T-CHM13v2.fasta"
+  # Output dir set to results
 
 extract_ref_hor_arrays:
   output_dir: "results/ref_hor_arrays"
@@ -114,7 +114,7 @@ humas_hmmer:
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
   threads: 30
   # NOTE: Change this later to data/models/AS-HORs-hmmer3.0-170921.hmm!
-  model: "workflow/scripts/HumAS-HMMER_for_AnVIL/AS-HORs-hmmer3.3.2-120124.hmm"
+  model: "data/models/AS-HORs-hmmer3.0-170921.hmm"
 
 plot_hor_stv:
   output_dir: "results/hor_stv"

@@ -2,48 +2,6 @@
 # Extract centromeric regions
 
 
-# Get centromeric regions from alignments to t2t-chm13 ONLY
-rule intersect_cen_regions:
-    input:
-        aln_bed=lambda wc: expand(
-            rules.asm_ref_aln_to_bed.output, ref=[REF_NAME], sm=wc.sm
-        ),
-        ref_cens_bed=config["ident_cen_ctgs"]["ref_cens_500kbp_regions"],
-    output:
-        cen_regions=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"], "bed", REF_NAME, "{sm}_cens.bed"
-        ),
-    conda:
-        "../env/tools.yaml"
-    log:
-        "logs/intersect_ref_cen_{sm}.log",
-    shell:
-        """
-        bedtools intersect -a {input.aln_bed} -b {input.ref_cens_bed} > {output} 2> {log}
-        """
-
-
-rule intersect_with_pq_arm:
-    input:
-        aln_cens_bed=rules.intersect_cen_regions.output,
-        ref_monomeric_bed=config["ident_cen_ctgs"]["ref_cens_monomeric_regions"],
-    output:
-        pqarms_cen_regions=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "bed",
-            REF_NAME,
-            "{sm}_pqarm_cens.bed",
-        ),
-    conda:
-        "../env/tools.yaml"
-    log:
-        "logs/intersect_ref_cen_pqarm_{sm}.log",
-    shell:
-        """
-        bedtools intersect -a {input.aln_cens_bed} -b {input.ref_monomeric_bed} > {output.pqarms_cen_regions} 2> {log}
-        """
-
-
 rule format_hor_ref_aln_cen_contigs:
     input:
         aln_bed=lambda wc: expand(
@@ -92,86 +50,54 @@ rule format_hor_ref_aln_cen_contigs:
         """
 
 
-rule intersect_both_aln:
+# Add monomeric pq arms and intersect with alignments.
+rule intersect_with_pq_arm:
     input:
-        full_aln=rules.intersect_with_pq_arm.output.pqarms_cen_regions,
-        hor_arr_only_aln=rules.format_hor_ref_aln_cen_contigs.output,
+        aln_cens_bed=rules.format_hor_ref_aln_cen_contigs.output,
+        ref_monomeric_bed=config["ident_cen_ctgs"]["ref_cens_monomeric_regions"],
     output:
-        regions=os.path.join(
+        qarms_cen_regions=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
-            "{sm}_centromeric_contigs.bed",
+            f"{REF_NAME}_cens",
+            "{sm}_pqarm_cens.bed",
         ),
     conda:
         "../env/tools.yaml"
     log:
-        "logs/intersect_both_aln_{sm}.log",
+        "logs/intersect_ref_cen_pqarm_{sm}.log",
     shell:
         """
-        {{
-            bedtools intersect -loj -a {input.full_aln} -b {input.hor_arr_only_aln} | \
-            awk -v OFS="\\t" -v FS="\\t" '{{
-                if ($5==$23) {{
-                    print $24, $25, $26, $1, $23
-                }}
-            }}' | \
-            sort | uniq ;
-        }} > {output} 2> {log}
+        bedtools intersect -wa -wb -a {input.aln_cens_bed} -b  {input.ref_monomeric_bed} > {output.qarms_cen_regions} 2> {log}
         """
 
 
-# In.
-# 6. query_name
-# 7. query_start
-# 8. query_end
-# 1. reference_name
-# 5. strand
-# Out.
-# 1. query_name
-# 2. query_start
-# 3. query_end
-# 5. reference_name
-# 6. strand
-# +. sub(query_end, query_start)
-rule collapse_cens_contigs:
+rule map_collapse_cens:
     input:
-        script="workflow/scripts/filter_cen_ctgs.py",
-        regions=rules.intersect_both_aln.output,
+        script="workflow/scripts/map_cens.py",
+        regions=rules.intersect_with_pq_arm.output,
     output:
-        regions=os.path.join(
+        resolved_cen_regions=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
-            "{sm}_centromeric_contigs.collapsed.bed",
+            f"{REF_NAME}_cens",
+            "{sm}_mapped_cens.bed",
         ),
     params:
-        io_cols=["chr", "start", "end", "name", "strand"],
-        grp_cols=["chr", "strand", "name"],
-        sort_cols=["chr", "start"],
         thr_ctg_len=1_000_000,
     conda:
         "../env/py.yaml"
     log:
-        "logs/collapse_cens_contigs_{sm}.log",
+        "logs/map_collapse_cens_{sm}.log",
     shell:
         """
-        {{ python {input.script} bedminmax \
-            -i {input.regions} \
-            -ci {params.io_cols} \
-            -co {params.io_cols} \
-            -g {params.grp_cols} \
-            -s {params.sort_cols} | \
-        awk -v OFS="\\t" '{{
-            len=$3-$2
-            if (len > {params.thr_ctg_len}) {{
-                print $1, $2, $3, $4, $5, len
-            }}
-        }}';}} > {output} 2> {log}
+        python {input.script} -i {input.regions} -t {params.thr_ctg_len} > {output} 2> {log}
         """
 
 
 # Make renamed copy of assembly here with mapped chr.
 RENAME_ASM_CFG = {
-    "bed_input_regions": rules.collapse_cens_contigs.output,
+    "bed_input_regions": rules.map_collapse_cens.output,
     "fa_assembly": rules.concat_asm.output,
     "output_dir": os.path.join(config["concat_asm"]["output_dir"], "{sm}"),
     "samples": SAMPLE_NAMES,
@@ -237,11 +163,9 @@ use rule extract_and_index_fa as extract_cens_oriented_regions with:
 
 rule ident_cen_ctgs_all:
     input:
-        expand(rules.intersect_cen_regions.output, sm=SAMPLE_NAMES),
-        expand(rules.intersect_with_pq_arm.output, sm=SAMPLE_NAMES),
         expand(rules.format_hor_ref_aln_cen_contigs.output, sm=SAMPLE_NAMES),
-        expand(rules.intersect_both_aln.output, sm=SAMPLE_NAMES),
-        expand(rules.collapse_cens_contigs.output, sm=SAMPLE_NAMES),
+        expand(rules.intersect_with_pq_arm.output, sm=SAMPLE_NAMES),
+        expand(rules.map_collapse_cens.output, sm=SAMPLE_NAMES),
         # Rename ctgs
         rules.asm_rename_ctg_all.input,
         expand(
