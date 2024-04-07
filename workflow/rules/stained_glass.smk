@@ -47,6 +47,8 @@ rule run_stained_glass:
     conda:
         "../env/stained_glass.yaml"
     threads: config["stained_glass"]["threads"]
+    resources:
+        mem_mb=60_000,
     params:
         window=config["stained_glass"]["window"],
         mm_f=config["stained_glass"]["mm_f"],
@@ -70,6 +72,7 @@ rule run_stained_glass:
         nbatch={params.nbatch} \
         outdir={params.outdir} \
         --cores {threads} \
+        --rerun-incomplete \
         {params.target_rule} 2>> {log}
         """
 

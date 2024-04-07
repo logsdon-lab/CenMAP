@@ -38,6 +38,7 @@ include: "rules/plot_hor_stv.smk"
 include: "rules/plot_repeatmasker_sat_annot.smk"
 include: "rules/stained_glass.smk"
 include: "rules/plot_complete_cens.smk"
+include: "rules/calculate_hor_length.smk"
 
 
 rule extract_align_cens_only:
@@ -55,9 +56,9 @@ rule all:
         rules.extract_new_cens_all.input,
         rules.nuc_freq_only.input,
         rules.repeatmasker_only.input,
-        # rules.humas_hmmer_only.input,
-        # rules.plot_hor_stv_only.input,
-        # rules.get_hor_length_only.input,
-        # rules.stained_glass_only.input,
-        # rules.plot_cens_only.input,
+        rules.humas_hmmer_only.input,
+        rules.plot_hor_stv_only.input,
+        rules.get_hor_length_only.input,
+        rules.stained_glass_only.input,
+        rules.plot_cens_only.input,
     default_target: True

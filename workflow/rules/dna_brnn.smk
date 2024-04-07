@@ -246,11 +246,6 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
 rule dna_brnn_all:
     input:
         expand(rules.run_dna_brnn.output, sm=SAMPLE_NAMES, ort=ORIENTATION),
-        # rules.run_dna_brnn_ref_cens.output,
-        expand(
-            rules.filter_dnabrnn_ref_cens_regions.output,
-            chr=CHROMOSOMES,
-        ),
         expand(
             rules.get_dnabrnn_ref_cens_pos.output,
             chr=CHROMOSOMES,

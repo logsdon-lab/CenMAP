@@ -126,6 +126,9 @@ plot_hor_stv:
     - small
     - large
 
+calculate_hor_length:
+  output_dir: "results/calculate_hor_length"
+
 stained_glass:
   input_dir: null
   output_dir: "results/stained_glass"

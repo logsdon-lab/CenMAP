@@ -49,8 +49,8 @@ def main():
     df_concensus_mapping = (
         # Default to picking reference by highest percent identity by all
         df.filter(
-            pl.col("perID_by_all")
-            == pl.col("perID_by_all").max().over(["query_name", "strand"])
+            pl.col("perID_by_events")
+            == pl.col("perID_by_events").max().over(["query_name", "strand"])
         )
         .join(df_qarms, on=["query_name", "strand"], how="left")
         .select("query_name", "strand", "reference_name", "reference_name_right", "arm")

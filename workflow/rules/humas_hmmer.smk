@@ -144,7 +144,11 @@ checkpoint split_cens_for_humas_hmmer:
 
 module HumAS_HMMER:
     snakefile:
-        github("koisland/Smk-HumAS-HMMER", path="workflow/Snakefile", branch="main")
+        github(
+            "logsdon-lab/Snakemake-HumAS-HMMER",
+            path="workflow/Snakefile",
+            branch="main",
+        )
     config:
         config["humas_hmmer"]
 

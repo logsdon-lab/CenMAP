@@ -173,7 +173,7 @@ rule format_add_control_repeatmasker_output:
         """
         # Copy file and append reference repeatmasker output.
         cp {input.sample_rm_output} {output} 2> {log}
-        {{ grep "chr" {input.ref_rm_output} | sed -e 's/chr/chm13-chr/g';}} >> {output} 2> {log}
+        {{ grep "chr" {input.ref_rm_output} | sed -e 's/chr/chm13_chr/g';}} >> {output} 2> {log}
         """
 
 
@@ -227,7 +227,6 @@ rule extract_rm_out_by_chr:
 
 rule check_cens_status:
     input:
-        script="workflow/scripts/check_cens_status.py",
         rm_out=rules.extract_rm_out_by_chr.output.rm_out_by_chr,
         rm_ref=rules.merge_control_repeatmasker_output.output,
     output:
@@ -237,13 +236,10 @@ rule check_cens_status:
     log:
         "logs/check_cens_status_{chr}.log",
     conda:
-        "../env/py.yaml"
+        "../env/cen_stats.yaml"
     shell:
         """
-        python {input.script} \
-        -i {input.rm_out} \
-        -r {input.rm_ref} \
-        -o {output} 2> {log}
+        cen-stats -i {input.rm_out} -r {input.rm_ref} -o {output} 2> {log}
         """
 
 

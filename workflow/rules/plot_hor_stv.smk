@@ -8,7 +8,9 @@ rule get_stv_row_from_humas_hmmer_out:
         script_mon_to_stv="workflow/scripts/stv_fix/scripts/mon2stv.py",
     output:
         directory(
-            os.path.join(config["plot_hor_stv"]["output_dir"], "results_{chr}_stv")
+            os.path.join(
+                config["plot_hor_stv"]["output_dir"], "bed", "results_{chr}_stv"
+            )
         ),
     params:
         humas_hmmer_dir=lambda wc: config["humas_hmmer"]["output_dir"],
@@ -44,42 +46,32 @@ rule get_stv_row_from_humas_hmmer_out:
         """
 
 
-rule aggregate_all_stv_row:
+rule aggregate_format_all_stv_row:
     input:
         rules.get_stv_row_from_humas_hmmer_out.output,
     output:
         os.path.join(
-            config["plot_hor_stv"]["output_dir"], "{chr}_AS-HOR_stv_row.all.bed"
+            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
         ),
     params:
         stv_row_pattern=lambda wc, input: os.path.join(
             str(input), "AS-HOR_*_stv_row.bed"
         ),
-    shell:
-        """
-        cat {params.stv_row_pattern} > {output}
-        """
-
-
-rule calculate_as_hor_length:
-    input:
-        script="workflow/scripts/calculate_HOR_length.py",
-        fmt_hmmer_output=rules.aggregate_all_stv_row.output,
-    output:
-        os.path.join(config["plot_hor_stv"]["output_dir"], "{chr}_AS-HOR_lengths.tsv"),
-    conda:
-        "../env/py.yaml"
     log:
-        "logs/calculate_{chr}_as_hor_length.log",
-    params:
-        bp_jump_thr=100_000,
-        arr_len_thr=30_000,
+        "logs/get_stv_row_from_{chr}_humas_hmmer_out.log",
     shell:
         """
-        python {input.script} \
-        --input {input.fmt_hmmer_output} \
-        --bp_jump_thr {params.bp_jump_thr} \
-        --arr_len_thr {params.arr_len_thr} > {output} 2> {log}
+        ( cat {params.stv_row_pattern} || true ) | \
+        awk -v OFS="\\t" '{{
+            # Find start in contig name.
+            match($1, ":(.+)-", starts);
+            # Update start and end
+            $2=$2+starts[1];
+            $3=$3+starts[1];
+            $7=$7+starts[1];
+            $8=$8+starts[1];
+            print
+        }}' > {output}
         """
 
 
@@ -88,13 +80,12 @@ rule plot_stv_with_order:
         script="workflow/scripts/StVHORorganization_simplified_2datasets_basedOnStartStop_newcolors.R",
         chm1_stv=config["plot_hor_stv"]["chm1_stv"],
         chm13_stv=config["plot_hor_stv"]["chm13_stv"],
-        all_stv=rules.aggregate_all_stv_row.output,
+        all_stv=rules.aggregate_format_all_stv_row.output,
     output:
         hor_array_plot=os.path.join(
-            config["plot_hor_stv"]["output_dir"], "{chr}_hgsvc3_{mer_order}ontop.png"
-        ),
-        hor_array_length=os.path.join(
-            config["plot_hor_stv"]["output_dir"], "{chr}_length_{mer_order}.tsv"
+            config["plot_hor_stv"]["output_dir"],
+            "plots",
+            "{chr}_hgsvc3_{mer_order}ontop.png",
         ),
     log:
         "logs/plot_{chr}_stv_{mer_order}_on_top.log",
@@ -102,28 +93,26 @@ rule plot_stv_with_order:
         "../env/r.yaml"
     shell:
         """
-        Rscript {input.script} \
-        --input {input.all_stv} \
-        --input_chm13 {input.chm13_stv} \
-        --input_chm1 {input.chm1_stv} \
-        --output {output.hor_array_plot} \
-        --output_tbl {output.hor_array_length} \
-        --chr {wildcards.chr} \
-        --mer_order {wildcards.mer_order} 2> {log}
+        if ! [ -s {input.all_stv} ]; then
+            touch {output.hor_array_plot}
+        else
+            Rscript {input.script} \
+            --input {input.all_stv} \
+            --input_chm13 {input.chm13_stv} \
+            --input_chm1 {input.chm1_stv} \
+            --output {output.hor_array_plot} \
+            --chr {wildcards.chr} \
+            --mer_order {wildcards.mer_order} 2> {log}
+        fi
         """
 
 
 rule plot_hor_stv_only:
     input:
         expand(rules.get_stv_row_from_humas_hmmer_out.output, chr=CHROMOSOMES),
-        expand(rules.aggregate_all_stv_row.output, chr=CHROMOSOMES),
+        expand(rules.aggregate_format_all_stv_row.output, chr=CHROMOSOMES),
         expand(
             rules.plot_stv_with_order.output,
             chr=CHROMOSOMES,
             mer_order=config["plot_hor_stv"]["mer_order"],
         ),
-
-
-rule get_hor_length_only:
-    input:
-        expand(rules.calculate_as_hor_length.output, chr=CHROMOSOMES),

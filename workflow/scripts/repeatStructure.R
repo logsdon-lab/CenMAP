@@ -97,7 +97,7 @@ read_humas_hmmer_input <- function(
     fill = TRUE, quote = "",
     header = FALSE, select = cols_to_take
   )
-  hgsvc3 <- fread(input_chr,
+  samples <- fread(input_chr,
     sep = "\t",
     stringsAsFactors = TRUE,
     fill = TRUE, quote = "",
@@ -106,61 +106,36 @@ read_humas_hmmer_input <- function(
 
   colnames(chm13) <- cols
   colnames(chm1) <- cols
-  colnames(hgsvc3) <- cols
+  colnames(samples) <- cols
 
-  # select the chr
+  # combine the CHM1 and samples centromeres
+  chm13$chr <- gsub("chr", "chm13_chr", chm13$chr)
+  chm1$chr <- gsub("chr", "chm1_chr", chm1$chr)
+
   # Requires coordinates in name. ex. chr?:1-2
-  chm13_select <- chm13 %>%
-    filter(str_detect(chr, paste0(chr_name, ":"))) %>%
-    # Correct for coords start/stop with ctg length.
-    separate_wider_delim(chr, ":", names=c("chr_name", "coord"), cols_remove=FALSE) %>%
-    separate_wider_delim(coord, "-", names=c("ctg_start", "ctg_stop")) %>%
-    mutate(start=start-as.numeric(ctg_start), stop=stop-as.numeric(ctg_start)) %>%
-    select(chr, start, stop, hor, strand)
-
-  chm1_select <- chm1 %>%
-    filter(str_detect(chr, paste0(chr_name, ":")))
-
-  # combine the CHM1 and HGSVC3 centromeres
-  chm13_select$chr <- gsub("chr", "chm13_chr", chm13_select$chr)
-  chm1_select$chr <- gsub("chr", "chm1_chr", chm1_select$chr)
-  chm13_chm1_hgsvc3 <- rbind(chm13_select, chm1_select, hgsvc3)
+  chm13_chm1_samples <- rbind(chm13, chm1, samples)
 
   # determine distance between start and stop
-  chm13_chm1_hgsvc3$length <- chm13_chm1_hgsvc3$stop - chm13_chm1_hgsvc3$start
+  chm13_chm1_samples$length <- chm13_chm1_samples$stop - chm13_chm1_samples$start
 
   # calculate monomer size and round
-  chm13_chm1_hgsvc3$mer <- as.numeric(round(chm13_chm1_hgsvc3$length / monomer_len))
+  chm13_chm1_samples$mer <- as.numeric(round(chm13_chm1_samples$length / monomer_len))
 
   # filter monomers
-  chm13_chm1_hgsvc3 <- switch(chr_name,
-    "chr10" = subset(chm13_chm1_hgsvc3, as.numeric(mer) >= 5),
-    "chr20" = subset(chm13_chm1_hgsvc3, as.numeric(mer) >= 5),
-    "chrY" = subset(chm13_chm1_hgsvc3, as.numeric(mer) >= 30),
-    "chr17" = subset(chm13_chm1_hgsvc3, as.numeric(mer) >= 4),
-    chm13_chm1_hgsvc3
+  chm13_chm1_samples <- switch(chr_name,
+    "chr10" = subset(chm13_chm1_samples, as.numeric(mer) >= 5),
+    "chr20" = subset(chm13_chm1_samples, as.numeric(mer) >= 5),
+    "chrY" = subset(chm13_chm1_samples, as.numeric(mer) >= 30),
+    "chr17" = subset(chm13_chm1_samples, as.numeric(mer) >= 4),
+    chm13_chm1_samples
   )
 
   # filter for HORs that occur at least 20 times (10 times per haplotype)
-  df_stv <- chm13_chm1_hgsvc3 %>%
+  df_stv <- chm13_chm1_samples %>%
     group_by(mer) %>%
-    filter(n() > hor_filter) #
+    filter(n() > hor_filter)
 
-  # Add contig length to start and stop so aligns with repeatmasker annotations.
-  df_final <- df_stv %>%
-    separate_wider_delim(chr, delim = ":", names = c("chr", "range"), too_few = "align_start") %>%
-    separate_wider_delim(range, delim = "-", names = c("ctg_start", "ctg_stop"), too_few = "align_start") %>%
-    mutate(
-      ctg_start = replace_na(as.numeric(ctg_start), 0),
-      ctg_stop = replace_na(as.numeric(ctg_stop), 0)
-    ) %>%
-    mutate(
-      start = ctg_start + start,
-      stop = ctg_start + stop
-    ) %>%
-    mutate(new_chr = str_extract(chr, "([\\w_-]*?):", group = 1))
-
-  return(df_final)
+  return(df_stv)
 }
 
 # Create a parser
@@ -168,7 +143,7 @@ p <- arg_parser("Plot combined SF + satellites")
 p <- add_argument(p, "--input_rm_sat", help = "Input bed file made from annotated satellite RM output.", type = "character")
 
 p <- add_argument(p, "--input_stv",
-  help = "Input HGSVC3 HumAS-HMMER formatted output.",
+  help = "Input sample HumAS-HMMER formatted output.",
   type = "character"
 )
 p <- add_argument(p, "--input_stv_chm13",
@@ -184,7 +159,7 @@ p <- add_argument(p, "--chr",
   type = "character"
 )
 p <- add_argument(p, "--output",
-  help = "Output plot file. Defaults to {chr}_hgsvc3_{order_hor}erontop.png.",
+  help = "Output plot file. Defaults to {chr}_samples_{order_hor}erontop.png.",
   type = "character", default = NA
 )
 p <- add_argument(p, "--hor_filter",
@@ -214,9 +189,11 @@ argv <- parse_args(p)
 #   chr_name <- test_chr
 # }
 
-
 df_rm_sat_out <- read_repeatmasker_sat_input(argv$input_rm_sat)
-df_humas_hmmer_stv_out <- read_humas_hmmer_input(argv$input_stv, argv$input_stv_chm1, argv$input_stv_chm13, argv$chr, argv$hor_filter)
+# Filter out chr without annotations.
+df_humas_hmmer_stv_out <- read_humas_hmmer_input(argv$input_stv, argv$input_stv_chm1, argv$input_stv_chm13, argv$chr, argv$hor_filter) %>%
+  filter(chr %in% df_rm_sat_out$chr)
+df_rm_sat_out <- df_rm_sat_out %>% filter(chr %in% df_humas_hmmer_stv_out$chr)
 
 # Set new minimum and standardize scales.
 new_min <- min(df_rm_sat_out$start2)
