@@ -6,7 +6,7 @@ rule concat_asm:
         os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fasta"),
     # https://bioinf.shenwei.me/seqkit/usage/#rmdup
     params:
-        assembly_fname_pattern="*.gz",
+        assembly_fname_pattern=".*\.(fa|fasta)",
         by_seq="-s",
     resources:
         mem_mb=20_000,
@@ -16,7 +16,9 @@ rule concat_asm:
         "../env/tools.yaml"
     shell:
         """
-        {{ zcat {input.sm_dir}/{params.assembly_fname_pattern} | \
+        {{ cat \
+        <(find {input.sm_dir} -regextype posix-egrep -regex "{params.assembly_fname_pattern}\.gz" -exec zcat {{}} + ) \
+        <(find {input.sm_dir} -regextype posix-egrep -regex "{params.assembly_fname_pattern}" -exec cat {{}} + ) | \
         seqkit rmdup {params.by_seq};}} > {output} 2> {log}
         """
 

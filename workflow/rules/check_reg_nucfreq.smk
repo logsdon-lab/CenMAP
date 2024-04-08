@@ -1,3 +1,26 @@
+
+
+rule convert_reads_to_fq:
+    input:
+        reads=os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}"),
+    output:
+        reads_fq=temp(os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}.fq")),
+    conda:
+        "../env/tools.yaml"
+    log:
+        "logs/convert_{sm}_{id}_to_fq.log",
+    shell:
+        """
+        if [[ "{wildcards.id}" =~ .*\.bam$ ]]; then
+            samtools bam2fq {input.reads} > {output.reads_fq} 2> {log}
+        else if [[ "{wildcards.id}" =~ .*\.gz$  ]]; then
+            zcat {input.reads} > {output.reads_fq} 2> {log}
+        else
+            cp {input.reads} {output.reads_fq} 2> {log}
+        fi
+        """
+
+
 rule align_reads_to_asm:
     input:
         asm=os.path.join(
@@ -5,9 +28,8 @@ rule align_reads_to_asm:
             "{sm}",
             "{sm}_regions.renamed.fa",
         ),
-        reads=os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}.bam"),
+        reads=rules.convert_reads_to_fq.output.reads_fq,
     output:
-        reads_fq=temp(os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}.fq")),
         alignment=temp(
             os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")
         ),
@@ -26,12 +48,11 @@ rule align_reads_to_asm:
         "benchmarks/align_{sm}_{id}_hifi_reads_to_asm.tsv"
     shell:
         """
-        samtools bam2fq {input.reads} > {output.reads_fq} 2> {log}
         pbmm2 align \
         --log-level {params.aln_log_level} \
         --preset {params.aln_preset} \
         --min-length {params.aln_min_length} \
-        -j {threads} {input.asm} {output.reads_fq} > {output.alignment} 2>> {log}
+        -j {threads} {input.asm} {input.reads} > {output.alignment} 2>> {log}
         """
 
 
