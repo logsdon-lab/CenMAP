@@ -3,8 +3,16 @@
 .snakemake
 logs/
 results/
+benchmarks/
 venv/
+temp/
+
+RM_*
+.RepeatMaskerCache/
+
 __pycache__
+.ipynb_checkpoints
+
 .Rproj.user
 *.Rproj
 .RData
@@ -12,6 +20,4 @@ __pycache__
 .Rprofile
 renv/
 renv.lock
-temp/
 Rplots.pdf
-.ipynb_checkpoints

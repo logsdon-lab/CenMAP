@@ -24,26 +24,26 @@ chromosomes:
   - "chrX"
   - "chrY"
 
-align_asm_to_ref:
-  # This config specifies the assemblies in `tbl`
-  config: "config/asm_to_ref_config.yaml"
-  # Reference in asm_to_ref_config.yaml
-  ref_key: "t2t_chm13_v2.0"
-  asat_annotations: "data/annotations/chm13_v2.0_hor_arrays.bed"
-  cens_500kbp_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
-  # Output dir set to results
+samples:
+  - HG00171
 
 concat_asm:
   # Expects {input_dir}/{sm}/*.gz
-  input_dir: "data/assemblies"
+  input_dir: "data/assemblies_link"
   output_dir: "data/assemblies/combined"
 
-mask_hor_arrays:
-  output_dir: "results/masked"
+align_asm_to_ref:
+  # Output dir set to results
+  reference: "data/reference_link/T2T-CHM13v2.fasta"
+
+extract_ref_hor_arrays:
+  output_dir: "results/ref_hor_arrays"
 
 ident_cen_ctgs:
   comb_assemblies_dir: "data/assemblies/combined"
   output_dir: "results/cens"
+  ref_cens_500kbp_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
+  ref_cens_monomeric_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
 
 dna_brnn:
   output_dir: "results/dna_brnn"
@@ -61,24 +61,23 @@ dna_brnn:
     chr16: [[1_000_000, null]]
   default_repeat_len_thr: [1_000, null]
 
+new_cens:
+  output_dir: "results/cens_new"
+
 nuc_freq:
-  hifi_reads_dir: "data/raw_data/hifi"
-  output_dir: "results/dna_brnn/nucfreq"
-  threads: 4
+  hifi_reads_dir: "data/raw_data_link"
+  output_dir: "results/nucfreq"
+  config_nucfreq: "config/nucfreq.toml"
+  ignore_regions: "config/nucfreq_ignore.bed"
+  threads_aln: 4
+  processes_nucfreq: 12
   samtools_view_flag: 2308
 
 repeatmasker:
-  # Map of paths to correct samples according to nuc_freq.
-  correct_asm:
-    HG00171: "results/dna_brnn/nucfreq/HG00171_correct_ALR_regions.500kbp.bed"
-  # /net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/t2t_chr8/chm13/centromeres/repeatmasker/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
-  censat_annot_hor_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
-  # Optional.
-  # Repeatmasker output on reference genome. Will prevent running step.
+  ref_repeatmasker_chrY_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
   threads: 100
-  # output_dir: "results/repeatmasker"
-  output_dir: "/home/koisland/Projects/hgsvc3/results/repeatmasker"
+  output_dir: "results/repeatmasker"
 
 repeatmasker_sat_annot:
   output_dir: "results/repeatmasker_sat_annot"
@@ -107,7 +106,6 @@ repeatmasker_sat_annot:
       color: "127,159,184"
   ct_track_color: "209,211,212"
 
-
 humas_hmmer:
   # Dir where split cens placed.
   input_dir: "results/humas_hmmer/cens"
@@ -115,7 +113,7 @@ humas_hmmer:
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
   threads: 30
   # NOTE: Change this later to data/models/AS-HORs-hmmer3.0-170921.hmm!
-  model: "workflow/scripts/HumAS-HMMER_for_AnVIL/AS-HORs-hmmer3.3.2-120124.hmm"
+  model: "data/models/AS-HORs-hmmer3.0-170921.hmm"
 
 plot_hor_stv:
   output_dir: "results/hor_stv"
@@ -127,10 +125,12 @@ plot_hor_stv:
     - small
     - large
 
+calculate_hor_length:
+  output_dir: "results/calculate_hor_length"
+
 stained_glass:
   input_dir: null
   output_dir: "results/stained_glass"
   threads: 10
   window: 5000
   mm_f: 5000
-  # Always will be in workflow/scripts/StainedGlass/results

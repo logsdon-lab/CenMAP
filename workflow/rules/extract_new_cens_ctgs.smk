@@ -1,12 +1,12 @@
-NEW_CENS_OUTPUT_DIR = os.path.join(config["dna_brnn"]["output_dir"], "new_cens")
-
-
+# HG00171_chr22_h2tg000021l#1-94189493:1993043-3660421
+# HG00171_chr22_h2tg000021l#1-94189493
 rule create_format_orient_cens_list:
     input:
         regions=rules.run_dna_brnn.output.repeat_regions,
     output:
         os.path.join(
-            NEW_CENS_OUTPUT_DIR,
+            config["new_cens"]["output_dir"],
+            "bed",
             "{sm}_contigs.{ort}.list",
         ),
     log:
@@ -15,45 +15,25 @@ rule create_format_orient_cens_list:
         "../env/tools.yaml"
     shell:
         """
-        {{ sed -e 's/_/\\t/g' -e 's/:/\\t/g' {input} | cut -f 3 | sort | uniq;}} > {output} 2> {log}
+        {{  sed -e 's/:/\\t/g' {input} | cut -f 1 | sort | uniq;}} > {output} 2> {log}
         """
 
 
 use rule extract_and_index_fa as extract_new_oriented_cens_regions with:
     input:
         bed=rules.create_format_orient_cens_list.output,
-        fa=rules.concat_asm.output,
+        fa=rules.asm_rename_ctgs.output,
     output:
-        seq=os.path.join(NEW_CENS_OUTPUT_DIR, "{sm}_contigs.{ort}.fa"),
-        idx=os.path.join(NEW_CENS_OUTPUT_DIR, "{sm}_contigs.{ort}.fa.fai"),
+        seq=os.path.join(
+            config["new_cens"]["output_dir"], "seq", "{sm}_contigs.{ort}.fa"
+        ),
+        idx=os.path.join(
+            config["new_cens"]["output_dir"], "seq", "{sm}_contigs.{ort}.fa.fai"
+        ),
     params:
         added_cmds=lambda wc: "" if wc.ort == "fwd" else "| seqtk seq -r",
     log:
         "logs/extract_new_{ort}_cens_regions_{sm}.log",
-
-
-# HG00171_chr4_haplotype1-0000002:1892469-12648706        293621  293950  1
-# |HG00171|chr4|haplotype1-0000002|1892469-12648706|293621|293950|1
-RENAME_NEW_CTGS_CFG = {
-    "bed_input_regions": rules.run_dna_brnn.output.repeat_regions,
-    "fa_assembly": rules.extract_new_oriented_cens_regions.output.seq,
-    "output_dir": NEW_CENS_OUTPUT_DIR,
-    "samples": SAMPLE_NAMES,
-    "log_dir": "logs/rename_cens",
-    "bed_find_col": 3,
-    "bed_replace_w_joined_cols": (1, 2, 3),
-    "sed_cmd": "sed 's/> />/g' | tr \" \" \"\\n\" | sed '$ s/.$//'",
-}
-
-
-module rename_new_cens_ctgs:
-    snakefile:
-        "rename_ctgs.smk"
-    config:
-        RENAME_NEW_CTGS_CFG
-
-
-use rule * from rename_new_cens_ctgs as new_cens_*
 
 
 # Corresponds to
@@ -61,7 +41,7 @@ use rule * from rename_new_cens_ctgs as new_cens_*
 # ...map_align_t2t_chm13/results/t2t_chm13_v2.0_cens/bed/centromeres/dna-brnn/centromeric_regions/extract_ALR_regions.bash
 use rule extract_and_index_fa as extract_alr_region_ref_by_chr with:
     input:
-        fa=config["align_asm_to_ref"]["config"]["ref"][REF_NAME],
+        fa=REF_FA,
         bed=lambda wc: expand(
             rules.aggregate_dnabrnn_alr_regions_by_chr.output,
             chr=[wc.chr],
@@ -69,11 +49,17 @@ use rule extract_and_index_fa as extract_alr_region_ref_by_chr with:
         ),
     output:
         seq=temp(
-            os.path.join(NEW_CENS_OUTPUT_DIR, f"{REF_NAME}_{{chr}}_contigs.fwd.ALR.fa")
+            os.path.join(
+                config["new_cens"]["output_dir"],
+                "seq",
+                f"{REF_NAME}_{{chr}}_contigs.fwd.ALR.fa",
+            )
         ),
         idx=temp(
             os.path.join(
-                NEW_CENS_OUTPUT_DIR, f"{REF_NAME}_{{chr}}_contigs.fwd.ALR.fa.fai"
+                config["new_cens"]["output_dir"],
+                "seq",
+                f"{REF_NAME}_{{chr}}_contigs.fwd.ALR.fa.fai",
             )
         ),
     params:
@@ -84,12 +70,22 @@ use rule extract_and_index_fa as extract_alr_region_ref_by_chr with:
 
 use rule extract_and_index_fa as extract_alr_region_sample_by_chr with:
     input:
-        fa=rules.new_cens_rename_oriented_ctgs.output,
+        fa=rules.extract_new_oriented_cens_regions.output.seq,
         bed=rules.aggregate_dnabrnn_alr_regions_by_chr.output,
     output:
-        seq=temp(os.path.join(NEW_CENS_OUTPUT_DIR, "{chr}_{sm}_contigs.{ort}.ALR.fa")),
+        seq=temp(
+            os.path.join(
+                config["new_cens"]["output_dir"],
+                "seq",
+                "{chr}_{sm}_contigs.{ort}.ALR.fa",
+            )
+        ),
         idx=temp(
-            os.path.join(NEW_CENS_OUTPUT_DIR, "{chr}_{sm}_contigs.{ort}.ALR.fa.fai")
+            os.path.join(
+                config["new_cens"]["output_dir"],
+                "seq",
+                "{chr}_{sm}_contigs.{ort}.ALR.fa.fai",
+            )
         ),
     log:
         "logs/extract_alr_region_{sm}_{chr}_{ort}.log",
@@ -112,8 +108,12 @@ rule merge_alr_regions_by_chr:
         ),
         ref_ctgs_fai=lambda wc: rules.extract_alr_region_ref_by_chr.output.idx,
     output:
-        seq=os.path.join(NEW_CENS_OUTPUT_DIR, "{chr}_contigs.{ort}.ALR.fa"),
-        idx=os.path.join(NEW_CENS_OUTPUT_DIR, "{chr}_contigs.{ort}.ALR.fa.fai"),
+        seq=os.path.join(
+            config["new_cens"]["output_dir"], "seq", "{chr}_contigs.{ort}.ALR.fa"
+        ),
+        idx=os.path.join(
+            config["new_cens"]["output_dir"], "seq", "{chr}_contigs.{ort}.ALR.fa.fai"
+        ),
     conda:
         "../env/tools.yaml"
     log:
@@ -122,6 +122,66 @@ rule merge_alr_regions_by_chr:
         """
         cat {input.ref_ctgs_fa} {input.sm_ctgs_fa} > {output.seq} 2> {log}
         cat {input.ref_ctgs_fai} {input.sm_ctgs_fai} > {output.idx} 2> {log}
+        """
+
+
+# ex. NA12329 chrX    haplotype1      0000017 92036218        98212716        6176499 4617952 6176499 6176500
+# ex. HG00171 chr22   h1tg000027l     1       26260313        1       4719177 4719177 48      4719177 4719178
+rule make_new_cens_bed_file:
+    input:
+        script="workflow/scripts/filter_cen_ctgs.py",
+        faidx=expand(
+            rules.merge_alr_regions_by_chr.output.idx,
+            ort=ORIENTATION,
+            sm=SAMPLE_NAMES,
+            chr=CHROMOSOMES,
+        ),
+    output:
+        tmp_fmt_alr_bed=temp(
+            os.path.join(
+                config["new_cens"]["output_dir"],
+                "bed",
+                "fmt_{sm}_ALR_regions.500kbp.bed",
+            )
+        ),
+        alr_bed=os.path.join(
+            config["new_cens"]["output_dir"], "bed", "{sm}_ALR_regions.500kbp.bed"
+        ),
+    params:
+        io_cols=" ".join(["ctg", "start", "end"]),
+        grp_cols=" ".join(["ctg"]),
+        sort_cols=" ".join(["ctg", "start"]),
+    conda:
+        "../env/py.yaml"
+    log:
+        "logs/make_{sm}_bed_files_for_plot.log",
+    shell:
+        # Only filter for sample to avoid malformed output ref cols in alr bed.
+        # Also, filter starting position of 1 as likely only a fragment of ALR.
+        """
+        {{ cat {input.faidx} | \
+        sed -e 's/_/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' -e 's/#/\\t/g' | \
+        awk -v OFS="\\t" '{{
+            if ($1 == "{wildcards.sm}") {{
+                if ($3 ~ "h1" || $3 ~ "h2") {{
+                    contig_name=$1"_"$2"_"$3"#"$4"-"$5
+                    print contig_name, $6, $7
+                }} else {{
+                    contig_name=$1"_"$2"_"$3"-"$4
+                    print contig_name, $5, $6
+                }}
+            }}
+        }}' | \
+        sort | \
+        uniq;}} > {output.tmp_fmt_alr_bed} 2> {log}
+
+        {{ python {input.script} bedminmax \
+            -i {output.tmp_fmt_alr_bed} \
+            -ci {params.io_cols} \
+            -co {params.io_cols} \
+            -g {params.grp_cols} \
+            -s {params.sort_cols} | \
+        awk -v OFS="\\t" '{{ print $1, $2, $3, $3-$2, $4}}';}} > {output.alr_bed} 2>> {log}
         """
 
 
@@ -140,20 +200,9 @@ rule extract_new_cens_all:
             chr=CHROMOSOMES,
         ),
         expand(
-            rules.extract_alr_region_ref_by_chr.output,
-            sm=SAMPLE_NAMES,
-            ort=ORIENTATION,
-            chr=CHROMOSOMES,
-        ),
-        expand(
-            rules.extract_alr_region_sample_by_chr.output,
-            sm=SAMPLE_NAMES,
-            ort=ORIENTATION,
-            chr=CHROMOSOMES,
-        ),
-        expand(
             rules.merge_alr_regions_by_chr.output,
             sm=SAMPLE_NAMES,
             ort=ORIENTATION,
             chr=CHROMOSOMES,
         ),
+        expand(rules.make_new_cens_bed_file.output, sm=SAMPLE_NAMES),

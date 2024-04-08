@@ -1,98 +1,19 @@
-# HG00171_chr4_haplotype1-0000002:1892469-12648706
-# |haplotype1-0000002|1892469|12648706|chr4|
-# |haplotype1-0000002|1892469|12648706|12648706-1892469|chr4|
-rule make_bed_files_for_plot:
-    input:
-        script="workflow/scripts/filter_cen_ctgs.py",
-        faidx=expand(
-            rules.merge_alr_regions_by_chr.output.idx,
-            ort=ORIENTATION,
-            sm=SAMPLE_NAMES,
-            chr=CHROMOSOMES,
-        ),
-    output:
-        tmp_fmt_alr_bed=temp(
-            os.path.join(
-                config["nuc_freq"]["output_dir"], "fmt_{sm}_ALR_regions.500kbp.bed"
-            )
-        ),
-        alr_bed=os.path.join(
-            config["nuc_freq"]["output_dir"], "{sm}_ALR_regions.500kbp.bed"
-        ),
-        correct_alr_bed=os.path.join(
-            config["nuc_freq"]["output_dir"], "{sm}_correct_ALR_regions.500kbp.bed"
-        ),
-    params:
-        io_cols=" ".join(["ctg", "start", "end", "chr"]),
-        grp_cols=" ".join(["ctg", "chr"]),
-        sort_cols=" ".join(["ctg", "start"]),
-    conda:
-        "../env/py.yaml"
-    log:
-        "logs/make_{sm}_bed_files_for_plot.log",
-    message:
-        f"""
-        Check (sm)_correct_ALR_regions.500kbp.bed for copies of ALR regions per sample.
-        Add a column labeling regions as "good" or "misassembled".
-        Then update repeatmasker.correct_asm in config/config.yaml.
-        An automated approach to missassembly identification is a WIP.
-        """
-    shell:
-        # Only filter for sample to avoid malformed output ref cols in alr bed.
-        # Also, filter starting position of 1 as likely only a fragment of ALR.
-        """
-        {{ cat {input.faidx} | \
-        sed -e 's/_/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
-        awk -v OFS="\\t" '{{if ($1 == "{wildcards.sm}") {{print $3"-"$4, $5, $6, $2}}}}' | \
-        sort | \
-        uniq;}} > {output.tmp_fmt_alr_bed} 2> {log}
-
-        {{ python {input.script} bedminmax \
-            -i {output.tmp_fmt_alr_bed} \
-            -ci {params.io_cols} \
-            -co {params.io_cols} \
-            -g {params.grp_cols} \
-            -s {params.sort_cols} | \
-        awk -v OFS="\\t" '{{ if ($2 != 1) {{print $1, $2, $3, $3-$2, $4}}}}';}} > {output.alr_bed} 2>> {log}
-
-        # Make copy.
-        cp {output.alr_bed} {output.correct_alr_bed}
-        """
-
-
-rule convert_hifi_reads_to_fq:
-    input:
-        os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}.bam"),
-    output:
-        os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.fq"),
-    conda:
-        "../env/tools.yaml"
-    log:
-        "logs/convert_{sm}_{id}_hifi_reads_to_fq.log",
-    shell:
-        """
-        samtools bam2fq {input} > {output} 2> {log}
-        """
-
-
 rule align_reads_to_asm:
     input:
-        asm=rules.concat_asm.output,
-        reads=rules.convert_hifi_reads_to_fq.output,
+        asm=os.path.join(
+            config["concat_asm"]["output_dir"],
+            "{sm}",
+            "{sm}_regions.renamed.fa",
+        ),
+        reads=os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}.bam"),
     output:
         alignment=temp(
             os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")
         ),
-        alignment_idx=temp(
-            os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam.bai")
-        ),
-    threads: config["nuc_freq"]["threads"]
+    threads: config["nuc_freq"]["threads_aln"]
     resources:
-        mem_mb=40_000,
-        sort_mem=4,
+        mem_mb=120_000,
     params:
-        # https://broadinstitute.github.io/picard/explain-flags.html
-        samtools_view_flag=config["nuc_freq"]["samtools_view_flag"],
         aln_log_level="DEBUG",
         aln_preset="SUBREAD",
         aln_min_length=5000,
@@ -104,22 +25,44 @@ rule align_reads_to_asm:
         "benchmarks/align_{sm}_{id}_hifi_reads_to_asm.tsv"
     shell:
         """
-        {{ pbmm2 align \
+        pbmm2 align \
         --log-level {params.aln_log_level} \
         --preset {params.aln_preset} \
         --min-length {params.aln_min_length} \
-        -j {threads} {input.asm} {input.reads} | \
-        samtools view -F {params.samtools_view_flag} -u - | \
-        samtools sort -m {resources.sort_mem}G -@ {threads} -;}} > {output.alignment} 2> {log}
+        -j {threads} {input.asm} {input.reads} > {output.alignment} 2> {log}
+        """
 
-        samtools index {output.alignment} 2> {log}
+
+# Get error when trying to pipe ^ to samtools view. No header. Separate step works.
+rule filter_align_reads_to_asm:
+    input:
+        rules.align_reads_to_asm.output,
+    output:
+        alignment=temp(
+            os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi_view.bam")
+        ),
+    params:
+        # https://broadinstitute.github.io/picard/explain-flags.html
+        samtools_view_flag=config["nuc_freq"]["samtools_view_flag"],
+    resources:
+        sort_mem=4,
+        mem_mb=20_000,
+    threads: config["nuc_freq"]["threads_aln"]
+    conda:
+        "../env/tools.yaml"
+    log:
+        "logs/filter_align_{sm}_{id}_hifi_reads_to_asm.log",
+    shell:
+        """
+        {{ samtools view -b -F {params.samtools_view_flag} {input} | \
+        samtools sort -m {resources.sort_mem}G -@ {threads} -o {output.alignment};}} 2> {log}
         """
 
 
 rule merge_hifi_read_asm_alignments:
     input:
         lambda wc: expand(
-            rules.align_reads_to_asm.output.alignment,
+            rules.filter_align_reads_to_asm.output.alignment,
             sm=[wc.sm],
             id=SAMPLE_FLOWCELL_IDS[str(wc.sm)],
         ),
@@ -128,7 +71,9 @@ rule merge_hifi_read_asm_alignments:
         alignment_idx=os.path.join(
             config["nuc_freq"]["output_dir"], "{sm}_hifi.bam.bai"
         ),
-    threads: config["nuc_freq"]["threads"]
+    threads: config["nuc_freq"]["threads_aln"]
+    resources:
+        mem_mb=10_000,
     conda:
         "../env/tools.yaml"
     log:
@@ -142,43 +87,47 @@ rule merge_hifi_read_asm_alignments:
         """
 
 
-rule gen_nucfreq_plot:
+rule check_asm_nucfreq:
     input:
-        script="workflow/scripts/NucFreq/NucPlot.py",
         bam_file=rules.merge_hifi_read_asm_alignments.output.alignment,
-        alr_regions=rules.make_bed_files_for_plot.output.alr_bed,
+        alr_regions=rules.make_new_cens_bed_file.output.alr_bed,
+        config=config["nuc_freq"]["config_nucfreq"],
+        ignore_regions=config["nuc_freq"]["ignore_regions"],
     output:
-        alr_hap_regions=temp(
-            os.path.join(
-                config["nuc_freq"]["output_dir"],
-                "{sm}_{hap}_ALR_regions.500kbp.bed",
-            )
-        ),
-        plot=os.path.join(
+        plot_dir=directory(os.path.join(config["nuc_freq"]["output_dir"], "{sm}")),
+        misassemblies=os.path.join(
             config["nuc_freq"]["output_dir"],
-            "{sm}_{hap}_hifi_cens.png",
+            "{sm}_cen_misassemblies.bed",
         ),
+        asm_status=os.path.join(
+            config["nuc_freq"]["output_dir"],
+            "{sm}_cen_status.bed",
+        ),
+    threads: config["nuc_freq"]["processes_nucfreq"]
     conda:
-        "../env/pysam.yaml"
+        "../env/nucfreq.yaml"
     resources:
-        mem_mb=60_000,
-    params:
-        ylim=100,
-        height=4,
+        mem_mb=50_000,
     log:
-        "logs/run_nucfreq_{sm}_{hap}.log",
+        "logs/run_nucfreq_{sm}.log",
     benchmark:
-        "benchmarks/run_nucfreq_{sm}_{hap}.tsv"
+        "benchmarks/run_nucfreq_{sm}.tsv"
     shell:
         """
-        grep "{wildcards.hap}" {input.alr_regions} > {output.alr_hap_regions}
-        python {input.script} \
-        -y {params.ylim} \
-        {input.bam_file} \
-        {output.plot} \
-        --bed {output.alr_hap_regions} \
-        --height {params.height} &> {log}
+        nucfreq \
+        -i {input.bam_file} \
+        -b {input.alr_regions} \
+        -d {output.plot_dir} \
+        -o {output.misassemblies} \
+        -t {threads} \
+        -p {threads} \
+        -s {output.asm_status} \
+        -c {input.config} \
+        --ignore_regions {input.ignore_regions} &> {log}
         """
 
 
-# Then review plots manually.
+rule nuc_freq_only:
+    input:
+        expand(rules.merge_hifi_read_asm_alignments.output, sm=SAMPLE_NAMES),
+        expand(rules.check_asm_nucfreq.output, sm=SAMPLE_NAMES),

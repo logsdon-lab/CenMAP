@@ -1,22 +1,21 @@
+samples:
+- test_1
+
 align_asm_to_ref:
-  # This config specifies the assemblies in `tbl`
-  config: "test/config/asm_to_ref_config.yaml"
-  # Reference in asm_to_ref_config.yaml
-  ref_key: "t2t_chm13_v2.0"
-  asat_annotations: "data/annotations/chm13_v2.0_hor_arrays.bed"
-  cens_500kbp_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
-  # Output dir set to results
+  reference: "test/data/test.fasta"
 
 concat_asm:
   input_dir: "test/data/assemblies"
   output_dir: "data/assemblies/combined"
 
-mask_hor_arrays:
+extract_ref_hor_arrays:
   output_dir: "results/masked"
 
 ident_cen_ctgs:
   comb_assemblies_dir: "data/assemblies/combined"
   output_dir: "results/cens"
+  ref_cens_500kbp_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
+  ref_cens_monomeric_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
 
 dna_brnn:
   output_dir: "results/dna_brnn"
@@ -32,18 +31,21 @@ dna_brnn:
     chr16: [[1_000_000, null]]
   default_repeat_len_thr: [1_000, null]
 
+new_cens:
+  output_dir: "results/cens_new"
+
 nuc_freq:
   hifi_reads_dir: "test/data/raw_data/hifi"
   output_dir: "results/dna_brnn/nucfreq"
-  threads: 4
+  config_nucfreq: "config/nucfreq.toml"
+  ignore_regions: "config/nucfreq_ignore.bed"
+  threads_aln: 4
+  processes_nucfreq: 12
   samtools_view_flag: 2308
 
 repeatmasker:
-  # Map of paths to correct samples according to nuc_freq.
-  correct_asm:
-    test_1: "test/config/test_1_correct.bed"
-  # /net/eichler/vol27/projects/AlphaSatelliteMapping/nobackups/FindingAlphaSat/t2t_chr8/chm13/centromeres/repeatmasker/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
-  censat_annot_hor_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
+  ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
+  ref_repeatmasker_chrY_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   threads: 40
   output_dir: "results/repeatmasker"
 
@@ -92,6 +94,9 @@ plot_hor_stv:
   mer_order:
     - small
     - large
+
+calculate_hor_length:
+  output_dir: "results/calculate_hor_length"
 
 stained_glass:
   input_dir: null

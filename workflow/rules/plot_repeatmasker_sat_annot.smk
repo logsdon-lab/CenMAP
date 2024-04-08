@@ -17,11 +17,15 @@ rule create_annotated_satellites:
         ),
         # corrected_rm_out=rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
         corrected_rm_out=os.path.join(
-            config["repeatmasker"]["output_dir"], "all_corrected_cens.fa.out"
+            config["repeatmasker"]["output_dir"],
+            "repeats",
+            "all",
+            "all_corrected_cens.fa.out",
         ),
     output:
         os.path.join(
             config["repeatmasker_sat_annot"]["output_dir"],
+            "bed",
             "all_cens_{repeat}.satellites.bed",
         ),
     params:
@@ -33,13 +37,14 @@ rule create_annotated_satellites:
         """
         {{ cat {input} | \
         grep "{params.pattern}" | \
-        sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
         awk -v OFS="\\t" '{{
-            if ($5 ~ /chm/ || $5 ~ /^chr[0-9XY]+$/ ) {{
-                print $5, $6+$8, $6+$9, "{wildcards.repeat}", "0", ".", $6+$8, $6+$9, "{params.color}"
-            }} else {{
-                print $5"-"$6, $7+$9, $7+$10, "{wildcards.repeat}", "0", ".", $7+$9, $7+$10, "{params.color}"
-            }}
+            # Find start in contig name.
+            match($5, ":(.+)-", starts);
+            # Create adjust start/end
+            new_start=$6+starts[1];
+            new_end=$7+starts[1];
+
+            print $5, new_start, new_end, "{wildcards.repeat}", "0", ".", new_start, new_end, "{params.color}"
         }}';}} > {output} 2> {log}
         """
 
@@ -52,10 +57,15 @@ rule create_ct_track:
             else rules.run_repeatmasker_ref.output
         ),
         corrected_rm_out=os.path.join(
-            config["repeatmasker"]["output_dir"], "all_corrected_cens.fa.out"
+            config["repeatmasker"]["output_dir"],
+            "repeats",
+            "all",
+            "all_corrected_cens.fa.out",
         ),
     output:
-        os.path.join(config["repeatmasker_sat_annot"]["output_dir"], "all_cens.ct.bed"),
+        os.path.join(
+            config["repeatmasker_sat_annot"]["output_dir"], "bed", "all_cens.ct.bed"
+        ),
     params:
         color=config["repeatmasker_sat_annot"]["ct_track_color"],
     log:
@@ -65,13 +75,11 @@ rule create_ct_track:
     shell:
         """
         {{ cat {input} | \
-        sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
         awk -v OFS="\\t" '{{
-            if ($5 ~ /chm/ || $5 ~ /^chr[0-9XY]+$/ ) {{
-                print $5, $6, $7, "ct", "0", ".", $6, $7, "{params.color}"
-            }} else {{
-                print $5"-"$6, $7, $8, "ct", "0", ".", $7, $8, "{params.color}"
-            }}
+            # Find start in contig name.
+            match($5, ":(.+)-", starts);
+            match($5, ".*-(.+)$", ends);
+            print $5, starts[1], ends[1], "ct", "0", ".", starts[1], ends[1], "{params.color}"
         }}' | \
         sort | uniq | grep -P "chr|cen";}} > {output} 2> {log}
         """
@@ -86,7 +94,9 @@ rule aggregate_rm_satellite_annotations:
         ct_track=rules.create_ct_track.output,
     output:
         os.path.join(
-            config["repeatmasker_sat_annot"]["output_dir"], "all_cens.annotation.bed"
+            config["repeatmasker_sat_annot"]["output_dir"],
+            "bed",
+            "all_cens.annotation.bed",
         ),
     shell:
         """
@@ -100,6 +110,7 @@ rule split_rm_satellite_annotations:
     output:
         chr_annot=os.path.join(
             config["repeatmasker_sat_annot"]["output_dir"],
+            "repeats",
             "all_cens_{chr}.annotation.fa.out",
         ),
     params:
@@ -117,6 +128,7 @@ rule plot_satellite_annotations:
     output:
         chr_plot=os.path.join(
             config["repeatmasker_sat_annot"]["output_dir"],
+            "plots",
             "all_cens_{chr}.annotation.png",
         ),
     log:

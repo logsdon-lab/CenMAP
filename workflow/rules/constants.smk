@@ -1,7 +1,7 @@
 # Globals shared throughout workflow.
-SAMPLES_DF = load_samples_df()
-REF_NAME = config["align_asm_to_ref"]["ref_key"]
-SAMPLE_NAMES = SAMPLES_DF.index
+REF_FA = config["align_asm_to_ref"]["reference"]
+REF_NAME = os.path.splitext(os.path.basename(REF_FA))[0]
+SAMPLE_NAMES = config["samples"]
 ORIENTATION = ("fwd", "rev")
 HAPLOTYPE = ("haplotype1", "haplotype2")
 CHROMOSOMES = config.get(
@@ -34,4 +34,3 @@ CHROMOSOMES = config.get(
     ),
 )
 SAMPLE_FLOWCELL_IDS = get_hifi_read_wildcards()
-CORRECT_ASSEMBLIES = config["repeatmasker"]["correct_asm"]

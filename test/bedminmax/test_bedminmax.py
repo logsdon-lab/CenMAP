@@ -28,7 +28,7 @@ def test_bedminmax(input_bed: str, expected_bed: str):
     subprocess.run(
         [
             "python",
-            "workflow/scripts/bedminmax_cens.py",
+            "test/bedminmax/bedminmax_cens.py",
             "-i",
             input_bed,
             "-o",

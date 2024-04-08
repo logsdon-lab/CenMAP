@@ -2,10 +2,11 @@
 rule run_dna_brnn:
     input:
         model=config["dna_brnn"]["model"],
-        seqs=rules.cens_rename_oriented_ctgs.output,
+        seqs=rules.extract_cens_oriented_regions.output.seq,
     output:
         repeat_regions=os.path.join(
             config["dna_brnn"]["output_dir"],
+            "{sm}",
             "{sm}_centromeric_regions.renamed.{ort}.bed",
         ),
     threads: config["dna_brnn"]["threads"]
@@ -31,10 +32,10 @@ rule run_dna_brnn:
 use rule run_dna_brnn as run_dna_brnn_ref_cens with:
     input:
         model=config["dna_brnn"]["model"],
-        seqs=rules.extract_hor_arrays.output,
+        seqs=rules.extract_ref_hor_arrays.output,
     output:
         cens=os.path.join(
-            config["dna_brnn"]["output_dir"], f"{REF_NAME}_cens.trimmed.bed"
+            config["dna_brnn"]["output_dir"], REF_NAME, f"{REF_NAME}_cens.trimmed.bed"
         ),
     log:
         f"logs/dna_brnn_{REF_NAME}_cens.log",
@@ -48,11 +49,17 @@ use rule run_dna_brnn as run_dna_brnn_ref_cens with:
 # awk -v OFS="\t" '{print $1, $2+$4, $2+$5, $6, $5-$4}' | awk '$4==2' | awk '$5>1000' > chr1_tmp.fwd.bed
 rule filter_dnabrnn_ref_cens_regions:
     input:
-        repeats=rules.run_dna_brnn_ref_cens.output
-        if config["dna_brnn"].get("ref_alr_file") is None
-        else config["dna_brnn"]["ref_alr_file"],
+        repeats=(
+            rules.run_dna_brnn_ref_cens.output
+            if config["dna_brnn"].get("ref_alr_file") is None
+            else config["dna_brnn"]["ref_alr_file"]
+        ),
     output:
-        temp(os.path.join(config["dna_brnn"]["output_dir"], "{chr}_tmp.fwd.bed")),
+        temp(
+            os.path.join(
+                config["dna_brnn"]["output_dir"], REF_NAME, "{chr}_tmp.fwd.bed"
+            )
+        ),
     params:
         repeat_type_filter=2,
         repeat_len_thr=1000,
@@ -69,7 +76,9 @@ rule filter_dnabrnn_ref_cens_regions:
         """
 
 
+# ex. >HG00171_chr19_h1tg000004l#1-58112442
 # ex. >HG00171_chr16_haplotype1-0000003:4-8430174
+# HG00171_chr16_haplotype1|0000003|4|8430174|start|end|type
 # (Per chr + sample)
 # grep "chr2_" ${sample}.renamed.fwd.bed | \
 # sed 's/:/\t/g' | \
@@ -79,21 +88,18 @@ rule filter_dnabrnn_ref_cens_regions:
 # awk '$5>1000' >> chr2_tmp.fwd.bed
 rule filter_dnabrnn_sample_cens_regions:
     input:
-        script="workflow/scripts/filter_cen_ctgs.py",
         repeats=rules.run_dna_brnn.output,
     output:
         tmp_alr_ctgs=temp(
             os.path.join(
                 config["dna_brnn"]["output_dir"],
+                "{sm}",
                 "{chr}_{sm}_contigs.{ort}.ALR.bed",
             )
         ),
     params:
         repeat_type_filter=2,
         awk_repeat_len_thr_stmt=lambda wc: build_awk_cen_region_length_thr(str(wc.chr)),
-        awk_dst_calc_cols=lambda wc: "$4-$6, $4-$5"
-        if wc.ort == "rev"
-        else "$3+$5, $3+$6",
     log:
         "logs/filter_dnabrnn_{ort}_{sm}_{chr}_cens_regions.log",
     conda:
@@ -106,8 +112,35 @@ rule filter_dnabrnn_sample_cens_regions:
             touch {output.tmp_alr_ctgs}
         else
            {{ printf '%s\\n' "${{chr_repeats}}" | \
-            sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
-            awk -v OFS="\\t" '{{print $1"-"$2, {params.awk_dst_calc_cols}, $7, $6-$5}}' | \
+            sed -e 's/h1tg/h1-tg/g' -e 's/h2tg/h2-tg/g' | \
+            sed -e 's/#/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
+            awk -v OFS="\\t" '{{
+                is_hifiasm=$1 ~ "h1" || $1 ~ "h2"
+                if ("{wildcards.ort}" == "rev") {{
+                    if (is_hifiasm) {{
+                        new_start=$6-$7
+                        new_stop=$6-$8
+                    }} else {{
+                        new_start=$4-$5
+                        new_stop=$4-$6
+                    }}
+                }} else {{
+                    if (is_hifiasm) {{
+                        new_start=$5+$7
+                        new_stop=$5+$8
+                    }} else {{
+                        new_start=$3+$5
+                        new_stop=$3+$6
+                    }}
+                }}
+                if (is_hifiasm) {{
+                    contig_name=$1""$2"#"$3"-"$4
+                    print contig_name, new_start, new_stop, $9, $8-$7
+                }} else {{
+                    contig_name=$1"-"$2":"$3"-"$4
+                    print contig_name, new_start, new_stop, $7, $6-$5
+                }}
+            }}' | \
             awk '$4=={params.repeat_type_filter} && {params.awk_repeat_len_thr_stmt}';}} > {output.tmp_alr_ctgs} 2> {log}
         fi
         """
@@ -119,11 +152,13 @@ rule filter_dnabrnn_sample_cens_regions:
 rule get_dnabrnn_ref_cens_pos:
     input:
         script="workflow/scripts/get_cen_pos.py",
-        repeats=rules.run_dna_brnn_ref_cens.output
-        if config["dna_brnn"].get("ref_alr_file") is None
-        else config["dna_brnn"]["ref_alr_file"],
+        repeats=(
+            rules.run_dna_brnn_ref_cens.output
+            if config["dna_brnn"].get("ref_alr_file") is None
+            else config["dna_brnn"]["ref_alr_file"]
+        ),
     output:
-        os.path.join(config["dna_brnn"]["output_dir"], "{chr}_cens_data.json"),
+        os.path.join(config["dna_brnn"]["output_dir"], REF_NAME, "{chr}_cens_data.json"),
     log:
         "logs/get_dnabrnn_ref_{chr}_cens_data.log",
     params:
@@ -211,17 +246,6 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
 rule dna_brnn_all:
     input:
         expand(rules.run_dna_brnn.output, sm=SAMPLE_NAMES, ort=ORIENTATION),
-        # rules.run_dna_brnn_ref_cens.output,
-        expand(
-            rules.filter_dnabrnn_ref_cens_regions.output,
-            chr=CHROMOSOMES,
-        ),
-        expand(
-            rules.filter_dnabrnn_sample_cens_regions.output,
-            sm=SAMPLE_NAMES,
-            ort=ORIENTATION,
-            chr=CHROMOSOMES,
-        ),
         expand(
             rules.get_dnabrnn_ref_cens_pos.output,
             chr=CHROMOSOMES,

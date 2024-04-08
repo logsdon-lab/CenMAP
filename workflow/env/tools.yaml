@@ -9,5 +9,5 @@ dependencies:
   - hmmer
   - bedops
   - seqkit
-  - minimap2
+  - minimap2==2.26
   - pbmm2

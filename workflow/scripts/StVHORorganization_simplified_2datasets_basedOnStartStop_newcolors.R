@@ -36,10 +36,6 @@ p <- add_argument(p, "--output",
   help = "Output plot file. Defaults to {chr}_hgsvc3_{order_hor}erontop.png.",
   type = "character", default = NA
 )
-p <- add_argument(p, "--output_tbl",
-  help = "Output table file. Defaults to {chr}_length.tsv.",
-  type = "character", default = NA
-)
 p <- add_argument(p, "--hor_filter",
   help = "Filter for HORs that occur at least 20 times (10 times per haplotype)",
   type = "numeric", default = 0
@@ -62,11 +58,6 @@ if (is.na(args$chr)) {
 }
 
 # Create default output names.
-args$output_tbl <- ifelse(
-  is.na(args$output_tbl),
-  paste0(args$chr, "_length.tsv"),
-  args$output_tbl
-)
 args$output <- ifelse(
   is.na(args$output),
   paste0(
@@ -133,25 +124,6 @@ chm13_chm1_hgsvc3 <- switch(args$chr,
   "chr17" = subset(chm13_chm1_hgsvc3, as.numeric(mer) >= 4),
   chm13_chm1_hgsvc3
 )
-
-# determine length of HOR array
-df_length <- chm13_chm1_hgsvc3 %>% group_by(chr)
-
-if (args$chr == "chr8") {
-  df_length <- df_length %>%
-    slice(3:n()) %>%
-    filter(row_number() <= n() - 1)
-}
-
-df_length <- df_length %>%
-  summarise(
-    HOR_array_length = max(stop) - min(start),
-    start = min(start),
-    stop = max(stop)
-  )
-
-# write bed output
-write.table(df_length, file = args$output_tbl, quote = FALSE, sep = "\t", row.names = FALSE)
 
 # filter for HORs that occur at least 20 times (10 times per haplotype)
 df_mer <- chm13_chm1_hgsvc3 %>%

@@ -137,9 +137,9 @@ ggplot() +
   theme(legend.position = "bottom") +
   theme(legend.key.width = unit(1, "cm")) +
   theme(legend.title = element_blank()) +
-  guides(color = guide_legend(override.aes = list(size = 6))) +
+  guides(color = guide_legend(override.aes = list(size = 1))) +
   xlab("Position (kbp)")
 
 if (!interactive()) pdf(NULL)
 height <- length(unique(df$contig)) * 0.5
-ggsave(argv$output, width = 10, height = height + 4)
+ggsave(argv$output, width = 14, height = height + 4)
