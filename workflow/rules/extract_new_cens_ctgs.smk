@@ -199,12 +199,6 @@ rule extract_new_cens_all:
             ort=ORIENTATION,
             chr=CHROMOSOMES,
         ),
-        # expand(
-        #     rules.extract_alr_region_sample_by_chr.output,
-        #     sm=SAMPLE_NAMES,
-        #     ort=ORIENTATION,
-        #     chr=CHROMOSOMES,
-        # ),
         expand(
             rules.merge_alr_regions_by_chr.output,
             sm=SAMPLE_NAMES,

@@ -120,11 +120,6 @@ rule rename_ctg_all:
             rules.create_renamed_bed_n_legend.output,
             sm=SAMPLES,
         ),
-        # expand(
-        #     rules.split_oriented_assembly_fasta.output,
-        #     sm=SAMPLES,
-        #     ort=ORIENTATION,
-        # ),
         expand(
             rules.rename_ctgs.output,
             sm=SAMPLES,

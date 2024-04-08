@@ -89,7 +89,6 @@ rule merge_hifi_read_asm_alignments:
 
 rule check_asm_nucfreq:
     input:
-        script="workflow/scripts/NucFreq/NucPlot.py",
         bam_file=rules.merge_hifi_read_asm_alignments.output.alignment,
         alr_regions=rules.make_new_cens_bed_file.output.alr_bed,
         config=config["nuc_freq"]["config_nucfreq"],
