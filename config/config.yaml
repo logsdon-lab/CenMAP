@@ -33,8 +33,8 @@ concat_asm:
   output_dir: "data/assemblies/combined"
 
 align_asm_to_ref:
-  reference: "data/reference_link/T2T-CHM13v2.fasta"
   # Output dir set to results
+  reference: "data/reference_link/T2T-CHM13v2.fasta"
 
 extract_ref_hor_arrays:
   output_dir: "results/ref_hor_arrays"
@@ -105,7 +105,6 @@ repeatmasker_sat_annot:
       pattern: "(CATTC)n\\|(GAATG)n"
       color: "127,159,184"
   ct_track_color: "209,211,212"
-
 
 humas_hmmer:
   # Dir where split cens placed.
