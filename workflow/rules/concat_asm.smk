@@ -8,16 +8,15 @@ rule concat_asm:
     params:
         assembly_fname_pattern="*.gz",
         by_seq="-s",
-    # Only allow not hap names ex. HG00171 (Not H00171_1)
-    wildcard_constraints:
-        sm="\\w+",
+    resources:
+        mem_mb=20_000,
     log:
         "logs/concat_asm_{sm}.log",
     conda:
         "../env/tools.yaml"
     shell:
         """
-        {{ find {input.sm_dir} -name {params.assembly_fname_pattern} -exec zcat {{}} + | \
+        {{ zcat {input.sm_dir}/{params.assembly_fname_pattern} | \
         seqkit rmdup {params.by_seq};}} > {output} 2> {log}
         """
 

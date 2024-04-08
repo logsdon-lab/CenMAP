@@ -7,6 +7,7 @@ rule align_reads_to_asm:
         ),
         reads=os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}.bam"),
     output:
+        reads_fq=temp(os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}.fq")),
         alignment=temp(
             os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")
         ),
@@ -25,11 +26,12 @@ rule align_reads_to_asm:
         "benchmarks/align_{sm}_{id}_hifi_reads_to_asm.tsv"
     shell:
         """
+        samtools bam2fq {input.reads} > {output.reads_fq} 2> {log}
         pbmm2 align \
         --log-level {params.aln_log_level} \
         --preset {params.aln_preset} \
         --min-length {params.aln_min_length} \
-        -j {threads} {input.asm} {input.reads} > {output.alignment} 2> {log}
+        -j {threads} {input.asm} {output.reads_fq} > {output.alignment} 2>> {log}
         """
 
 

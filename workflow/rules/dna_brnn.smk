@@ -18,7 +18,7 @@ rule run_dna_brnn:
         "benchmarks/dna_brnn_{ort}_{sm}.tsv"
     # No conda recipe. Use singularity if not installed locally.
     singularity:
-        "docker://logsdonlab/hgsvc3:latest"
+        "docker://logsdonlab/dna-nn:latest"
     shell:
         """
         dna-brnn -t {threads} -Ai {input.model} {input.seqs} > {output} 2> {log}
@@ -137,7 +137,7 @@ rule filter_dnabrnn_sample_cens_regions:
                     contig_name=$1""$2"#"$3"-"$4
                     print contig_name, new_start, new_stop, $9, $8-$7
                 }} else {{
-                    contig_name=$1"-"$2":"$3"-"$4
+                    contig_name=$1"-"$2
                     print contig_name, new_start, new_stop, $7, $6-$5
                 }}
             }}' | \
