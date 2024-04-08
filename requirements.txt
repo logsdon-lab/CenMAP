@@ -1,1 +1,2 @@
 snakemake==7.32.4
+pandas
