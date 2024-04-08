@@ -38,7 +38,7 @@ rule align_reads_to_asm:
 # Get error when trying to pipe ^ to samtools view. No header. Separate step works.
 rule filter_align_reads_to_asm:
     input:
-        rules.align_reads_to_asm.output,
+        rules.align_reads_to_asm.output.alignment,
     output:
         alignment=temp(
             os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi_view.bam")
