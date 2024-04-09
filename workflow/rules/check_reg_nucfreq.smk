@@ -52,7 +52,7 @@ rule align_reads_to_asm:
         --log-level {params.aln_log_level} \
         --preset {params.aln_preset} \
         --min-length {params.aln_min_length} \
-        -j {threads} {input.asm} {input.reads} > {output.alignment} 2>> {log}
+        -j {threads} {input.asm} {input.reads} > {output} 2>> {log}
         """
 
 
@@ -90,7 +90,7 @@ def get_aln_to_asm(wc) -> list[str]:
     )
     if not alns:
         raise FileNotFoundError(
-            f"Subdirectory {wc.sm} in {config["nuc_freq"]["hifi_reads_dir"]} is missing or contains no alignment files."
+            f"Subdirectory {wc.sm} in {config['nuc_freq']['hifi_reads_dir']} is missing or contains no alignment files."
         )
     return alns
         
