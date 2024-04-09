@@ -11,9 +11,9 @@ rule convert_reads_to_fq:
         "logs/convert_{sm}_{id}_to_fq.log",
     shell:
         """
-        if [[ "{wildcards.id}" =~ .*\.bam$ ]]; then
+        if [[ "{wildcards.id}" =~ ".*\.bam$" ]]; then
             samtools bam2fq {input.reads} > {output.reads_fq} 2> {log}
-        else if [[ "{wildcards.id}" =~ .*\.gz$  ]]; then
+        elif [[ "{wildcards.id}" =~ ".*\.gz$" ]]; then
             zcat {input.reads} > {output.reads_fq} 2> {log}
         else
             cp {input.reads} {output.reads_fq} 2> {log}
@@ -84,6 +84,8 @@ rule filter_align_reads_to_asm:
 
 rule merge_hifi_read_asm_alignments:
     input:
+        # TODO: Expand id and ext wildcards together.
+        # https://snakemake.readthedocs.io/en/v8.10.6/snakefiles/rules.html#the-expand-function 
         lambda wc: expand(
             rules.filter_align_reads_to_asm.output.alignment,
             sm=[wc.sm],
