@@ -160,7 +160,12 @@ def bedminmax(
     elif isinstance(input, IOBase):
         bed_df = read_bed_df(input, input_cols=input_cols)
     else:
-        bed_df = pl.concat(read_bed_df(i, input_cols=input_cols) for i in input)
+        dfs = []
+        for i in input:
+            df = read_bed_df(i, input_cols=input_cols)
+            if not df.is_empty():
+                dfs.append(df)
+        bed_df = pl.concat(dfs) if dfs else pl.DataFrame()
 
     # Allow empty df as output.
     if bed_df.is_empty() and allow_empty:
