@@ -11,9 +11,9 @@ rule convert_reads_to_fq:
         "logs/convert_{sm}_{id}_to_fq.log",
     shell:
         """
-        if [[ "{wildcards.id}" =~ ".*\.bam$" ]]; then
+        if [[ "{wildcards.id}" =~ .*\.bam$ ]]; then
             samtools bam2fq {input.reads} > {output} 2> {log}
-        elif [[ "{wildcards.id}" =~ ".*\.gz$" ]]; then
+        elif [[ "{wildcards.id}" =~ .*\.gz$ ]]; then
             zcat {input.reads} > {output} 2> {log}
         else
             cp {input.reads} {output} 2> {log}

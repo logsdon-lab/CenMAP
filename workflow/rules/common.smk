@@ -19,7 +19,7 @@ def get_hifi_read_wildcards() -> dict[str, list[str]]:
             for file in os.listdir(read_dir_path):
                 try:
                     flowcell_id, extension = re.search(path_pattern, file).groups()
-                except ValueError:
+                except (ValueError, AttributeError):
                     continue
                 
                 samples[read_dir].append(flowcell_id + extension)
