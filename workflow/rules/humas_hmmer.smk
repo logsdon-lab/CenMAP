@@ -33,7 +33,7 @@ rule fmt_correct_alr_regions:
             for line in input_fa.readlines():
                 if line.startswith(">"):
                     # HG00171_chr22_h1tg000027l#1-26260313
-                    sm, chrm, record_id = line[1:].strip().split("_")
+                    sm, chrm, record_id = line[1:].strip().rsplit("_", maxsplit=2)
                     record_id, *delim_coords = record_id.partition(":")
                     replacement = replacements.get(record_id, "")
                     is_rc = "rc" in replacement
