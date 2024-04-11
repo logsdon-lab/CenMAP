@@ -367,7 +367,7 @@ rule count_complete_cens:
             for l in cens_list_fh.readlines():
                 if l.startswith("chm13"):
                     continue
-                sample, _, _ = l.partition("_")
+                sample, _, _ = l.rsplit("_", maxsplit=2)
                 counts[sample] += 1
 
             for sm, count in counts.items():
