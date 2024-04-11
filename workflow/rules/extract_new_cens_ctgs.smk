@@ -157,14 +157,15 @@ rule make_new_cens_bed_file:
         "logs/make_{sm}_bed_files_for_plot.log",
     shell:
         # Only filter for sample to avoid malformed output ref cols in alr bed.
-        # Also, filter starting position of 1 as likely only a fragment of ALR.
         """
         {{ cat {input.faidx} | \
         awk -v OFS="\\t" '{{
-            match($1, "^(.+):", ctgs);
-            match($1, ":(.+)-", starts);
-            match($1, ".*-(.+)$", ends);
-            print ctgs[1], starts[1], ends[1]
+            if ($1 ~ "^{wildcards.sm}") {{
+                match($1, "^(.+):", ctgs);
+                match($1, ":(.+)-", starts);
+                match($1, ".*-(.+)$", ends);
+                print ctgs[1], starts[1], ends[1]
+            }}
         }}' | \
         sort | \
         uniq;}} > {output.tmp_fmt_alr_bed} 2> {log}
