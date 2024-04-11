@@ -160,17 +160,11 @@ rule make_new_cens_bed_file:
         # Also, filter starting position of 1 as likely only a fragment of ALR.
         """
         {{ cat {input.faidx} | \
-        sed -e 's/_/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' -e 's/#/\\t/g' | \
         awk -v OFS="\\t" '{{
-            if ($1 == "{wildcards.sm}") {{
-                if ($3 ~ "h1" || $3 ~ "h2") {{
-                    contig_name=$1"_"$2"_"$3"#"$4"-"$5
-                    print contig_name, $6, $7
-                }} else {{
-                    contig_name=$1"_"$2"_"$3"-"$4
-                    print contig_name, $5, $6
-                }}
-            }}
+            match($1, "^(.+):", ctgs);
+            match($1, ":(.+)-", starts);
+            match($1, ".*-(.+)$", ends);
+            print ctgs[1], starts[1], ends[1]
         }}' | \
         sort | \
         uniq;}} > {output.tmp_fmt_alr_bed} 2> {log}

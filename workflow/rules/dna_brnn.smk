@@ -105,6 +105,7 @@ rule filter_dnabrnn_sample_cens_regions:
     conda:
         "../env/tools.yaml"
     shell:
+        # TODO: This may fail. Replace with regex.
         """
         chr_repeats=$(grep "{wildcards.chr}_" {input.repeats} || true)
         if [ -z "${{chr_repeats}}" ]; then
