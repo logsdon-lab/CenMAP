@@ -1,5 +1,5 @@
 # Generate table
-ASM_TABLE = "/tmp/table.asm.tbl"
+ASM_TABLE = f"/tmp/table_{hash(workflow.basedir)}.asm.tbl"
 with open(ASM_TABLE, "wt") as tbl_fh:
     tbl_fh.write("sample\tasm\n")
     for sm in SAMPLE_NAMES:
