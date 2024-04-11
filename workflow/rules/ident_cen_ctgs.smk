@@ -41,7 +41,6 @@ rule format_hor_ref_aln_cen_contigs:
         awk -v OFS="\\t" 'NR>1 {{
             # Find starts/ends in contig name.
             match($1, ":(.+)-", starts);
-            match($5, ".*-(.+)$", ends);
             # Remove coords from ctg name
             gsub(":.*-.*", "", $1)
             # Print columns.

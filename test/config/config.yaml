@@ -35,7 +35,7 @@ new_cens:
   output_dir: "results/cens_new"
 
 nuc_freq:
-  hifi_reads_dir: "test/data/raw_data/hifi"
+  hifi_reads_dir: "test/data/raw_data"
   output_dir: "results/dna_brnn/nucfreq"
   config_nucfreq: "config/nucfreq.toml"
   ignore_regions: "config/nucfreq_ignore.bed"

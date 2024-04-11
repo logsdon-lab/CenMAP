@@ -6,18 +6,19 @@ rule concat_asm:
         os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fasta"),
     # https://bioinf.shenwei.me/seqkit/usage/#rmdup
     params:
-        assembly_fname_pattern="*.gz",
+        assembly_fname_pattern=".*\.(fa|fasta)",
         by_seq="-s",
-    # Only allow not hap names ex. HG00171 (Not H00171_1)
-    wildcard_constraints:
-        sm="\\w+",
+    resources:
+        mem_mb=20_000,
     log:
         "logs/concat_asm_{sm}.log",
     conda:
         "../env/tools.yaml"
     shell:
         """
-        {{ find {input.sm_dir} -name {params.assembly_fname_pattern} -exec zcat {{}} + | \
+        {{ cat \
+        <(find {input.sm_dir} -regextype posix-egrep -regex "{params.assembly_fname_pattern}\.gz" -exec zcat {{}} + ) \
+        <(find {input.sm_dir} -regextype posix-egrep -regex "{params.assembly_fname_pattern}" -exec cat {{}} + ) | \
         seqkit rmdup {params.by_seq};}} > {output} 2> {log}
         """
 

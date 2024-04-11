@@ -18,7 +18,7 @@ rule run_dna_brnn:
         "benchmarks/dna_brnn_{ort}_{sm}.tsv"
     # No conda recipe. Use singularity if not installed locally.
     singularity:
-        "docker://logsdonlab/hgsvc3:latest"
+        "docker://logsdonlab/dna-nn:latest"
     shell:
         """
         dna-brnn -t {threads} -Ai {input.model} {input.seqs} > {output} 2> {log}
@@ -105,6 +105,7 @@ rule filter_dnabrnn_sample_cens_regions:
     conda:
         "../env/tools.yaml"
     shell:
+        # TODO: This may fail. Replace with regex.
         """
         chr_repeats=$(grep "{wildcards.chr}_" {input.repeats} || true)
         if [ -z "${{chr_repeats}}" ]; then
@@ -118,11 +119,11 @@ rule filter_dnabrnn_sample_cens_regions:
                 is_hifiasm=$1 ~ "h1" || $1 ~ "h2"
                 if ("{wildcards.ort}" == "rev") {{
                     if (is_hifiasm) {{
-                        new_start=$6-$7
-                        new_stop=$6-$8
+                        new_start=$6-$8
+                        new_stop=$6-$7
                     }} else {{
-                        new_start=$4-$5
-                        new_stop=$4-$6
+                        new_start=$4-$6
+                        new_stop=$4-$5
                     }}
                 }} else {{
                     if (is_hifiasm) {{
@@ -137,7 +138,7 @@ rule filter_dnabrnn_sample_cens_regions:
                     contig_name=$1""$2"#"$3"-"$4
                     print contig_name, new_start, new_stop, $9, $8-$7
                 }} else {{
-                    contig_name=$1"-"$2":"$3"-"$4
+                    contig_name=$1"-"$2
                     print contig_name, new_start, new_stop, $7, $6-$5
                 }}
             }}' | \
@@ -176,6 +177,13 @@ rule get_dnabrnn_ref_cens_pos:
         """
 
 
+def alr_region_threshold(wc):
+    if wc.chr == "chrY":
+        return 300_000
+    else:
+        return 1_000_000
+
+
 # TODO: Annotate
 # /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py (modified bedminmax) \
 # -i chr2_tmp.fwd.bed | \
@@ -202,7 +210,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
             "{chr}_contigs.{ort}.ALR.bed",
         ),
     params:
-        repeat_len_thr=1_000_000,
+        repeat_len_thr=alr_region_threshold,
         input_cols=" ".join(
             [
                 "chr",

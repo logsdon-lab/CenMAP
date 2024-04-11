@@ -6,17 +6,24 @@ from collections import defaultdict
 def get_hifi_read_wildcards() -> dict[str, list[str]]:
     """
     Get hifi reads by sample automatically from hifi_reads_dir.
-    Expects {hifi_reads_dir}/{sample}/*.bam
+    Expects {hifi_reads_dir}/{sample}/*.(bam|fq|fastq)(.gz)*
     """
-    reads_dir = config["nuc_freq"]["hifi_reads_dir"]
     # Avoid subdirs by constraining wildcards.
     # https://stackoverflow.com/a/60744040
-    path_pattern = os.path.join(reads_dir, "{sm,[^/]+}", "{flowcell_id,[^/]+}.bam")
-    reads_run_mdata_id = glob_wildcards(path_pattern)
+    path_pattern = re.compile(r"([^/]+)(\.bam|\.fq.gz|\.fastq\.gz|\.fq|\.fastq)")
 
     samples = defaultdict(list)
-    for sm, flowcell_id in zip(reads_run_mdata_id.sm, reads_run_mdata_id.flowcell_id):
-        samples[sm].append(flowcell_id)
+    for root, read_dirs, _ in os.walk(config["nuc_freq"]["hifi_reads_dir"]):
+        for read_dir in read_dirs:
+            read_dir_path = os.path.join(root, read_dir)
+            for file in os.listdir(read_dir_path):
+                try:
+                    flowcell_id, extension = re.search(path_pattern, file).groups()
+                except (ValueError, AttributeError):
+                    continue
+                
+                samples[read_dir].append(flowcell_id + extension)
+
     return samples
 
 

@@ -35,7 +35,8 @@ By default, the following are expected.
 Inputs can be modified in [`Configuration`](#configuration).
 
 ##### Assemblies
-* Directory with subdirectories corresponding to sample names each with `.gz` fasta/fa files.
+* Directory with subdirectories corresponding to sample names each with fasta files.
+  * Compressed or uncompressed files with the `fa` or `fasta` extension are supported.
 * `concat_asm.input_dir`
 
 ```yaml
@@ -48,7 +49,8 @@ data/assemblies/GM19129/
 ```
 
 ##### PacBio HiFi Reads
-* Directory with subdirectories corresponding to sample names each with indexed, unaligned `.bam` files.
+* Directory with subdirectories corresponding to sample names each with unaligned reads.
+  * Compressed or uncompressed files with the `bam`, `fq`, or `fastq` extension are supported.
 * `nuc_freq.hifi_reads_dir`
 
 ```yaml

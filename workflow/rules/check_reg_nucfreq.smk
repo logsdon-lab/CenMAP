@@ -1,3 +1,26 @@
+
+
+rule convert_reads_to_fq:
+    input:
+        reads=os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}"),
+    output:
+        temp(os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}.fq")),
+    conda:
+        "../env/tools.yaml"
+    log:
+        "logs/convert_{sm}_{id}_to_fq.log",
+    shell:
+        """
+        if [[ "{wildcards.id}" =~ .*\.bam$ ]]; then
+            samtools bam2fq {input.reads} > {output} 2> {log}
+        elif [[ "{wildcards.id}" =~ .*\.gz$ ]]; then
+            zcat {input.reads} > {output} 2> {log}
+        else
+            cp {input.reads} {output} 2> {log}
+        fi
+        """
+
+
 rule align_reads_to_asm:
     input:
         asm=os.path.join(
@@ -5,9 +28,9 @@ rule align_reads_to_asm:
             "{sm}",
             "{sm}_regions.renamed.fa",
         ),
-        reads=os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}.bam"),
+        reads=rules.convert_reads_to_fq.output,
     output:
-        alignment=temp(
+        temp(
             os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")
         ),
     threads: config["nuc_freq"]["threads_aln"]
@@ -29,7 +52,7 @@ rule align_reads_to_asm:
         --log-level {params.aln_log_level} \
         --preset {params.aln_preset} \
         --min-length {params.aln_min_length} \
-        -j {threads} {input.asm} {input.reads} > {output.alignment} 2> {log}
+        -j {threads} {input.asm} {input.reads} > {output} 2>> {log}
         """
 
 
@@ -38,7 +61,7 @@ rule filter_align_reads_to_asm:
     input:
         rules.align_reads_to_asm.output,
     output:
-        alignment=temp(
+        temp(
             os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi_view.bam")
         ),
     params:
@@ -55,17 +78,26 @@ rule filter_align_reads_to_asm:
     shell:
         """
         {{ samtools view -b -F {params.samtools_view_flag} {input} | \
-        samtools sort -m {resources.sort_mem}G -@ {threads} -o {output.alignment};}} 2> {log}
+        samtools sort -m {resources.sort_mem}G -@ {threads} -o {output};}} 2> {log}
         """
 
 
+def get_aln_to_asm(wc) -> list[str]:
+    alns = expand(
+        rules.filter_align_reads_to_asm.output,
+        sm=[wc.sm],
+        id=SAMPLE_FLOWCELL_IDS[str(wc.sm)],
+    )
+    if not alns:
+        raise FileNotFoundError(
+            f"Subdirectory {wc.sm} in {config['nuc_freq']['hifi_reads_dir']} is missing or contains no alignment files."
+        )
+    return alns
+        
+
 rule merge_hifi_read_asm_alignments:
     input:
-        lambda wc: expand(
-            rules.filter_align_reads_to_asm.output.alignment,
-            sm=[wc.sm],
-            id=SAMPLE_FLOWCELL_IDS[str(wc.sm)],
-        ),
+        get_aln_to_asm,
     output:
         alignment=os.path.join(config["nuc_freq"]["output_dir"], "{sm}_hifi.bam"),
         alignment_idx=os.path.join(
