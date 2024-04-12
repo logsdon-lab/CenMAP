@@ -233,13 +233,26 @@ rule check_cens_status:
         cens_status=os.path.join(
             config["repeatmasker"]["output_dir"], "status", "{chr}_cens_status.tsv"
         ),
+    params:
+        edge_len=100_000,
+        edge_perc_alr_thr=0.7,
+        dst_perc_thr=0.3,
+        # Edge-case for chrY whose repeats are small and broken up.
+        max_alr_len_thr=lambda wc: 0 if wc.chr == "chrY" else 200_000,
     log:
         "logs/check_cens_status_{chr}.log",
     conda:
         "../env/cen_stats.yaml"
     shell:
         """
-        cen-stats -i {input.rm_out} -r {input.rm_ref} -o {output} 2> {log}
+        cen-stats \
+        -i {input.rm_out} \
+        -r {input.rm_ref} \
+        -o {output} \
+        --edge_len {params.edge_len} \
+        --edge_perc_alr_thr {params.edge_perc_alr_thr} \
+        --dst_perc_thr {params.dst_perc_thr} \
+        --max_alr_len_thr {params.max_alr_len_thr} 2> {log}
         """
 
 

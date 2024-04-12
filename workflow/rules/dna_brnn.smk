@@ -88,7 +88,9 @@ rule filter_dnabrnn_ref_cens_regions:
 # awk '$5>1000' >> chr2_tmp.fwd.bed
 rule filter_dnabrnn_sample_cens_regions:
     input:
+        script="workflow/scripts/filter_dnabrnn_output.py",
         repeats=rules.run_dna_brnn.output,
+        thresholds=config["dna_brnn"]["thr_file"],
     output:
         tmp_alr_ctgs=temp(
             os.path.join(
@@ -99,51 +101,19 @@ rule filter_dnabrnn_sample_cens_regions:
         ),
     params:
         repeat_type_filter=2,
-        awk_repeat_len_thr_stmt=lambda wc: build_awk_cen_region_length_thr(str(wc.chr)),
     log:
         "logs/filter_dnabrnn_{ort}_{sm}_{chr}_cens_regions.log",
     conda:
-        "../env/tools.yaml"
+        "../env/py.yaml"
     shell:
-        # TODO: This may fail. Replace with regex.
         """
-        chr_repeats=$(grep "{wildcards.chr}_" {input.repeats} || true)
-        if [ -z "${{chr_repeats}}" ]; then
-            # Still make the file even if chr doesn't exist.
-            touch {output.tmp_alr_ctgs}
-        else
-           {{ printf '%s\\n' "${{chr_repeats}}" | \
-            sed -e 's/h1tg/h1-tg/g' -e 's/h2tg/h2-tg/g' | \
-            sed -e 's/#/\\t/g' -e 's/:/\\t/g' -e 's/-/\\t/g' | \
-            awk -v OFS="\\t" '{{
-                is_hifiasm=$1 ~ "h1" || $1 ~ "h2"
-                if ("{wildcards.ort}" == "rev") {{
-                    if (is_hifiasm) {{
-                        new_start=$6-$8
-                        new_stop=$6-$7
-                    }} else {{
-                        new_start=$4-$6
-                        new_stop=$4-$5
-                    }}
-                }} else {{
-                    if (is_hifiasm) {{
-                        new_start=$5+$7
-                        new_stop=$5+$8
-                    }} else {{
-                        new_start=$3+$5
-                        new_stop=$3+$6
-                    }}
-                }}
-                if (is_hifiasm) {{
-                    contig_name=$1""$2"#"$3"-"$4
-                    print contig_name, new_start, new_stop, $9, $8-$7
-                }} else {{
-                    contig_name=$1"-"$2
-                    print contig_name, new_start, new_stop, $7, $6-$5
-                }}
-            }}' | \
-            awk '$4=={params.repeat_type_filter} && {params.awk_repeat_len_thr_stmt}';}} > {output.tmp_alr_ctgs} 2> {log}
-        fi
+        python {input.script} \
+        -i {input.repeats} \
+        -o {output} \
+        -t {input.thresholds} \
+        --orientation {wildcards.ort} \
+        --chr {wildcards.chr} \
+        --repeat_type {params.repeat_type_filter} 2> {log}
         """
 
 
@@ -175,13 +145,6 @@ rule get_dnabrnn_ref_cens_pos:
         awk -v OFS="\\t" \
         '{{len=$3-$2; rp_typ=$4; if (rp_typ=={params.repeat_type_filter} && len>{params.repeat_len_thr}) print}}')
         """
-
-
-def alr_region_threshold(wc):
-    if wc.chr == "chrY":
-        return 300_000
-    else:
-        return 1_000_000
 
 
 # TODO: Annotate
