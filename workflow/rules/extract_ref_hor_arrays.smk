@@ -1,8 +1,24 @@
+rule adjust_ref_hor_arrays:
+    input:
+        config["ident_cen_ctgs"]["ref_cens_500kbp_regions"],
+    output:
+        os.path.join(
+            config["extract_ref_hor_arrays"]["output_dir"],
+            f"{REF_NAME}.hor_arrays.adj.bed",
+        ),
+    params:
+        added_bases=config["extract_ref_hor_arrays"].get("added_bases", 0),
+    shell:
+        """
+        awk -v OFS="\\t" '{{ print $1, $2-{params.added_bases}, $3+{params.added_bases} }}' {input} > {output}
+        """
+
+
 # Extract HOR arrays from reference.
 rule extract_ref_hor_arrays:
     input:
         ref=REF_FA,
-        cens_regions=config["ident_cen_ctgs"]["ref_cens_500kbp_regions"],
+        cens_regions=rules.adjust_ref_hor_arrays.output,
     output:
         seq=os.path.join(
             config["extract_ref_hor_arrays"]["output_dir"],

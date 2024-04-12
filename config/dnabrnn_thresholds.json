@@ -4,6 +4,6 @@
         "chr10": [[2000, null]],
         "chr16": [[1000000, null]]
     },
-    "min_repeat_len_perc": 0.95,
+    "min_repeat_len_perc": 0.5,
     "default_repeat_len_thr": [1000, null]
 }

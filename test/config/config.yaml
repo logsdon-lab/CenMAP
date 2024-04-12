@@ -10,6 +10,7 @@ concat_asm:
 
 extract_ref_hor_arrays:
   output_dir: "results/masked"
+  added_bases: 0
 
 ident_cen_ctgs:
   comb_assemblies_dir: "data/assemblies/combined"

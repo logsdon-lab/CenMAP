@@ -38,6 +38,7 @@ align_asm_to_ref:
 
 extract_ref_hor_arrays:
   output_dir: "results/ref_hor_arrays"
+  added_bases: 0
 
 ident_cen_ctgs:
   comb_assemblies_dir: "data/assemblies/combined"
