@@ -143,7 +143,7 @@ def main():
         # Only allow repeats in the 95th percentile or above. This removes small repeats that would overextend the HOR array region.
         # Apply additional static repeat len filters.
         df_ctg = (
-            df_ctg.filter(chr_len_thr_exprs)
+            df_ctg.filter(pl.any_horizontal(chr_len_thr_exprs))
             .with_columns(perc=pl.col("rlen").rank() / pl.col("rlen").len())
             .filter(
                 (pl.col("perc") > min_repeat_len_perc_threshold)
