@@ -2,12 +2,10 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - repeatmasker==4.1.0
   - bedtools
   - seqtk
   - samtools
   - hmmer
   - bedops
   - seqkit
-  - minimap2==2.26
   - pbmm2

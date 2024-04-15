@@ -426,7 +426,7 @@ rule plot_cens_from_rm_by_chr:
         repeat_plot_by_chr=os.path.join(
             config["repeatmasker"]["output_dir"],
             "plot",
-            "hgsvc3_{chr}_cens.additional.pdf",
+            "{chr}_cens.additional.pdf",
         ),
     log:
         "logs/plot_{chr}_cens_from_rm.log",
@@ -446,7 +446,7 @@ use rule plot_cens_from_rm_by_chr as plot_og_cens_from_rm_by_chr with:
         repeat_plot_by_chr=os.path.join(
             config["repeatmasker"]["output_dir"],
             "plot",
-            "hgsvc3_{chr}_cens.original.pdf",
+            "{chr}_cens.original.pdf",
         ),
     log:
         "logs/plot_{chr}_cens_from_rm_og.log",
