@@ -73,7 +73,7 @@ rule merge_correct_alr_regions:
     shell:
         """
         cat {input.alr_fa} > {output.seq} 2> {log}
-        if [-s {output.seq}]; then
+        if [ -s "{output.seq}" ]; then
             samtools faidx {output.seq} 2> {log}
         else
             touch {output.idx}
@@ -103,7 +103,7 @@ rule extract_cens_for_humas_hmmer:
         """
         seqtk subseq {input.all_correct_alr_fa} {input.corrected_cens_list} > {output.cens} 2> {log}
         seqtk subseq {input.rc_all_correct_alr_fa} {input.corrected_cens_list} >> {output.cens} 2> {log}
-        if [-s {output.cens}]; then
+        if [ -s "{output.cens}" ]; then
             samtools faidx {output.cens} 2> {log}
         else
             touch {output.idx}
