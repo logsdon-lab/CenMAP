@@ -10,6 +10,7 @@ concat_asm:
 
 extract_ref_hor_arrays:
   output_dir: "results/masked"
+  added_bases: 0
 
 ident_cen_ctgs:
   comb_assemblies_dir: "data/assemblies/combined"
@@ -25,11 +26,8 @@ dna_brnn:
   # Optional.
   ref_alr_file: "data/annotations/chm13_cens.trimmed.bed"
   threads: 12
-  repeat_len_thr:
-    chr9: [[9_000, 10_000], [1_000_000, null]]
-    chr10: [[2_000, null]]
-    chr16: [[1_000_000, null]]
-  default_repeat_len_thr: [1_000, null]
+  thr_file: "config/dnabrnn_thresholds.json"
+  full_alr_thr_file: "config/dnabrnn_full_alr_region_thresholds.json"
 
 new_cens:
   output_dir: "results/cens_new"

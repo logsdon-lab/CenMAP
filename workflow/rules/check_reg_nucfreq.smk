@@ -2,7 +2,9 @@
 
 rule convert_reads_to_fq:
     input:
-        reads=os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}"),
+        reads=ancient(
+            os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}")
+        ),
     output:
         temp(os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}.fq")),
     conda:
@@ -23,16 +25,16 @@ rule convert_reads_to_fq:
 
 rule align_reads_to_asm:
     input:
-        asm=os.path.join(
-            config["concat_asm"]["output_dir"],
-            "{sm}",
-            "{sm}_regions.renamed.fa",
+        asm=ancient(
+            os.path.join(
+                config["concat_asm"]["output_dir"],
+                "{sm}",
+                "{sm}_regions.renamed.fa",
+            )
         ),
-        reads=rules.convert_reads_to_fq.output,
+        reads=ancient(rules.convert_reads_to_fq.output),
     output:
-        temp(
-            os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")
-        ),
+        temp(os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")),
     threads: config["nuc_freq"]["threads_aln"]
     resources:
         mem_mb=120_000,
@@ -59,11 +61,9 @@ rule align_reads_to_asm:
 # Get error when trying to pipe ^ to samtools view. No header. Separate step works.
 rule filter_align_reads_to_asm:
     input:
-        rules.align_reads_to_asm.output,
+        ancient(rules.align_reads_to_asm.output),
     output:
-        temp(
-            os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi_view.bam")
-        ),
+        temp(os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi_view.bam")),
     params:
         # https://broadinstitute.github.io/picard/explain-flags.html
         samtools_view_flag=config["nuc_freq"]["samtools_view_flag"],
@@ -92,8 +92,8 @@ def get_aln_to_asm(wc) -> list[str]:
         raise FileNotFoundError(
             f"Subdirectory {wc.sm} in {config['nuc_freq']['hifi_reads_dir']} is missing or contains no alignment files."
         )
-    return alns
-        
+    return ancient(alns)
+
 
 rule merge_hifi_read_asm_alignments:
     input:
@@ -121,7 +121,7 @@ rule merge_hifi_read_asm_alignments:
 
 rule check_asm_nucfreq:
     input:
-        bam_file=rules.merge_hifi_read_asm_alignments.output.alignment,
+        bam_file=ancient(rules.merge_hifi_read_asm_alignments.output.alignment),
         alr_regions=rules.make_new_cens_bed_file.output.alr_bed,
         config=config["nuc_freq"]["config_nucfreq"],
         ignore_regions=config["nuc_freq"]["ignore_regions"],

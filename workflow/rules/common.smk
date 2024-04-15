@@ -1,6 +1,12 @@
 import os
+import json
 import glob
 from collections import defaultdict
+
+
+with open(config["dna_brnn"]["full_alr_thr_file"]) as fh:
+    DNA_BRNN_FULL_ALR_THRS = json.load(fh)
+    DNA_BRNN_DEF_FULL_ALR_THR = DNA_BRNN_FULL_ALR_THRS.get("default", 1_000_000)
 
 
 def get_hifi_read_wildcards() -> dict[str, list[str]]:
@@ -21,30 +27,14 @@ def get_hifi_read_wildcards() -> dict[str, list[str]]:
                     flowcell_id, extension = re.search(path_pattern, file).groups()
                 except (ValueError, AttributeError):
                     continue
-                
+
                 samples[read_dir].append(flowcell_id + extension)
 
     return samples
 
 
-def build_awk_cen_region_length_thr(chr_name: str) -> str:
-    region_thresholds: list[list[int | None, int | None]] = (
-        config["dna_brnn"]
-        .get("repeat_len_thr", {})
-        .get(
-            chr_name, [config["dna_brnn"].get("default_repeat_len_thr", [1_000, None])]
-        )
-    )
-    stmts = []
-    for thr_min, thr_max in region_thresholds:
-        if thr_min and thr_max:
-            stmts.append(f"$5>{thr_min} && $5<{thr_max}")
-        elif thr_min:
-            stmts.append(f"$5>{thr_min}")
-        else:
-            stmts.append(f"$5<{thr_max}")
-
-    return f"({' || '.join(stmts)})"
+def alr_region_threshold(wc) -> int:
+    return DNA_BRNN_FULL_ALR_THRS.get(str(wc.chr), DNA_BRNN_DEF_FULL_ALR_THR)
 
 
 # Include contants so can run individual smk files without main Snakefile.
