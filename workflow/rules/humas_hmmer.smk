@@ -103,7 +103,7 @@ rule extract_cens_for_humas_hmmer:
         """
         seqtk subseq {input.all_correct_alr_fa} {input.corrected_cens_list} > {output.cens} 2> {log}
         seqtk subseq {input.rc_all_correct_alr_fa} {input.corrected_cens_list} >> {output.cens} 2> {log}
-        if [-s {output.cens}]; then
+        if [ -s "{output.cens}" ]; then
             samtools faidx {output.cens} 2> {log}
         else
             touch {output.idx}
@@ -115,12 +115,10 @@ checkpoint split_cens_for_humas_hmmer:
     input:
         rules.extract_cens_for_humas_hmmer.output.cens,
     output:
-        temp(
-            touch(
-                os.path.join(
-                    config["humas_hmmer"]["output_dir"],
-                    "split_cens_for_humas_hmmer_{chr}.done",
-                )
+        touch(
+            os.path.join(
+                config["humas_hmmer"]["output_dir"],
+                "split_cens_for_humas_hmmer_{chr}.done",
             )
         ),
     log:
