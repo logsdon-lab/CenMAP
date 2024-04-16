@@ -85,7 +85,7 @@ rule plot_stv_with_order:
         hor_array_plot=os.path.join(
             config["plot_hor_stv"]["output_dir"],
             "plots",
-            "{chr}_hgsvc3_{mer_order}ontop.png",
+            "{chr}_{mer_order}ontop.png",
         ),
     log:
         "logs/plot_{chr}_stv_{mer_order}_on_top.log",
