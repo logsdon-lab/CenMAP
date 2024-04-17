@@ -115,12 +115,10 @@ checkpoint split_cens_for_humas_hmmer:
     input:
         rules.extract_cens_for_humas_hmmer.output.cens,
     output:
-        temp(
-            touch(
-                os.path.join(
-                    config["humas_hmmer"]["output_dir"],
-                    "split_cens_for_humas_hmmer_{chr}.done",
-                )
+        touch(
+            os.path.join(
+                config["humas_hmmer"]["output_dir"],
+                "split_cens_for_humas_hmmer_{chr}.done",
             )
         ),
     log:

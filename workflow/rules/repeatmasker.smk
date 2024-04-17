@@ -426,7 +426,7 @@ rule plot_cens_from_rm_by_chr:
         repeat_plot_by_chr=os.path.join(
             config["repeatmasker"]["output_dir"],
             "plot",
-            "{chr}_cens.additional.pdf",
+            "{chr}_cens.corrected.pdf",
         ),
     log:
         "logs/plot_{chr}_cens_from_rm.log",

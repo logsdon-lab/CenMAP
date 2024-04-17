@@ -135,7 +135,25 @@ read_humas_hmmer_input <- function(
     group_by(mer) %>%
     filter(n() > hor_filter)
 
-  return(df_stv)
+  # Fix orientation.
+  df_rc_stv <- df_stv %>%
+    filter(str_detect(chr, "rc")) %>%
+    mutate(
+      ctg_start=as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
+      ctg_stop=as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+    ) %>%
+    mutate(
+      new_start=ctg_start+abs(ctg_stop-stop),
+      new_stop=ctg_start+abs(ctg_stop-start)
+    ) %>%
+    mutate(start=new_start, stop=new_stop) %>%
+    select(chr, start, stop, hor, strand, length, mer)
+
+  df_stv <- df_stv %>%
+    filter(!str_detect(chr, "rc"))
+  df_both <- rbind(df_rc_stv, df_stv)
+
+  return(df_both)
 }
 
 # Create a parser
@@ -172,10 +190,10 @@ p <- add_argument(p, "--mer_order",
 )
 
 argv <- parse_args(p)
-# test_chr <- "chr17"
+# test_chr <- "chrY"
 # {
-#   argv$input_rm_sat <- paste0("results/repeatmasker_sat_annot/all_cens_", test_chr, ".annotation.fa.out")
-#   argv$input_stv <- paste0("results/hor_stv/", test_chr, "_AS-HOR_stv_row.all.bed")
+#   argv$input_rm_sat <- paste0("all_cens_", test_chr, ".annotation.fa.out")
+#   argv$input_stv <- paste0(test_chr, "_AS-HOR_stv_row.all.bed")
 #   argv$input_stv_chm13 <- "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all2.bed"
 #   argv$input_stv_chm1 <- "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all2.bed"
 #   argv$chr <- test_chr
