@@ -73,7 +73,7 @@ rule merge_correct_alr_regions:
     shell:
         """
         cat {input.alr_fa} > {output.seq} 2> {log}
-        if [-s {output.seq}]; then
+        if [ -s "{output.seq}" ]; then
             samtools faidx {output.seq} 2> {log}
         else
             touch {output.idx}
