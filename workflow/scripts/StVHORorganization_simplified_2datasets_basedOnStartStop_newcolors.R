@@ -17,7 +17,7 @@ library(argparser, quietly = TRUE)
 
 p <- arg_parser("Plot STV from formatted HumAS-HMMER output.")
 p <- add_argument(p, "--input",
-  help = "Input HGSVC3 HumAS-HMMER formatted output.",
+  help = "Input HumAS-HMMER formatted output.",
   type = "character"
 )
 p <- add_argument(p, "--input_chm13",
@@ -33,7 +33,7 @@ p <- add_argument(p, "--chr",
   type = "character"
 )
 p <- add_argument(p, "--output",
-  help = "Output plot file. Defaults to {chr}_hgsvc3_{order_hor}erontop.png.",
+  help = "Output plot file. Defaults to {chr}_{order_hor}erontop.png.",
   type = "character", default = NA
 )
 p <- add_argument(p, "--hor_filter",
@@ -61,7 +61,7 @@ if (is.na(args$chr)) {
 args$output <- ifelse(
   is.na(args$output),
   paste0(
-    args$chr, "_hgsvc3_",
+    args$chr, "_",
     args$order_hor,
     switch(args$order_hor,
       "small" = "er",
@@ -88,7 +88,7 @@ chm1 <- fread(args$input_chm1,
   fill = TRUE, quote = "",
   header = FALSE, select = cols_to_take
 )
-hgsvc3 <- fread(args$input,
+samples <- fread(args$input,
   sep = "\t",
   stringsAsFactors = TRUE,
   fill = TRUE, quote = "",
@@ -97,7 +97,7 @@ hgsvc3 <- fread(args$input,
 
 colnames(chm13) <- cols
 colnames(chm1) <- cols
-colnames(hgsvc3) <- cols
+colnames(samples) <- cols
 
 # select the chr
 chm13_select <- chm13 %>%
@@ -105,28 +105,28 @@ chm13_select <- chm13 %>%
 chm1_select <- chm1 %>%
   filter(str_detect(chr, paste0(args$chr, "$")))
 
-# combine the CHM1 and HGSVC3 centromeres
+# combine the CHM1 and samples centromeres
 chm13_select$chr <- gsub("chr", "chm13_chr", chm13_select$chr)
 chm1_select$chr <- gsub("chr", "chm1_chr", chm1_select$chr)
-chm13_chm1_hgsvc3 <- rbind(chm13_select, chm1_select, hgsvc3)
+chm13_chm1_samples <- rbind(chm13_select, chm1_select, samples)
 
 # determine distance between start and stop
-chm13_chm1_hgsvc3$length <- chm13_chm1_hgsvc3$stop - chm13_chm1_hgsvc3$start
+chm13_chm1_samples$length <- chm13_chm1_samples$stop - chm13_chm1_samples$start
 
 # calculate monomer size and round
-chm13_chm1_hgsvc3$mer <- as.numeric(round(chm13_chm1_hgsvc3$length / monomer_len))
+chm13_chm1_samples$mer <- as.numeric(round(chm13_chm1_samples$length / monomer_len))
 
 # filter monomers
-chm13_chm1_hgsvc3 <- switch(args$chr,
-  "chr10" = subset(chm13_chm1_hgsvc3, as.numeric(mer) >= 5),
-  "chr20" = subset(chm13_chm1_hgsvc3, as.numeric(mer) >= 5),
-  "chrY" = subset(chm13_chm1_hgsvc3, as.numeric(mer) >= 30),
-  "chr17" = subset(chm13_chm1_hgsvc3, as.numeric(mer) >= 4),
-  chm13_chm1_hgsvc3
+chm13_chm1_samples <- switch(args$chr,
+  "chr10" = subset(chm13_chm1_samples, as.numeric(mer) >= 5),
+  "chr20" = subset(chm13_chm1_samples, as.numeric(mer) >= 5),
+  "chrY" = subset(chm13_chm1_samples, as.numeric(mer) >= 30),
+  "chr17" = subset(chm13_chm1_samples, as.numeric(mer) >= 4),
+  chm13_chm1_samples
 )
 
 # filter for HORs that occur at least 20 times (10 times per haplotype)
-df_mer <- chm13_chm1_hgsvc3 %>%
+df_mer <- chm13_chm1_samples %>%
   group_by(mer) %>%
   filter(n() > args$hor_filter) #
 
