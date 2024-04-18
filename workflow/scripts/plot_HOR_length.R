@@ -5,6 +5,7 @@ library(stringr)
 library(RColorBrewer)
 library(argparser)
 library(ggnewscale)
+library(ggbeeswarm)
 
 
 p <- arg_parser("Plot cumulative centromere HOR array lengths.")
@@ -120,19 +121,16 @@ ggplot(df_all_lengths, aes(factor(chr), len)) +
   geom_violin(
     aes(factor(chr), len, fill = chr),
     scale = "width",
-    alpha = 0.5,
+    alpha = 0.3,
+    trim = FALSE,
     size = 0.8
   ) +
   scale_fill_manual(name = "Chromosome", values = chr_colors) +
   new_scale_fill() +
-  geom_dotplot(
-    aes(factor(chr), len, fill = chr),
-    binaxis = "y",
-    stackdir = "center",
-    dotsize = 0.4,
-  ) +
+  geom_quasirandom(aes(factor(chr), len, color = chr)) +
+  scale_color_manual(values = chr_colors) +
   # Remove legend for dotplot fill.
-  guides(fill = FALSE) +
+  guides(color = "none") +
   scale_fill_manual(values = chr_colors) +
   new_scale_fill() +
   # Add chm1 and chm13 dots with separate colorscale.
