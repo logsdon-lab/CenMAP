@@ -93,6 +93,10 @@ plot_hor_stv:
     - small
     - large
 
+cluster_cens:
+  output_dir: "results/cluster_cens"
+  mer_order: "small"
+
 calculate_hor_length:
   output_dir: "results/calculate_hor_length"
 

@@ -16,3 +16,4 @@ dependencies:
   - r-dplyr
   - r-tidyr
   - r-ggnewscale
+  - r-ggpubr

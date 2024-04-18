@@ -4,6 +4,7 @@ REF_NAME = os.path.splitext(os.path.basename(REF_FA))[0]
 SAMPLE_NAMES = config["samples"]
 ORIENTATION = ("fwd", "rev")
 HAPLOTYPE = ("haplotype1", "haplotype2")
+MER_ORDER = ("small", "large")
 CHROMOSOMES = config.get(
     "chromosomes",
     (
