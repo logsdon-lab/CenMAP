@@ -51,6 +51,20 @@ data/assemblies/GM19129/
 ##### PacBio HiFi Reads
 * Directory with subdirectories corresponding to sample names each with unaligned reads.
   * Compressed or uncompressed files with the `bam`, `fq`, or `fastq` extension are supported.
+  * Defaults to reads with a `bam` extension.
+  * Modify `nuc_freq.reads_ext` with a list of extensions.
+
+    ```yaml
+    nuc_freq:
+      reads_ext:
+        - bam
+        - fq
+        - fq.gz
+        - fastq
+        - fastq.gz
+    ```
+
+
 * `nuc_freq.hifi_reads_dir`
 
 ```yaml
