@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import glob
 from collections import defaultdict
@@ -16,8 +17,10 @@ def get_hifi_read_wildcards() -> dict[str, list[str]]:
     """
     # Avoid subdirs by constraining wildcards.
     # https://stackoverflow.com/a/60744040
-    path_pattern = re.compile(r"([^/]+)(\.bam|\.fq.gz|\.fastq\.gz|\.fq|\.fastq)")
-
+    # path_pattern = re.compile(r"([^/]+)(\.bam|\.fq.gz|\.fastq\.gz|\.fq|\.fastq)")
+    escaped_exts = [re.escape(f".{ext}") for ext in config["nuc_freq"].get("reads_ext", ["bam"])]
+    path_pattern = re.compile(r"([^/]+)(" + '|'.join(escaped_exts) + ")")
+    
     samples = defaultdict(list)
     for root, read_dirs, _ in os.walk(config["nuc_freq"]["hifi_reads_dir"]):
         for read_dir in read_dirs:
