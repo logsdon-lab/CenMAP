@@ -21,6 +21,13 @@ rule plot_complete_cens:
             "plots",
             "all_cens_{chr}_{mer_order}.png",
         ),
+        cen_plot_dir=directory(
+            os.path.join(
+                config["plot_hor_stv"]["output_dir"],
+                "plots",
+                "{chr}_{mer_order}",
+            )
+        ),
     log:
         "logs/plot_{chr}_{mer_order}_complete_cens.log",
     conda:
@@ -38,7 +45,8 @@ rule plot_complete_cens:
             --input_stv_chm13 {input.chm13_stv} \
             --input_stv_chm1 {input.chm1_stv} \
             --chr {wildcards.chr} \
-            --output {output} \
+            --output {output.plot} \
+            --output_dir {output.cen_plot_dir} \
             --hor_filter {params.hor_filter} \
             --mer_order {wildcards.mer_order} 2> {log}
         fi

@@ -11,3 +11,4 @@ dependencies:
     - seaborn
     - polars
     - editdistance
+    - scipy

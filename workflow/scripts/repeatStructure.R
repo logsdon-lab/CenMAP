@@ -11,6 +11,7 @@ library(data.table)
 library(dplyr)
 library(tidyr)
 library(stringr)
+library(ggpubr)
 
 
 read_repeatmasker_sat_input <- function(input_file) {
@@ -177,7 +178,11 @@ p <- add_argument(p, "--chr",
   type = "character"
 )
 p <- add_argument(p, "--output",
-  help = "Output plot file. Defaults to {chr}_samples_{order_hor}erontop.png.",
+  help = "Output plot.",
+  type = "character", default = NA
+)
+p <- add_argument(p, "--output_dir",
+  help = "Output dir with each centromere split into a separate image.",
   type = "character", default = NA
 )
 p <- add_argument(p, "--hor_filter",
@@ -190,12 +195,13 @@ p <- add_argument(p, "--mer_order",
 )
 
 argv <- parse_args(p)
-# test_chr <- "chrY"
+# test_chr <- "chr9"
 # {
-#   argv$input_rm_sat <- paste0("all_cens_", test_chr, ".annotation.fa.out")
-#   argv$input_stv <- paste0(test_chr, "_AS-HOR_stv_row.all.bed")
+#   argv$input_rm_sat <- paste0("results/repeatmasker_sat_annot/repeats/all_cens_", test_chr, ".annotation.fa.out")
+#   argv$input_stv <- paste0("results/hor_stv/bed/", test_chr, "_AS-HOR_stv_row.all.bed")
 #   argv$input_stv_chm13 <- "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all2.bed"
 #   argv$input_stv_chm1 <- "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all2.bed"
+#   argv$output <- "test.png"
 #   argv$chr <- test_chr
 #   argv$mer_order <- "large"
 # }
@@ -249,13 +255,65 @@ df_humas_hmmer_stv_out <- switch(argv$mer_order,
   )
 
 height <- 5
-ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
-  geom_segment(aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region), alpha = 1, size = height * 2) +
+
+# Generate split plot.
+if (!is.null(argv$output_dir)) {
+  dir.create(argv$output_dir)
+
+  for (ctg in unique(df_rm_sat_out$chr)) {
+    ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ] %>% filter(chr == ctg)) +
+      geom_segment(
+        aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region),
+        alpha = 1,
+        size = height * 2
+      ) +
+      scale_color_manual(values = get_rm_sat_annot_colors()) +
+      scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
+      # New colorscale.
+      new_scale_color() +
+      geom_segment(
+        data = df_humas_hmmer_stv_out %>% filter(chr == ctg),
+        aes(x = start, xend = stop + 2000, y = chr, yend = chr, color = as.factor(mer)),
+        size = height * 2
+      ) +
+      scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
+      theme_classic() +
+      # Remove everything.
+      theme(
+        axis.line.x = element_line(colour = "white"),
+        axis.line.y = element_line(colour = "white"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = "none"
+      ) +
+      guides(color = guide_legend(override.aes = list(size = 6))) +
+      xlab("Position (kbp)")
+
+    if (!interactive()) pdf(NULL)
+    ggsave(paste0(argv$output_dir, ctg, ".png"), width = 12, height = 1)
+  }
+}
+
+# Generate full plot.
+plt <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
+  geom_segment(
+    aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region),
+    alpha = 1,
+    size = height * 2
+  ) +
   scale_color_manual(values = get_rm_sat_annot_colors()) +
   scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
   # New colorscale.
   new_scale_color() +
-  geom_segment(data = df_humas_hmmer_stv_out, aes(x = start, xend = stop + 2000, y = chr, yend = chr, color = as.factor(mer)), linewidth = 9) +
+  geom_segment(
+    data = df_humas_hmmer_stv_out,
+    aes(x = start, xend = stop + 2000, y = chr, yend = chr, color = as.factor(mer)),
+    size = height * 2
+  ) +
   scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
   theme_classic() +
   theme(axis.line.y = element_line(colour = "white")) +
@@ -267,5 +325,16 @@ ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
 
 
 if (!interactive()) pdf(NULL)
+# Scale height to fit number contigs.
 height <- length(unique(df_humas_hmmer_stv_out$chr)) * 0.5
-ggsave(argv$output, width = 14, height = height + 4)
+ggsave(argv$output, plot = plt, width = 14, height = height + 4)
+
+# And the legend.
+if (!is.null(argv$output_dir)) {
+  legend <- get_legend(plt)
+
+  # Convert to a ggplot and print
+  plt_legend <- as_ggplot(legend)
+
+  ggsave(paste0(argv$output_dir, "/legend.png"), plot = plt_legend, width = 8, height = 4)
+}
