@@ -31,13 +31,16 @@ concat_asm:
   # Expects {input_dir}/{sm}/*.gz
   input_dir: "data/assemblies_link"
   output_dir: "data/assemblies/combined"
+  mem_mb: 20_000
 
 align_asm_to_ref:
   # Output dir set to results
   reference: "data/reference/T2T-CHM13v2.fasta.gz"
+  mem_mb: 60_000
 
 extract_ref_hor_arrays:
   output_dir: "results/ref_hor_arrays"
+  # Add bp to extend edges of HOR array for alignment.
   added_bases: 0
 
 ident_cen_ctgs:
@@ -54,6 +57,7 @@ dna_brnn:
   # Optional.
   ref_alr_file: "data/annotations/chm13_cens.trimmed.bed"
   threads: 12
+  mem_mb: 30_000
   thr_file: "config/dnabrnn_thresholds.json"
   full_alr_thr_file: "config/dnabrnn_full_alr_region_thresholds.json"
 
@@ -73,12 +77,13 @@ nuc_freq:
   ignore_regions: "config/nucfreq_ignore.bed"
   threads_aln: 4
   processes_nucfreq: 12
+  mem_mb: 50_000
   samtools_view_flag: 2308
 
 repeatmasker:
   ref_repeatmasker_chrY_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
-  threads: 100
+  threads: 12
   output_dir: "results/repeatmasker"
 
 repeatmasker_sat_annot:
@@ -134,5 +139,6 @@ stained_glass:
   input_dir: null
   output_dir: "results/stained_glass"
   threads: 10
+  mem_mb: 60_000
   window: 5000
   mm_f: 5000

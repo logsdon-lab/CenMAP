@@ -139,7 +139,7 @@ rule check_asm_nucfreq:
     conda:
         "../env/nucfreq.yaml"
     resources:
-        mem_mb=50_000,
+        mem_mb=config["nuc_freq"]["mem_mb"],
     log:
         "logs/run_nucfreq_{sm}.log",
     benchmark:
