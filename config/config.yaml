@@ -100,7 +100,7 @@ concat_asm:
 align_asm_to_ref:
   # Output dir set to results
   reference: "data/reference/T2T-CHM13v2.fasta.gz"
-  mem_mb: 100_000
+  mem_mb: 120_000
 
 extract_ref_hor_arrays:
   output_dir: "results/ref_hor_arrays"
