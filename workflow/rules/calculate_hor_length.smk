@@ -59,7 +59,7 @@ rule plot_as_hor_length:
     log:
         "logs/plot_all_as_hor_length.log",
     conda:
-        "../env/R.yaml"
+        "../env/r.yaml"
     shell:
         """
         Rscript {input.script} \
