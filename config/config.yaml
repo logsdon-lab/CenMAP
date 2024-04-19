@@ -34,7 +34,7 @@ concat_asm:
 
 align_asm_to_ref:
   # Output dir set to results
-  reference: "data/reference_link/T2T-CHM13v2.fasta"
+  reference: "data/reference/T2T-CHM13v2.fasta.gz"
 
 extract_ref_hor_arrays:
   output_dir: "results/ref_hor_arrays"
