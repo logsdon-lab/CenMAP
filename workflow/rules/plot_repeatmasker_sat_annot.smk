@@ -1,11 +1,4 @@
-
-
 include: "common.smk"
-
-
-ANNOTATE_SAT_REPEATS = config["repeatmasker_sat_annot"][
-    "repeat_name_pattern_replacement"
-]
 
 
 rule create_annotated_satellites:
@@ -67,7 +60,7 @@ rule create_ct_track:
             config["repeatmasker_sat_annot"]["output_dir"], "bed", "all_cens.ct.bed"
         ),
     params:
-        color=config["repeatmasker_sat_annot"]["ct_track_color"],
+        color=ANNOTATE_SAT_REPEATS["ct"]["color"],
     log:
         "logs/create_ct_track.log",
     conda:
