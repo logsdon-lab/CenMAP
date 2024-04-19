@@ -43,5 +43,4 @@ rule aggregate_as_hor_length:
 
 rule get_hor_length_only:
     input:
-        expand(rules.calculate_as_hor_length.output, chr=CHROMOSOMES),
         rules.aggregate_as_hor_length.output,

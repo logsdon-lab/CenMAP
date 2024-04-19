@@ -454,22 +454,7 @@ use rule plot_cens_from_rm_by_chr as plot_og_cens_from_rm_by_chr with:
 
 rule repeatmasker_only:
     input:
-        expand(rules.extract_correct_alr_regions_rm.output, sm=SAMPLE_NAMES),
-        expand(rules.rc_correct_alr_regions_rm.output, sm=SAMPLE_NAMES),
-        expand(rules.run_repeatmasker.output, sm=SAMPLE_NAMES),
-        expand(rules.remove_repeatmasker_header.output, sm=SAMPLE_NAMES),
-        rules.merge_repeatmasker_output.output,
-        rules.merge_control_repeatmasker_output.output,
-        rules.format_add_control_repeatmasker_output.output,
-        rules.reverse_complete_repeatmasker_output.output,
-        expand(rules.extract_rm_out_by_chr.output, chr=CHROMOSOMES),
-        expand(rules.check_cens_status.output, chr=CHROMOSOMES),
         rules.merge_corrections_list.output,
-        expand(rules.fix_incorrect_merged_legend.output, sm=SAMPLE_NAMES),
-        expand(rules.fix_incorrect_mapped_cens.output, chr=CHROMOSOMES),
         rules.count_complete_cens.output,
-        expand(rules.create_correct_oriented_cens.output, chr=CHROMOSOMES),
-        expand(rules.fix_incorrect_mapped_cens.output, chr=CHROMOSOMES),
-        expand(rules.split_corrected_rm_output.output, chr=CHROMOSOMES),
         expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
         expand(rules.plot_og_cens_from_rm_by_chr.output, chr=CHROMOSOMES),

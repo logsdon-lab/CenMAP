@@ -109,8 +109,6 @@ rule plot_stv_with_order:
 
 rule plot_hor_stv_only:
     input:
-        expand(rules.get_stv_row_from_humas_hmmer_out.output, chr=CHROMOSOMES),
-        expand(rules.aggregate_format_all_stv_row.output, chr=CHROMOSOMES),
         expand(
             rules.plot_stv_with_order.output,
             chr=CHROMOSOMES,

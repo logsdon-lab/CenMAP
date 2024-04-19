@@ -143,8 +143,5 @@ rule plot_satellite_annotations:
 
 rule plot_repeatmasker_sat_only:
     input:
-        rules.create_ct_track.output,
-        rules.aggregate_rm_satellite_annotations.output,
-        expand(rules.split_rm_satellite_annotations.output, chr=CHROMOSOMES),
         expand(rules.plot_satellite_annotations.output, chr=CHROMOSOMES),
     default_target: True

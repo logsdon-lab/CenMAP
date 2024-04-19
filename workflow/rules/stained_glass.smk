@@ -99,11 +99,7 @@ if config["stained_glass"].get("input_dir") is None:
         input:
             stained_glass_outputs_no_input_dir,
         output:
-            temp(
-                touch(
-                    os.path.join(OUTPUT_STAINED_GLASS_DIR, "stained_glass_{chr}.done")
-                )
-            ),
+            touch(os.path.join(OUTPUT_STAINED_GLASS_DIR, "stained_glass_{chr}.done")),
 
 else:
 

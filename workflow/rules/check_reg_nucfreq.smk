@@ -161,5 +161,4 @@ rule check_asm_nucfreq:
 
 rule nuc_freq_only:
     input:
-        expand(rules.merge_hifi_read_asm_alignments.output, sm=SAMPLE_NAMES),
         expand(rules.check_asm_nucfreq.output, sm=SAMPLE_NAMES),
