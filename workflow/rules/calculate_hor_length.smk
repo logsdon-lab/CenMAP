@@ -1,3 +1,6 @@
+include: "common.smk"
+
+
 rule calculate_as_hor_length:
     input:
         script="workflow/scripts/calculate_HOR_length.py",
@@ -41,6 +44,33 @@ rule aggregate_as_hor_length:
         """
 
 
+rule plot_as_hor_length:
+    input:
+        script="workflow/scripts/plot_HOR_length.R",
+        chm1_lengths=config["calculate_hor_length"]["chm1_hor_lengths"],
+        chm13_lengths=config["calculate_hor_length"]["chm13_hor_lengths"],
+        lengths=rules.aggregate_as_hor_length.output,
+    output:
+        os.path.join(
+            config["calculate_hor_length"]["output_dir"],
+            "plots",
+            "all_AS-HOR_lengths.png",
+        ),
+    log:
+        "logs/plot_all_as_hor_length.log",
+    conda:
+        "../env/R.yaml"
+    shell:
+        """
+        Rscript {input.script} \
+        --input {input.lengths} \
+        --input_chm1 {input.chm1_lengths} \
+        --input_chm13 {input.chm13_lengths} \
+        --output {output} 2> {log}
+        """
+
+
 rule get_hor_length_only:
     input:
         rules.aggregate_as_hor_length.output,
+        rules.plot_as_hor_length.output,
