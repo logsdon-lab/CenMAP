@@ -1,28 +1,4 @@
 
-
-rule convert_reads_to_fq:
-    input:
-        reads=ancient(
-            os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", "{id}")
-        ),
-    output:
-        temp(os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}.fq")),
-    conda:
-        "../env/tools.yaml"
-    log:
-        "logs/convert_{sm}_{id}_to_fq.log",
-    shell:
-        """
-        if [[ "{wildcards.id}" =~ .*\.bam$ ]]; then
-            samtools bam2fq {input.reads} > {output} 2> {log}
-        elif [[ "{wildcards.id}" =~ .*\.gz$ ]]; then
-            zcat {input.reads} > {output} 2> {log}
-        else
-            cp {input.reads} {output} 2> {log}
-        fi
-        """
-
-
 rule align_reads_to_asm:
     input:
         asm=ancient(
@@ -32,7 +8,7 @@ rule align_reads_to_asm:
                 "{sm}_regions.renamed.fa",
             )
         ),
-        reads=ancient(rules.convert_reads_to_fq.output),
+        reads=ancient(os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", f"{{id}}.{config['nuc_freq']['reads_ext']}")),
     output:
         temp(os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")),
     threads: config["nuc_freq"]["threads_aln"]

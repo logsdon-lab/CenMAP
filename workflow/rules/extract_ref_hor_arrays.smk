@@ -1,10 +1,12 @@
+REF_CENS_EDGE_LEN = round((500_000 + config["extract_ref_hor_arrays"].get("added_bases", 0)) / 1000)
+
 rule adjust_ref_hor_arrays:
     input:
         config["ident_cen_ctgs"]["ref_cens_500kbp_regions"],
     output:
         os.path.join(
             config["extract_ref_hor_arrays"]["output_dir"],
-            f"{REF_NAME}.hor_arrays.adj.bed",
+            f"{REF_NAME}.hor_arrays.{REF_CENS_EDGE_LEN}kbp.bed",
         ),
     params:
         added_bases=config["extract_ref_hor_arrays"].get("added_bases", 0),
@@ -22,11 +24,11 @@ rule extract_ref_hor_arrays:
     output:
         seq=os.path.join(
             config["extract_ref_hor_arrays"]["output_dir"],
-            f"{REF_NAME}.hor_arrays.500kbp.fa",
+            f"{REF_NAME}.hor_arrays.{REF_CENS_EDGE_LEN}kbp.fa",
         ),
         idx=os.path.join(
             config["extract_ref_hor_arrays"]["output_dir"],
-            f"{REF_NAME}.hor_arrays.500kbp.fa.fai",
+            f"{REF_NAME}.hor_arrays.{REF_CENS_EDGE_LEN}kbp.fa.fai",
         ),
     log:
         "logs/extract_ref_hor_arrays.log",
