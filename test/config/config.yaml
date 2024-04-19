@@ -3,6 +3,7 @@ samples:
 
 align_asm_to_ref:
   reference: "test/data/test.fasta"
+  threads: 4
 
 concat_asm:
   input_dir: "test/data/assemblies"

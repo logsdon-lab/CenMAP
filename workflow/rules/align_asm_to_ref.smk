@@ -12,7 +12,7 @@ with open(ASM_TABLE, "wt") as tbl_fh:
 ALN_CFG = {
     "ref": {f"{REF_NAME}_cens": rules.extract_ref_hor_arrays.output.seq},
     "tbl": ASM_TABLE,
-    "aln_threads": 8,
+    "aln_threads": config["align_asm_to_ref"]["threads"],
     "mm2_opts": "-x asm20 --secondary=no -s 25000 -K 15G",
     "second_aln": "no",
     ## THE FOLLOWING OPTIONS ARE ONLY USED FOR GENE CONVERSION ANALYSIS AND NOT ALIGNMENT AND CAN BE IGNORRED
