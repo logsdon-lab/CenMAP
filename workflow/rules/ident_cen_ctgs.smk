@@ -162,9 +162,6 @@ use rule extract_and_index_fa as extract_cens_oriented_regions with:
 
 rule ident_cen_ctgs_all:
     input:
-        expand(rules.format_hor_ref_aln_cen_contigs.output, sm=SAMPLE_NAMES),
-        expand(rules.intersect_with_pq_arm.output, sm=SAMPLE_NAMES),
-        expand(rules.map_collapse_cens.output, sm=SAMPLE_NAMES),
         # Rename ctgs
         rules.asm_rename_ctg_all.input,
         expand(

@@ -51,6 +51,20 @@ data/assemblies/GM19129/
 ##### PacBio HiFi Reads
 * Directory with subdirectories corresponding to sample names each with unaligned reads.
   * Compressed or uncompressed files with the `bam`, `fq`, or `fastq` extension are supported.
+  * Defaults to reads with a `bam` extension.
+  * Modify `nuc_freq.reads_ext` with a list of extensions.
+
+    ```yaml
+    nuc_freq:
+      reads_ext:
+        - bam
+        - fq
+        - fq.gz
+        - fastq
+        - fastq.gz
+    ```
+
+
 * `nuc_freq.hifi_reads_dir`
 
 ```yaml
@@ -106,8 +120,9 @@ snakemake -np -c 12 --use-conda --use-singularity
 ```
 
 #### Cluster
-The following command shows cluster usage with [`LSF`](https://www.ibm.com/docs/en/spectrum-lsf/10.1.0?topic=overview-lsf-introduction).
+The following commands shows cluster usage:
 
+[`LSF`](https://www.ibm.com/docs/en/spectrum-lsf/10.1.0?topic=overview-lsf-introduction)
 ```bash
 snakemake -np -j 100 \
 --cluster "bsub -M {resources.mem_mb} -R 'rusage[mem={resources.mem_mb}]' -n {threads} -o /dev/null" \
@@ -125,7 +140,9 @@ snakemake -np -j 100 \
 * Generates sequence identity plots across centromeres.
     * Using [`StainedGlass`](https://github.com/mrvollger/StainedGlass)
 
-<img src="docs/rulegraph.svg" width="30%" />
+<p float="left">
+    <img align="middle" src="docs/rulegraph.svg" width="30%">
+</p>
 
 ### TODO
 * Add test/move calculate HOR length script to new repo.

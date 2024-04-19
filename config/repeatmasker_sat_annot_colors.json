@@ -1,0 +1,34 @@
+{
+    "asat": {
+        "pattern": "ALR",
+        "color": "244,219,112"
+    },
+    "bsat":{
+        "pattern": "BSR",
+        "color": "213,177,206"
+    },
+    "gsat":{
+        "pattern": "GSAT",
+        "color": "133,117,170"
+    },
+    "hsat1A":{
+        "pattern": "SAR",
+        "color": "70,150,139"
+    },
+    "hsat2":{
+        "pattern": "HSATII\\b",
+        "color": "49,53,100"
+    },
+    "hsat1B":{
+        "pattern": "HSATI\\b",
+        "color": "70,150,139"
+    },
+    "hsat3":{
+        "pattern": "(CATTC)n\\|(GAATG)n",
+        "color": "127,159,184"
+    },
+    "ct": {
+        "pattern": null,
+        "color": "209,211,212"
+    }
+}

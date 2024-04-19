@@ -172,20 +172,11 @@ rule run_humas_hmmer_for_anvil:
     input:
         unpack(humas_hmmer_outputs),
     output:
-        # TODO: Sort maybe?
-        temp(
-            touch(
-                os.path.join(
-                    config["humas_hmmer"]["input_dir"], "humas_hmmer_{chr}.done"
-                )
-            )
+        touch(
+            os.path.join(config["humas_hmmer"]["input_dir"], "humas_hmmer_{chr}.done")
         ),
 
 
 rule humas_hmmer_only:
     input:
-        expand(rules.fmt_correct_alr_regions.output, sm=SAMPLE_NAMES, comp=["c", "rc"]),
-        expand(rules.merge_correct_alr_regions.output, comp=["c", "rc"]),
-        expand(rules.extract_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
-        expand(rules.split_cens_for_humas_hmmer.output, chr=CHROMOSOMES),
         expand(rules.run_humas_hmmer_for_anvil.output, chr=CHROMOSOMES),

@@ -35,3 +35,6 @@ CHROMOSOMES = config.get(
     ),
 )
 SAMPLE_FLOWCELL_IDS = get_hifi_read_wildcards()
+
+with open(config["repeatmasker_sat_annot"]["config_pattern_colors"]) as fh:
+    ANNOTATE_SAT_REPEATS = json.load(fh)
