@@ -183,18 +183,6 @@ rule make_new_cens_bed_file:
 rule extract_new_cens_all:
     input:
         expand(
-            rules.create_format_orient_cens_list.output,
-            sm=SAMPLE_NAMES,
-            ort=ORIENTATION,
-            chr=CHROMOSOMES,
-        ),
-        expand(
-            rules.extract_new_oriented_cens_regions.output,
-            sm=SAMPLE_NAMES,
-            ort=ORIENTATION,
-            chr=CHROMOSOMES,
-        ),
-        expand(
             rules.merge_alr_regions_by_chr.output,
             sm=SAMPLE_NAMES,
             ort=ORIENTATION,

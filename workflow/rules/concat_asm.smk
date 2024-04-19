@@ -9,7 +9,7 @@ rule concat_asm:
         assembly_fname_pattern=".*\.(fa|fasta)",
         by_seq="-s",
     resources:
-        mem_mb=20_000,
+        mem_mb=config["concat_asm"]["mem_mb"],
     log:
         "logs/concat_asm_{sm}.log",
     conda:

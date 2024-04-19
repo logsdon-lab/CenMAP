@@ -11,7 +11,7 @@ rule run_dna_brnn:
         ),
     threads: config["dna_brnn"]["threads"]
     resources:
-        mem_mb=30_000,
+        mem_mb=config["dna_brnn"]["mem_mb"],
     log:
         "logs/dna_brnn_{ort}_{sm}.log",
     benchmark:
@@ -216,11 +216,6 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
 
 rule dna_brnn_all:
     input:
-        expand(rules.run_dna_brnn.output, sm=SAMPLE_NAMES, ort=ORIENTATION),
-        expand(
-            rules.get_dnabrnn_ref_cens_pos.output,
-            chr=CHROMOSOMES,
-        ),
         expand(
             rules.aggregate_dnabrnn_alr_regions_by_chr.output,
             ort=ORIENTATION,
