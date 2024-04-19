@@ -20,6 +20,7 @@ A centromere mapping and annotation pipeline.
 * `Python >= 3.7`
 * `conda` / `mamba`
 * `singularity`
+* `git lfs` (Optional. See [Git LFS](#git-lfs))
 
 #### Clone
 ```bash
@@ -28,6 +29,14 @@ git clone git@github.com:logsdon-lab/CenMAP.git --recurse-submodules
 # Create a python virtualenv.
 make venv && source venv/bin/activate
 ```
+
+##### Git LFS
+Large files like the CHM13 reference genome are stored via [git lfs](https://git-lfs.com/).
+
+To pull them into the repo.
+```bash
+git lfs pull
+``` 
 
 #### Data
 By default, the following are expected.
@@ -85,13 +94,16 @@ data/raw_data/HG00171/
 * Fasta file reference genome.
 * `align_asm_to_ref.reference`
 
+> [!NOTE]
+> The CHM13v2 reference genome can be pulled with Git LFS. See [Git LFS](#git-lfs).
+
 ```yaml
 align_asm_to_ref:
-    reference: "data/reference/T2T-CHM13v2.fasta"
+    reference: "data/reference/T2T-CHM13v2.fasta.gz"
 ```
 ```
 data/reference/
-└── T2T-CHM13v2.fasta
+└── T2T-CHM13v2.fasta.gz
 ```
 
 #### Configuration
