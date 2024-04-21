@@ -12,7 +12,7 @@ rule aggregate_all_live_hor:
         ),
     params:
         liveHORs_pattern=lambda wc, input: os.path.join(
-            str(input), "AS-HOR_*_liveHORs.bed"
+            str(input), "AS-HOR*_liveHORs.bed"
         ),
     shell:
         """
