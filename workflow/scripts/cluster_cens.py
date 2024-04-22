@@ -69,14 +69,30 @@ def main():
     )
 
     args = ap.parse_args()
+    try:
+        df = pl.read_csv(args.input, separator="\t", new_columns=COLUMNS)
 
-    df = pl.read_csv(args.input, separator="\t", new_columns=COLUMNS)
+        df_mons = df.group_by("ctg").agg(
+            merged_mons=pl.when(pl.col("ctg").str.contains("rc-"))
+            .then(pl.col("mon").reverse())
+            .otherwise(pl.col("mon"))
+        )
+    except Exception:
+        df_mons = pl.DataFrame()
+    
+    if df_mons.shape[0] <= 1:
+        # Create empty plot.
+        open(args.output_plot, "wb")
+        try:
+            ctgs = [df_mons["ctg"][0]]
+        except Exception:
+            ctgs = []
+        # Only one cluster.
+        with open(args.output_clusters, "wt") as fh:
+            json.dump({"C1": ctgs}, fh)
 
-    df_mons = df.group_by("ctg").agg(
-        merged_mons=pl.when(pl.col("ctg").str.contains("rc-"))
-        .then(pl.col("mon").reverse())
-        .otherwise(pl.col("mon"))
-    )
+        return
+
     upper_tri_coords = np.triu_indices(len(df_mons.get_column("merged_mons")), 1)
 
     computed_dsts = np.apply_along_axis(
@@ -120,10 +136,10 @@ def main():
                 continue
 
     plt.tight_layout()
-    plt.savefig(args.plot, dpi=300)
+    plt.savefig(args.output_plot, dpi=300)
 
     clusters = get_cluster_classes(den_info)
-    with open(args.clusters, "wt") as fh:
+    with open(args.output_clusters, "wt") as fh:
         json.dump(clusters, fh)
 
 
