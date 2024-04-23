@@ -45,15 +45,15 @@ def main():
         args.input, separator="\t", new_columns=ALN_HEADER, has_header=False
     )
 
-    df_qarms = df.filter((pl.col("arm") == "q-arm").over("query_name", "strand"))
+    df_qarms = df.filter(pl.col("arm") == "q-arm")
     df_concensus_mapping = (
         # Default to picking reference by highest percent identity by all
         df.filter(
             pl.col("perID_by_events")
-            == pl.col("perID_by_events").max().over(["query_name", "strand"])
+            == pl.col("perID_by_events").max().over(["query_name"])
         )
-        .join(df_qarms, on=["query_name", "strand"], how="left")
-        .select("query_name", "strand", "reference_name", "reference_name_right", "arm")
+        .join(df_qarms, on=["query_name"], how="left")
+        .select("query_name", "reference_name", "reference_name_right", "arm")
         .unique()
         # But if has alignment to q-arm, take that instead.
         .with_columns(
@@ -61,11 +61,11 @@ def main():
             .then(pl.col("reference_name_right"))
             .otherwise(pl.col("reference_name"))
         )
-        .select(["query_name", "strand", "reference_name"])
+        .select(["query_name", "reference_name"])
     )
 
     df_minmax = (
-        df.join(df_concensus_mapping, on=["query_name", "strand"], how="left")
+        df.join(df_concensus_mapping, on=["query_name"], how="left")
         .rename(
             {
                 "reference_name_right": "final_reference_name",
