@@ -2,6 +2,7 @@ channels:
   - conda-forge
 dependencies:
   - python==3.12.0
+  - git-lfs
   - pip
   - pip:
     - git+https://github.com/logsdon-lab/cen-stats.git
