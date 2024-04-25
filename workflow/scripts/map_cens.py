@@ -45,6 +45,14 @@ def main():
         args.input, separator="\t", new_columns=ALN_HEADER, has_header=False
     )
 
+    # To pass, a given query sequence must have both p and q arms mapped.
+    df = df.filter(
+        pl.all_horizontal(
+            (pl.col("arm") == "p-arm").any(),
+            (pl.col("arm") == "q-arm").any()
+        ).over("query_name")
+    )
+
     df_qarms = df.filter(pl.col("arm") == "q-arm")
     df_concensus_mapping = (
         # Default to picking reference by highest percent identity by all
