@@ -70,7 +70,7 @@ def main():
 
     args = ap.parse_args()
     try:
-        df = pl.read_csv(args.input, separator="\t", new_columns=COLUMNS)
+        df = pl.read_csv(args.input, separator="\t", new_columns=COLUMNS, has_header=False)
 
         df_mons = df.group_by("ctg").agg(
             merged_mons=pl.when(pl.col("ctg").str.contains("rc-"))

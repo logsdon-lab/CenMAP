@@ -70,6 +70,7 @@ def main():
         # "results/dna_brnn/K1463_2212/K1463_2212_centromeric_regions.renamed.fwd.bed",
         args.input,
         separator="\t",
+        has_header=False,
         new_columns=["ctg", "start", "end", "rtype"],
     )
     if args.thresholds:
@@ -140,13 +141,15 @@ def main():
             continue
 
         # Calculate percentile of repeats by repeat length.
-        # Only allow repeats in the 95th percentile or above. This removes small repeats that would overextend the HOR array region.
+        # Only allow repeats in the x-th percentile or above. This removes small repeats that would overextend the HOR array region. Only done if not all alpha-satellite.
         # Apply additional static repeat len filters.
         df_ctg = (
             df_ctg.filter(pl.any_horizontal(chr_len_thr_exprs))
             .with_columns(perc=pl.col("rlen").rank() / pl.col("rlen").len())
             .filter(
-                (pl.col("perc") > min_repeat_len_perc_threshold)
+                pl.when((pl.col("rtype") == 2).all())
+                .then(pl.lit(True))
+                .otherwise(pl.col("perc") > min_repeat_len_perc_threshold)
                 & (pl.col("rtype") == selected_repeat_type)
             )
             .select("ctg", "start", "end", "rtype", "rlen")
