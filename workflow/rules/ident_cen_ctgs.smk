@@ -67,7 +67,7 @@ rule intersect_with_pq_arm:
         "logs/intersect_ref_cen_pqarm_{sm}.log",
     shell:
         """
-        bedtools intersect -wa -wb -a {input.aln_cens_bed} -b  {input.ref_monomeric_bed} > {output.qarms_cen_regions} 2> {log}
+        bedtools intersect -loj -a {input.aln_cens_bed} -b  {input.ref_monomeric_bed} > {output.qarms_cen_regions} 2> {log}
         """
 
 

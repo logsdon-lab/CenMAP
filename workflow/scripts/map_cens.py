@@ -46,11 +46,19 @@ def main():
     )
 
     # To pass, a given query sequence must have both p and q arms mapped.
+    # The acrocentrics are exceptions and only require the q-arm.
     df = df.filter(
-        pl.all_horizontal(
-            (pl.col("arm") == "p-arm").any(),
-            (pl.col("arm") == "q-arm").any()
-        ).over("query_name")
+        pl.when(~pl.col("reference_name").is_in(["chr21", "chr22", "chr13", "chr14", "chr15"]))
+        .then(
+            pl.all_horizontal(
+                (pl.col("arm") == "p-arm").any(),
+                (pl.col("arm") == "q-arm").any()
+            ).over("query_name")
+        ).otherwise(
+            pl.all_horizontal(
+                (pl.col("arm") == "q-arm").any()
+            ).over("query_name")
+        )
     )
 
     df_qarms = df.filter(pl.col("arm") == "q-arm")
