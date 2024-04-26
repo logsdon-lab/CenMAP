@@ -10,8 +10,8 @@ rule check_cens_status:
             config["repeatmasker"]["output_dir"], "status", "{chr}_cens_status.tsv"
         ),
     params:
-        edge_len=100_000,
-        edge_perc_alr_thr=0.7,
+        edge_len=500_000,
+        edge_perc_alr_thr=0.90,
         dst_perc_thr=0.3,
         # Edge-case for chrs whose repeats are small and broken up.
         max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 30_000,
