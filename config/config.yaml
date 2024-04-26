@@ -133,11 +133,13 @@ nuc_freq:
   hifi_reads_dir: "data/raw_data_link"
   reads_ext: "bam"
   output_dir: "results/nucfreq"
+  tmp_dir: "/tmp"
   config_nucfreq: "config/nucfreq.toml"
   ignore_regions: "config/nucfreq_ignore.bed"
   threads_aln: 4
   processes_nucfreq: 12
-  mem_mb: 50_000
+  mem_mb_nucfreq: 50_000
+  mem_mb_aln: 120_000
   samtools_view_flag: 2308
 
 repeatmasker:

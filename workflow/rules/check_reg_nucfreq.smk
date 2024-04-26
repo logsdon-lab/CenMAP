@@ -13,11 +13,17 @@ rule align_reads_to_asm:
         temp(os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")),
     threads: config["nuc_freq"]["threads_aln"]
     resources:
-        mem_mb=120_000,
+        mem_mb=config["nuc_freq"]["mem_mb_aln"],
+        sort_mem=4,
     params:
         aln_log_level="DEBUG",
         aln_preset="SUBREAD",
         aln_min_length=5000,
+        tmp_dir=config["nuc_freq"].get(
+            "tmp_dir",
+            os.environ.get("TMPDIR", "/tmp")
+        ),
+        samtools_view_flag=config["nuc_freq"]["samtools_view_flag"],
     conda:
         "../env/tools.yaml"
     log:
@@ -26,41 +32,19 @@ rule align_reads_to_asm:
         "benchmarks/align_{sm}_{id}_hifi_reads_to_asm.tsv"
     shell:
         """
-        pbmm2 align \
+        {{ pbmm2 align \
         --log-level {params.aln_log_level} \
         --preset {params.aln_preset} \
         --min-length {params.aln_min_length} \
-        -j {threads} {input.asm} {input.reads} > {output} 2>> {log}
-        """
-
-
-# Get error when trying to pipe ^ to samtools view. No header. Separate step works.
-rule filter_align_reads_to_asm:
-    input:
-        ancient(rules.align_reads_to_asm.output),
-    output:
-        temp(os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi_view.bam")),
-    params:
-        # https://broadinstitute.github.io/picard/explain-flags.html
-        samtools_view_flag=config["nuc_freq"]["samtools_view_flag"],
-    resources:
-        sort_mem=4,
-        mem_mb=20_000,
-    threads: config["nuc_freq"]["threads_aln"]
-    conda:
-        "../env/tools.yaml"
-    log:
-        "logs/filter_align_{sm}_{id}_hifi_reads_to_asm.log",
-    shell:
-        """
-        {{ samtools view -b -F {params.samtools_view_flag} {input} | \
-        samtools sort -m {resources.sort_mem}G -@ {threads} -o {output};}} 2> {log}
+        -j {threads} {input.asm} {input.reads} | \
+        samtools view -F {params.samtools_view_flag} -u - | \
+        samtools sort -T {params.tmp_dir} -m {resources.sort_mem}G -@ {threads} - ;}} > {output} 2>> {log}
         """
 
 
 def get_aln_to_asm(wc) -> list[str]:
     alns = expand(
-        rules.filter_align_reads_to_asm.output,
+        rules.align_reads_to_asm.output,
         sm=[wc.sm],
         id=SAMPLE_FLOWCELL_IDS[str(wc.sm)],
     )
@@ -115,7 +99,7 @@ rule check_asm_nucfreq:
     conda:
         "../env/nucfreq.yaml"
     resources:
-        mem_mb=config["nuc_freq"]["mem_mb"],
+        mem_mb=config["nuc_freq"]["mem_mb_nucfreq"],
     log:
         "logs/run_nucfreq_{sm}.log",
     benchmark:
