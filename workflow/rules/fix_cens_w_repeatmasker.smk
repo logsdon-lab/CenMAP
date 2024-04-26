@@ -14,7 +14,7 @@ rule check_cens_status:
         edge_perc_alr_thr=0.7,
         dst_perc_thr=0.3,
         # Edge-case for chrs whose repeats are small and broken up.
-        max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 100_000,
+        max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 30_000,
     log:
         "logs/check_cens_status_{chr}.log",
     conda:
