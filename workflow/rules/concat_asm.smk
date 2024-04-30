@@ -7,7 +7,6 @@ rule concat_asm:
     # https://bioinf.shenwei.me/seqkit/usage/#rmdup
     params:
         assembly_fname_pattern=".*\.(fa|fasta)",
-        by_seq="-s",
     resources:
         mem_mb=config["concat_asm"]["mem_mb"],
     log:
@@ -19,7 +18,7 @@ rule concat_asm:
         {{ cat \
         <(find {input.sm_dir} -regextype posix-egrep -regex "{params.assembly_fname_pattern}\.gz" -size +0 -exec zcat {{}} + ) \
         <(find {input.sm_dir} -regextype posix-egrep -regex "{params.assembly_fname_pattern}" -size +0 -exec cat {{}} + ) | \
-        seqkit rmdup {params.by_seq};}} > {output} 2> {log}
+        seqkit rmdup;}} > {output} 2> {log}
         """
 
 
