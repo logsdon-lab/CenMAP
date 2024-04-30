@@ -1,4 +1,7 @@
-REF_CENS_EDGE_LEN = round((500_000 + config["extract_ref_hor_arrays"].get("added_bases", 0)) / 1000)
+REF_CENS_EDGE_LEN = round(
+    (500_000 + config["extract_ref_hor_arrays"].get("added_bases", 0)) / 1000
+)
+
 
 rule adjust_ref_hor_arrays:
     input:

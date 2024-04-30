@@ -8,7 +8,13 @@ rule align_reads_to_asm:
                 "{sm}_regions.renamed.fa",
             )
         ),
-        reads=ancient(os.path.join(config["nuc_freq"]["hifi_reads_dir"], "{sm}", f"{{id}}.{config['nuc_freq']['reads_ext']}")),
+        reads=ancient(
+            os.path.join(
+                config["nuc_freq"]["hifi_reads_dir"],
+                "{sm}",
+                f"{{id}}.{config['nuc_freq']['reads_ext']}",
+            )
+        ),
     output:
         temp(os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")),
     threads: config["nuc_freq"]["threads_aln"]
@@ -19,10 +25,7 @@ rule align_reads_to_asm:
         aln_log_level="DEBUG",
         aln_preset="SUBREAD",
         aln_min_length=5000,
-        tmp_dir=config["nuc_freq"].get(
-            "tmp_dir",
-            os.environ.get("TMPDIR", "/tmp")
-        ),
+        tmp_dir=config["nuc_freq"].get("tmp_dir", os.environ.get("TMPDIR", "/tmp")),
         samtools_view_flag=config["nuc_freq"]["samtools_view_flag"],
     conda:
         "../env/tools.yaml"
