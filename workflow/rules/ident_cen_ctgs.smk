@@ -1,12 +1,15 @@
 # Identify centromeric regions
 # Extract centromeric regions
 
+include: "utils.smk"
+include: "common.smk"
+
 
 rule format_hor_ref_aln_cen_contigs:
     input:
-        aln_bed=lambda wc: expand(
-            rules.asm_ref_aln_to_bed.output, ref=[f"{REF_NAME}_cens"], sm=wc.sm
-        ),
+        aln_bed=os.path.join(
+            "results", f"{REF_NAME}_cens", "bed", "{sm}.bed"
+        )
     output:
         cen_regions=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
@@ -97,7 +100,9 @@ rule map_collapse_cens:
 # Make renamed copy of assembly here with mapped chr.
 RENAME_ASM_CFG = {
     "bed_input_regions": rules.map_collapse_cens.output,
-    "fa_assembly": rules.concat_asm.output,
+    "fa_assembly": os.path.join(
+        config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fasta"
+    ),
     "output_dir": os.path.join(config["concat_asm"]["output_dir"], "{sm}"),
     "samples": SAMPLE_NAMES,
     "log_dir": "logs/rename_cens",
