@@ -13,25 +13,23 @@ with open(config["dna_brnn"]["full_alr_thr_file"]) as fh:
 def get_hifi_read_wildcards() -> dict[str, list[str]]:
     """
     Get hifi reads by sample automatically from hifi_reads_dir.
-    Expects {hifi_reads_dir}/{sample}/*.(bam|fq|fastq)(.gz)*
+    Expects {hifi_reads_dir}/{sample}/*.{ext}
     """
     # Avoid subdirs by constraining wildcards.
     # https://stackoverflow.com/a/60744040
-    escaped_exts = [
-        re.escape(f".{ext}") for ext in config["nuc_freq"].get("reads_ext", ["bam"])
-    ]
-    path_pattern = re.compile(r"([^/]+)(" + "|".join(escaped_exts) + ")")
-    samples = defaultdict(list)
+    escaped_ext = re.escape("." + config["nuc_freq"].get("reads_ext", "bam"))
+    path_pattern = re.compile(r"([^/]+)(" + escaped_ext + ")")
+    samples = defaultdict(set)
     for root, read_dirs, _ in os.walk(config["nuc_freq"]["hifi_reads_dir"]):
         for read_dir in read_dirs:
             read_dir_path = os.path.join(root, read_dir)
             for file in os.listdir(read_dir_path):
                 try:
-                    flowcell_id, extension = re.search(path_pattern, file).groups()
+                    flowcell_id, _ = re.search(path_pattern, file).groups()
                 except (ValueError, AttributeError):
                     continue
 
-                samples[read_dir].append(flowcell_id + extension)
+                samples[read_dir].add(flowcell_id)
 
     return samples
 

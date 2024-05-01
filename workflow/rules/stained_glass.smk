@@ -80,7 +80,10 @@ rule run_stained_glass:
 # https://stackoverflow.com/a/63040288
 def stained_glass_outputs_no_input_dir(wc):
     # Wait until done.
-    _ = checkpoints.split_cens_for_humas_hmmer.get(**wc).output
+    try:
+        _ = checkpoints.split_cens_for_humas_hmmer.get(**wc).output
+    except AttributeError:
+        pass
 
     fnames = (
         os.path.splitext(os.path.split(file)[1])[0]

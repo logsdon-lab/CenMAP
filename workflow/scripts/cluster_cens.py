@@ -69,14 +69,30 @@ def main():
     )
 
     args = ap.parse_args()
+    try:
+        df = pl.read_csv(args.input, separator="\t", new_columns=COLUMNS, has_header=False)
 
-    df = pl.read_csv(args.input, separator="\t", new_columns=COLUMNS)
+        df_mons = df.group_by("ctg").agg(
+            merged_mons=pl.when(pl.col("ctg").str.contains("rc-"))
+            .then(pl.col("mon").reverse())
+            .otherwise(pl.col("mon"))
+        )
+    except Exception:
+        df_mons = pl.DataFrame()
 
-    df_mons = df.group_by("ctg").agg(
-        merged_mons=pl.when(pl.col("ctg").str.contains("rc-"))
-        .then(pl.col("mon").reverse())
-        .otherwise(pl.col("mon"))
-    )
+    if df_mons.shape[0] <= 1:
+        # Create empty plot.
+        open(args.output_plot, "wb")
+        try:
+            ctgs = [df_mons["ctg"][0]]
+        except Exception:
+            ctgs = []
+        # Only one cluster.
+        with open(args.output_clusters, "wt") as fh:
+            json.dump({"C1": ctgs}, fh)
+
+        return
+
     upper_tri_coords = np.triu_indices(len(df_mons.get_column("merged_mons")), 1)
 
     computed_dsts = np.apply_along_axis(
@@ -87,7 +103,7 @@ def main():
     clusters = linkage(computed_dsts, method=args.linkage_method, metric=None)
 
     den_info = dendrogram(
-        clusters, labels=df_mons.get_column("ctg").to_list(), orientation="left"
+        clusters, labels=df_mons.get_column("ctg").to_list(), orientation="right"
     )
     plt_den = plt.gcf()
 
@@ -99,20 +115,33 @@ def main():
     ax_den = plt.gca()
 
     if args.cens_dir:
+        # Need renderer to calculate img bbox.
+        renderer = plt_den.canvas.get_renderer()
         for lbl in ax_den.get_yticklabels():
             ctg_name = lbl.get_text()
             ctg_img_path = os.path.join(args.cens_dir, f"{ctg_name}.png")
-            _, y_pos = lbl.get_position()
+            x_pos, y_pos = lbl.get_position()
+            # Convert position to pixels.
+            x_px, _ = ax_den.transData.transform([x_pos, y_pos])
             try:
                 img = plt.imread(ctg_img_path)
                 im = OffsetImage(img, zoom=0.1)
                 im.image.axes = ax_den
-                # TODO: This might not be correctly oriented.
+                # Get width of image.
+                img_bbox = im.get_tightbbox(renderer)
+                img_width = sum(img_bbox.intervalx)
+
+                # Adjust the x position of the image (center of image by default) so image positioned on left.
+                img_x_pos_adj = ax_den.transData.inverted().transform(
+                    [x_px - (img_width / 2), 0]
+                )[0]
+                # Plot annotation image pushing down slightly to not cover label.
                 ab = AnnotationBbox(
                     im,
-                    xy=(-800, y_pos - 3),
+                    xy=(img_x_pos_adj, y_pos - 1),
                     xycoords="data",
                     pad=0,
+                    # Allow to clip outside if necessary.
                     annotation_clip=False,
                 )
                 ax_den.add_artist(ab)
@@ -120,10 +149,10 @@ def main():
                 continue
 
     plt.tight_layout()
-    plt.savefig(args.plot, dpi=300)
+    plt.savefig(args.output_plot, dpi=300)
 
     clusters = get_cluster_classes(den_info)
-    with open(args.clusters, "wt") as fh:
+    with open(args.output_clusters, "wt") as fh:
         json.dump(clusters, fh)
 
 

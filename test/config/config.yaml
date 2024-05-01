@@ -3,6 +3,7 @@ samples:
 
 align_asm_to_ref:
   reference: "test/data/test.fasta"
+  threads: 4
 
 concat_asm:
   input_dir: "test/data/assemblies"
@@ -35,9 +36,12 @@ new_cens:
 nuc_freq:
   hifi_reads_dir: "test/data/raw_data"
   output_dir: "results/dna_brnn/nucfreq"
+  tmp_dir: "/tmp"
   config_nucfreq: "config/nucfreq.toml"
   ignore_regions: "config/nucfreq_ignore.bed"
   threads_aln: 4
+  mem_mb_nucfreq: 50_000
+  mem_mb_aln: 120_000
   processes_nucfreq: 12
   samtools_view_flag: 2308
 

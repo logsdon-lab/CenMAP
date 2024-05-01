@@ -294,7 +294,7 @@ if (!is.null(argv$output_dir)) {
       xlab("Position (kbp)")
 
     if (!interactive()) pdf(NULL)
-    ggsave(paste0(argv$output_dir, ctg, ".png"), width = 12, height = 1)
+    ggsave(paste0(argv$output_dir, "/", ctg, ".png"), width = 12, height = 1)
   }
 }
 

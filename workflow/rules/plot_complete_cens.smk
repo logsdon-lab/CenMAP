@@ -37,7 +37,8 @@ rule plot_complete_cens:
     shell:
         """
         if ! [ -s  {input.hor_stv_out} ] || ! [ -s {input.rm_sat_out} ]; then
-            touch {output}
+            touch {output.plot}
+            mkdir -p {output.cen_plot_dir}
         else
             Rscript {input.script} \
             --input_rm_sat {input.rm_sat_out} \

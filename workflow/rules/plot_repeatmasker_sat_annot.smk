@@ -82,7 +82,7 @@ rule aggregate_rm_satellite_annotations:
     input:
         satellites=expand(
             rules.create_annotated_satellites.output,
-            repeat=ANNOTATE_SAT_REPEATS.keys(),
+            repeat=[r for r in ANNOTATE_SAT_REPEATS.keys() if r != "ct"],
         ),
         ct_track=rules.create_ct_track.output,
     output:

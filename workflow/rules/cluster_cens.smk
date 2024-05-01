@@ -3,7 +3,7 @@ include: "common.smk"
 
 rule aggregate_all_live_hor:
     input:
-        rules.get_stv_row_from_humas_hmmer_out.output,
+        os.path.join(config["plot_hor_stv"]["output_dir"], "bed", "results_{chr}_stv"),
     output:
         os.path.join(
             config["cluster_cens"]["output_dir"],
@@ -12,11 +12,11 @@ rule aggregate_all_live_hor:
         ),
     params:
         liveHORs_pattern=lambda wc, input: os.path.join(
-            str(input), "AS-HOR_*_liveHORs.bed"
+            str(input), "AS-HOR*liveHORs.bed"
         ),
     shell:
         """
-        cat {params.liveHORs_pattern} > {output}
+        ( cat {params.liveHORs_pattern} || true ) > {output}
         """
 
 

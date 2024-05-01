@@ -20,6 +20,7 @@ A centromere mapping and annotation pipeline.
 * `Python >= 3.7`
 * `conda` / `mamba`
 * `singularity`
+* `git lfs` (Optional. See [Git LFS](#git-lfs))
 
 #### Clone
 ```bash
@@ -28,6 +29,14 @@ git clone git@github.com:logsdon-lab/CenMAP.git --recurse-submodules
 # Create a python virtualenv.
 make venv && source venv/bin/activate
 ```
+
+##### Git LFS
+Large files like the CHM13 reference genome are stored via [git lfs](https://git-lfs.com/).
+
+To pull them into the repo.
+```bash
+git lfs pull
+``` 
 
 #### Data
 By default, the following are expected.
@@ -52,16 +61,10 @@ data/assemblies/GM19129/
 * Directory with subdirectories corresponding to sample names each with unaligned reads.
   * Compressed or uncompressed files with the `bam`, `fq`, or `fastq` extension are supported.
   * Defaults to reads with a `bam` extension.
-  * Modify `nuc_freq.reads_ext` with a list of extensions.
 
     ```yaml
     nuc_freq:
-      reads_ext:
-        - bam
-        - fq
-        - fq.gz
-        - fastq
-        - fastq.gz
+      reads_ext: "bam" 
     ```
 
 
@@ -85,13 +88,16 @@ data/raw_data/HG00171/
 * Fasta file reference genome.
 * `align_asm_to_ref.reference`
 
+> [!NOTE]
+> The CHM13v2 reference genome can be pulled with Git LFS. See [Git LFS](#git-lfs).
+
 ```yaml
 align_asm_to_ref:
-    reference: "data/reference/T2T-CHM13v2.fasta"
+    reference: "data/reference/T2T-CHM13v2.fasta.gz"
 ```
 ```
 data/reference/
-└── T2T-CHM13v2.fasta
+└── T2T-CHM13v2.fasta.gz
 ```
 
 #### Configuration
