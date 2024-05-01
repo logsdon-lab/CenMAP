@@ -19,7 +19,7 @@ def get_hifi_read_wildcards() -> dict[str, list[str]]:
     # https://stackoverflow.com/a/60744040
     escaped_ext = re.escape("." + config["nuc_freq"].get("reads_ext", "bam"))
     path_pattern = re.compile(r"([^/]+)(" + escaped_ext + ")")
-    samples = defaultdict(list)
+    samples = defaultdict(set)
     for root, read_dirs, _ in os.walk(config["nuc_freq"]["hifi_reads_dir"]):
         for read_dir in read_dirs:
             read_dir_path = os.path.join(root, read_dir)
@@ -29,7 +29,7 @@ def get_hifi_read_wildcards() -> dict[str, list[str]]:
                 except (ValueError, AttributeError):
                     continue
 
-                samples[read_dir].append(flowcell_id)
+                samples[read_dir].add(flowcell_id)
 
     return samples
 
