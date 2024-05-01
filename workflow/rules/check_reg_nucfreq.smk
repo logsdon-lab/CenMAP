@@ -53,7 +53,7 @@ def get_aln_to_asm(wc) -> list[str]:
     )
     if not alns:
         raise FileNotFoundError(
-            f"Subdirectory {wc.sm} in {config['nuc_freq']['hifi_reads_dir']} is missing or contains no alignment files."
+            f"Directory {config['nuc_freq']['hifi_reads_dir']}/{wc.sm} is missing or contains no alignment files with extension {config['nuc_freq']['reads_ext']}."
         )
     return ancient(alns)
 
