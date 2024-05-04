@@ -69,6 +69,9 @@ rule merge_hifi_read_asm_alignments:
     threads: config["nuc_freq"]["threads_aln"]
     resources:
         mem_mb=10_000,
+        sort_mem=4,
+    params:
+        tmp_dir=config["nuc_freq"].get("tmp_dir", os.environ.get("TMPDIR", "/tmp")),
     conda:
         "../env/tools.yaml"
     log:
@@ -77,8 +80,9 @@ rule merge_hifi_read_asm_alignments:
         "benchmarks/merge_{sm}_hifi_read_asm_alignments.tsv"
     shell:
         """
-        samtools merge -@ {threads} {output.alignment} {input} 2> {log}
-        samtools index {output.alignment} 2> {log}
+        {{ samtools merge -@ {threads} - {input} | \
+        samtools sort -T {params.tmp_dir} -m {resources.sort_mem}G -@ {threads} -;}} > {output.alignment} 2> {log}
+        samtools index {output.alignment} 2>> {log}
         """
 
 

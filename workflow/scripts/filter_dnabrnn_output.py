@@ -11,7 +11,7 @@ RGX_CHR = re.compile("|".join(f"{c}_" for c in CHRS))
 DEF_REPEAT_PERC_THR = 0.95
 DEF_REPEAT_LEN_THR = [1_000, None]
 DEF_REPEAT_TYPE = 2
-
+DEF_DST_FROM_LARGEST = 4_000_000
 
 def build_interval_expr(interval: tuple[int, int | None]) -> pl.Expr | None:
     try:
@@ -62,6 +62,13 @@ def main():
         type=int,
         default=DEF_REPEAT_TYPE,
         help="Repeat type to filter for.",
+    )
+    ap.add_argument(
+        "-d",
+        "--dst_from_largest",
+        type=int,
+        default=DEF_DST_FROM_LARGEST,
+        help="Distance from largest repeat allowed.",
     )
 
     args = ap.parse_args()
@@ -153,6 +160,16 @@ def main():
                 & (pl.col("rtype") == selected_repeat_type)
             )
             .select("ctg", "start", "end", "rtype", "rlen")
+        )
+        largest_row = df_ctg.filter(pl.col("rlen") == pl.col("rlen").max()).to_dict()
+
+        # Allow only repeats some number of bps from the largest detected alpha-sat repeat.
+        df_ctg = (
+            df_ctg
+            .filter(
+                (pl.col("start") > largest_row["start"] - args.dst_from_largest) &
+                (pl.col("end") < largest_row["end"] + args.dst_from_largest)
+            )
         )
 
         dfs.append(df_ctg)
