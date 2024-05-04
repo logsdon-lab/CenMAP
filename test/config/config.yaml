@@ -33,16 +33,16 @@ dna_brnn:
 new_cens:
   output_dir: "results/cens_new"
 
-nuc_freq:
+nucflag:
   hifi_reads_dir: "test/data/raw_data"
-  output_dir: "results/dna_brnn/nucfreq"
+  output_dir: "results/dna_brnn/nucflag"
   tmp_dir: "/tmp"
-  config_nucfreq: "config/nucfreq.toml"
-  ignore_regions: "config/nucfreq_ignore.bed"
+  config_nucflag: "config/nucflag.toml"
+  ignore_regions: "config/nucflag_ignore.bed"
   threads_aln: 4
-  mem_mb_nucfreq: 50_000
+  mem_mb_nucflag: 50_000
   mem_mb_aln: 120_000
-  processes_nucfreq: 12
+  processes_nucflag: 12
   samtools_view_flag: 2308
 
 repeatmasker:

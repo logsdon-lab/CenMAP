@@ -63,15 +63,15 @@ data/assemblies/GM19129/
   * Defaults to reads with a `bam` extension.
 
     ```yaml
-    nuc_freq:
+    nucflag:
       reads_ext: "bam" 
     ```
 
 
-* `nuc_freq.hifi_reads_dir`
+* `nucflag.hifi_reads_dir`
 
 ```yaml
-nuc_freq:
+nucflag:
   hifi_reads_dir: "data/raw_data"
 ```
 ```

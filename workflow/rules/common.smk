@@ -17,10 +17,10 @@ def get_hifi_read_wildcards() -> dict[str, list[str]]:
     """
     # Avoid subdirs by constraining wildcards.
     # https://stackoverflow.com/a/60744040
-    escaped_ext = re.escape("." + config["nuc_freq"].get("reads_ext", "bam"))
+    escaped_ext = re.escape("." + config["nucflag"].get("reads_ext", "bam"))
     path_pattern = re.compile(r"([^/]+)(" + escaped_ext + ")")
     samples = defaultdict(set)
-    for root, read_dirs, _ in os.walk(config["nuc_freq"]["hifi_reads_dir"]):
+    for root, read_dirs, _ in os.walk(config["nucflag"]["hifi_reads_dir"]):
         for read_dir in read_dirs:
             read_dir_path = os.path.join(root, read_dir)
             for file in os.listdir(read_dir_path):

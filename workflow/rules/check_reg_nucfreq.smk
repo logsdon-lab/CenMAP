@@ -10,23 +10,23 @@ rule align_reads_to_asm:
         ),
         reads=ancient(
             os.path.join(
-                config["nuc_freq"]["hifi_reads_dir"],
+                config["nucflag"]["hifi_reads_dir"],
                 "{sm}",
-                f"{{id}}.{config['nuc_freq']['reads_ext']}",
+                f"{{id}}.{config['nucflag']['reads_ext']}",
             )
         ),
     output:
-        temp(os.path.join(config["nuc_freq"]["output_dir"], "{sm}_{id}_hifi.bam")),
-    threads: config["nuc_freq"]["threads_aln"]
+        temp(os.path.join(config["nucflag"]["output_dir"], "{sm}_{id}_hifi.bam")),
+    threads: config["nucflag"]["threads_aln"]
     resources:
-        mem_mb=config["nuc_freq"]["mem_mb_aln"],
+        mem_mb=config["nucflag"]["mem_mb_aln"],
         sort_mem=4,
     params:
         aln_log_level="DEBUG",
         aln_preset="SUBREAD",
         aln_min_length=5000,
-        tmp_dir=config["nuc_freq"].get("tmp_dir", os.environ.get("TMPDIR", "/tmp")),
-        samtools_view_flag=config["nuc_freq"]["samtools_view_flag"],
+        tmp_dir=config["nucflag"].get("tmp_dir", os.environ.get("TMPDIR", "/tmp")),
+        samtools_view_flag=config["nucflag"]["samtools_view_flag"],
     conda:
         "../env/tools.yaml"
     log:
@@ -53,7 +53,7 @@ def get_aln_to_asm(wc) -> list[str]:
     )
     if not alns:
         raise FileNotFoundError(
-            f"Directory {config['nuc_freq']['hifi_reads_dir']}/{wc.sm} is missing or contains no alignment files with extension {config['nuc_freq']['reads_ext']}."
+            f"Directory {config['nucflag']['hifi_reads_dir']}/{wc.sm} is missing or contains no alignment files with extension {config['nucflag']['reads_ext']}."
         )
     return ancient(alns)
 
@@ -62,16 +62,16 @@ rule merge_hifi_read_asm_alignments:
     input:
         get_aln_to_asm,
     output:
-        alignment=os.path.join(config["nuc_freq"]["output_dir"], "{sm}_hifi.bam"),
+        alignment=os.path.join(config["nucflag"]["output_dir"], "{sm}_hifi.bam"),
         alignment_idx=os.path.join(
-            config["nuc_freq"]["output_dir"], "{sm}_hifi.bam.bai"
+            config["nucflag"]["output_dir"], "{sm}_hifi.bam.bai"
         ),
-    threads: config["nuc_freq"]["threads_aln"]
+    threads: config["nucflag"]["threads_aln"]
     resources:
         mem_mb=10_000,
         sort_mem=4,
     params:
-        tmp_dir=config["nuc_freq"].get("tmp_dir", os.environ.get("TMPDIR", "/tmp")),
+        tmp_dir=config["nucflag"].get("tmp_dir", os.environ.get("TMPDIR", "/tmp")),
     conda:
         "../env/tools.yaml"
     log:
@@ -86,34 +86,34 @@ rule merge_hifi_read_asm_alignments:
         """
 
 
-rule check_asm_nucfreq:
+rule check_asm_nucflag:
     input:
         bam_file=ancient(rules.merge_hifi_read_asm_alignments.output.alignment),
         alr_regions=rules.make_new_cens_bed_file.output.alr_bed,
-        config=config["nuc_freq"]["config_nucfreq"],
-        ignore_regions=config["nuc_freq"]["ignore_regions"],
+        config=config["nucflag"]["config_nucflag"],
+        ignore_regions=config["nucflag"]["ignore_regions"],
     output:
-        plot_dir=directory(os.path.join(config["nuc_freq"]["output_dir"], "{sm}")),
+        plot_dir=directory(os.path.join(config["nucflag"]["output_dir"], "{sm}")),
         misassemblies=os.path.join(
-            config["nuc_freq"]["output_dir"],
+            config["nucflag"]["output_dir"],
             "{sm}_cen_misassemblies.bed",
         ),
         asm_status=os.path.join(
-            config["nuc_freq"]["output_dir"],
+            config["nucflag"]["output_dir"],
             "{sm}_cen_status.bed",
         ),
-    threads: config["nuc_freq"]["processes_nucfreq"]
+    threads: config["nucflag"]["processes_nucflag"]
     conda:
-        "../env/nucfreq.yaml"
+        "../env/nucflag.yaml"
     resources:
-        mem_mb=config["nuc_freq"]["mem_mb_nucfreq"],
+        mem_mb=config["nucflag"]["mem_mb_nucflag"],
     log:
-        "logs/run_nucfreq_{sm}.log",
+        "logs/run_nucflag_{sm}.log",
     benchmark:
-        "benchmarks/run_nucfreq_{sm}.tsv"
+        "benchmarks/run_nucflag_{sm}.tsv"
     shell:
         """
-        nucfreq \
+        nucflag \
         -i {input.bam_file} \
         -b {input.alr_regions} \
         -d {output.plot_dir} \
@@ -126,6 +126,6 @@ rule check_asm_nucfreq:
         """
 
 
-rule nuc_freq_only:
+rule nucflag_only:
     input:
-        expand(rules.check_asm_nucfreq.output, sm=SAMPLE_NAMES),
+        expand(rules.check_asm_nucflag.output, sm=SAMPLE_NAMES),
