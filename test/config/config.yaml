@@ -37,6 +37,7 @@ nucflag:
   hifi_reads_dir: "test/data/raw_data"
   output_dir: "results/dna_brnn/nucflag"
   tmp_dir: "/tmp"
+  reads_ext: "bam"
   config_nucflag: "config/nucflag.toml"
   ignore_regions: "config/nucflag_ignore.bed"
   threads_aln: 4
