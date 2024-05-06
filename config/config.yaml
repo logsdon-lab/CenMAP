@@ -25,75 +25,11 @@ chromosomes:
   - "chrY"
 
 samples:
-  - HG00096
   - HG00171
-  - HG00268
-  # - HG00512
-  # - HG00513
-  - HG00514
-  # - HG00733
-  - HG00864
-  - NA19240
-  - NA18939
-  - NA12329
-  - HG00358
-  - HG00731
-  - HG00732
-  - HG01114
-  - HG01352
-  - HG01457
-  - HG01505
-  - HG01573
-  - HG01596
-  - HG01890
-  - HG02011
-  - HG02018
-  - HG02059
-  - HG02106
-  - HG02282
-  - HG02492
-  - HG02554
-  - HG02587
-  - HG02666
-  - HG02769
-  - HG02818
-  - HG02953
-  - HG03009
-  - HG03065
-  - HG03248
-  - HG03371
-  - HG03452
-  - HG03456
-  - HG03520
-  - HG03683
-  - HG03732
-  - HG03807
-  - HG04036
-  - HG04217
-  - NA18534
-  - NA18989
-  - NA19036
-  - NA19129
-  - NA19238
-  - NA19239
-  # - NA19317 # All misassembled
-  - NA19331
-  - NA19347
-  - NA19384
-  - NA19434
-  - NA19650
-  - NA19705
-  - NA19836
-  - NA19983
-  - NA20355
-  - NA20509
-  - NA20847
-  - NA21487
-  - NA24385
 
 concat_asm:
   # Expects {input_dir}/{sm}/*.gz
-  input_dir: "data/assemblies_link"
+  input_dir: "data/assemblies"
   output_dir: "data/assemblies/combined"
   mem_mb: 20_000
 
@@ -130,10 +66,10 @@ new_cens:
   output_dir: "results/cens_new"
 
 nucflag:
-  hifi_reads_dir: "data/raw_data_link"
-  reads_ext: "bam"
+  hifi_reads_dir: "data/raw_data"
+  reads_ext: "fastq.gz"
   output_dir: "results/nucflag"
-  tmp_dir: "/scratch"
+  tmp_dir: "temp"
   config_nucflag: "config/nucflag.toml"
   ignore_regions: "config/nucflag_ignore.bed"
   threads_aln: 6

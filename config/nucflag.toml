@@ -12,7 +12,7 @@ thr_min_valley_horizontal_distance = 1
 thr_min_valley_width = 10
 
 # Number of std above mean to include peak.
-thr_peak_height_std_above = 3.2
+thr_peak_height_std_above = 4
 
 # Number of std below mean to include valley.
 thr_valley_height_std_below = 3
