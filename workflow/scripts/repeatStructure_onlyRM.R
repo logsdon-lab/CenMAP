@@ -142,4 +142,4 @@ ggplot() +
 
 if (!interactive()) pdf(NULL)
 height <- length(unique(df$contig)) * 0.5
-ggsave(argv$output, width = 14, height = height + 4)
+ggsave(argv$output, width = 14, height = height + 4, limitsize = FALSE)
