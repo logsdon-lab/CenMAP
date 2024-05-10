@@ -11,7 +11,8 @@ RGX_CHR = re.compile("|".join(f"{c}_" for c in CHRS))
 DEF_REPEAT_PERC_THR = 0.95
 DEF_REPEAT_LEN_THR = [1_000, None]
 DEF_REPEAT_TYPE = 2
-DEF_DST_FROM_LARGEST = 4_000_000
+DEF_DST_FROM_LARGEST = 5_000_000
+
 
 def build_interval_expr(interval: tuple[int, int | None]) -> pl.Expr | None:
     try:
@@ -74,14 +75,12 @@ def main():
     args = ap.parse_args()
 
     df = pl.read_csv(
-        # "results/dna_brnn/K1463_2212/K1463_2212_centromeric_regions.renamed.fwd.bed",
         args.input,
         separator="\t",
         has_header=False,
         new_columns=["ctg", "start", "end", "rtype"],
     )
     if args.thresholds:
-        # thresholds = json.load(open("config/dnabrnn_thresholds.json"))
         thresholds = json.load(open(args.thresholds))
     else:
         thresholds = {}
@@ -164,12 +163,9 @@ def main():
         largest_row = df_ctg.filter(pl.col("rlen") == pl.col("rlen").max()).to_dict()
 
         # Allow only repeats some number of bps from the largest detected alpha-sat repeat.
-        df_ctg = (
-            df_ctg
-            .filter(
-                (pl.col("start") > largest_row["start"] - args.dst_from_largest) &
-                (pl.col("end") < largest_row["end"] + args.dst_from_largest)
-            )
+        df_ctg = df_ctg.filter(
+            (pl.col("start") > largest_row["start"] - args.dst_from_largest)
+            & (pl.col("end") < largest_row["end"] + args.dst_from_largest)
         )
 
         dfs.append(df_ctg)
