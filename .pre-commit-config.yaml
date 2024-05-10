@@ -19,4 +19,4 @@ repos:
     -   id: ruff
     -   id: ruff-format
 
-exclude: "data/annotations/.*"
+exclude: "data/annotations/.*|docs/.*png"
