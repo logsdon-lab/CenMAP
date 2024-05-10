@@ -7,7 +7,7 @@ A centromere mapping and annotation pipeline.
   <tr>
     <th>
       <figure float="left">
-        <img align="middle" src="docs/all_cens_chr12_small.png" width="70%">
+        <img align="middle" src="docs/all_cens_chr12_small.png" width="100%">
         <figcaption>chr12 centromere HOR structure.</figcaption>
       </figure>
     </th>
