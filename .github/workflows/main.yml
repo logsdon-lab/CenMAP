@@ -21,7 +21,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
 
-    - name: Test extract cens, dna-brnn, and nucfreq workflow.
+    - name: Test extract cens, dna-brnn, and nucflag workflow.
       run: |
         snakemake -c 1 -np --configfile test/config/config.yaml
 

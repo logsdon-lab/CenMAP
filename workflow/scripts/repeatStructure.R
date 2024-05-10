@@ -295,6 +295,7 @@ if (!is.null(argv$output_dir)) {
 
     if (!interactive()) pdf(NULL)
     ggsave(paste0(argv$output_dir, "/", ctg, ".png"), width = 12, height = 1)
+    dev.off()
   }
 }
 
@@ -328,6 +329,7 @@ if (!interactive()) pdf(NULL)
 # Scale height to fit number contigs.
 height <- length(unique(df_humas_hmmer_stv_out$chr)) * 0.5
 ggsave(argv$output, plot = plt, width = 14, height = height + 4)
+dev.off()
 
 # And the legend.
 if (!is.null(argv$output_dir)) {
@@ -337,4 +339,5 @@ if (!is.null(argv$output_dir)) {
   plt_legend <- as_ggplot(legend)
 
   ggsave(paste0(argv$output_dir, "/legend.png"), plot = plt_legend, width = 8, height = 4)
+  dev.off()
 }

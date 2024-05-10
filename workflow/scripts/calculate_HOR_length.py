@@ -63,14 +63,20 @@ def main():
         ).filter(pl.col("diff") > bp_jump_thr)
 
         if df_bp_jumps.is_empty():
+            adj_start = df_live_hor.get_column("start").min()
+            adj_stop = df_live_hor.get_column("stop").max()
+            adj_len = adj_stop - adj_start
+
+            if adj_len < args.arr_len_thr:
+                continue
+
             dfs.append(
                 pl.DataFrame(
                     {
                         "chr_name": ctg_name,
-                        "start_pos": df_live_hor.get_column("start").min(),
-                        "stop_pos": df_live_hor.get_column("stop").max(),
-                        "len": df_live_hor.get_column("stop").max()
-                        - df_live_hor.get_column("start").min(),
+                        "start_pos": adj_start,
+                        "stop_pos": adj_stop,
+                        "len": adj_len,
                     }
                 )
             )

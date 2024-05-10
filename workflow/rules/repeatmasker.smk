@@ -10,7 +10,7 @@ wildcard_constraints:
 rule get_valid_regions_for_rm:
     input:
         bed=os.path.join(
-            config["nuc_freq"]["output_dir"],
+            config["nucflag"]["output_dir"],
             "{sm}_cen_status.bed",
         ),
     output:

@@ -1,1 +1,0 @@
-data/reference/T2T-CHM13v2.fasta.gz filter=lfs diff=lfs merge=lfs -text

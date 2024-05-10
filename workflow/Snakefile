@@ -27,7 +27,7 @@ include: "rules/align_asm_to_ref.smk"
 include: "rules/ident_cen_ctgs.smk"
 include: "rules/dna_brnn.smk"
 include: "rules/extract_new_cens_ctgs.smk"
-include: "rules/check_reg_nucfreq.smk"
+include: "rules/nucflag.smk"
 include: "rules/repeatmasker.smk"
 include: "rules/humas_hmmer.smk"
 include: "rules/plot_hor_stv.smk"
@@ -51,7 +51,7 @@ rule all:
         rules.ident_cen_ctgs_all.input,
         rules.dna_brnn_all.input,
         rules.extract_new_cens_all.input,
-        rules.nuc_freq_only.input,
+        rules.nucflag_only.input,
         rules.repeatmasker_only.input,
         rules.humas_hmmer_only.input,
         rules.plot_hor_stv_only.input,

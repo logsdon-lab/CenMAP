@@ -529,7 +529,7 @@
 <g id="node31" class="node">
 <title>30</title>
 <path fill="none" stroke="#565bd8" stroke-width="2" d="M525.38,-1196C525.38,-1196 436.62,-1196 436.62,-1196 430.62,-1196 424.62,-1190 424.62,-1184 424.62,-1184 424.62,-1172 424.62,-1172 424.62,-1166 430.62,-1160 436.62,-1160 436.62,-1160 525.38,-1160 525.38,-1160 531.38,-1160 537.38,-1166 537.38,-1172 537.38,-1172 537.38,-1184 537.38,-1184 537.38,-1190 531.38,-1196 525.38,-1196"/>
-<text text-anchor="middle" x="481" y="-1174.88" font-family="sans" font-size="10.00">check_asm_nucfreq</text>
+<text text-anchor="middle" x="481" y="-1174.88" font-family="sans" font-size="10.00">check_asm_nucflag</text>
 </g>
 <!-- 29&#45;&gt;30 -->
 <g id="edge62" class="edge">
