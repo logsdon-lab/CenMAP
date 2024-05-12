@@ -41,8 +41,8 @@ nucflag:
   config_nucflag: "config/nucflag.toml"
   ignore_regions: "config/nucflag_ignore.bed"
   threads_aln: 4
-  mem_mb_nucflag: 50_000
-  mem_mb_aln: 120_000
+  mem_nucflag: 50
+  mem_aln: 120
   processes_nucflag: 12
   samtools_view_flag: 2308
 

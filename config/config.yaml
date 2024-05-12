@@ -74,8 +74,8 @@ nucflag:
   ignore_regions: "config/nucflag_ignore.bed"
   threads_aln: 6
   processes_nucflag: 12
-  mem_mb_nucflag: 50_000
-  mem_mb_aln: 50_000
+  mem_nucflag: 50
+  mem_aln: 50
   samtools_view_flag: 2308
 
 repeatmasker:
