@@ -48,7 +48,7 @@ rule run_stained_glass:
         "../env/stained_glass.yaml"
     threads: config["stained_glass"]["threads"]
     resources:
-        mem_mb=config["stained_glass"]["mem_mb"],
+        mem=config["stained_glass"]["mem"],
     params:
         window=config["stained_glass"]["window"],
         mm_f=config["stained_glass"]["mm_f"],
