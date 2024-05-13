@@ -34,7 +34,7 @@ rule extract_ref_hor_arrays:
             f"{REF_NAME}.hor_arrays.{REF_CENS_EDGE_LEN}kbp.fa.fai",
         ),
     log:
-        "logs/extract_ref_hor_arrays.log",
+        "logs/extract_ref_hor_arrays/extract_ref_hor_arrays.log",
     conda:
         "../env/tools.yaml"
     shell:

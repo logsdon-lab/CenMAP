@@ -13,9 +13,9 @@ rule run_dna_brnn:
     resources:
         mem=config["dna_brnn"]["mem"],
     log:
-        "logs/dna_brnn_{ort}_{sm}.log",
+        "logs/dna_brnn/dna_brnn_{ort}_{sm}.log",
     benchmark:
-        "benchmarks/dna_brnn_{ort}_{sm}.tsv"
+        "benchmarks/dna_brnn/dna_brnn_{ort}_{sm}.tsv"
     # No conda recipe. Use singularity if not installed locally.
     singularity:
         "docker://logsdonlab/dna-nn:latest"
@@ -38,9 +38,9 @@ use rule run_dna_brnn as run_dna_brnn_ref_cens with:
             config["dna_brnn"]["output_dir"], REF_NAME, f"{REF_NAME}_cens.trimmed.bed"
         ),
     log:
-        f"logs/dna_brnn_{REF_NAME}_cens.log",
+        f"logs/dna_brnn/dna_brnn_{REF_NAME}_cens.log",
     benchmark:
-        f"benchmarks/dna_brnn_{REF_NAME}_cens.tsv"
+        f"benchmarks/dna_brnn/dna_brnn_{REF_NAME}_cens.tsv"
 
 
 # TODO: Script different from notebook?
@@ -64,7 +64,7 @@ rule filter_dnabrnn_ref_cens_regions:
         repeat_type_filter=2,
         repeat_len_thr=1000,
     log:
-        "logs/filter_dnabrnn_ref_{chr}_cens_regions.log",
+        "logs/dna_brnn/filter_dnabrnn_ref_{chr}_cens_regions.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -102,7 +102,7 @@ rule filter_dnabrnn_sample_cens_regions:
     params:
         repeat_type_filter=2,
     log:
-        "logs/filter_dnabrnn_{ort}_{sm}_{chr}_cens_regions.log",
+        "logs/dna_brnn/filter_dnabrnn_{ort}_{sm}_{chr}_cens_regions.log",
     conda:
         "../env/py.yaml"
     shell:
@@ -131,7 +131,7 @@ rule get_dnabrnn_ref_cens_pos:
     output:
         os.path.join(config["dna_brnn"]["output_dir"], REF_NAME, "{chr}_cens_data.json"),
     log:
-        "logs/get_dnabrnn_ref_{chr}_cens_data.log",
+        "logs/dna_brnn/get_dnabrnn_ref_{chr}_cens_data.log",
     params:
         repeat_type_filter=2,
         repeat_len_thr=1000,
@@ -189,7 +189,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         # dna-brnn output may not contain repeats from a chr.
         allow_empty="--allow_empty",
     log:
-        "logs/aggregate_dnabrnn_alr_regions_by_{chr}_{ort}.log",
+        "logs/dna_brnn/aggregate_dnabrnn_alr_regions_by_{chr}_{ort}.log",
     conda:
         "../env/py.yaml"
     # Aggregate and bedminmax all.

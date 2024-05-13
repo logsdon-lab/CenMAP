@@ -25,7 +25,7 @@ rule create_annotated_satellites:
         pattern=lambda wc: ANNOTATE_SAT_REPEATS[str(wc.repeat)]["pattern"],
         color=lambda wc: ANNOTATE_SAT_REPEATS[str(wc.repeat)]["color"],
     log:
-        "logs/create_{repeat}_annotated_satellites.log",
+        "logs/plot_repeatmasker_sat_annot/create_{repeat}_annotated_satellites.log",
     shell:
         """
         {{ cat {input} | \
@@ -62,7 +62,7 @@ rule create_ct_track:
     params:
         color=ANNOTATE_SAT_REPEATS["ct"]["color"],
     log:
-        "logs/create_ct_track.log",
+        "logs/plot_repeatmasker_sat_annot/create_ct_track.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -125,7 +125,7 @@ rule plot_satellite_annotations:
             "all_cens_{chr}.annotation.png",
         ),
     log:
-        "logs/plot_{chr}_satellite_annotations.log",
+        "logs/plot_repeatmasker_sat_annot/plot_{chr}_satellite_annotations.log",
     conda:
         "../env/r.yaml"
     shell:

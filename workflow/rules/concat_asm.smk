@@ -10,7 +10,7 @@ rule concat_asm:
     resources:
         mem=config["concat_asm"]["mem"],
     log:
-        "logs/concat_asm_{sm}.log",
+        "logs/concat_asm/concat_asm_{sm}.log",
     conda:
         "../env/tools.yaml"
     shell:

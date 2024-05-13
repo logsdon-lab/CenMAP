@@ -53,24 +53,24 @@ use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
     params:
         added_cmds="",
     log:
-        "logs/extract_alr_regions_repeatmasker_{sm}.log",
+        "logs/repeatmasker/extract_alr_regions_repeatmasker_{sm}.log",
 
 
-rule rc_correct_alr_regions_rm:
-    input:
-        fa=rules.extract_correct_alr_regions_rm.output.seq,
-    output:
-        rc_seq=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "seq",
-            "{sm}_correct_ALR_regions.500kbp.rc.fa",
-        ),
-    conda:
-        "../env/tools.yaml"
-    log:
-        "logs/rc_alr_regions_repeatmasker_{sm}.log",
-    shell:
-        "seqtk seq -r {input.fa} > {output.rc_seq} 2> {log}"
+# rule rc_correct_alr_regions_rm:
+#     input:
+#         fa=rules.extract_correct_alr_regions_rm.output.seq,
+#     output:
+#         rc_seq=os.path.join(
+#             config["repeatmasker"]["output_dir"],
+#             "seq",
+#             "{sm}_correct_ALR_regions.500kbp.rc.fa",
+#         ),
+#     conda:
+#         "../env/tools.yaml"
+#     log:
+#         "logs/rc_alr_regions_repeatmasker_{sm}.log",
+#     shell:
+#         "seqtk seq -r {input.fa} > {output.rc_seq} 2> {log}"
 
 
 rule run_repeatmasker:
@@ -91,9 +91,9 @@ rule run_repeatmasker:
     singularity:
         "docker://logsdonlab/repeatmasker70:latest"
     log:
-        "logs/repeatmasker_{sm}.log",
+        "logs/repeatmasker/repeatmasker_{sm}.log",
     benchmark:
-        "benchmarks/repeatmasker_{sm}.tsv"
+        "benchmarks/repeatmasker/repeatmasker_{sm}.tsv"
     shell:
         """
         RepeatMasker \
@@ -166,7 +166,7 @@ rule format_add_control_repeatmasker_output:
             "all_samples_and_ref_correct_ALR_regions.500kbp.fa.out",
         ),
     log:
-        "logs/format_add_control_repeatmasker_output.log",
+        "logs/repeatmasker/format_add_control_repeatmasker_output.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -188,7 +188,7 @@ rule reverse_complete_repeatmasker_output:
             "all_samples_and_ref_correct_ALR_regions.500kbp.rc.fa.out",
         ),
     log:
-        "logs/reverse_complete_repeatmasker_output.log",
+        "logs/repeatmasker/reverse_complete_repeatmasker_output.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -215,7 +215,7 @@ rule extract_rm_out_by_chr:
             config["repeatmasker"]["output_dir"], "repeats", "all", "{chr}_cens.fa.out"
         ),
     log:
-        "logs/extract_{chr}_cens_from_rm.log",
+        "logs/repeatmasker/extract_{chr}_cens_from_rm.log",
     conda:
         "../env/tools.yaml"
     shell:

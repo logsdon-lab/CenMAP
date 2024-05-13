@@ -16,7 +16,7 @@ rule check_cens_status:
         # Edge-case for chrs whose repeats are small and broken up.
         max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 30_000,
     log:
-        "logs/check_cens_status_{chr}.log",
+        "logs/fix_cens_w_repeatmasker/check_cens_status_{chr}.log",
     conda:
         "../env/cen_stats.yaml"
     shell:
@@ -45,7 +45,7 @@ rule create_correct_oriented_cens:
             "reoriented_{chr}_cens.fa.out",
         ),
     log:
-        "logs/create_correct_oriented_{chr}_cens_list.log",
+        "logs/fix_cens_w_repeatmasker/create_correct_oriented_{chr}_cens_list.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -94,7 +94,7 @@ rule fix_incorrect_merged_legend:
     conda:
         "../env/py.yaml"
     log:
-        "logs/fix_incorrect_merged_legend_{sm}.log",
+        "logs/fix_cens_w_repeatmasker/fix_incorrect_merged_legend_{sm}.log",
     shell:
         """
         python {input.script} \
@@ -123,7 +123,7 @@ rule fix_incorrect_mapped_cens:
     conda:
         "../env/py.yaml"
     log:
-        "logs/fix_incorrect_mapped_cens.log",
+        "logs/fix_cens_w_repeatmasker/fix_incorrect_mapped_cens.log",
     shell:
         """
         python {input.script} \
@@ -184,7 +184,7 @@ rule split_corrected_rm_output:
             config["repeatmasker"]["output_dir"], "status", "corrected_{chr}_cens.list"
         ),
     log:
-        "logs/split_corrected_{chr}_rm_output.log",
+        "logs/fix_cens_w_repeatmasker/split_corrected_{chr}_rm_output.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -205,7 +205,7 @@ rule plot_cens_from_rm_by_chr:
             "{chr}_cens.corrected.pdf",
         ),
     log:
-        "logs/plot_{chr}_cens_from_rm.log",
+        "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_rm.log",
     conda:
         "../env/r.yaml"
     shell:
@@ -225,4 +225,4 @@ use rule plot_cens_from_rm_by_chr as plot_og_cens_from_rm_by_chr with:
             "{chr}_cens.original.pdf",
         ),
     log:
-        "logs/plot_{chr}_cens_from_rm_og.log",
+        "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_rm_og.log",

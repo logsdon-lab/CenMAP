@@ -29,7 +29,7 @@ rule plot_complete_cens:
             )
         ),
     log:
-        "logs/plot_{chr}_{mer_order}_complete_cens.log",
+        "logs/plot_complete_cens/plot_{chr}_{mer_order}_complete_cens.log",
     conda:
         "../env/r.yaml"
     params:

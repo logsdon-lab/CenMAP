@@ -19,7 +19,7 @@ rule format_hor_ref_aln_cen_contigs:
     conda:
         "../env/tools.yaml"
     log:
-        "logs/format_hor_ref_aln_cen_contigs_{sm}.log",
+        "logs/ident_cen_ctgs/format_hor_ref_aln_cen_contigs_{sm}.log",
     shell:
         # 1. chr2:91797392-95576642
         # 2. 3054999
@@ -66,7 +66,7 @@ rule intersect_with_pq_arm:
     conda:
         "../env/tools.yaml"
     log:
-        "logs/intersect_ref_cen_pqarm_{sm}.log",
+        "logs/ident_cen_ctgs/intersect_ref_cen_pqarm_{sm}.log",
     shell:
         """
         bedtools intersect -loj -a {input.aln_cens_bed} -b  {input.ref_monomeric_bed} > {output.qarms_cen_regions} 2> {log}
@@ -89,7 +89,7 @@ rule map_collapse_cens:
     conda:
         "../env/py.yaml"
     log:
-        "logs/map_collapse_cens_{sm}.log",
+        "logs/ident_cen_ctgs/map_collapse_cens_{sm}.log",
     shell:
         """
         python {input.script} -i {input.regions} -t {params.thr_ctg_len} > {output} 2> {log}
@@ -104,7 +104,7 @@ RENAME_ASM_CFG = {
     ),
     "output_dir": os.path.join(config["concat_asm"]["output_dir"], "{sm}"),
     "samples": SAMPLE_NAMES,
-    "log_dir": "logs/rename_cens",
+    "log_dir": "logs/ident_cen_ctgs/rename_cens",
 }
 
 
@@ -134,7 +134,7 @@ rule filter_cens_oriented_regions:
     params:
         sign=lambda wc: "+" if wc.ort == "fwd" else "-",
     log:
-        "logs/filter_{ort}_regions_{sm}.log",
+        "logs/ident_cen_ctgs/filter_{ort}_regions_{sm}.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -161,7 +161,7 @@ use rule extract_and_index_fa as extract_cens_oriented_regions with:
     params:
         added_cmds=lambda wc: "" if wc.ort == "fwd" else "| seqtk seq -r",
     log:
-        "logs/extract_{ort}_regions_{sm}.log",
+        "logs/ident_cen_ctgs/extract_{ort}_regions_{sm}.log",
 
 
 rule ident_cen_ctgs_all:

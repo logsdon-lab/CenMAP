@@ -10,7 +10,7 @@ rule create_format_orient_cens_list:
             "{sm}_contigs.{ort}.list",
         ),
     log:
-        "logs/format_{ort}_cens_list_{sm}.log",
+        "logs/extract_new_cens_ctgs/format_{ort}_cens_list_{sm}.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -33,7 +33,7 @@ use rule extract_and_index_fa as extract_new_oriented_cens_regions with:
     params:
         added_cmds=lambda wc: "" if wc.ort == "fwd" else "| seqtk seq -r",
     log:
-        "logs/extract_new_{ort}_cens_regions_{sm}.log",
+        "logs/extract_new_cens_ctgs/extract_new_{ort}_cens_regions_{sm}.log",
 
 
 # Corresponds to
@@ -65,7 +65,7 @@ use rule extract_and_index_fa as extract_alr_region_ref_by_chr with:
     params:
         added_cmds="",
     log:
-        f"logs/extract_alr_region_{REF_NAME}_{{chr}}.log",
+        f"logs/extract_new_cens_ctgs/extract_alr_region_{REF_NAME}_{{chr}}.log",
 
 
 use rule extract_and_index_fa as extract_alr_region_sample_by_chr with:
@@ -88,7 +88,7 @@ use rule extract_and_index_fa as extract_alr_region_sample_by_chr with:
             )
         ),
     log:
-        "logs/extract_alr_region_{sm}_{chr}_{ort}.log",
+        "logs/extract_new_cens_ctgs/extract_alr_region_{sm}_{chr}_{ort}.log",
 
 
 rule merge_alr_regions_by_chr:
@@ -117,7 +117,7 @@ rule merge_alr_regions_by_chr:
     conda:
         "../env/tools.yaml"
     log:
-        "logs/merge_alr_regions_by_{chr}_{ort}.log",
+        "logs/extract_new_cens_ctgs/merge_alr_regions_by_{chr}_{ort}.log",
     shell:
         """
         cat {input.ref_ctgs_fa} {input.sm_ctgs_fa} > {output.seq} 2> {log}
@@ -154,7 +154,7 @@ rule make_new_cens_bed_file:
     conda:
         "../env/py.yaml"
     log:
-        "logs/make_{sm}_bed_files_for_plot.log",
+        "logs/extract_new_cens_ctgs/make_{sm}_bed_files_for_plot.log",
     shell:
         # Only filter for sample to avoid malformed output ref cols in alr bed.
         """

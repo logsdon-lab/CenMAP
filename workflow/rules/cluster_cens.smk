@@ -39,7 +39,7 @@ rule cluster_cens:
     params:
         linkage_method="average",
     log:
-        "logs/cluster_cens_{chr}.log",
+        "logs/cluster_cens/cluster_cens_{chr}.log",
     conda:
         "../env/py.yaml"
     shell:

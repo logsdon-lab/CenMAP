@@ -16,7 +16,7 @@ rule calculate_as_hor_length:
     conda:
         "../env/py.yaml"
     log:
-        "logs/calculate_{chr}_as_hor_length.log",
+        "logs/calculate_hor_length/calculate_{chr}_as_hor_length.log",
     params:
         bp_jump_thr=100_000,
         arr_len_thr=30_000,
@@ -57,7 +57,7 @@ rule plot_as_hor_length:
             "all_AS-HOR_lengths.png",
         ),
     log:
-        "logs/plot_all_as_hor_length.log",
+        "logs/calculate_hor_length/plot_all_as_hor_length.log",
     conda:
         "../env/r.yaml"
     shell:
