@@ -5,4 +5,4 @@ dependencies:
   - git-lfs
   - pip
   - pip:
-    - git+https://github.com/logsdon-lab/cen-stats.git
+    - git+https://github.com/logsdon-lab/CenStats.git

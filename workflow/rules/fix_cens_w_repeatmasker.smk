@@ -10,25 +10,28 @@ rule check_cens_status:
             config["repeatmasker"]["output_dir"], "status", "{chr}_cens_status.tsv"
         ),
     params:
-        edge_len=500_000,
-        edge_perc_alr_thr=0.90,
+        edge_len=100_000,
+        edge_perc_alr_thr=0.70,
         dst_perc_thr=0.3,
         # Edge-case for chrs whose repeats are small and broken up.
         max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 30_000,
+        # Only allow mapping changes to 13 and 21 if chr13 or chr21.
+        restrict_13_21="--restrict_13_21",
     log:
         "logs/fix_cens_w_repeatmasker/check_cens_status_{chr}.log",
     conda:
         "../env/cen_stats.yaml"
     shell:
         """
-        cen-stats \
+        censtats status \
         -i {input.rm_out} \
         -r {input.rm_ref} \
         -o {output} \
         --edge_len {params.edge_len} \
         --edge_perc_alr_thr {params.edge_perc_alr_thr} \
         --dst_perc_thr {params.dst_perc_thr} \
-        --max_alr_len_thr {params.max_alr_len_thr} 2> {log}
+        --max_alr_len_thr {params.max_alr_len_thr} \
+        {params.restrict_13_21} 2> {log}
         """
 
 
