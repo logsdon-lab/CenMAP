@@ -28,7 +28,9 @@ def test_rename_rm(rm_out: str, original_faidx: str, renamed_faidx: str, expecte
         capture_output=True,
         check=True,
     )
-    res = [line.split("\t") for line in process.stdout.decode().split("\n") if line]
+    res = [
+        line.strip().split("\t") for line in process.stdout.decode().split("\n") if line
+    ]
     with open(expected, "rt") as exp_res_fh:
         exp_res = [line.strip().split("\t") for line in exp_res_fh.readlines() if line]
         assert res == exp_res
