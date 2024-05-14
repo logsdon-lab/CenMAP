@@ -141,11 +141,11 @@ rule make_new_cens_bed_file:
             os.path.join(
                 config["new_cens"]["output_dir"],
                 "bed",
-                "fmt_{sm}_ALR_regions.500kbp.bed",
+                "fmt_{sm}_ALR_regions.bed",
             )
         ),
         alr_bed=os.path.join(
-            config["new_cens"]["output_dir"], "bed", "{sm}_ALR_regions.500kbp.bed"
+            config["new_cens"]["output_dir"], "bed", "{sm}_ALR_regions.bed"
         ),
     params:
         io_cols=" ".join(["ctg", "start", "end"]),

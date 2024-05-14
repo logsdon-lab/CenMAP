@@ -5,7 +5,7 @@ REF_CENS_EDGE_LEN = round(
 
 rule adjust_ref_hor_arrays:
     input:
-        config["ident_cen_ctgs"]["ref_cens_500kbp_regions"],
+        config["ident_cen_ctgs"]["ref_cens_regions"],
     output:
         os.path.join(
             config["extract_ref_hor_arrays"]["output_dir"],

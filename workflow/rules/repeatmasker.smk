@@ -17,7 +17,7 @@ rule get_valid_regions_for_rm:
         good_regions=os.path.join(
             config["repeatmasker"]["output_dir"],
             "bed",
-            "{sm}_valid_ALR_regions.500kbp.bed",
+            "{sm}_valid_ALR_regions.bed",
         ),
     params:
         assembly_filter="good",
@@ -43,12 +43,12 @@ use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
         seq=os.path.join(
             config["repeatmasker"]["output_dir"],
             "seq",
-            "{sm}_correct_ALR_regions.500kbp.fa",
+            "{sm}_correct_ALR_regions.fa",
         ),
         idx=os.path.join(
             config["repeatmasker"]["output_dir"],
             "seq",
-            "{sm}_correct_ALR_regions.500kbp.fa.fai",
+            "{sm}_correct_ALR_regions.fa.fai",
         ),
     params:
         added_cmds="",
@@ -56,21 +56,33 @@ use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
         "logs/repeatmasker/extract_alr_regions_repeatmasker_{sm}.log",
 
 
-# rule rc_correct_alr_regions_rm:
-#     input:
-#         fa=rules.extract_correct_alr_regions_rm.output.seq,
-#     output:
-#         rc_seq=os.path.join(
-#             config["repeatmasker"]["output_dir"],
-#             "seq",
-#             "{sm}_correct_ALR_regions.500kbp.rc.fa",
-#         ),
-#     conda:
-#         "../env/tools.yaml"
-#     log:
-#         "logs/rc_alr_regions_repeatmasker_{sm}.log",
-#     shell:
-#         "seqtk seq -r {input.fa} > {output.rc_seq} 2> {log}"
+# RepeatMasker has a limit of 50 characters for sequence names.
+# While I was able to create a fork of RepeatMasker that allowed for longer sequence names, I still ran into issues.
+# Bumping to v4.1.5 and also adding the increased limit fixed the issue but resulted in a 5-10x increase in runtime.
+# So I downgraded the repeatmasker70 image to v4.1.0.
+rule rename_for_repeatmasker:
+    input:
+        fa=rules.extract_correct_alr_regions_rm.output.seq,
+    output:
+        renamed_fa=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "seq",
+            "{sm}_correct_ALR_regions.renamed.fa",
+        ),
+        renamed_fa_idx=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "seq",
+            "{sm}_correct_ALR_regions.renamed.fa.fai",
+        ),
+    params:
+        prefix="seq",
+    log:
+        "logs/repeatmasker/rename_for_repeatmasker_{sm}.log",
+    shell:
+        """
+        seqtk rename {input.fa} {params.prefix} > {output} 2> {log}
+        samtools faidx {output} 2>> {log}
+        """
 
 
 rule run_repeatmasker:
@@ -81,7 +93,7 @@ rule run_repeatmasker:
             config["repeatmasker"]["output_dir"],
             "repeats",
             "{sm}",
-            "{sm}_correct_ALR_regions.500kbp.fa.out",
+            "{sm}_correct_ALR_regions.fa.out",
         ),
     threads: config["repeatmasker"]["threads"]
     params:
@@ -92,6 +104,8 @@ rule run_repeatmasker:
         "docker://logsdonlab/repeatmasker70:latest"
     log:
         "logs/repeatmasker/repeatmasker_{sm}.log",
+    # Retry in case of .RepeatMaskerCache failure.
+    retries: 2
     benchmark:
         "benchmarks/repeatmasker/repeatmasker_{sm}.tsv"
     shell:
@@ -105,19 +119,27 @@ rule run_repeatmasker:
         """
 
 
-rule remove_repeatmasker_header:
+# Rename repeatmasker output to match the original sequence names.
+rule reformat_repeatmasker_output:
     input:
-        rules.run_repeatmasker.output,
+        script="workflow/scripts/reformat_rm.py",
+        rm_out=rules.run_repeatmasker.output,
+        original_fai=rules.extract_correct_alr_regions_rm.output.idx,
+        renamed_fai=rules.rename_for_repeatmasker.output.renamed_fa_idx,
     output:
         os.path.join(
             config["repeatmasker"]["output_dir"],
             "repeats",
             "{sm}",
-            "{sm}_correct_ALR_regions.500kbp.fa.noheader.out",
+            "{sm}_correct_ALR_regions.fa.reformatted.out",
         ),
+    log:
+        "logs/repeatmasker/reformat_repeatmasker_output_{sm}.log",
+    conda:
+        "../env/py.yaml"
     shell:
         """
-        tail -n +4 {input} > {output}
+        python {input.script} -i {input.rm_out} -f {input.original_fai} -r {input.renamed_fai} > {output} 2> {log}
         """
 
 
@@ -125,13 +147,13 @@ rule remove_repeatmasker_header:
 # |1259|28.4|7.4|5.3|GM18989_chr1_hap1-0000003:9717731-15372230|8|560|(5653940)|+|Charlie2b|DNA/hAT-Charlie|120|683|(2099)|1|
 rule merge_repeatmasker_output:
     input:
-        expand(rules.remove_repeatmasker_header.output, sm=SAMPLE_NAMES),
+        expand(rules.reformat_repeatmasker_output.output, sm=SAMPLE_NAMES),
     output:
         os.path.join(
             config["repeatmasker"]["output_dir"],
             "repeats",
             "all",
-            "all_samples_correct_ALR_regions.500kbp.fa.out",
+            "all_samples_correct_ALR_regions.fa.out",
         ),
     shell:
         """
@@ -163,7 +185,7 @@ rule format_add_control_repeatmasker_output:
             config["repeatmasker"]["output_dir"],
             "repeats",
             "all",
-            "all_samples_and_ref_correct_ALR_regions.500kbp.fa.out",
+            "all_samples_and_ref_correct_ALR_regions.fa.out",
         ),
     log:
         "logs/repeatmasker/format_add_control_repeatmasker_output.log",
@@ -185,7 +207,7 @@ rule reverse_complete_repeatmasker_output:
             config["repeatmasker"]["output_dir"],
             "repeats",
             "all",
-            "all_samples_and_ref_correct_ALR_regions.500kbp.rc.fa.out",
+            "all_samples_and_ref_correct_ALR_regions.rc.fa.out",
         ),
     log:
         "logs/repeatmasker/reverse_complete_repeatmasker_output.log",
