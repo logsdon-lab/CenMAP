@@ -100,8 +100,8 @@ rule run_repeatmasker:
         output_dir=lambda wc, output: os.path.dirname(str(output)),
         species="human",
         engine="rmblast",
-    singularity:
-        "docker://logsdonlab/repeatmasker70:latest"
+    conda:
+        "../env/repeatmasker.yaml"
     log:
         "logs/repeatmasker/repeatmasker_{sm}.log",
     # Retry in case of .RepeatMaskerCache failure.
