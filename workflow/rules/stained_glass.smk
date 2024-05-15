@@ -20,7 +20,7 @@ rule index_fa_for_stained_glass:
     conda:
         "../env/stained_glass.yaml"
     log:
-        "logs/index_fa_for_stained_glass+{fname}.log",
+        "logs/stained_glass/index_fa_for_stained_glass+{fname}.log",
     shell:
         """
         # Index file.
@@ -48,7 +48,7 @@ rule run_stained_glass:
         "../env/stained_glass.yaml"
     threads: config["stained_glass"]["threads"]
     resources:
-        mem_mb=config["stained_glass"]["mem_mb"],
+        mem=config["stained_glass"]["mem"],
     params:
         window=config["stained_glass"]["window"],
         mm_f=config["stained_glass"]["mm_f"],
@@ -56,9 +56,9 @@ rule run_stained_glass:
         target_rule="make_figures",
         outdir=OUTPUT_STAINED_GLASS_DIR,
     log:
-        "logs/stained_glass_{fname}.log",
+        "logs/stained_glass/stained_glass_{fname}.log",
     benchmark:
-        "benchmarks/stained_glass_{fname}.txt"
+        "benchmarks/stained_glass/stained_glass_{fname}.txt"
     shell:
         """
         snakemake -s {input.snakefile} \

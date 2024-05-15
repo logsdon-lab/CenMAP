@@ -8,9 +8,9 @@ rule concat_asm:
     params:
         assembly_fname_pattern=".*\.(fa|fasta)",
     resources:
-        mem_mb=config["concat_asm"]["mem_mb"],
+        mem=config["concat_asm"]["mem"],
     log:
-        "logs/concat_asm_{sm}.log",
+        "logs/concat_asm/concat_asm_{sm}.log",
     conda:
         "../env/tools.yaml"
     shell:

@@ -5,7 +5,7 @@ REF_CENS_EDGE_LEN = round(
 
 rule adjust_ref_hor_arrays:
     input:
-        config["ident_cen_ctgs"]["ref_cens_500kbp_regions"],
+        config["ident_cen_ctgs"]["ref_cens_regions"],
     output:
         os.path.join(
             config["extract_ref_hor_arrays"]["output_dir"],
@@ -34,7 +34,7 @@ rule extract_ref_hor_arrays:
             f"{REF_NAME}.hor_arrays.{REF_CENS_EDGE_LEN}kbp.fa.fai",
         ),
     log:
-        "logs/extract_ref_hor_arrays.log",
+        "logs/extract_ref_hor_arrays/extract_ref_hor_arrays.log",
     conda:
         "../env/tools.yaml"
     shell:

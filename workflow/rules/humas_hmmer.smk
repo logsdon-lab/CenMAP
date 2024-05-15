@@ -7,7 +7,7 @@ rule fmt_correct_alr_regions:
         alr_fa=os.path.join(
             config["repeatmasker"]["output_dir"],
             "seq",
-            "{sm}_correct_ALR_regions.500kbp.fa",
+            "{sm}_correct_ALR_regions.fa",
         ),
         legend=os.path.join(
             config["repeatmasker"]["output_dir"],
@@ -18,7 +18,7 @@ rule fmt_correct_alr_regions:
         fmt_alr_fa=temp(
             os.path.join(
                 config["humas_hmmer"]["output_dir"],
-                "{sm}_fmt_correct_ALR_regions.{comp}.500kbp.fa",
+                "{sm}_fmt_correct_ALR_regions.{comp}.fa",
             )
         ),
     run:
@@ -60,14 +60,14 @@ rule merge_correct_alr_regions:
     output:
         seq=os.path.join(
             config["humas_hmmer"]["output_dir"],
-            "all_correct_ALR_regions.{comp}.500kbp.fa",
+            "all_correct_ALR_regions.{comp}.fa",
         ),
         idx=os.path.join(
             config["humas_hmmer"]["output_dir"],
-            "all_correct_ALR_regions.{comp}.500kbp.fa.fai",
+            "all_correct_ALR_regions.{comp}.fa.fai",
         ),
     log:
-        "logs/merge_correct_alr_regions_{comp}.log",
+        "logs/humas_hmmer/merge_correct_alr_regions_{comp}.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -96,7 +96,7 @@ rule extract_cens_for_humas_hmmer:
         cens=os.path.join(config["humas_hmmer"]["output_dir"], "{chr}_cens.fa"),
         idx=os.path.join(config["humas_hmmer"]["output_dir"], "{chr}_cens.fa.fai"),
     log:
-        "logs/extract_{chr}_cens_for_humas_hmmer.log",
+        "logs/humas_hmmer/extract_{chr}_cens_for_humas_hmmer.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -122,7 +122,7 @@ checkpoint split_cens_for_humas_hmmer:
             )
         ),
     log:
-        "logs/split_{chr}_cens_for_humas_hmmer.log",
+        "logs/humas_hmmer/split_{chr}_cens_for_humas_hmmer.log",
     params:
         split_dir=config["humas_hmmer"]["input_dir"],
     conda:

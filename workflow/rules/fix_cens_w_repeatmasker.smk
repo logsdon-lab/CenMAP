@@ -10,25 +10,28 @@ rule check_cens_status:
             config["repeatmasker"]["output_dir"], "status", "{chr}_cens_status.tsv"
         ),
     params:
-        edge_len=500_000,
-        edge_perc_alr_thr=0.90,
+        edge_len=100_000,
+        edge_perc_alr_thr=0.70,
         dst_perc_thr=0.3,
         # Edge-case for chrs whose repeats are small and broken up.
         max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 30_000,
+        # Only allow mapping changes to 13 and 21 if chr13 or chr21.
+        restrict_13_21="--restrict_13_21",
     log:
-        "logs/check_cens_status_{chr}.log",
+        "logs/fix_cens_w_repeatmasker/check_cens_status_{chr}.log",
     conda:
         "../env/cen_stats.yaml"
     shell:
         """
-        cen-stats \
+        censtats status \
         -i {input.rm_out} \
         -r {input.rm_ref} \
         -o {output} \
         --edge_len {params.edge_len} \
         --edge_perc_alr_thr {params.edge_perc_alr_thr} \
         --dst_perc_thr {params.dst_perc_thr} \
-        --max_alr_len_thr {params.max_alr_len_thr} 2> {log}
+        --max_alr_len_thr {params.max_alr_len_thr} \
+        {params.restrict_13_21} 2> {log}
         """
 
 
@@ -45,7 +48,7 @@ rule create_correct_oriented_cens:
             "reoriented_{chr}_cens.fa.out",
         ),
     log:
-        "logs/create_correct_oriented_{chr}_cens_list.log",
+        "logs/fix_cens_w_repeatmasker/create_correct_oriented_{chr}_cens_list.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -94,7 +97,7 @@ rule fix_incorrect_merged_legend:
     conda:
         "../env/py.yaml"
     log:
-        "logs/fix_incorrect_merged_legend_{sm}.log",
+        "logs/fix_cens_w_repeatmasker/fix_incorrect_merged_legend_{sm}.log",
     shell:
         """
         python {input.script} \
@@ -123,7 +126,7 @@ rule fix_incorrect_mapped_cens:
     conda:
         "../env/py.yaml"
     log:
-        "logs/fix_incorrect_mapped_cens.log",
+        "logs/fix_cens_w_repeatmasker/fix_incorrect_mapped_cens.log",
     shell:
         """
         python {input.script} \
@@ -184,7 +187,7 @@ rule split_corrected_rm_output:
             config["repeatmasker"]["output_dir"], "status", "corrected_{chr}_cens.list"
         ),
     log:
-        "logs/split_corrected_{chr}_rm_output.log",
+        "logs/fix_cens_w_repeatmasker/split_corrected_{chr}_rm_output.log",
     conda:
         "../env/tools.yaml"
     shell:
@@ -205,7 +208,7 @@ rule plot_cens_from_rm_by_chr:
             "{chr}_cens.corrected.pdf",
         ),
     log:
-        "logs/plot_{chr}_cens_from_rm.log",
+        "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_rm.log",
     conda:
         "../env/r.yaml"
     shell:
@@ -225,4 +228,4 @@ use rule plot_cens_from_rm_by_chr as plot_og_cens_from_rm_by_chr with:
             "{chr}_cens.original.pdf",
         ),
     log:
-        "logs/plot_{chr}_cens_from_rm_og.log",
+        "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_rm_og.log",

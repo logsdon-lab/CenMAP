@@ -31,13 +31,13 @@ concat_asm:
   # Expects {input_dir}/{sm}/*.gz
   input_dir: "data/assemblies"
   output_dir: "data/assemblies/combined"
-  mem_mb: 20_000
+  mem: 20
 
 align_asm_to_ref:
   # Output dir set to results
   reference: "data/reference/T2T-CHM13v2.fasta.gz"
   threads: 4
-  mem_mb: 120_000
+  mem: 120
 
 extract_ref_hor_arrays:
   output_dir: "results/ref_hor_arrays"
@@ -47,7 +47,7 @@ extract_ref_hor_arrays:
 ident_cen_ctgs:
   comb_assemblies_dir: "data/assemblies/combined"
   output_dir: "results/cens"
-  ref_cens_500kbp_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
+  ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
   ref_cens_monomeric_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
 
 dna_brnn:
@@ -58,7 +58,7 @@ dna_brnn:
   # Optional.
   ref_alr_file: "data/annotations/chm13_cens.trimmed.bed"
   threads: 12
-  mem_mb: 30_000
+  mem: 30
   thr_file: "config/dnabrnn_thresholds.json"
   full_alr_thr_file: "config/dnabrnn_full_alr_region_thresholds.json"
 
@@ -74,8 +74,8 @@ nucflag:
   ignore_regions: "config/nucflag_ignore.bed"
   threads_aln: 6
   processes_nucflag: 12
-  mem_mb_nucflag: 50_000
-  mem_mb_aln: 50_000
+  mem_nucflag: 50
+  mem_aln: 50
   samtools_view_flag: 2308
 
 repeatmasker:
@@ -120,6 +120,6 @@ stained_glass:
   input_dir: null
   output_dir: "results/stained_glass"
   threads: 10
-  mem_mb: 60_000
+  mem: 60
   window: 5000
   mm_f: 5000

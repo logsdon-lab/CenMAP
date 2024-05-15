@@ -29,7 +29,7 @@ rule get_stv_row_from_humas_hmmer_out:
             else ""
         ),
     log:
-        "logs/get_stv_row_from_{chr}_humas_hmmer_out.log",
+        "logs/plot_hor_stv/get_stv_row_from_{chr}_humas_hmmer_out.log",
     conda:
         "../env/py.yaml"
     shell:
@@ -58,7 +58,7 @@ rule aggregate_format_all_stv_row:
             str(input), "AS-HOR_*_stv_row.bed"
         ),
     log:
-        "logs/get_stv_row_from_{chr}_humas_hmmer_out.log",
+        "logs/plot_hor_stv/get_stv_row_from_{chr}_humas_hmmer_out.log",
     shell:
         """
         ( cat {params.stv_row_pattern} || true ) | \
@@ -88,7 +88,7 @@ rule plot_stv_with_order:
             "{chr}_{mer_order}ontop.png",
         ),
     log:
-        "logs/plot_{chr}_stv_{mer_order}_on_top.log",
+        "logs/plot_hor_stv/plot_{chr}_stv_{mer_order}_on_top.log",
     conda:
         "../env/r.yaml"
     shell:
