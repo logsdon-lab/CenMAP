@@ -2,7 +2,7 @@ NUCFLAG_CFG = {
     "samples": [
         {
             "name": sm,
-            "asm_fa": rules.concat_asm.output,
+            "asm_fa": rules.asm_rename_ctgs.output,
             "read_dir": os.path.join(config["nucflag"]["hifi_reads_dir"], sm),
             "read_ext": config["nucflag"]["reads_ext"],
             "region_bed": rules.make_new_cens_bed_file.output.alr_bed,
