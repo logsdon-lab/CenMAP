@@ -199,8 +199,8 @@ argv <- parse_args(p)
 # {
 #   argv$input_rm_sat <- paste0("results/repeatmasker_sat_annot/repeats/all_cens_", test_chr, ".annotation.fa.out")
 #   argv$input_stv <- paste0("results/hor_stv/bed/", test_chr, "_AS-HOR_stv_row.all.bed")
-#   argv$input_stv_chm13 <- "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all2.bed"
-#   argv$input_stv_chm1 <- "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all2.bed"
+#   argv$input_stv_chm13 <- "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
+#   argv$input_stv_chm1 <- "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
 #   argv$output <- "test.png"
 #   argv$chr <- test_chr
 #   argv$mer_order <- "large"
