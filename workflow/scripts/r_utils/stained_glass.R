@@ -200,7 +200,8 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       grob_hist,
       xmin = 0, xmax = xmax / 3,
       ymin = -ylim, ymax = -ylim + (ylim / 4)
-    )
+    ) +
+    ggtitle(rname)
 
   return(final_plot)
 }
