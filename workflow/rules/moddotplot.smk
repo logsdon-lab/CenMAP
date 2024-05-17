@@ -26,6 +26,7 @@ rule run_moddotplot:
         "../env/moddotplot.yaml"
     params:
         window=config["moddotplot"]["window"],
+        ident_thr=70.0,
         outdir=lambda wc: os.path.join(OUTPUT_MODDOTPLOT_DIR, f"original_{wc.fname}"),
     log:
         "logs/moddotplot/moddotplot_{fname}.log",
@@ -33,7 +34,7 @@ rule run_moddotplot:
         "benchmarks/moddotplot/moddotplot_{fname}.tsv"
     shell:
         """
-        moddotplot static -f {input.fasta} -w {params.window} -o {params.outdir} &> {log}
+        moddotplot static -f {input.fasta} -w {params.window} -o {params.outdir} -id {params.ident_thr} &> {log}
         """
 
 

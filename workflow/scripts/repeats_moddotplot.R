@@ -84,16 +84,18 @@ plot <- make_cen_plot(
   df_humas_hmmer_stv_out,
   df_rm_sat_out
 )
+
+# TODO: Scale with the number of HORs and length of the centromere.
 ggsave(
   plot = plot,
   file = glue("{outdir}/{rname}_{mer_order}.tri.png"),
-  height = 6,
-  width = 10,
+  height = 5,
+  width = 9,
   dpi = 600
 )
 ggsave(
   plot = plot,
   file = glue("{outdir}/{rname}_{mer_order}.tri.pdf"),
-  height = 6,
-  width = 10
+  height = 5,
+  width = 9
 )

@@ -71,7 +71,7 @@ make_hist <- function(sdf) {
     scale_y_continuous(labels = make_k) +
     coord_cartesian(xlim = c(bot, 100)) +
     xlab("% identity") +
-    ylab("# of alignments (thousands)")
+    ylab("# of alignments (k)")
   return(p)
 }
 
@@ -150,12 +150,43 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
   # make the histogram
   plot_hist <- make_hist(df_rname_seq_ident)
   grob_hist <- ggplotGrob(plot_hist)
+  df_rm_sat_out <- df_rm_sat_out[order(df_rm_sat_out$region)] %>%
+    filter(chr == rname)
+  df_rm_sat_out_ct <- df_rm_sat_out %>% filter(region == "ct")
+  df_rm_sat_out_other <- df_rm_sat_out %>% filter(region != "ct")
 
-  height <- 10
-  plot_ident_cen <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region)] %>% filter(chr == rname)) +
+  segment_linewidth <- 10
+  segment_y <- -200000
+  ct_outline_edges_x <- 9000
+
+  plot_ident_cen <- ggplot() +
+    # Make larger ct segment as outline
     geom_segment(
-      aes(x = start2, y = -120000, xend = stop2, yend = -120000, color = region),
-      size = height
+      data = df_rm_sat_out_ct,
+      aes(
+        x = start2,
+        y = segment_y,
+        xend = stop2,
+        yend = segment_y,
+        color = "black"
+      ),
+      linewidth = segment_linewidth + 1
+    ) +
+    geom_segment(
+      data = df_rm_sat_out_ct,
+      aes(
+        x = start2 + ct_outline_edges_x,
+        y = segment_y,
+        xend = stop2 - ct_outline_edges_x,
+        yend = segment_y,
+        color = region
+      ),
+      linewidth = segment_linewidth
+    ) +
+    geom_segment(
+      data = df_rm_sat_out_other,
+      aes(x = start2, y = segment_y, xend = stop2, yend = segment_y, color = region),
+      linewidth = segment_linewidth
     ) +
     scale_color_manual(values = get_rm_sat_annot_colors()) +
     scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
@@ -163,8 +194,14 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     new_scale_color() +
     geom_segment(
       data = df_humas_hmmer_stv_out %>% filter(chr == rname),
-      aes(x = start, xend = stop, y = -120000, yend = -120000, color = as.factor(mer)),
-      size = height
+      aes(
+        x = start,
+        xend = stop,
+        y = segment_y,
+        yend = segment_y,
+        color = as.factor(mer)
+      ),
+      linewidth = segment_linewidth
     ) +
     scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
     # New colorscale.
@@ -182,14 +219,14 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     theme(
       legend.position = "right",
       legend.title = element_blank(),
-      legend.box.background = element_rect(colour = "black"),
       legend.background = element_blank(),
+      legend.key.size = unit(1.0, "cm"),
+      legend.key = element_rect(color = "black", fill = NA),
       axis.title.y = element_blank(),
       axis.text.y = element_blank(),
       axis.ticks.y = element_blank(),
       axis.line.y = element_blank(),
     ) +
-    guides(color = guide_legend(override.aes = list(size = 6))) +
     xlab("Position (Mbp)")
 
   # ranges for inset hist
@@ -199,7 +236,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     annotation_custom(
       grob_hist,
       xmin = 0, xmax = xmax / 3,
-      ymin = -ylim, ymax = -ylim + (ylim / 4)
+      ymin = -ylim, ymax = -ylim + (ylim / 3.5)
     ) +
     ggtitle(rname)
 
