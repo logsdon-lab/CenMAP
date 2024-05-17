@@ -11,13 +11,13 @@ get_colors = function(sdf){
   bot = floor(min(sdf$perID_by_events)); top = 100
   breaks = seq(70,100,1)
   labels = seq(length(breaks)-1)
-  return( cut(sdf$perID_by_events, breaks=seq(70,100,1), labels=seq(length(breaks)-1), include.lowest=TRUE)  )
+  return(cut(sdf$perID_by_events, breaks=seq(70,100,1), labels=seq(length(breaks)-1), include.lowest=TRUE))
 
 }
 
 read_bedpe <- function(all.files){
   l <- lapply(all.files, fread, sep="\t")
-  df <- rbindlist( l )
+  df <- rbindlist(l)
 
   df$discrete = get_colors(df)
   if("#query_name" %in% colnames(df)){
@@ -64,43 +64,53 @@ make_hist = function(sdf){
     geom_histogram(aes(perID_by_events, fill = new_discrete), bins = 300) +
     scale_fill_manual(values = discrete_color_ranges) +
     theme_cowplot() +
-    theme(legend.position = "none") +
+    theme(
+      legend.position = "none",
+      text = element_text(size = 8),
+      axis.text = element_text(size = 8)
+    ) +
     scale_y_continuous(labels=make_k) +
     coord_cartesian(xlim = c(bot, 100))+
     xlab("% identity") +
     ylab("# of alignments (thousands)")
-  p
+  return(p)
 }
 
 diamond <- function(row) {
   side_length <- as.numeric(row["window"])
   x <- as.numeric(row["w"])
   y <- as.numeric(row["z"])
-
   base <- matrix(c(1, 0, 0, 1, -1, 0, 0, -1), nrow = 2) * sqrt(2) / 2
   trans <- (base * side_length) + c(x, y)
   df <- as.data.frame(t(trans))
   colnames(df) <- c("w", "z")
   df$new_discrete <- row["new_discrete"]
   df$group <- as.numeric(row["group"])
-  df
+  return(df)
+}
+
+make_tri_df = function(df){
+  df$w = (df$first_pos + df$second_pos)
+  df$z = -df$first_pos + df$second_pos
+  window = max(df$q_en - df$q_st)
+  tri_scale =  max(df$q_st) / max(df$w)
+  df$window <- max(df$q_en - df$q_st) / tri_scale
+  df$group <- seq(nrow(df))
+  df_d <- rbindlist(apply(df, 1, diamond))
+  df_d$x <- df_d$w * tri_scale
+  df_d$y <- df_d$z * window
+  return(df_d)
 }
 
 make_tri = function(sdf, rname=""){
-  sdf$w = (sdf$first_pos + sdf$second_pos)
-  sdf$z = -sdf$first_pos + sdf$second_pos
-  window = max(sdf$q_en - sdf$q_st)
-  tri_scale =  max(sdf$q_st) / max(sdf$w)
-  sdf$window <- max(sdf$q_en - sdf$q_st) / tri_scale
-  sdf$group <- seq(nrow(sdf))
-  df_d <- rbindlist(apply(sdf, 1, diamond))
+  df_d <- make_tri_df(sdf)
 
-  ggplot(df_d) +
-    geom_polygon(aes(x = w * tri_scale, y = z * window , fill = new_discrete, group = group)) +
+  plt <- ggplot(df_d) +
+    geom_polygon(aes(x = x, y = y , fill = new_discrete, group = group)) +
     theme_cowplot() +
     scale_fill_manual(values = discrete_color_ranges) +
     scale_x_continuous(labels=make_scale, limits = c(0,NA)) +
-    scale_y_continuous(labels=make_scale, limits = c(0,NA)) +
+    scale_y_reverse(labels=make_scale, limits = c(NA,0)) +
     xlab("Genomic position (Mbp)") +
     ylab("") +
     theme(
@@ -110,12 +120,13 @@ make_tri = function(sdf, rname=""){
         axis.line.y = element_blank()
       ) +
     ggtitle(rname)
+  return(plt)
 }
 
 make_dot = function(sdf, rname=""){
   max = max(sdf$q_en, sdf$r_en)
   window = max(sdf$query_end - sdf$query_start)
-  ggplot(sdf) +
+  plt <- ggplot(sdf) +
     geom_tile(aes(x = q_st, y = r_st, fill = new_discrete, height=window, width=window)) +
     theme_cowplot() +
     scale_fill_manual(values = discrete_color_ranges) +
@@ -127,52 +138,70 @@ make_dot = function(sdf, rname=""){
     xlab("Genomic position (Mbp)") +
     ylab("") +
     ggtitle(rname)
+
+  return(plt)
 }
 
 
-make_plots <- function(r_name) {
-  sdf = copy(df[r == r_name & q == r_name])
+make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out) {
+  df_rname_seq_ident <- df_seq_ident %>% filter(q == rname & r == rname)
 
-  # make the plots
-  p_lone = make_tri(sdf, rname=r_name)
-  scale = 1 / 2.25
-  p_hist = make_hist(sdf)
+  # make the tri sequence identity plots
+  df_d <- make_tri_df(df_rname_seq_ident)
+  # make the histogram
+  plot_hist = make_hist(df_rname_seq_ident)
+  grob_hist <- ggplotGrob(plot_hist)
 
-  # setup the space
-  dir.create(glue("{OUT}/pdfs/{r_name}/"))
-  dir.create(glue("{OUT}/pngs/{r_name}/"))
-
-  # save the plots
-  p_hist <- p_hist +
-      theme(text = element_text(size = 8), axis.text = element_text(size = 8))
+  height <- 10
+  plot_ident_cen <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region)] %>% filter(chr == rname)) +
+      geom_segment(
+        aes(x = start2, y = -120000, xend = stop2, yend = -120000, color = region),
+        size = height
+      ) +
+      scale_color_manual(values = get_rm_sat_annot_colors()) +
+      scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
+      # New colorscale.
+      new_scale_color() +
+      geom_segment(
+        data = df_humas_hmmer_stv_out %>% filter(chr == rname),
+        aes(x = start, xend = stop, y = -120000, yend = -120000, color = as.factor(mer)),
+        size = height
+      ) +
+      scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
+      # New colorscale.
+      new_scale_color() +
+      geom_polygon(
+        df_d,
+        mapping=aes(x = x, y = y, fill = new_discrete, group = group),
+        show.legend = FALSE
+      ) +
+      scale_fill_manual(values = discrete_color_ranges) +
+      scale_x_continuous(labels=make_scale, limits = c(0,NA)) +
+      # Reorient so stainedglass plot is on the bottom
+      scale_y_reverse(labels=make_scale) +
+      theme_classic() +
+      theme(
+        legend.position = "right",
+        legend.title = element_blank(),
+        legend.box.background = element_rect(colour = "black"),
+        legend.background = element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.line.y = element_blank(),
+      ) +
+      guides(color = guide_legend(override.aes = list(size = 6))) +
+      xlab("Position (Mbp)")
 
   # ranges for inset hist
-  mmax <- max(sdf$q_en, sdf$r_en)
-  build <- ggplot_build(p_lone)
-  yr <- build$layout$panel_params[[1]]$y.range
-  xmin <- -1 / 10 * mmax
-  xmax <- mmax * 1 / 3.75
-  ymin <- yr[2] * 1 / 2
-  ymax <- yr[2] * 2 / 2
-  # combine
-  plot <- p_lone + annotation_custom(
-    ggplotGrob(p_hist),
-    xmin = xmin, xmax = xmax,
-    ymin = ymin, ymax = ymax
-  )
-  ggsave(
-    plot = plot,
-    file = glue("{OUT}/pdfs/{r_name}/{PRE}__{r_name}__tri.pdf"),
-    height = 12 * scale,
-    width = 9
-  )
+  xmax <- max(df_rname_seq_ident$q_en, df_rname_seq_ident$r_en)
+  ylim <- max(df_d$y)
+  final_plot <- plot_ident_cen +
+    annotation_custom(
+      grob_hist,
+      xmin = 0, xmax = xmax / 3,
+      ymin = -ylim, ymax = -ylim + (ylim / 4)
+    )
 
-  ggsave(
-    plot = plot,
-    file = glue("{OUT}/pngs/{r_name}/{PRE}__{r_name}__tri.png"),
-    height = 12 * scale,
-    width = 9,
-    dpi = DPI
-  )
-  return (plot)
+  return (final_plot)
 }

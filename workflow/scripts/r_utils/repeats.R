@@ -47,7 +47,7 @@ plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, height =
       geom_segment(
         data = df_humas_hmmer_stv_out %>% filter(chr == ctg),
         aes(x = start, xend = stop , y = chr, yend = chr, color = as.factor(mer)),
-        size = height * 2
+        size = height
       ) +
       scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
       theme_classic() +
@@ -82,7 +82,7 @@ plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, height=10) {
     geom_segment(
       data = df_humas_hmmer_stv_out,
       aes(x = start, xend = stop, y = chr, yend = chr, color = as.factor(mer)),
-      size = height * 2
+      size = height
     ) +
     scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
     theme_classic() +
@@ -120,4 +120,144 @@ read_repeatmasker_sat_input <- function(input_file) {
   df$region <- factor(df$region, levels = c("ct", "asat", "bsat", "gsat", "hsat1A", "hsat1B", "hsat2", "hsat3"), ordered = T)
 
   return(df)
+}
+
+read_one_humas_hmmer_input <- function(
+    input_chr,
+    hor_filter = 0
+) {
+  cols_to_take <- seq(6)
+  monomer_len <- 170
+  cols <- c("chr", "start", "stop", "hor", "0", "strand")
+
+  df_samples <- fread(input_chr,
+    sep = "\t",
+    stringsAsFactors = TRUE,
+    fill = TRUE, quote = "",
+    header = FALSE, select = cols_to_take
+  )
+  colnames(df_samples) <- cols
+
+  chr_name <- str_extract(df_samples$chr, "(chr[\\dXY]+)")[[1]]
+
+  # determine distance between start and stop
+  df_samples$length <- df_samples$stop - df_samples$start
+
+  # calculate monomer size and round
+  df_samples$mer <- as.numeric(round(df_samples$length / monomer_len))
+
+  # filter monomers
+  df_samples <- switch(chr_name,
+    "chr10" = subset(df_samples, as.numeric(mer) >= 5),
+    "chr20" = subset(df_samples, as.numeric(mer) >= 5),
+    "chrY" = subset(df_samples, as.numeric(mer) >= 30),
+    "chr17" = subset(df_samples, as.numeric(mer) >= 4),
+    df_samples
+  )
+
+  # filter for HORs that occur at least 20 times (10 times per haplotype)
+  df_stv <- df_samples %>%
+    group_by(mer) %>%
+    filter(n() > hor_filter)
+
+  # Fix orientation.
+  df_rc_stv <- df_stv %>%
+    filter(str_detect(chr, "rc")) %>%
+    mutate(
+      ctg_start=as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
+      ctg_stop=as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+    ) %>%
+    mutate(
+      new_start=ctg_start+abs(ctg_stop-stop),
+      new_stop=ctg_start+abs(ctg_stop-start)
+    ) %>%
+    mutate(start=new_start, stop=new_stop) %>%
+    select(chr, start, stop, hor, strand, length, mer)
+
+  df_stv <- df_stv %>%
+    filter(!str_detect(chr, "rc"))
+  df_both <- rbind(df_rc_stv, df_stv)
+
+  return(df_both)
+}
+
+read_multiple_humas_hmmer_input <- function(
+    input_chr,
+    input_chm1,
+    input_chm13,
+    chr_name,
+    hor_filter = 0) {
+  cols_to_take <- seq(5)
+  monomer_len <- 170
+  cols <- c("chr", "start", "stop", "hor", "strand")
+
+  chm13 <- fread(input_chm13,
+    sep = "\t",
+    stringsAsFactors = TRUE,
+    fill = TRUE, quote = "",
+    header = FALSE, select = cols_to_take
+  )
+  chm1 <- fread(input_chm1,
+    sep = "\t",
+    stringsAsFactors = TRUE,
+    fill = TRUE, quote = "",
+    header = FALSE, select = cols_to_take
+  )
+  samples <- fread(input_chr,
+    sep = "\t",
+    stringsAsFactors = TRUE,
+    fill = TRUE, quote = "",
+    header = FALSE, select = cols_to_take
+  )
+
+  colnames(chm13) <- cols
+  colnames(chm1) <- cols
+  colnames(samples) <- cols
+
+  # combine the CHM1 and samples centromeres
+  chm13$chr <- gsub("chr", "chm13_chr", chm13$chr)
+  chm1$chr <- gsub("chr", "chm1_chr", chm1$chr)
+
+  # Requires coordinates in name. ex. chr?:1-2
+  chm13_chm1_samples <- rbind(chm13, chm1, samples)
+
+  # determine distance between start and stop
+  chm13_chm1_samples$length <- chm13_chm1_samples$stop - chm13_chm1_samples$start
+
+  # calculate monomer size and round
+  chm13_chm1_samples$mer <- as.numeric(round(chm13_chm1_samples$length / monomer_len))
+
+  # filter monomers
+  chm13_chm1_samples <- switch(chr_name,
+    "chr10" = subset(chm13_chm1_samples, as.numeric(mer) >= 5),
+    "chr20" = subset(chm13_chm1_samples, as.numeric(mer) >= 5),
+    "chrY" = subset(chm13_chm1_samples, as.numeric(mer) >= 30),
+    "chr17" = subset(chm13_chm1_samples, as.numeric(mer) >= 4),
+    chm13_chm1_samples
+  )
+
+  # filter for HORs that occur at least 20 times (10 times per haplotype)
+  df_stv <- chm13_chm1_samples %>%
+    group_by(mer) %>%
+    filter(n() > hor_filter)
+
+  # Fix orientation.
+  df_rc_stv <- df_stv %>%
+    filter(str_detect(chr, "rc")) %>%
+    mutate(
+      ctg_start=as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
+      ctg_stop=as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+    ) %>%
+    mutate(
+      new_start=ctg_start+abs(ctg_stop-stop),
+      new_stop=ctg_start+abs(ctg_stop-start)
+    ) %>%
+    mutate(start=new_start, stop=new_stop) %>%
+    select(chr, start, stop, hor, strand, length, mer)
+
+  df_stv <- df_stv %>%
+    filter(!str_detect(chr, "rc"))
+  df_both <- rbind(df_rc_stv, df_stv)
+
+  return(df_both)
 }

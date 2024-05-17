@@ -5,7 +5,10 @@ require(scales)
 library(RColorBrewer)
 library(data.table)
 library(cowplot)
+library(stringr)
 library(glue)
+library(tidyr)
+library(ggnewscale)
 require("argparse")
 
 
@@ -30,29 +33,43 @@ parser$add_argument("-b", "--bed",  help="bedfile with alignment information")
 parser$add_argument("-r", "--hor",  help="bedfile with HOR information")
 parser$add_argument("-s", "--sat",  help="bedfile with satellite repeat information")
 parser$add_argument("-o", "--output", default="results", help="Output plot.")
+parser$add_argument("--mer_order",  help="HOR monomer order", default="small")
 args <- parser$parse_args()
 
-# BED = args$bed
-BED = "HG00358_chr2_haplotype1-0000022:2-3544202.bed"
-# SAT = args$sat
-SAT = "HG00358_chr2_haplotype1-0000022:2-3544202_sat_annot.bed"
-# HOR = args$hor
-HOR = "AS-HOR-vs-HG00358_chr2_haplotype1-0000022:2-3544202_stv_row.bed"
-OUT = args$output
-DPI=600
-dir.create(OUT)
+bed_seq_ident <- args$bed
+# bed_seq_ident <- "HG00358_chr2_haplotype1-0000022:2-3544202.bed"
+bed_sat_annot <- args$sat
+# bed_sat_annot <- "HG00358_chr2_haplotype1-0000022:2-3544202_sat_annot.bed"
+bed_hor_mon <- args$hor
+# bed_hor_mon <- "AS-HOR-vs-HG00358_chr2_haplotype1-0000022:2-3544202_stv_row.bed"
+outdir <- args$output
+mer_order <- args$mer_order
+dir.create(outdir)
 
-df = read_bedpe(BED)
-Qs = df$q
-N=length(Qs)
-columns = ceiling(sqrt(N+1))
-rows = ceiling( (N+1) / columns)
-scale = 2/3
+df_humas_hmmer_stv_out <- read_one_humas_hmmer_input(bed_hor_mon)
+df_humas_hmmer_stv_out <- switch(args$mer_order,
+    # First sort by val. This sorts the dataframe but NOT the factor levels #larger HORs on top
+    "large" = df_humas_hmmer_stv_out %>% arrange(mer),
+    # First sort by val. This sorts the dataframe but NOT the factor levels #smaller HORs on top
+    "small" = df_humas_hmmer_stv_out %>% arrange(-mer),
+    stop(paste("Invalid mer reordering option:", args$mer_order))
+  )
 
-plots = make_plots(Qs)
-N <- length(plots)
-columns <- ceiling(sqrt(N))
-rows <- ceiling((N) / columns)
-p = cowplot::plot_grid(plotlist = plots, nrow=rows, ncol=columns, labels = "auto");
-ggsave(glue("{OUT}/pdfs/{PRE}.tri.all.pdf"), plot=p, height = 6*rows*scale, width = 6*columns)
-ggsave(glue("{OUT}/pngs/{PRE}.tri.all.png"), plot=p, height = 6*rows*scale, width = 6*columns, dpi=DPI)
+df_rm_sat_out <- read_repeatmasker_sat_input(bed_sat_annot)
+df_seq_ident <- read_bedpe(bed_seq_ident)
+rname <- df_seq_ident$q[[1]]
+
+plot <- make_cen_plot(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out)
+ggsave(
+  plot = plot,
+  file = glue("{outdir}/{rname}_{mer_order}.tri.png"),
+  height = 6,
+  width = 10,
+  dpi = 600
+)
+ggsave(
+  plot = plot,
+  file = glue("{outdir}/{rname}_{mer_order}.tri.pdf"),
+  height = 6,
+  width = 10
+)

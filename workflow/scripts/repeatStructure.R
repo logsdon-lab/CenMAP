@@ -78,7 +78,7 @@ argv <- parse_args(p)
 
 df_rm_sat_out <- read_repeatmasker_sat_input(argv$input_rm_sat)
 # Filter out chr without annotations.
-df_humas_hmmer_stv_out <- read_humas_hmmer_input(argv$input_stv, argv$input_stv_chm1, argv$input_stv_chm13, argv$chr, argv$hor_filter) %>%
+df_humas_hmmer_stv_out <- read_multiple_humas_hmmer_input(argv$input_stv, argv$input_stv_chm1, argv$input_stv_chm13, argv$chr, argv$hor_filter) %>%
   filter(chr %in% df_rm_sat_out$chr)
 df_rm_sat_out <- df_rm_sat_out %>% filter(chr %in% df_humas_hmmer_stv_out$chr)
 
