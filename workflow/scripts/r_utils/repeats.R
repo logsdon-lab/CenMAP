@@ -35,40 +35,40 @@ get_rm_sat_annot_colors <- function() {
 
 plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
   p <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ] %>% filter(chr == ctg)) +
-      geom_segment(
-        aes(x = start2, y = chr, xend = stop2, yend = chr, color = region),
-        alpha = 1,
-        size = height
-      ) +
-      scale_color_manual(values = get_rm_sat_annot_colors()) +
-      scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
-      # New colorscale.
-      new_scale_color() +
-      geom_segment(
-        data = df_humas_hmmer_stv_out %>% filter(chr == ctg),
-        aes(x = start, xend = stop , y = chr, yend = chr, color = as.factor(mer)),
-        size = height
-      ) +
-      scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
-      theme_classic() +
-      # Remove everything.
-      theme(
-        axis.line.x = element_line(colour = "white"),
-        axis.line.y = element_line(colour = "white"),
-        axis.title.x = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.title.y = element_blank(),
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank(),
-        legend.position = "none"
-      ) +
-      guides(color = guide_legend(override.aes = list(size = 6))) +
-      xlab("Position (kbp)")
+    geom_segment(
+      aes(x = start2, y = chr, xend = stop2, yend = chr, color = region),
+      alpha = 1,
+      size = height
+    ) +
+    scale_color_manual(values = get_rm_sat_annot_colors()) +
+    scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
+    # New colorscale.
+    new_scale_color() +
+    geom_segment(
+      data = df_humas_hmmer_stv_out %>% filter(chr == ctg),
+      aes(x = start, xend = stop, y = chr, yend = chr, color = as.factor(mer)),
+      size = height
+    ) +
+    scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
+    theme_classic() +
+    # Remove everything.
+    theme(
+      axis.line.x = element_line(colour = "white"),
+      axis.line.y = element_line(colour = "white"),
+      axis.title.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.title.y = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      legend.position = "none"
+    ) +
+    guides(color = guide_legend(override.aes = list(size = 6))) +
+    xlab("Position (kbp)")
   return(p)
 }
 
-plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, height=10) {
+plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
   p <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
     geom_segment(
       aes(x = start2, y = chr, xend = stop2, yend = chr, color = region),
@@ -111,10 +111,10 @@ read_repeatmasker_sat_input <- function(input_file) {
   colnames(df) <- cols
   # Filter duplicated chm13 rows.
   df <- df %>%
-    mutate(chr=str_replace(chr, "cen", "chr")) %>%
+    mutate(chr = str_replace(chr, "cen", "chr")) %>%
     filter(!str_detect(chr, "^chr[0-9XY]+$")) %>%
     # Correct for version and different naming of chr. ex. chm1_cen1v8 -> chm1_chr1
-    mutate(chr=str_remove(chr, "v\\d+"))
+    mutate(chr = str_remove(chr, "v\\d+"))
 
   # reorder rows so that live arrays are plotted on top
   df$region <- factor(df$region, levels = c("ct", "asat", "bsat", "gsat", "hsat1A", "hsat1B", "hsat2", "hsat3"), ordered = T)
@@ -124,8 +124,7 @@ read_repeatmasker_sat_input <- function(input_file) {
 
 read_one_humas_hmmer_input <- function(
     input_chr,
-    hor_filter = 0
-) {
+    hor_filter = 0) {
   cols_to_take <- seq(6)
   monomer_len <- 170
   cols <- c("chr", "start", "stop", "hor", "0", "strand")
@@ -164,14 +163,14 @@ read_one_humas_hmmer_input <- function(
   df_rc_stv <- df_stv %>%
     filter(str_detect(chr, "rc")) %>%
     mutate(
-      ctg_start=as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
-      ctg_stop=as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
     ) %>%
     mutate(
-      new_start=ctg_start+abs(ctg_stop-stop),
-      new_stop=ctg_start+abs(ctg_stop-start)
+      new_start = ctg_start + abs(ctg_stop - stop),
+      new_stop = ctg_start + abs(ctg_stop - start)
     ) %>%
-    mutate(start=new_start, stop=new_stop) %>%
+    mutate(start = new_start, stop = new_stop) %>%
     select(chr, start, stop, hor, strand, length, mer)
 
   df_stv <- df_stv %>%
@@ -245,14 +244,14 @@ read_multiple_humas_hmmer_input <- function(
   df_rc_stv <- df_stv %>%
     filter(str_detect(chr, "rc")) %>%
     mutate(
-      ctg_start=as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
-      ctg_stop=as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
     ) %>%
     mutate(
-      new_start=ctg_start+abs(ctg_stop-stop),
-      new_stop=ctg_start+abs(ctg_stop-start)
+      new_start = ctg_start + abs(ctg_stop - stop),
+      new_stop = ctg_start + abs(ctg_stop - start)
     ) %>%
-    mutate(start=new_start, stop=new_stop) %>%
+    mutate(start = new_start, stop = new_stop) %>%
     select(chr, start, stop, hor, strand, length, mer)
 
   df_stv <- df_stv %>%

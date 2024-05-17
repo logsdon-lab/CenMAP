@@ -30,7 +30,7 @@ A centromere mapping and annotation pipeline implemented in [`Snakemake`](https:
 * Complete and correctly assembled centromere sequences and their regions.
 * Centromere alpha-satellite higher order repeat (HOR) array lengths.
 * `RepeatMasker` and `HumAS-HMMER` alpha-satellite HOR annotations and plots.
-* `StainedGlass` sequence identity plots.
+* `ModDotPlot` sequence identity plots.
 
 ### [Documentation]((https://github.com/logsdon-lab/CenMAP/wiki))
 Read the docs on the `CenMAP` [wiki](https://github.com/logsdon-lab/CenMAP/wiki).
