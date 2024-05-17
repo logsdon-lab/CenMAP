@@ -6,18 +6,26 @@ A centromere mapping and annotation pipeline implemented in [`Snakemake`](https:
 
 <table>
   <tr>
-    <th>
+    <td colspan="2">
+      <figure float="center">
+        <img align="middle" src="docs/HG00358_chr2_haplotype1-0000022:2-3544202_large.tri.png" width="100%">
+        <figcaption>chr2 centromere HOR structure and self-identity plot.</figcaption>
+      </figure>
+    </td>
+  </tr>
+  <tr>
+    <td>
       <figure float="left">
         <img align="middle" src="docs/all_cens_chr12_small.png" width="100%">
         <figcaption>chr12 centromere HOR structure.</figcaption>
       </figure>
-    </th>
-    <th>
+    </td>
+    <td>
       <figure float="left">
         <img align="middle" src="docs/all_AS-HOR_lengths.png" width="100%">
         <figcaption>Cumulative alpha-satellite HOR array lengths by chromosome.</figcaption>
       </figure>
-    </th>
+    </td>
   </tr>
 </table>
 
@@ -31,6 +39,7 @@ A centromere mapping and annotation pipeline implemented in [`Snakemake`](https:
 * Centromere alpha-satellite higher order repeat (HOR) array lengths.
 * `RepeatMasker` and `HumAS-HMMER` alpha-satellite HOR annotations and plots.
 * `ModDotPlot` sequence identity plots.
+* `ModDotPlot` self-identity and HOR array structure plots.
 
-### [Documentation]((https://github.com/logsdon-lab/CenMAP/wiki))
+### [Documentation](https://github.com/logsdon-lab/CenMAP/wiki)
 Read the docs on the `CenMAP` [wiki](https://github.com/logsdon-lab/CenMAP/wiki).
