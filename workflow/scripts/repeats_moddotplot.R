@@ -54,7 +54,20 @@ parser <- add_argument(
 parser <- add_argument(
   parser,
   "--mer_order",
+  type = "character",
   help = "HOR monomer order", default = "small"
+)
+parser <- add_argument(
+  parser,
+  "--height",
+  type = "numeric",
+  help = "Plot height."
+)
+parser <- add_argument(
+  parser,
+  "--width",
+  type = "numeric",
+  help = "Plot width."
 )
 args <- parse_args(parser)
 bed_seq_ident <- args$bed
@@ -74,7 +87,7 @@ df_humas_hmmer_stv_out <- switch(args$mer_order,
   stop(paste("Invalid mer reordering option:", args$mer_order))
 )
 
-df_rm_sat_out <- read_repeatmasker_sat_input(bed_sat_annot)
+df_rm_sat_out <- read_one_repeatmasker_sat_input(bed_sat_annot)
 df_seq_ident <- read_bedpe(bed_seq_ident)
 rname <- df_seq_ident$q[[1]]
 
@@ -85,19 +98,29 @@ plot <- make_cen_plot(
   df_rm_sat_out
 )
 
-contig_len_mb <- round(max(df_seq_ident$q_en) - min(df_seq_ident$q_st)) / 1000000
-num_uniq_mers <- df_humas_hmmer_stv_out %>% distinct(mer) %>% nrow()
+# Adjust width and height based on number of HORs and contig length
+if (is.na(args$width)) {
+  num_uniq_mers <- df_humas_hmmer_stv_out %>% distinct(mer) %>% nrow()
+  default_width <- 9
+  width_adjustment <- ceiling(num_uniq_mers / 6) - 1
+  final_width <- default_width + width_adjustment
+} else {
+  width_adjustment <- 0
+  final_width <- args$width
+}
 
-# Scale with the number of HORs.
-default_height <- 5
-default_width <- 9
-default_mb <- 4
-width_adjustment <- (num_uniq_mers / 6) - 1
-# inches / mb
-height_adjustment_factor <- default_height / default_mb
-height_adjustment <- floor(abs(contig_len_mb - default_mb)) * height_adjustment_factor
-final_height <- default_height + height_adjustment
-final_width <- default_width + width_adjustment
+if (is.na(args$height)) {
+  contig_len_mb <- round(max(df_seq_ident$q_en) - min(df_seq_ident$q_st)) / 1000000
+  default_height <- 5
+  default_mb <- 4
+  height_ctg_len_adjustment_factor <- round((contig_len_mb - default_mb) * 0.02)
+  height_num_uniq_mers_adjustment_factor <- round(width_adjustment / 3)
+  height_adjustment <- height_ctg_len_adjustment_factor + height_num_uniq_mers_adjustment_factor
+  final_height <- default_height + height_adjustment
+} else {
+  final_height <- args$height
+}
+
 ggsave(
   plot = plot,
   file = glue("{outdir}/{rname}_{mer_order}.tri.png"),

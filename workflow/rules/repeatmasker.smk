@@ -80,8 +80,8 @@ rule rename_for_repeatmasker:
         "logs/repeatmasker/rename_for_repeatmasker_{sm}.log",
     shell:
         """
-        seqtk rename {input.fa} {params.prefix} > {output} 2> {log}
-        samtools faidx {output} 2>> {log}
+        seqtk rename {input.fa} {params.prefix} > {output.renamed_fa} 2> {log}
+        samtools faidx {output.renamed_fa} 2>> {log}
         """
 
 

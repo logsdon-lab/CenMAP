@@ -61,7 +61,7 @@ p <- add_argument(p, "--mer_order",
 
 argv <- parse_args(p)
 
-df_rm_sat_out <- read_repeatmasker_sat_input(argv$input_rm_sat)
+df_rm_sat_out <- read_multiple_repeatmasker_sat_input(argv$input_rm_sat)
 # Filter out chr without annotations.
 df_humas_hmmer_stv_out <- read_multiple_humas_hmmer_input(
   argv$input_stv,

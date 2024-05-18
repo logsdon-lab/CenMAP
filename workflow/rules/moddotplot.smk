@@ -28,6 +28,8 @@ rule run_moddotplot:
         window=config["moddotplot"]["window"],
         ident_thr=70.0,
         outdir=lambda wc: os.path.join(OUTPUT_MODDOTPLOT_DIR, f"original_{wc.fname}"),
+    resources:
+        mem=config["moddotplot"]["mem"],
     log:
         "logs/moddotplot/moddotplot_{fname}.log",
     benchmark:
@@ -111,7 +113,7 @@ def moddotplot_outputs_no_input_dir(wc):
                 zip,
                 fname=fnames,
                 chr=chrs,
-                mer_order="{mer_order}",
+                mer_order=["{mer_order}"] * len(fnames),
             ),
             mer_order=config["plot_hor_stv"]["mer_order"],
         ),
@@ -143,7 +145,7 @@ else:
                     zip,
                     fname=fnames,
                     chr=chrs,
-                    mer_order="{mer_order}",
+                    mer_order=["{mer_order}"] * len(fnames),
                 ),
                 mer_order=config["plot_hor_stv"]["mer_order"],
             ),
