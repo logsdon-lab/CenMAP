@@ -119,4 +119,5 @@ calculate_hor_length:
 moddotplot:
   input_dir: null
   output_dir: "results/moddotplot"
+  mem: 10
   window: 5000

@@ -1,11 +1,11 @@
 *.env
 *.sif
 .snakemake
-logs/
-results/
-benchmarks/
+logs*/
+results*/
+benchmarks*/
 venv/
-temp/
+temp*/
 
 RM_*
 .RepeatMaskerCache/

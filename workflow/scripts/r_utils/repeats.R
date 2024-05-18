@@ -99,7 +99,32 @@ plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
   return(p)
 }
 
-read_repeatmasker_sat_input <- function(input_file) {
+read_multiple_repeatmasker_sat_input <- function(input_file) {
+  df <- fread(
+    input_file,
+    select = c(1:9),
+    stringsAsFactors = TRUE,
+    fill = TRUE,
+    sep = "\t",
+    quote = "",
+    header = FALSE
+  )
+  cols <- c("chr", "start", "stop", "region", "value", "strand", "start2", "stop2", "rgb")
+  colnames(df) <- cols
+  # Filter duplicated chm13 rows.
+  df <- df %>%
+    mutate(chr=str_replace(chr, "cen", "chr")) %>%
+    filter(!str_detect(chr, "^chr[0-9XY]+$")) %>%
+    # Correct for version and different naming of chr. ex. chm1_cen1v8 -> chm1_chr1
+    mutate(chr=str_remove(chr, "v\\d+"))
+
+  # reorder rows so that live arrays are plotted on top
+  df$region <- factor(df$region, levels = c("ct", "asat", "bsat", "gsat", "hsat1A", "hsat1B", "hsat2", "hsat3"), ordered = T)
+
+  return(df)
+}
+
+read_one_repeatmasker_sat_input <- function(input_file) {
   # read in BED file
   df <- fread(
     input_file,
@@ -126,16 +151,17 @@ read_repeatmasker_sat_input <- function(input_file) {
   # Set to always start at 0.
   df <- df %>%
     mutate(
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
       ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
     ) %>%
     mutate(
       start2 = case_when(
         str_detect(chr, "rc-") ~ ctg_stop - stop,
-        TRUE ~ start
+        TRUE ~ start - ctg_start
       ),
       stop2 = case_when(
         str_detect(chr, "rc-") ~ ctg_stop - start,
-        TRUE ~ stop
+        TRUE ~ stop - ctg_start
       )
     )
 
