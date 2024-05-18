@@ -32,7 +32,7 @@ include: "rules/repeatmasker.smk"
 include: "rules/humas_hmmer.smk"
 include: "rules/plot_hor_stv.smk"
 include: "rules/plot_repeatmasker_sat_annot.smk"
-include: "rules/stained_glass.smk"
+include: "rules/moddotplot.smk"
 include: "rules/plot_complete_cens.smk"
 include: "rules/calculate_hor_length.smk"
 include: "rules/cluster_cens.smk"
@@ -56,7 +56,7 @@ rule all:
         rules.humas_hmmer_only.input,
         rules.plot_hor_stv_only.input,
         rules.get_hor_length_only.input,
-        rules.stained_glass_only.input,
+        rules.moddotplot_only.input,
         rules.plot_cens_only.input,
         rules.cluster_cens_only.input,
     default_target: True

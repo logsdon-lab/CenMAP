@@ -1,7 +1,6 @@
 [submodule "workflow/scripts/stv_fix"]
 	path = workflow/scripts/stv_fix
 	url = git@github.com:koisland/stv.git
-[submodule "workflow/scripts/StainedGlassV5"]
-	path = workflow/scripts/StainedGlassV5
-	url = git@github.com:koisland/StainedGlass.git
-	branch = fix/pre-v8
+[submodule "workflow/scripts/ModDotPlot"]
+	path = workflow/scripts/ModDotPlot
+	url = https://github.com/marbl/ModDotPlot
