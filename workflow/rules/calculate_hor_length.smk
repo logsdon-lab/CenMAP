@@ -3,7 +3,6 @@ include: "common.smk"
 
 rule calculate_as_hor_length:
     input:
-        script="workflow/scripts/calculate_HOR_length.py",
         fmt_hmmer_output=os.path.join(
             config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
         ),
@@ -14,7 +13,7 @@ rule calculate_as_hor_length:
             "{chr}_AS-HOR_lengths.tsv",
         ),
     conda:
-        "../env/py.yaml"
+        "../env/cen_stats.yaml"
     log:
         "logs/calculate_hor_length/calculate_{chr}_as_hor_length.log",
     params:
@@ -22,7 +21,7 @@ rule calculate_as_hor_length:
         arr_len_thr=30_000,
     shell:
         """
-        ( python {input.script} \
+        ( censtats length \
         --input {input.fmt_hmmer_output} \
         --bp_jump_thr {params.bp_jump_thr} \
         --arr_len_thr {params.arr_len_thr} || true ) > {output} 2> {log}
