@@ -85,17 +85,29 @@ plot <- make_cen_plot(
   df_rm_sat_out
 )
 
-# TODO: Scale with the number of HORs and length of the centromere.
+contig_len_mb <- round(max(df_seq_ident$q_en) - min(df_seq_ident$q_st)) / 1000000
+num_uniq_mers <- df_humas_hmmer_stv_out %>% distinct(mer) %>% nrow()
+
+# Scale with the number of HORs.
+default_height <- 5
+default_width <- 9
+default_mb <- 4
+width_adjustment <- (num_uniq_mers / 6) - 1
+# inches / mb
+height_adjustment_factor <- default_height / default_mb
+height_adjustment <- floor(abs(contig_len_mb - default_mb)) * height_adjustment_factor
+final_height <- default_height + height_adjustment
+final_width <- default_width + width_adjustment
 ggsave(
   plot = plot,
   file = glue("{outdir}/{rname}_{mer_order}.tri.png"),
-  height = 5,
-  width = 9,
+  height = final_height,
+  width = final_width,
   dpi = 600
 )
 ggsave(
   plot = plot,
   file = glue("{outdir}/{rname}_{mer_order}.tri.pdf"),
-  height = 5,
-  width = 9
+  height = final_height,
+  width = final_width
 )

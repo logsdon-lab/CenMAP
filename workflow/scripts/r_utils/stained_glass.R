@@ -147,16 +147,22 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
 
   # make the tri sequence identity plots
   df_d <- make_tri_df(df_rname_seq_ident)
+
   # make the histogram
   plot_hist <- make_hist(df_rname_seq_ident)
   grob_hist <- ggplotGrob(plot_hist)
+
+  # Filter data.
+  # Get centromeric transition regions separately to outline.
   df_rm_sat_out <- df_rm_sat_out[order(df_rm_sat_out$region)] %>%
     filter(chr == rname)
-  df_rm_sat_out_ct <- df_rm_sat_out %>% filter(region == "ct")
-  df_rm_sat_out_other <- df_rm_sat_out %>% filter(region != "ct")
+  df_rm_sat_out_ct <- df_rm_sat_out %>%
+    filter(region == "ct" & chr == rname)
+  df_rm_sat_out_other <- df_rm_sat_out %>%
+    filter(region != "ct" & chr == rname)
 
   segment_linewidth <- 10
-  segment_y <- -200000
+  segment_y <- -240000
   ct_outline_edges_x <- 9000
 
   plot_ident_cen <- ggplot() +
@@ -174,6 +180,8 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     ) +
     geom_segment(
       data = df_rm_sat_out_ct,
+      # Adjust x and y values
+      # to be slightly smaller than the outline
       aes(
         x = start2 + ct_outline_edges_x,
         y = segment_y,
@@ -185,9 +193,16 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     ) +
     geom_segment(
       data = df_rm_sat_out_other,
-      aes(x = start2, y = segment_y, xend = stop2, yend = segment_y, color = region),
+      aes(
+        x = start2,
+        y = segment_y,
+        xend = stop2,
+        yend = segment_y,
+        color = region
+      ),
       linewidth = segment_linewidth
     ) +
+    guides(color = guide_legend(nrow = 4)) +
     scale_color_manual(values = get_rm_sat_annot_colors()) +
     scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
     # New colorscale.
@@ -203,9 +218,9 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       ),
       linewidth = segment_linewidth
     ) +
+    guides(color = guide_legend(nrow = 6)) +
     scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
     # New colorscale.
-    new_scale_color() +
     geom_polygon(
       df_d,
       mapping = aes(x = x, y = y, fill = new_discrete, group = group),
@@ -216,16 +231,24 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     # Reorient so stainedglass plot is on the bottom
     scale_y_reverse(labels = make_scale) +
     theme_classic() +
+    # Adjust legend.
     theme(
       legend.position = "right",
       legend.title = element_blank(),
       legend.background = element_blank(),
       legend.key.size = unit(1.0, "cm"),
       legend.key = element_rect(color = "black", fill = NA),
+    ) +
+    # Adjust axes
+    theme(
       axis.title.y = element_blank(),
       axis.text.y = element_blank(),
       axis.ticks.y = element_blank(),
-      axis.line.y = element_blank(),
+      axis.line.y = element_blank()
+    ) +
+    # Adjust title
+    theme(
+      plot.title = element_text(hjust = 0.5)
     ) +
     xlab("Position (Mbp)")
 

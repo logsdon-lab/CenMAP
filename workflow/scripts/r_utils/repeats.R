@@ -16,19 +16,22 @@ get_rm_sat_annot_colors <- function() {
   myColors <- c(
     "#58245B",
     "#3A3A3A",
-    "#DDDDDD", # lighter gray
-    # "#C2C2C2", #darker gray
+    "#DDDDDD",
     "#3A3A3A",
-    "#3A3A3A", "#3A3A3A",
-    "#3A3A3A", "#3A3A3A"
+    "#3A3A3A",
+    "#3A3A3A",
+    "#3A3A3A",
+    "#3A3A3A"
   )
   names(myColors) <- levels(as.factor(c(
     "asat",
     "bsat",
     "ct",
     "gsat",
-    "hsat1A", "hsat1B",
-    "hsat2", "hsat3"
+    "hsat1A",
+    "hsat1B",
+    "hsat2",
+    "hsat3"
   )))
   return(myColors)
 }
@@ -119,6 +122,23 @@ read_repeatmasker_sat_input <- function(input_file) {
   # reorder rows so that live arrays are plotted on top
   df$region <- factor(df$region, levels = c("ct", "asat", "bsat", "gsat", "hsat1A", "hsat1B", "hsat2", "hsat3"), ordered = T)
 
+  # Adjust for reverse complemented regions.
+  # Set to always start at 0.
+  df <- df %>%
+    mutate(
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+    ) %>%
+    mutate(
+      start2 = case_when(
+        str_detect(chr, "rc-") ~ ctg_stop - stop,
+        TRUE ~ start
+      ),
+      stop2 = case_when(
+        str_detect(chr, "rc-") ~ ctg_stop - start,
+        TRUE ~ stop
+      )
+    )
+
   return(df)
 }
 
@@ -159,25 +179,7 @@ read_one_humas_hmmer_input <- function(
     group_by(mer) %>%
     filter(n() > hor_filter)
 
-  # Fix orientation.
-  df_rc_stv <- df_stv %>%
-    filter(str_detect(chr, "rc")) %>%
-    mutate(
-      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
-      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
-    ) %>%
-    mutate(
-      new_start = ctg_start + abs(ctg_stop - stop),
-      new_stop = ctg_start + abs(ctg_stop - start)
-    ) %>%
-    mutate(start = new_start, stop = new_stop) %>%
-    select(chr, start, stop, hor, strand, length, mer)
-
-  df_stv <- df_stv %>%
-    filter(!str_detect(chr, "rc"))
-  df_both <- rbind(df_rc_stv, df_stv)
-
-  return(df_both)
+   return(df_stv)
 }
 
 read_multiple_humas_hmmer_input <- function(
