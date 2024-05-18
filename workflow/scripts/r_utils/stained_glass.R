@@ -166,7 +166,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
   # Calculated adjustment factor (y-px / 3.5mb) for segment y position.
   segment_y_adj_factor <- -0.06
   segment_y <- segment_y_adj_factor * contig_len
-  ct_outline_edges_x <- 9000
+  ct_outline_edges_x <- 5000
 
   plot_ident_cen <- ggplot() +
     # Make larger ct segment as outline
@@ -177,10 +177,12 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
         y = segment_y,
         xend = stop2,
         yend = segment_y,
-        color = "black"
       ),
-      linewidth = segment_linewidth + 1
+      linewidth = segment_linewidth + 0.5
     ) +
+    # Need to change colorscale as outline gets desaturated.
+    scale_color_manual(values = c("black")) +
+    new_scale_color() +
     geom_segment(
       data = df_rm_sat_out_ct,
       # Adjust x and y values
@@ -208,7 +210,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     guides(color = guide_legend(nrow = 4)) +
     scale_color_manual(values = get_rm_sat_annot_colors()) +
     scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
-    # New colorscale.
+    # New colorscale for hor monomers
     new_scale_color() +
     geom_segment(
       data = df_humas_hmmer_stv_out %>% filter(chr == rname),
@@ -223,7 +225,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     ) +
     guides(color = guide_legend(nrow = 6)) +
     scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
-    # New colorscale.
+    # New colorscale for stainedglass.
     geom_polygon(
       df_d,
       mapping = aes(x = x, y = y, fill = new_discrete, group = group),
