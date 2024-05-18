@@ -1,2 +1,8 @@
 test/rename_rm/HG01596_expected.fa.out filter=lfs diff=lfs merge=lfs -text
 test/rename_rm/HG01596_renamed.fa.out filter=lfs diff=lfs merge=lfs -text
+test/repeats_moddotplot/input/HG00358_chr2_haplotype1-0000022:2-3544202_sat_annot.bed filter=lfs diff=lfs merge=lfs -text
+test/repeats_moddotplot/input/AS-HOR-vs-HG00358_chr2_haplotype1-0000022:2-3544202_stv_row.bed filter=lfs diff=lfs merge=lfs -text
+test/repeats_moddotplot/input/HG00358_chr2_haplotype1-0000022:2-3544202.bed filter=lfs diff=lfs merge=lfs -text
+test/repeats_moddotplot/input/HG00096_rc-chr8_h2tg000024l\#1-133471904:98433763-102787061_sat_annot.bed filter=lfs diff=lfs merge=lfs -text
+test/repeats_moddotplot/input/AS-HOR-vs-HG00096_rc-chr8_h2tg000024l\#1-133471904:98433763-102787061_stv_row.bed filter=lfs diff=lfs merge=lfs -text
+test/repeats_moddotplot/input/HG00096_rc-chr8_h2tg000024l\#1-133471904:98433763-102787061.bed filter=lfs diff=lfs merge=lfs -text

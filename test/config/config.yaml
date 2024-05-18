@@ -82,9 +82,7 @@ cluster_cens:
 calculate_hor_length:
   output_dir: "results/calculate_hor_length"
 
-stained_glass:
+moddotplot:
   input_dir: null
-  threads: 10
+  output_dir: "results/moddotplot"
   window: 5000
-  mm_f: 5000
-  # Always will be in workflow/scripts/StainedGlass/results

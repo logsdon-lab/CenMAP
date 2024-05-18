@@ -34,6 +34,7 @@ CHROMOSOMES = config.get(
         "chrY",
     ),
 )
+RGX_CHR = re.compile("(chr[0-9XY]+)")
 
 with open(config["repeatmasker_sat_annot"]["config_pattern_colors"]) as fh:
     ANNOTATE_SAT_REPEATS = json.load(fh)
