@@ -87,7 +87,7 @@ rule rename_for_repeatmasker:
 
 rule run_repeatmasker:
     input:
-        seq=rules.extract_correct_alr_regions_rm.output.seq,
+        seq=rules.rename_for_repeatmasker.output.renamed_fa,
     output:
         os.path.join(
             config["repeatmasker"]["output_dir"],
