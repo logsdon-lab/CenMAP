@@ -162,7 +162,10 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     filter(region != "ct" & chr == rname)
 
   segment_linewidth <- 10
-  segment_y <- -240000
+  contig_len <- max(df_rname_seq_ident$q_en) - min(df_rname_seq_ident$q_st)
+  # Calculated adjustment factor (y-px / 3.5mb) for segment y position.
+  segment_y_adj_factor <- -0.06
+  segment_y <- segment_y_adj_factor * contig_len
   ct_outline_edges_x <- 9000
 
   plot_ident_cen <- ggplot() +
