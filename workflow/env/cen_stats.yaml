@@ -4,4 +4,4 @@ dependencies:
   - python==3.12.0
   - pip
   - pip:
-    - censtats
+    - censtats==0.0.2

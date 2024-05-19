@@ -1,6 +1,0 @@
-pulp==2.7.0
-snakemake==7.32.4
-pytest
-pre-commit
-polars
-pandas

@@ -2,9 +2,11 @@ channels:
   - conda-forge
 dependencies:
   - python==3.10.13
-  - singularity
+  # Singularity removed for CI.
   - pip
   - pip:
     - pandas
+    - polars
+    - pytest
     - snakemake==7.32.4
     - pulp==2.7.0

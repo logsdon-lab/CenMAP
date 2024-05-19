@@ -59,15 +59,16 @@ rule plot_cen_moddotplot:
     input:
         script="workflow/scripts/repeats_moddotplot.R",
         seq_ident_bed=rules.run_moddotplot.output.bed,
-        # TODO: Fix weird naming convention.
-        stv_row_bed=os.path.join(
-            config["plot_hor_stv"]["output_dir"],
-            "bed",
-            "results_{chr}_stv",
-            "AS-HOR_AS-HOR-vs-{fname}_stv_row.bed",
-        ),
+        # TODO: Remove grepping. Pass file directly. Will require stv wf refactor.
+        chr_stv_row_bed=rules.aggregate_format_all_stv_row.output,
         sat_annot_bed=rules.filter_sat_annotations.output,
     output:
+        stv_row_bed=temp(
+            os.path.join(
+                OUTPUT_MODDOTPLOT_DIR,
+                "{chr}_{mer_order}_{fname}_stv_row.bed",
+            )
+        ),
         plots=expand(
             os.path.join(
                 OUTPUT_MODDOTPLOT_DIR,
@@ -86,9 +87,10 @@ rule plot_cen_moddotplot:
         "logs/plot_cen_moddotplot/plot_cen_moddotplot_{chr}_{fname}_{mer_order}.log",
     shell:
         """
+        grep '{wildcards.fname}' {input.chr_stv_row_bed} > {output.stv_row_bed}
         Rscript {input.script} \
         --bed {input.seq_ident_bed} \
-        --hor {input.stv_row_bed} \
+        --hor {output.stv_row_bed} \
         --sat {input.sat_annot_bed} \
         --mer_order {wildcards.mer_order} \
         --outdir {params.output_dir} 2>> {log}
