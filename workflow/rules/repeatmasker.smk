@@ -93,7 +93,7 @@ rule run_repeatmasker:
             config["repeatmasker"]["output_dir"],
             "repeats",
             "{sm}",
-            "{sm}_correct_ALR_regions.fa.out",
+            "{sm}_correct_ALR_regions.renamed.fa.out",
         ),
     threads: config["repeatmasker"]["threads"]
     params:
@@ -139,7 +139,7 @@ rule reformat_repeatmasker_output:
         "../env/py.yaml"
     shell:
         """
-        python {input.script} -i {input.rm_out} -f {input.original_fai} -r {input.renamed_fai} > {output} 2> {log}
+        python {input.script} -i {input.rm_out} -of {input.original_fai} -rf {input.renamed_fai} > {output} 2> {log}
         """
 
 

@@ -74,12 +74,16 @@ def main():
 
     args = ap.parse_args()
 
-    df = pl.read_csv(
-        args.input,
-        separator="\t",
-        has_header=False,
-        new_columns=["ctg", "start", "end", "rtype"],
-    )
+    try:
+        df = pl.read_csv(
+            args.input,
+            separator="\t",
+            has_header=False,
+            new_columns=["ctg", "start", "end", "rtype"],
+        )
+    except pl.exceptions.NoDataError:
+        return
+
     if args.thresholds:
         thresholds = json.load(open(args.thresholds))
     else:

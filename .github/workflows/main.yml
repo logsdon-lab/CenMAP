@@ -12,32 +12,31 @@ jobs:
         submodules: 'true'
         lfs: 'true'
 
-    - name: Set up Python.
-      uses: actions/setup-python@v4
+    - uses: conda-incubator/setup-miniconda@v3
       with:
-        python-version: '3.10'
+        miniforge-variant: Mambaforge
+        miniforge-version: latest
+        use-mamba: true
+        channel-priority: true
+        activate-environment: test_env
+        environment-file: env.yaml
 
-    - name: Install dependencies.
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
-
-    - name: Test extract cens, dna-brnn, and nucflag workflow.
+    - name: Test dry-run workflow.
+      shell: bash -el {0}
       run: |
         snakemake -c 1 -np --configfile test/config/config.yaml
 
-    - name: Test repeatmasker workflow.
+    - name: Test chrY workflow.
+      shell: bash -el {0}
       run: |
-        snakemake -c 1 -np --configfile test/config/config.yaml -U repeatmasker_only
-
-    - name: Test HumAS-HMMER workflow.
-      run: |
-        snakemake -c 1 -np --configfile test/config/config.yaml -U humas_hmmer_only
-
-    - name: Test plotting StV workflow.
-      run: |
-        snakemake -c 1 -np --configfile test/config/config.yaml -U plot_hor_stv_only
+        snakemake -c 4 -p \
+        --configfile test/config/config_HG00731.yaml \
+        --use-conda \
+        --use-singularity \
+        --show-failed-logs \
+        --conda-cleanup-pkgs cache
 
     - name: Test scripts.
+      shell: bash -el {0}
       run: |
         pytest -s

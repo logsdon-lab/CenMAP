@@ -126,7 +126,7 @@ if (!is.na(argv$output_dir)) {
       width = 12,
       height = 1
     )
-    dev.off()
+    while (!is.null(dev.list())) dev.off()
   }
 }
 
