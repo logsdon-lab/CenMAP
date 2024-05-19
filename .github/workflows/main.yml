@@ -11,15 +11,19 @@ jobs:
       with:
         submodules: 'true'
         lfs: 'true'
-    - uses: singularityhub/install-singularity@main
-    - uses: conda-incubator/setup-miniconda@v3
+
+    - name: Install Singularity.
+      uses: singularityhub/install-singularity@main
+
+    - name: Install Mamba.
+      uses: conda-incubator/setup-miniconda@v3
       with:
         miniforge-variant: Mambaforge
         miniforge-version: latest
         use-mamba: true
         channel-priority: true
         activate-environment: test_env
-        environment-file: env.yaml
+        environment-file: env_dev.yaml
 
     - name: Test dry-run workflow.
       shell: bash -el {0}
