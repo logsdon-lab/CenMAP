@@ -2,7 +2,7 @@ channels:
   - conda-forge
 dependencies:
   - python==3.10.13
-  - singularity
+  # Singularity removed for CI.
   - pip
   - pip:
     - pandas
