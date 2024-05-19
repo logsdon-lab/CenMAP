@@ -76,6 +76,8 @@ rule rename_for_repeatmasker:
         ),
     params:
         prefix="seq",
+    conda:
+        "../env/tools.yaml"
     log:
         "logs/repeatmasker/rename_for_repeatmasker_{sm}.log",
     shell:
