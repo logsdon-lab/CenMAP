@@ -5,4 +5,4 @@ dependencies:
   - python==3.12.0
   - pip
   - pip:
-    - nucflag==0.0.4
+    - nucflag==0.0.5
