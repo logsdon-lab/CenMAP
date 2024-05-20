@@ -39,7 +39,7 @@ get_rm_sat_annot_colors <- function() {
 plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
   p <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ] %>% filter(chr == ctg)) +
     geom_segment(
-      aes(x = start2, y = chr, xend = stop2, yend = chr, color = region),
+      aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region),
       alpha = 1,
       size = height
     ) +
@@ -49,7 +49,7 @@ plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, height =
     new_scale_color() +
     geom_segment(
       data = df_humas_hmmer_stv_out %>% filter(chr == ctg),
-      aes(x = start, xend = stop, y = chr, yend = chr, color = as.factor(mer)),
+      aes(x = start, xend = stop + 2000, y = chr, yend = chr, color = as.factor(mer)),
       size = height
     ) +
     scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
@@ -74,7 +74,7 @@ plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, height =
 plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
   p <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
     geom_segment(
-      aes(x = start2, y = chr, xend = stop2, yend = chr, color = region),
+      aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region),
       alpha = 1,
       size = height
     ) +
@@ -84,7 +84,7 @@ plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
     new_scale_color() +
     geom_segment(
       data = df_humas_hmmer_stv_out,
-      aes(x = start, xend = stop, y = chr, yend = chr, color = as.factor(mer)),
+      aes(x = start, xend = stop + 2000, y = chr, yend = chr, color = as.factor(mer)),
       size = height
     ) +
     scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
