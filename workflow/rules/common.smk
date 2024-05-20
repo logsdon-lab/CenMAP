@@ -25,7 +25,6 @@ def extract_fa_fnames_and_chr(input_dir: str) -> tuple[list[str], list[str]]:
     assert len(fnames) == len(
         chrs
     ), f"One or more fa files in {input_dir} does not contain a chromosome in its name."
-    assert len(chrs) > 0, f"No fa files found in {input_dir}."
 
     return fnames, chrs
 
