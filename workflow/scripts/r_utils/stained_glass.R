@@ -199,7 +199,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       aes(
         x = start2,
         y = segment_y,
-        xend = stop2,
+        xend = stop2 + 1000,
         yend = segment_y,
       ),
       linewidth = segment_linewidth + 0.5
@@ -214,7 +214,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       aes(
         x = start2 + ct_outline_edges_x,
         y = segment_y,
-        xend = stop2 - ct_outline_edges_x,
+        xend = (stop2 - ct_outline_edges_x) + 1000,
         yend = segment_y,
         color = region
       ),
@@ -225,7 +225,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       aes(
         x = start2,
         y = segment_y,
-        xend = stop2,
+        xend = stop2 + 1000,
         yend = segment_y,
         color = region
       ),
@@ -240,7 +240,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       data = df_humas_hmmer_stv_out %>% filter(chr == rname),
       aes(
         x = start,
-        xend = stop,
+        xend = stop + 2000,
         y = segment_y,
         yend = segment_y,
         color = as.factor(mer)
