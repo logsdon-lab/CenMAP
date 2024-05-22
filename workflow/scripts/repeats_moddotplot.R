@@ -101,7 +101,7 @@ plot <- make_cen_plot(
 # Adjust width and height based on number of HORs and contig length
 if (is.na(args$width)) {
   num_uniq_mers <- df_humas_hmmer_stv_out %>% distinct(mer) %>% nrow()
-  default_width <- 9
+  default_width <- 12
   width_adjustment <- ceiling(num_uniq_mers / 6) - 1
   final_width <- default_width + width_adjustment
 } else {

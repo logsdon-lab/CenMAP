@@ -40,29 +40,25 @@ rule run_moddotplot:
         """
 
 
-rule filter_sat_annotations:
-    input:
-        os.path.join(
-            config["repeatmasker_sat_annot"]["output_dir"],
-            "bed",
-            "all_cens.annotation.bed",
-        ),
-    output:
-        temp(os.path.join(OUTPUT_MODDOTPLOT_DIR, "{fname}_sat_annot.bed")),
-    shell:
-        """
-        grep '{wildcards.fname}' {input} > {output}
-        """
-
-
 rule plot_cen_moddotplot:
     input:
         script="workflow/scripts/repeats_moddotplot.R",
         seq_ident_bed=rules.run_moddotplot.output.bed,
         # TODO: Remove grepping. Pass file directly. Will require stv wf refactor.
-        chr_stv_row_bed=rules.aggregate_format_all_stv_row.output,
-        sat_annot_bed=rules.filter_sat_annotations.output,
+        chr_stv_row_bed=os.path.join(
+            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
+        ),
+        all_sat_annot_bed=os.path.join(
+            config["repeatmasker_sat_annot"]["output_dir"],
+            "bed",
+            "all_cens.annotation.bed",
+        ),
     output:
+        sat_annot_bed=temp(
+            os.path.join(
+                OUTPUT_MODDOTPLOT_DIR, "{chr}_{mer_order}_{fname}_sat_annot.bed"
+            )
+        ),
         stv_row_bed=temp(
             os.path.join(
                 OUTPUT_MODDOTPLOT_DIR,
@@ -87,11 +83,12 @@ rule plot_cen_moddotplot:
         "logs/plot_cen_moddotplot/plot_cen_moddotplot_{chr}_{fname}_{mer_order}.log",
     shell:
         """
+        grep '{wildcards.fname}' {input.all_sat_annot_bed} > {output.sat_annot_bed}
         grep '{wildcards.fname}' {input.chr_stv_row_bed} > {output.stv_row_bed}
         Rscript {input.script} \
         --bed {input.seq_ident_bed} \
         --hor {output.stv_row_bed} \
-        --sat {input.sat_annot_bed} \
+        --sat {output.sat_annot_bed} \
         --mer_order {wildcards.mer_order} \
         --outdir {params.output_dir} 2>> {log}
         """
@@ -134,6 +131,9 @@ if config["moddotplot"].get("input_dir") is None:
 else:
     # Extract filenames and chromosome names from input directory.
     fnames, chrs = extract_fa_fnames_and_chr(INPUT_FA_DIR)
+
+    wildcard_constraints:
+        fname="|".join(fnames),
 
     rule moddotplot_all:
         input:
