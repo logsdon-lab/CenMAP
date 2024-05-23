@@ -112,7 +112,7 @@ plot <- cowplot::plot_grid(
   plot_cen, bottom_row,
   nrow=2,
   ncol=1,
-  rel_heights = c(1.1, 0.9),
+  rel_heights = c(1.2, 0.8),
   labels = NULL
 )
 
