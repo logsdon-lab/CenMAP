@@ -16,16 +16,36 @@ get_colors <- function(sdf) {
 
 read_bedpe <- function(all.files) {
   l <- lapply(all.files, fread, sep = "\t")
-  df <- rbindlist(l)
+  df <- rbindlist(l) %>%
+    mutate(
+      is_rc = str_detect(`#query_name`, "rc-")
+    )
+  ctg_start <- min(df$query_start)
+  ctg_end <- max(df$query_end)
 
   df$discrete <- get_colors(df)
   if ("#query_name" %in% colnames(df)) {
     df$q <- df$`#query_name`
-    df$q_st <- df$query_start
-    df$q_en <- df$query_end
+    df <- df %>%
+      mutate(
+        q_st = case_when(
+          is_rc ~ ctg_end - query_end,
+          TRUE ~ query_start - ctg_start
+        ),
+        r_st = case_when(
+          is_rc ~ ctg_end - reference_end,
+          TRUE ~ reference_start - ctg_start
+        ),
+        q_en = case_when(
+          is_rc ~ ctg_end - query_start,
+          TRUE ~ query_end - ctg_start
+        ),
+        r_en = case_when(
+          is_rc ~ ctg_end - reference_start,
+          TRUE ~ reference_end - ctg_start
+        )
+      )
     df$r <- df$reference_name
-    df$r_st <- df$reference_start
-    df$r_en <- df$reference_end
   }
   window <- max(df$q_en - df$q_st)
   df$first_pos <- df$q_st / window
@@ -144,13 +164,13 @@ make_dot <- function(sdf, rname = "") {
 
 make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out) {
   df_rname_seq_ident <- df_seq_ident %>% filter(q == rname & r == rname)
+  is_rc <- str_detect(rname, "rc-")
 
   # make the tri sequence identity plots
   df_d <- make_tri_df(df_rname_seq_ident)
 
   # make the histogram
   plot_hist <- make_hist(df_rname_seq_ident)
-  grob_hist <- ggplotGrob(plot_hist)
 
   # Filter data.
   # Get centromeric transition regions separately to outline.
@@ -164,7 +184,11 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
   segment_linewidth <- 10
   contig_len <- max(df_rname_seq_ident$q_en) - min(df_rname_seq_ident$q_st)
   # Calculated adjustment factor (y-px / 3.5mb) for segment y position.
-  segment_y_adj_factor <- -0.06
+  if (is_rc) {
+    segment_y_adj_factor <- 0.07
+  } else {
+    segment_y_adj_factor <- -0.07
+  }
   segment_y <- segment_y_adj_factor * contig_len
   ct_outline_edges_x <- 5000
 
@@ -175,7 +199,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       aes(
         x = start2,
         y = segment_y,
-        xend = stop2,
+        xend = stop2 + 1000,
         yend = segment_y,
       ),
       linewidth = segment_linewidth + 0.5
@@ -190,7 +214,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       aes(
         x = start2 + ct_outline_edges_x,
         y = segment_y,
-        xend = stop2 - ct_outline_edges_x,
+        xend = (stop2 - ct_outline_edges_x) + 1000,
         yend = segment_y,
         color = region
       ),
@@ -201,13 +225,13 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       aes(
         x = start2,
         y = segment_y,
-        xend = stop2,
+        xend = stop2 + 1000,
         yend = segment_y,
         color = region
       ),
       linewidth = segment_linewidth
     ) +
-    guides(color = guide_legend(nrow = 4)) +
+    guides(color = guide_legend(nrow = 2)) +
     scale_color_manual(values = get_rm_sat_annot_colors()) +
     scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
     # New colorscale for hor monomers
@@ -216,32 +240,37 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       data = df_humas_hmmer_stv_out %>% filter(chr == rname),
       aes(
         x = start,
-        xend = stop,
+        xend = stop + 2000,
         y = segment_y,
         yend = segment_y,
         color = as.factor(mer)
       ),
       linewidth = segment_linewidth
     ) +
-    guides(color = guide_legend(nrow = 6)) +
+    guides(color = guide_legend(nrow = 5)) +
     scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
     # New colorscale for stainedglass.
     geom_polygon(
       df_d,
       mapping = aes(x = x, y = y, fill = new_discrete, group = group),
       show.legend = FALSE
-    ) +
+    )
+
+  if (is_rc) {
+    plot_ident_cen <- plot_ident_cen + scale_y_continuous()
+  } else {
+    plot_ident_cen <- plot_ident_cen + scale_y_reverse()
+  }
+
+  plot_ident_cen <- plot_ident_cen +
     scale_fill_manual(values = discrete_color_ranges) +
     scale_x_continuous(labels = make_scale, limits = c(0, NA)) +
-    # Reorient so stainedglass plot is on the bottom
-    scale_y_reverse(labels = make_scale) +
-    theme_classic() +
+    theme_cowplot() +
     # Adjust legend.
     theme(
       legend.position = "right",
       legend.title = element_blank(),
       legend.background = element_blank(),
-      legend.key.size = unit(1.0, "cm"),
       legend.key = element_rect(color = "black", fill = NA),
     ) +
     # Adjust axes
@@ -251,22 +280,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       axis.ticks.y = element_blank(),
       axis.line.y = element_blank()
     ) +
-    # Adjust title
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    ) +
     xlab("Position (Mbp)")
 
-  # ranges for inset hist
-  xmax <- max(df_rname_seq_ident$q_en, df_rname_seq_ident$r_en)
-  ylim <- max(df_d$y)
-  final_plot <- plot_ident_cen +
-    annotation_custom(
-      grob_hist,
-      xmin = 0, xmax = xmax / 3,
-      ymin = -ylim, ymax = -ylim + (ylim / 3.5)
-    ) +
-    ggtitle(rname)
-
-  return(final_plot)
+  return(list(cen=plot_ident_cen, hist=plot_hist))
 }

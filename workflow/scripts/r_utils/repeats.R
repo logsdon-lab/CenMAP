@@ -154,15 +154,10 @@ read_one_repeatmasker_sat_input <- function(input_file) {
       ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
       ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
     ) %>%
+    # Because coords originate from rm output, already correctly oriented.
     mutate(
-      start2 = case_when(
-        str_detect(chr, "rc-") ~ ctg_stop - stop,
-        TRUE ~ start - ctg_start
-      ),
-      stop2 = case_when(
-        str_detect(chr, "rc-") ~ ctg_stop - start,
-        TRUE ~ stop - ctg_start
-      )
+      start2 = start - ctg_start,
+      stop2 = stop - ctg_start
     )
 
   return(df)
@@ -204,6 +199,23 @@ read_one_humas_hmmer_input <- function(
   df_stv <- df_samples %>%
     group_by(mer) %>%
     filter(n() > hor_filter)
+
+  df_stv <- df_stv %>%
+    mutate(
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+    ) %>%
+    mutate(
+      start2 = case_when(
+        str_detect(chr, "rc-") ~ ctg_stop - stop,
+        TRUE ~ start - ctg_start
+      ),
+      stop2 = case_when(
+        str_detect(chr, "rc-") ~ ctg_stop - start,
+        TRUE ~ stop - ctg_start
+      )
+    ) %>%
+    mutate(start=start2, stop=stop2)
 
    return(df_stv)
 }
