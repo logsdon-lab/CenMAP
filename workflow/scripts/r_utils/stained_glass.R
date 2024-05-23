@@ -185,9 +185,9 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
   contig_len <- max(df_rname_seq_ident$q_en) - min(df_rname_seq_ident$q_st)
   # Calculated adjustment factor (y-px / 3.5mb) for segment y position.
   if (is_rc) {
-    segment_y_adj_factor <- 0.06
+    segment_y_adj_factor <- 0.07
   } else {
-    segment_y_adj_factor <- -0.06
+    segment_y_adj_factor <- -0.07
   }
   segment_y <- segment_y_adj_factor * contig_len
   ct_outline_edges_x <- 5000
@@ -231,7 +231,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       ),
       linewidth = segment_linewidth
     ) +
-    guides(color = guide_legend(nrow = 4)) +
+    guides(color = guide_legend(nrow = 2)) +
     scale_color_manual(values = get_rm_sat_annot_colors()) +
     scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
     # New colorscale for hor monomers
@@ -247,7 +247,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       ),
       linewidth = segment_linewidth
     ) +
-    guides(color = guide_legend(nrow = 6)) +
+    guides(color = guide_legend(nrow = 5)) +
     scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
     # New colorscale for stainedglass.
     geom_polygon(
@@ -257,11 +257,9 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     )
 
   if (is_rc) {
-    plot_ident_cen <- plot_ident_cen +
-      scale_y_continuous(labels = make_scale)
+    plot_ident_cen <- plot_ident_cen + scale_y_continuous()
   } else {
-    plot_ident_cen <- plot_ident_cen +
-      scale_y_reverse(labels = make_scale)
+    plot_ident_cen <- plot_ident_cen + scale_y_reverse()
   }
 
   plot_ident_cen <- plot_ident_cen +
@@ -273,7 +271,6 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       legend.position = "right",
       legend.title = element_blank(),
       legend.background = element_blank(),
-      legend.key.size = unit(1.0, "cm"),
       legend.key = element_rect(color = "black", fill = NA),
     ) +
     # Adjust axes
@@ -283,22 +280,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       axis.ticks.y = element_blank(),
       axis.line.y = element_blank()
     ) +
-    # Adjust title
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    ) +
     xlab("Position (Mbp)")
 
-  # ranges for inset hist
-  xmax <- max(df_rname_seq_ident$q_en, df_rname_seq_ident$r_en)
-  ylim <- max(df_d$y)
-  final_plot <- cowplot::plot_grid(
-    plotlist = list(plot_ident_cen, plot_hist),
-    nrow=1,
-    ncol=2,
-    rel_widths = c(3, 1),
-    labels = "auto"
-  )
-
-  return(final_plot)
+  return(list(cen=plot_ident_cen, hist=plot_hist))
 }

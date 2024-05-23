@@ -91,32 +91,39 @@ df_rm_sat_out <- read_one_repeatmasker_sat_input(bed_sat_annot)
 df_seq_ident <- read_bedpe(bed_seq_ident)
 rname <- df_seq_ident$q[[1]]
 
-plot <- make_cen_plot(
+plots <- make_cen_plot(
   rname,
   df_seq_ident,
   df_humas_hmmer_stv_out,
   df_rm_sat_out
 )
+plot_cen <- plots[["cen"]]
+plot_cen_legend <- get_legend(plot_cen)
+plot_cen <- plot_cen + theme(legend.position = "none")
+plot_hist <- plots[["hist"]]
 
-# Adjust width and height based on number of HORs and contig length
+bottom_row <- cowplot::plot_grid(
+  plotlist = list(NULL, plot_cen_legend, plot_hist, NULL),
+  nrow = 1,
+  rel_widths = c(0.1, 1, 1, 0.1),
+  labels = NULL
+)
+plot <- cowplot::plot_grid(
+  plot_cen, bottom_row,
+  nrow=2,
+  ncol=1,
+  rel_heights = c(1.1, 0.9),
+  labels = NULL
+)
+
 if (is.na(args$width)) {
-  num_uniq_mers <- df_humas_hmmer_stv_out %>% distinct(mer) %>% nrow()
-  default_width <- 12
-  width_adjustment <- ceiling(num_uniq_mers / 6) - 1
-  final_width <- default_width + width_adjustment
+  final_width <- 9
 } else {
-  width_adjustment <- 0
   final_width <- args$width
 }
 
 if (is.na(args$height)) {
-  contig_len_mb <- round(max(df_seq_ident$q_en) - min(df_seq_ident$q_st)) / 1000000
-  default_height <- 5
-  default_mb <- 4
-  height_ctg_len_adjustment_factor <- round((contig_len_mb - default_mb) * 0.02)
-  height_num_uniq_mers_adjustment_factor <- round(width_adjustment / 3)
-  height_adjustment <- height_ctg_len_adjustment_factor + height_num_uniq_mers_adjustment_factor
-  final_height <- default_height + height_adjustment
+  final_height <- 9
 } else {
   final_height <- args$height
 }
