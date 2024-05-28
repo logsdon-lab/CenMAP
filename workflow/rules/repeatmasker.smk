@@ -83,7 +83,11 @@ rule rename_for_repeatmasker:
     shell:
         """
         seqtk rename {input.fa} {params.prefix} > {output.renamed_fa} 2> {log}
-        samtools faidx {output.renamed_fa} 2>> {log}
+        if [ -s {output.renamed_fa} ]; then
+            samtools faidx {output.renamed_fa} 2>> {log}
+        else
+            touch {output.renamed_fa_idx}
+        fi
         """
 
 
@@ -112,12 +116,16 @@ rule run_repeatmasker:
         "benchmarks/repeatmasker/repeatmasker_{sm}.tsv"
     shell:
         """
-        RepeatMasker \
-        -engine {params.engine} \
-        -species {params.species} \
-        -dir {params.output_dir} \
-        -pa {threads} \
-        {input.seq} &> {log}
+        if [ -s {input.seq} ]; then
+            RepeatMasker \
+            -engine {params.engine} \
+            -species {params.species} \
+            -dir {params.output_dir} \
+            -pa {threads} \
+            {input.seq} &> {log}
+        else
+            touch {output}
+        fi
         """
 
 

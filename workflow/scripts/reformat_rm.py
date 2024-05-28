@@ -47,8 +47,13 @@ def main():
         open(args.infile, "rt") as infile,
     ):
         # Skip first four lines.
-        for _ in range(3):
-            next(infile)
+        try:
+            for _ in range(3):
+                next(infile)
+        except StopIteration:
+            # If empty file.
+            return
+
         rm_writer = csv.writer(args.outfile, delimiter="\t")
         for line in infile.readlines():
             line = line.strip().split()

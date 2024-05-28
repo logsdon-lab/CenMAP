@@ -104,6 +104,9 @@ def moddotplot_outputs_no_input_dir(wc):
 
     fnames, chrs = extract_fa_fnames_and_chr(config["humas_hmmer"]["input_dir"])
 
+    wildcard_constraints:
+        fname="|".join(fnames),
+
     return dict(
         modotplot=expand(rules.run_moddotplot.output, fname=fnames),
         cen_moddoplot=expand(

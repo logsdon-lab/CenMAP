@@ -167,10 +167,13 @@ def main():
         largest_row = df_ctg.filter(pl.col("rlen") == pl.col("rlen").max()).to_dict()
 
         # Allow only repeats some number of bps from the largest detected alpha-sat repeat.
-        df_ctg = df_ctg.filter(
-            (pl.col("start") > largest_row["start"] - args.dst_from_largest)
-            & (pl.col("end") < largest_row["end"] + args.dst_from_largest)
-        )
+        try:
+            df_ctg = df_ctg.filter(
+                (pl.col("start") > largest_row["start"][0] - args.dst_from_largest)
+                & (pl.col("end") < largest_row["end"][0] + args.dst_from_largest)
+            )
+        except IndexError:
+            pass
 
         dfs.append(df_ctg)
 
