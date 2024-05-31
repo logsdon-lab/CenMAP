@@ -263,6 +263,5 @@ include: "fix_cens_w_repeatmasker.smk"
 rule repeatmasker_only:
     input:
         rules.merge_corrections_list.output,
-        rules.count_complete_cens.output,
         expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
         expand(rules.plot_og_cens_from_rm_by_chr.output, chr=CHROMOSOMES),

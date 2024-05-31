@@ -116,6 +116,11 @@ calculate_hor_length:
   chm13_hor_lengths: "data/annotations/chm13_hor_length.tsv"
   output_dir: "results/calculate_hor_length"
 
+count_complete_cens:
+  output_dir: "results/count_complete_cens"
+  plot_lbl: null
+  plot_color: "#DA8B26"
+
 moddotplot:
   input_dir: null
   output_dir: "results/moddotplot"
