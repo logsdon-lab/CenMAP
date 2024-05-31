@@ -137,41 +137,6 @@ rule fix_incorrect_mapped_cens:
         """
 
 
-rule count_complete_cens:
-    input:
-        rules.fix_incorrect_mapped_cens.output.corrected_cens_list,
-    output:
-        cmp_cnts=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "status",
-            "complete_cen_counts.tsv",
-        ),
-    params:
-        num_chrs=46,
-    run:
-        from collections import Counter
-
-        with (
-            open(str(input)) as cens_list_fh,
-            open(str(output), "wt") as cen_counts_fh,
-        ):
-            counts = Counter()
-            for l in cens_list_fh.readlines():
-                if l.startswith("chm13"):
-                    continue
-                sample, _, _ = l.rsplit("_", maxsplit=2)
-                counts[sample] += 1
-
-            for sm, count in counts.items():
-                prop = (count / params.num_chrs) * 100
-                cen_counts_fh.write(f"{sm}\t{count}\t{prop}\n")
-
-            total_count = sum(counts.values())
-            total_possible_count = len(counts) * params.num_chrs
-            total_prop = (total_count / total_possible_count) * 100
-            cen_counts_fh.write(f"all\t{total_count}\t{total_prop}\n")
-
-
 rule split_corrected_rm_output:
     input:
         corrected_cens_list=rules.fix_incorrect_mapped_cens.output.corrected_cens_list,

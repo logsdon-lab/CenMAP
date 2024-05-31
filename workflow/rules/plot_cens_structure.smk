@@ -2,7 +2,7 @@
 include: "common.smk"
 
 
-rule plot_complete_cens:
+rule plot_cens_structure:
     input:
         script="workflow/scripts/repeatStructure.R",
         rm_sat_out=os.path.join(
@@ -29,7 +29,7 @@ rule plot_complete_cens:
             )
         ),
     log:
-        "logs/plot_complete_cens/plot_{chr}_{mer_order}_complete_cens.log",
+        "logs/plot_cens_structure/plot_{chr}_{mer_order}_cens_structure.log",
     conda:
         "../env/r.yaml"
     params:
@@ -54,10 +54,10 @@ rule plot_complete_cens:
         """
 
 
-rule plot_cens_only:
+rule plot_cens_structure_only:
     input:
         expand(
-            rules.plot_complete_cens.output,
+            rules.plot_cens_structure.output,
             chr=CHROMOSOMES,
             mer_order=config["plot_hor_stv"]["mer_order"],
         ),
