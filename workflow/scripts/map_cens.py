@@ -48,25 +48,36 @@ def main():
     # To pass, a given query sequence must have both p and q arms mapped.
     # The acrocentrics are exceptions and only require the q-arm.
     df = df.filter(
-        pl.when(~pl.col("reference_name").is_in(["chr21", "chr22", "chr13", "chr14", "chr15"]))
+        pl.when(
+            ~pl.col("reference_name").is_in(
+                ["chr21", "chr22", "chr13", "chr14", "chr15"]
+            )
+        )
         .then(
             pl.all_horizontal(
-                (pl.col("arm") == "p-arm").any(),
-                (pl.col("arm") == "q-arm").any()
+                (pl.col("arm") == "p-arm").any(), (pl.col("arm") == "q-arm").any()
             ).over("query_name")
-        ).otherwise(
-            pl.all_horizontal(
-                (pl.col("arm") == "q-arm").any()
-            ).over("query_name")
+        )
+        .otherwise(
+            pl.all_horizontal((pl.col("arm") == "q-arm").any()).over("query_name")
         )
     )
 
     df_qarms = df.filter(pl.col("arm") == "q-arm")
     df_concensus_mapping = (
-        # Default to picking reference by highest percent identity by all
-        df.filter(
-            pl.col("perID_by_events")
-            == pl.col("perID_by_events").max().over(["query_name"])
+        # Choose concensus by weighing highest aln length (0.66) in combination with highest percent identity by event (0.33).
+        df.with_columns(
+            match_perc_wt=(pl.col("matches").rank() / pl.col("matches").count()).over(
+                "query_name"
+            )
+            * 0.66,
+            perID_by_events_wt=(pl.col("perID_by_events") / 100) * 0.33,
+        )
+        .with_columns(
+            match_score=pl.col("match_perc_wt") + pl.col("perID_by_events_wt")
+        )
+        .filter(
+            pl.col("match_score") == pl.col("match_score").max().over(["query_name"])
         )
         .join(df_qarms, on=["query_name"], how="left")
         .select("query_name", "reference_name", "reference_name_right", "arm")
