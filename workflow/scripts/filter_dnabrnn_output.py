@@ -3,15 +3,16 @@ import sys
 import json
 import argparse
 import polars as pl
+from typing import Any
 
 
 CHRS = [*[f"chr{i}" for i in range(1, 23)], "chrX", "chrY"]
 ORTS = ["fwd", "rev"]
 RGX_CHR = re.compile("|".join(f"{c}_" for c in CHRS))
-DEF_REPEAT_PERC_THR = 0.95
+DEF_MERGE_REPEAT_DST_THR = 5000
 DEF_REPEAT_LEN_THR = [1_000, None]
 DEF_REPEAT_TYPE = 2
-DEF_DST_FROM_LARGEST = 5_000_000
+DEF_DST_FROM_LARGEST = 10_000_000
 
 
 def build_interval_expr(interval: tuple[int, int | None]) -> pl.Expr | None:
@@ -96,8 +97,8 @@ def main():
     default_repeat_len_threshold = tuple(
         thresholds.get("default_repeat_len_thr", DEF_REPEAT_LEN_THR)
     )
-    min_repeat_len_perc_threshold = thresholds.get(
-        "min_repeat_len_perc", DEF_REPEAT_PERC_THR
+    merge_repeat_dst_thr = thresholds.get(
+        "merge_repeat_dst_thr", DEF_MERGE_REPEAT_DST_THR
     )
 
     # Parse contig start and stop coords.
@@ -150,32 +151,48 @@ def main():
         else:
             continue
 
-        # Calculate percentile of repeats by repeat length.
         # Only allow repeats in the x-th percentile or above. This removes small repeats that would overextend the HOR array region. Only done if not all alpha-satellite.
         # Apply additional static repeat len filters.
-        df_ctg = (
+        df_ctg_repeats = (
             df_ctg.filter(pl.any_horizontal(chr_len_thr_exprs))
-            .with_columns(perc=pl.col("rlen").rank() / pl.col("rlen").len())
-            .filter(
-                pl.when((pl.col("rtype") == 2).all())
-                .then(pl.lit(True))
-                .otherwise(pl.col("perc") > min_repeat_len_perc_threshold)
-                & (pl.col("rtype") == selected_repeat_type)
-            )
+            .filter(pl.col("rtype") == selected_repeat_type)
             .select("ctg", "start", "end", "rtype", "rlen")
         )
-        largest_row = df_ctg.filter(pl.col("rlen") == pl.col("rlen").max()).to_dict()
+
+        # Merge adjacent rows within some dst
+        rows: list[dict[str, Any]] = []
+        for curr_row in df_ctg_repeats.iter_rows(named=True):
+            try:
+                prev_row = rows.pop()
+                dst = curr_row["start"] - prev_row["end"]
+                if dst < merge_repeat_dst_thr:
+                    new_row = {
+                        "ctg": curr_row["ctg"],
+                        "start": prev_row["start"],
+                        "end": curr_row["end"],
+                        "rtype": curr_row["rtype"],
+                        "rlen": curr_row["end"] - prev_row["start"],
+                    }
+                    rows.append(new_row)
+                else:
+                    rows.append(prev_row)
+                    rows.append(curr_row)
+            except IndexError:
+                rows.append(curr_row)
+        df_ctg_compressed_repeats = pl.DataFrame(rows)
+        largest_row = df_ctg_compressed_repeats.filter(
+            pl.col("rlen") == pl.col("rlen").max()
+        ).to_dict()
 
         # Allow only repeats some number of bps from the largest detected alpha-sat repeat.
         try:
-            df_ctg = df_ctg.filter(
+            df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(
                 (pl.col("start") > largest_row["start"][0] - args.dst_from_largest)
                 & (pl.col("end") < largest_row["end"][0] + args.dst_from_largest)
             )
         except IndexError:
             pass
-
-        dfs.append(df_ctg)
+        dfs.append(df_ctg_compressed_repeats)
 
     if dfs:
         df = pl.concat(dfs)
