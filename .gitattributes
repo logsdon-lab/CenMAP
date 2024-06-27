@@ -20,3 +20,6 @@ test/filter_dnabrnn_output/expected/NA19317_chr3_hap2_forward_filtered.bed filte
 test/map_cens/input/HG00512_cens.bed filter=lfs diff=lfs merge=lfs -text
 test/map_cens/input/NA19705_cens.bed filter=lfs diff=lfs merge=lfs -text
 test/map_cens/input/NA20355_cens.bed filter=lfs diff=lfs merge=lfs -text
+test/map_cens/expected/HG00512_expected_cens.bed filter=lfs diff=lfs merge=lfs -text
+test/map_cens/expected/NA19705_expected_cens.bed filter=lfs diff=lfs merge=lfs -text
+test/map_cens/expected/NA20355_expected_cens.bed filter=lfs diff=lfs merge=lfs -text

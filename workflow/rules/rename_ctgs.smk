@@ -82,7 +82,7 @@ rule rename_ctgs:
         "../env/tools.yaml"
     shell:
         """
-        seqkit replace -p '(\S+)' -r '{kv}' \
+        seqkit replace -p '(\S+)' -r '{{kv}}' \
         -k {input.legend} {input.seq} \
         --keep-key > {output} 2> {log}
         """

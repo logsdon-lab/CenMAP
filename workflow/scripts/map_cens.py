@@ -63,33 +63,10 @@ def main():
         )
     )
 
-    df_qarms = df.filter(pl.col("arm") == "q-arm")
-    df_concensus_mapping = (
-        # Choose concensus by weighing highest aln length (0.66) in combination with highest percent identity by event (0.33).
-        df.with_columns(
-            match_perc_wt=(pl.col("matches").rank() / pl.col("matches").count()).over(
-                "query_name"
-            )
-            * 0.66,
-            perID_by_events_wt=(pl.col("perID_by_events") / 100) * 0.33,
-        )
-        .with_columns(
-            match_score=pl.col("match_perc_wt") + pl.col("perID_by_events_wt")
-        )
-        .filter(
-            pl.col("match_score") == pl.col("match_score").max().over(["query_name"])
-        )
-        .join(df_qarms, on=["query_name"], how="left")
-        .select("query_name", "reference_name", "reference_name_right", "arm")
-        .unique()
-        # But if has alignment to q-arm, take that instead.
-        .with_columns(
-            reference_name=pl.when(pl.col("arm") == "q-arm")
-            .then(pl.col("reference_name_right"))
-            .otherwise(pl.col("reference_name"))
-        )
-        .select(["query_name", "reference_name"])
-    )
+    # Choose concensus by taking highest number of matches .
+    df_concensus_mapping = df.filter(
+        pl.col("matches") == pl.col("matches").max().over(["query_name"])
+    ).select(["query_name", "reference_name"])
 
     df_minmax = (
         df.join(df_concensus_mapping, on=["query_name"], how="left")
