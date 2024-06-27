@@ -7,12 +7,13 @@ from typing import Any
 
 
 CHRS = [*[f"chr{i}" for i in range(1, 23)], "chrX", "chrY"]
+CHRS_MULTI_HOR_ARR = {"chr3", "chr4"}
 ORTS = ["fwd", "rev"]
 RGX_CHR = re.compile("|".join(f"{c}_" for c in CHRS))
-DEF_MERGE_REPEAT_DST_THR = 5000
+DEF_MERGE_REPEAT_DST_THR = 10_000
 DEF_REPEAT_LEN_THR = [1_000, None]
 DEF_REPEAT_TYPE = 2
-DEF_DST_FROM_LARGEST = 10_000_000
+DEF_EDGES_BP = 500_000
 
 
 def build_interval_expr(interval: tuple[int, int | None]) -> pl.Expr | None:
@@ -66,11 +67,11 @@ def main():
         help="Repeat type to filter for.",
     )
     ap.add_argument(
-        "-d",
-        "--dst_from_largest",
+        "-e",
+        "--edges_bp",
         type=int,
-        default=DEF_DST_FROM_LARGEST,
-        help="Distance from largest repeat allowed.",
+        default=DEF_EDGES_BP,
+        help="Base pairs required on edges. Filters out partial contigs.",
     )
 
     args = ap.parse_args()
@@ -129,12 +130,16 @@ def main():
             end=pl.col("end") + pl.col("ctg_start"),
         )
 
-    df = lf.select("ctg", "start", "end", "rtype", "rlen").collect()
+    df = lf.select(
+        "ctg", "start", "end", "rtype", "rlen", "ctg_start", "ctg_end"
+    ).collect()
     dfs = []
 
     for df_ctg_name, df_ctg in df.group_by(["ctg"]):
         df_ctg_name = df_ctg_name[0]
         chr_len_thr_exprs = []
+
+        ctg_start, ctg_end = df_ctg.row(0)[5], df_ctg.row(0)[6]
 
         if mtch_chr_name := re.search(RGX_CHR, df_ctg_name):
             chr_name = mtch_chr_name.group().strip("_")
@@ -151,8 +156,7 @@ def main():
         else:
             continue
 
-        # Only allow repeats in the x-th percentile or above. This removes small repeats that would overextend the HOR array region. Only done if not all alpha-satellite.
-        # Apply additional static repeat len filters.
+        # Apply repeat len filters.
         df_ctg_repeats = (
             df_ctg.filter(pl.any_horizontal(chr_len_thr_exprs))
             .filter(pl.col("rtype") == selected_repeat_type)
@@ -179,18 +183,42 @@ def main():
                     rows.append(curr_row)
             except IndexError:
                 rows.append(curr_row)
-        df_ctg_compressed_repeats = pl.DataFrame(rows)
-        largest_row = df_ctg_compressed_repeats.filter(
-            pl.col("rlen") == pl.col("rlen").max()
-        ).to_dict()
+
+        df_ctg_compressed_repeats = pl.DataFrame(
+            rows, schema=["ctg", "start", "end", "rtype", "rlen"]
+        )
+        if df_ctg_compressed_repeats.is_empty():
+            continue
+
+        # If a chromosome that has multiple HOR arrays, set repeat bounds differently.
+        # * multiple - use min and max coordinate of all repeats.
+        # * single - use min and max coordinate of largest repeat.
+        if chr_name in CHRS_MULTI_HOR_ARR:
+            df_repeat_bounds = df_ctg_compressed_repeats.filter(
+                pl.col("rlen") >= 100_000
+            )
+        else:
+            df_repeat_bounds = df_ctg_compressed_repeats.filter(
+                pl.col("rlen") == pl.col("rlen").max()
+            )
+        repeats_edge_start = df_repeat_bounds.row(0)[1] - DEF_EDGES_BP
+        repeats_edge_end = df_repeat_bounds.row(-1)[2] + DEF_EDGES_BP
+
+        # Ensure that repeats have at least some number of bps(default: 50 kbp) on either side.
+        # TODO: Add test case to check if this works.
+        if repeats_edge_start < ctg_start or repeats_edge_start < 0:
+            continue
+        elif repeats_edge_end > ctg_end:
+            continue
 
         # Allow only repeats some number of bps from the largest detected alpha-sat repeat.
         try:
             df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(
-                (pl.col("start") > largest_row["start"][0] - args.dst_from_largest)
-                & (pl.col("end") < largest_row["end"][0] + args.dst_from_largest)
+                (pl.col("start") > repeats_edge_start)
+                & (pl.col("end") < repeats_edge_end)
             )
         except IndexError:
+            # If empty.
             pass
         dfs.append(df_ctg_compressed_repeats)
 
