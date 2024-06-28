@@ -43,17 +43,18 @@ use rule run_dna_brnn as run_dna_brnn_ref_cens with:
         f"benchmarks/dna_brnn/dna_brnn_{REF_NAME}_cens.tsv"
 
 
-# TODO: Script different from notebook?
 # grep "chr1:" chm13_cens.trimmed.bed | \
 # sed 's/:/\t/g' | sed 's/-/\t/g' | \
 # awk -v OFS="\t" '{print $1, $2+$4, $2+$5, $6, $5-$4}' | awk '$4==2' | awk '$5>1000' > chr1_tmp.fwd.bed
 rule filter_dnabrnn_ref_cens_regions:
     input:
+        script="workflow/scripts/filter_dnabrnn_output.py",
         repeats=(
             rules.run_dna_brnn_ref_cens.output
             if config["dna_brnn"].get("ref_alr_file") is None
             else config["dna_brnn"]["ref_alr_file"]
         ),
+        thresholds=config["dna_brnn"]["thr_file"],
     output:
         temp(
             os.path.join(
@@ -61,18 +62,21 @@ rule filter_dnabrnn_ref_cens_regions:
             )
         ),
     params:
+        orientation="fwd",
         repeat_type_filter=2,
-        repeat_len_thr=1000,
     log:
         "logs/dna_brnn/filter_dnabrnn_ref_{chr}_cens_regions.log",
     conda:
-        "../env/tools.yaml"
+        "../env/py.yaml"
     shell:
         """
-        {{ grep "{wildcards.chr}:" {input.repeats} | \
-        sed -e 's/:/\\t/g' -e 's/-/\\t/g' | \
-        awk -v OFS="\\t" '{{print $1, $2+$4, $2+$5, $6, $5-$4}}' | \
-        awk '$4=={params.repeat_type_filter} && $5>{params.repeat_len_thr}';}} > {output} 2> {log}
+        python {input.script} \
+        -i {input.repeats} \
+        -o {output} \
+        -t {input.thresholds} \
+        --orientation {params.orientation} \
+        --chr {wildcards.chr} \
+        --repeat_type {params.repeat_type_filter} 2> {log}
         """
 
 
@@ -86,7 +90,7 @@ rule filter_dnabrnn_ref_cens_regions:
 # awk -v OFS="\t" '{print $1"-"$2, $3+$5, $3+$6, $7, $6-$5}' | \
 # awk '$4==2' | \
 # awk '$5>1000' >> chr2_tmp.fwd.bed
-rule filter_dnabrnn_sample_cens_regions:
+use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions with:
     input:
         script="workflow/scripts/filter_dnabrnn_output.py",
         repeats=rules.run_dna_brnn.output,
@@ -100,21 +104,12 @@ rule filter_dnabrnn_sample_cens_regions:
             )
         ),
     params:
+        orientation="{ort}",
         repeat_type_filter=2,
     log:
         "logs/dna_brnn/filter_dnabrnn_{ort}_{sm}_{chr}_cens_regions.log",
     conda:
         "../env/py.yaml"
-    shell:
-        """
-        python {input.script} \
-        -i {input.repeats} \
-        -o {output} \
-        -t {input.thresholds} \
-        --orientation {wildcards.ort} \
-        --chr {wildcards.chr} \
-        --repeat_type {params.repeat_type_filter} 2> {log}
-        """
 
 
 # Calculate the start and end *-terms
@@ -147,7 +142,6 @@ rule get_dnabrnn_ref_cens_pos:
         """
 
 
-# TODO: Annotate
 # /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py (modified bedminmax) \
 # -i chr2_tmp.fwd.bed | \
 # awk -v OFS="\t" '{print $1, $2, $3, $3-$2}' | \
@@ -194,7 +188,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         "../env/py.yaml"
     # Aggregate and bedminmax all.
     # Select cols and calculate length.
-    # Calculate vals.
+    # Add ~500 kbp on both ends.
     # Take only repeats greater than some value.
     # Take abs value.
     shell:

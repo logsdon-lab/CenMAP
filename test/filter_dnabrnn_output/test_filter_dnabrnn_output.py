@@ -23,6 +23,12 @@ from test.helpers.integration import run_integration_test
             "chr3",
             "test/filter_dnabrnn_output/expected/NA19317_chr3_hap2_forward_filtered.bed",
         ),
+        (
+            "test/filter_dnabrnn_output/input/HG03248_chr16_hap1_reverse.bed",
+            "test/filter_dnabrnn_output/input/dnabrnn_thresholds.json",
+            "chr16",
+            "test/filter_dnabrnn_output/expected/HG03248_chr16_hap1_reverse_filtered.bed",
+        ),
     ],
 )
 def test_filter_dnabrnn_output(

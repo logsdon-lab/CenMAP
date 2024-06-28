@@ -36,7 +36,9 @@ include: "rules/moddotplot.smk"
 include: "rules/plot_cens_structure.smk"
 include: "rules/calculate_hor_length.smk"
 include: "rules/count_complete_cens.smk"
-include: "rules/cluster_cens.smk"
+
+
+# include: "rules/cluster_cens.smk"
 
 
 rule extract_align_cens_only:
@@ -60,5 +62,5 @@ rule all:
         rules.count_complete_cens_only.input,
         rules.moddotplot_only.input,
         rules.plot_cens_structure_only.input,
-        rules.cluster_cens_only.input,
+        # rules.cluster_cens_only.input,
     default_target: True

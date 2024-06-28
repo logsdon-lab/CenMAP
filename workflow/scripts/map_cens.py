@@ -63,10 +63,21 @@ def main():
         )
     )
 
-    # Choose concensus by taking highest number of matches .
-    df_concensus_mapping = df.filter(
-        pl.col("matches") == pl.col("matches").max().over(["query_name"])
-    ).select(["query_name", "reference_name"])
+    df_qarms = df.filter(pl.col("arm") == "q-arm")
+    df_concensus_mapping = (
+        # Default to picking reference by number of matches
+        df.filter(pl.col("matches") == pl.col("matches").max().over(["query_name"]))
+        .join(df_qarms, on=["query_name"], how="left")
+        .select("query_name", "reference_name", "reference_name_right", "arm_right")
+        .unique()
+        # But if has alignment to q-arm, take that instead.
+        .with_columns(
+            reference_name=pl.when(pl.col("arm_right") == "q-arm")
+            .then(pl.col("reference_name_right"))
+            .otherwise(pl.col("reference_name"))
+        )
+        .select(["query_name", "reference_name"])
+    )
 
     df_minmax = (
         df.join(df_concensus_mapping, on=["query_name"], how="left")

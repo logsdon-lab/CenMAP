@@ -6,14 +6,14 @@ import polars as pl
 from typing import Any
 
 
-CHRS = [*[f"chr{i}" for i in range(1, 23)], "chrX", "chrY"]
-CHRS_MULTI_HOR_ARR = {"chr3", "chr4"}
+# Reverse to not greedily match on chr2 instead of chr21
+CHRS = [*[f"chr{i}" for i in range(22, 0, -1)], "chrX", "chrY"]
+CHRS_EDGE_CASES = {"chr3", "chr4", "chr5", "chr7", "chr13", "chr21"}
 ORTS = ["fwd", "rev"]
-RGX_CHR = re.compile("|".join(f"{c}_" for c in CHRS))
-DEF_MERGE_REPEAT_DST_THR = 10_000
+RGX_CHR = re.compile("|".join(c for c in CHRS))
+DEF_MERGE_REPEAT_DST_THR = 100_000
 DEF_REPEAT_LEN_THR = [1_000, None]
 DEF_REPEAT_TYPE = 2
-DEF_EDGES_BP = 500_000
 
 
 def build_interval_expr(interval: tuple[int, int | None]) -> pl.Expr | None:
@@ -54,8 +54,8 @@ def main():
     ap.add_argument(
         "-c",
         "--chr",
-        required=True,
         choices=CHRS,
+        required=True,
         help="Chromosome to filter for.",
         metavar="{chr1|...|chr22|chrX|chrY}",
     )
@@ -65,13 +65,6 @@ def main():
         type=int,
         default=DEF_REPEAT_TYPE,
         help="Repeat type to filter for.",
-    )
-    ap.add_argument(
-        "-e",
-        "--edges_bp",
-        type=int,
-        default=DEF_EDGES_BP,
-        help="Base pairs required on edges. Filters out partial contigs.",
     )
 
     args = ap.parse_args()
@@ -130,16 +123,12 @@ def main():
             end=pl.col("end") + pl.col("ctg_start"),
         )
 
-    df = lf.select(
-        "ctg", "start", "end", "rtype", "rlen", "ctg_start", "ctg_end"
-    ).collect()
+    df = lf.select("ctg", "start", "end", "rtype", "rlen").collect()
     dfs = []
 
     for df_ctg_name, df_ctg in df.group_by(["ctg"]):
         df_ctg_name = df_ctg_name[0]
         chr_len_thr_exprs = []
-
-        ctg_start, ctg_end = df_ctg.row(0)[5], df_ctg.row(0)[6]
 
         if mtch_chr_name := re.search(RGX_CHR, df_ctg_name):
             chr_name = mtch_chr_name.group().strip("_")
@@ -164,62 +153,56 @@ def main():
         )
 
         # Merge adjacent rows within some dst
-        rows: list[dict[str, Any]] = []
-        for curr_row in df_ctg_repeats.iter_rows(named=True):
+        all_rows: list[dict[str, Any]] = list(df_ctg_repeats.iter_rows(named=True))
+        curr_pos = 0
+        while True:
             try:
-                prev_row = rows.pop()
-                dst = curr_row["start"] - prev_row["end"]
+                curr_row = all_rows[curr_pos]
+                next_row = all_rows[curr_pos + 1]
+                dst = next_row["start"] - curr_row["end"]
                 if dst < merge_repeat_dst_thr:
                     new_row = {
                         "ctg": curr_row["ctg"],
-                        "start": prev_row["start"],
-                        "end": curr_row["end"],
+                        "start": curr_row["start"],
+                        "end": next_row["end"],
                         "rtype": curr_row["rtype"],
-                        "rlen": curr_row["end"] - prev_row["start"],
+                        "rlen": next_row["end"] - curr_row["start"],
                     }
-                    rows.append(new_row)
+                    all_rows.pop(curr_pos + 1)
+                    all_rows.pop(curr_pos)
+                    all_rows.insert(curr_pos, new_row)
                 else:
-                    rows.append(prev_row)
-                    rows.append(curr_row)
+                    curr_pos += 1
             except IndexError:
-                rows.append(curr_row)
+                break
 
         df_ctg_compressed_repeats = pl.DataFrame(
-            rows, schema=["ctg", "start", "end", "rtype", "rlen"]
+            all_rows, schema=["ctg", "start", "end", "rtype", "rlen"]
         )
         if df_ctg_compressed_repeats.is_empty():
             continue
 
-        # If a chromosome that has multiple HOR arrays, set repeat bounds differently.
-        # * multiple - use min and max coordinate of all repeats.
+        # If a chromosome separated by hsat/other repeat or has multiple arrays, set repeat bounds differently.
+        # * edge cases - use min and max coordinate of all repeats filtering smaller alpha-sat repeats.
         # * single - use min and max coordinate of largest repeat.
-        if chr_name in CHRS_MULTI_HOR_ARR:
+        if chr_name in CHRS_EDGE_CASES:
             df_repeat_bounds = df_ctg_compressed_repeats.filter(
-                pl.col("rlen") >= 100_000
+                pl.col("rlen") >= 50_000
             )
         else:
             df_repeat_bounds = df_ctg_compressed_repeats.filter(
                 pl.col("rlen") == pl.col("rlen").max()
             )
-        repeats_edge_start = df_repeat_bounds.row(0)[1] - DEF_EDGES_BP
-        repeats_edge_end = df_repeat_bounds.row(-1)[2] + DEF_EDGES_BP
 
-        # Ensure that repeats have at least some number of bps(default: 50 kbp) on either side.
-        # TODO: Add test case to check if this works.
-        if repeats_edge_start < ctg_start or repeats_edge_start < 0:
-            continue
-        elif repeats_edge_end > ctg_end:
-            continue
+        # Min and max
+        repeats_edge_start = df_repeat_bounds.row(0)[1]
+        repeats_edge_end = df_repeat_bounds.row(-1)[2]
 
-        # Allow only repeats some number of bps from the largest detected alpha-sat repeat.
-        try:
-            df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(
-                (pl.col("start") > repeats_edge_start)
-                & (pl.col("end") < repeats_edge_end)
-            )
-        except IndexError:
-            # If empty.
-            pass
+        # Allow only repeats within repeat bounds set above.
+        df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(
+            (pl.col("start") >= repeats_edge_start)
+            & (pl.col("end") <= repeats_edge_end)
+        )
         dfs.append(df_ctg_compressed_repeats)
 
     if dfs:
