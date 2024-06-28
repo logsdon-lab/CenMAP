@@ -63,7 +63,10 @@ def main():
         )
     )
 
-    df_qarms = df.filter(pl.col("arm") == "q-arm")
+    df_qarms = df.filter(
+        (pl.col("arm") == "q-arm")
+        & (pl.col("matches") == pl.col("matches").max().over(["query_name"]))
+    )
     df_concensus_mapping = (
         # Default to picking reference by number of matches
         df.filter(pl.col("matches") == pl.col("matches").max().over(["query_name"]))
