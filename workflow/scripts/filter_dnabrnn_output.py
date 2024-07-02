@@ -151,6 +151,8 @@ def main():
             .filter(pl.col("rtype") == selected_repeat_type)
             .select("ctg", "start", "end", "rtype", "rlen")
         )
+        if ort == "rev":
+            df_ctg_repeats = df_ctg_repeats.reverse()
 
         # Merge adjacent rows within some dst
         all_rows: list[dict[str, Any]] = list(df_ctg_repeats.iter_rows(named=True))
@@ -175,6 +177,9 @@ def main():
                     curr_pos += 1
             except IndexError:
                 break
+
+        if ort == "rev":
+            df_ctg_repeats = df_ctg_repeats.reverse()
 
         df_ctg_compressed_repeats = pl.DataFrame(
             all_rows, schema=["ctg", "start", "end", "rtype", "rlen"]
