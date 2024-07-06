@@ -7,7 +7,7 @@
 #   * fa_assembly
 #       * Assembly with contig names to replace.
 #   * output_dir
-#   * log_dir
+#   * logs_dir
 #   * samples
 #   * orientation
 #       * Default: ("fwd", "rev")

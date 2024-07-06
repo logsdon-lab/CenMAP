@@ -37,12 +37,12 @@ align_asm_to_ref:
   # Output dir set to results
   reference: "data/reference/T2T-CHM13v2.fasta.gz"
   threads: 4
-  mem: 120
+  mem: 60
 
 extract_ref_hor_arrays:
   output_dir: "results/ref_hor_arrays"
   # Add bp to extend edges of HOR array for alignment.
-  added_bases: 100_000
+  added_bases: 0
 
 ident_cen_ctgs:
   comb_assemblies_dir: "data/assemblies/combined"
@@ -66,7 +66,7 @@ new_cens:
   output_dir: "results/cens_new"
 
 nucflag:
-  hifi_reads_dir: "data/raw_data"
+  hifi_reads_dir: "data/raw_data_link"
   reads_ext: "fastq.gz"
   output_dir: "results/nucflag"
   tmp_dir: "temp"
@@ -93,7 +93,7 @@ humas_hmmer:
   input_dir: "results/humas_hmmer/cens"
   output_dir: "results/humas_hmmer"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
-  threads: 30
+  threads: 8
   # NOTE: Change this later to data/models/AS-HORs-hmmer3.0-170921.hmm!
   model: "data/models/AS-HORs-hmmer3.0-170921.hmm"
 

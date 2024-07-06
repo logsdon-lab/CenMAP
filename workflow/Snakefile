@@ -14,7 +14,6 @@ include: "rules/common.smk"
 
 wildcard_constraints:
     chr="|".join(CHROMOSOMES),
-    ort="|".join(ORIENTATION),
     sm="|".join(SAMPLE_NAMES),
     hap="|".join(HAPLOTYPE),
     mer_order="|".join(MER_ORDER),

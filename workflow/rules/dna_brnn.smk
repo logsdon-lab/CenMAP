@@ -2,20 +2,20 @@
 rule run_dna_brnn:
     input:
         model=config["dna_brnn"]["model"],
-        seqs=rules.extract_cens_oriented_regions.output.seq,
+        seqs=rules.extract_cens_regions.output.seq,
     output:
         repeat_regions=os.path.join(
             config["dna_brnn"]["output_dir"],
             "{sm}",
-            "{sm}_centromeric_regions.renamed.{ort}.bed",
+            "{sm}_centromeric_regions.renamed.bed",
         ),
     threads: config["dna_brnn"]["threads"]
     resources:
         mem=config["dna_brnn"]["mem"],
     log:
-        "logs/dna_brnn/dna_brnn_{ort}_{sm}.log",
+        "logs/dna_brnn/dna_brnn_{sm}.log",
     benchmark:
-        "benchmarks/dna_brnn/dna_brnn_{ort}_{sm}.tsv"
+        "benchmarks/dna_brnn/dna_brnn_{sm}.tsv"
     # No conda recipe. Use singularity if not installed locally.
     singularity:
         "docker://logsdonlab/dna-nn:latest"
@@ -62,7 +62,6 @@ rule filter_dnabrnn_ref_cens_regions:
             )
         ),
     params:
-        orientation="fwd",
         repeat_type_filter=2,
     log:
         "logs/dna_brnn/filter_dnabrnn_ref_{chr}_cens_regions.log",
@@ -74,7 +73,6 @@ rule filter_dnabrnn_ref_cens_regions:
         -i {input.repeats} \
         -o {output} \
         -t {input.thresholds} \
-        --orientation {params.orientation} \
         --chr {wildcards.chr} \
         --repeat_type {params.repeat_type_filter} 2> {log}
         """
@@ -100,14 +98,13 @@ use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions w
             os.path.join(
                 config["dna_brnn"]["output_dir"],
                 "{sm}",
-                "{chr}_{sm}_contigs.{ort}.ALR.bed",
+                "{chr}_{sm}_contigs.ALR.bed",
             )
         ),
     params:
-        orientation="{ort}",
         repeat_type_filter=2,
     log:
-        "logs/dna_brnn/filter_dnabrnn_{ort}_{sm}_{chr}_cens_regions.log",
+        "logs/dna_brnn/filter_dnabrnn_{sm}_{chr}_cens_regions.log",
     conda:
         "../env/py.yaml"
 
@@ -152,19 +149,16 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
     input:
         script="workflow/scripts/filter_cen_ctgs.py",
         cen_pos=rules.get_dnabrnn_ref_cens_pos.output,
-        added_ref_cens=lambda wc: (
-            rules.filter_dnabrnn_ref_cens_regions.output if wc.ort == "fwd" else []
-        ),
+        added_ref_cens=rules.filter_dnabrnn_ref_cens_regions.output,
         sample_cens=lambda wc: expand(
             rules.filter_dnabrnn_sample_cens_regions.output,
             sm=SAMPLE_NAMES,
-            ort=[wc.ort],
             chr=[wc.chr],
         ),
     output:
         os.path.join(
             config["dna_brnn"]["output_dir"],
-            "{chr}_contigs.{ort}.ALR.bed",
+            "{chr}_contigs.ALR.bed",
         ),
     params:
         repeat_len_thr=alr_region_threshold,
@@ -183,7 +177,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         # dna-brnn output may not contain repeats from a chr.
         allow_empty="--allow_empty",
     log:
-        "logs/dna_brnn/aggregate_dnabrnn_alr_regions_by_{chr}_{ort}.log",
+        "logs/dna_brnn/aggregate_dnabrnn_alr_regions_by_{chr}.log",
     conda:
         "../env/py.yaml"
     # Aggregate and bedminmax all.
@@ -212,6 +206,5 @@ rule dna_brnn_all:
     input:
         expand(
             rules.aggregate_dnabrnn_alr_regions_by_chr.output,
-            ort=ORIENTATION,
             chr=CHROMOSOMES,
         ),

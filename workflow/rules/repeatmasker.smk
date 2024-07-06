@@ -31,7 +31,7 @@ rule get_valid_regions_for_rm:
         """
 
 
-use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
+use rule extract_and_index_fa_w_rc_bed as extract_correct_alr_regions_rm with:
     input:
         fa=os.path.join(
             config["concat_asm"]["output_dir"],
@@ -262,6 +262,6 @@ include: "fix_cens_w_repeatmasker.smk"
 
 rule repeatmasker_only:
     input:
-        rules.merge_corrections_list.output,
-        expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
+        # rules.merge_corrections_list.output,
+        # expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
         expand(rules.plot_og_cens_from_rm_by_chr.output, chr=CHROMOSOMES),

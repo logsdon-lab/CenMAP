@@ -9,13 +9,13 @@ thr_min_peak_width = 20
 thr_min_valley_horizontal_distance = 1
 
 # Min width of valley to consider.
-thr_min_valley_width = 10
+thr_min_valley_width = 5
 
 # Number of std above mean to include peak.
 thr_peak_height_std_above = 4
 
 # Number of std below mean to include valley.
-thr_valley_height_std_below = 3
+thr_valley_height_std_below = 4
 
 # Positions with coverage below this percentile are considered misjoins.
 # ex. 0.001 => 0.1th percentile
@@ -23,24 +23,24 @@ thr_misjoin_valley_height_perc_below = 0.001
 
 # Group consecutive positions allowing a maximum gap of x.
 # Larger value groups more positions.
-valley_group_distance = 500
+valley_group_distance = 5000
 
-peak_group_distance = 500
+peak_group_distance = 5000
 
 [second]
 # Percent threshold of most freq base to allow second most freq base
 # 30 * 0.1 = 3 so above 3 is allowed.
-thr_min_perc_first = 0.05
+thr_min_perc_first = 0.07
 
 # Number of std above mean to include peak.
-thr_peak_height_std_above = 3
+thr_peak_height_std_above = 4
 
 # Group consecutive positions allowing a maximum gap of x.
 # Larger value groups more positions.
-group_distance = 30_000
+group_distance = 5_000
 
 # Min group size.
-thr_min_group_size = 20
+thr_min_group_size = 10
 
 # Het ratio to consider second group a collapse if no overlaps in peaks found.
 thr_collapse_het_ratio = 0.2

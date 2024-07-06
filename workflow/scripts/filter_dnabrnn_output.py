@@ -8,7 +8,8 @@ from typing import Any
 
 # Reverse to not greedily match on chr2 instead of chr21
 CHRS = [*[f"chr{i}" for i in range(22, 0, -1)], "chrX", "chrY"]
-CHRS_EDGE_CASES = {"chr3", "chr4", "chr5", "chr7", "chr13", "chr21"}
+CHRS_ASAT_SEP = {"chr3", "chr4", "chr5", "chr7"}
+CHRS_13_21 = {"chr13", "chr21"}
 ORTS = ["fwd", "rev"]
 RGX_CHR = re.compile("|".join(c for c in CHRS))
 DEF_MERGE_REPEAT_DST_THR = 100_000
@@ -46,12 +47,6 @@ def main():
         "-t", "--thresholds", help="Input JSON file with repeat length thresholds."
     )
     ap.add_argument(
-        "--orientation",
-        default="fwd",
-        choices=ORTS,
-        help="Orientation of contigs. Alters start and end calculations.",
-    )
-    ap.add_argument(
         "-c",
         "--chr",
         choices=CHRS,
@@ -84,15 +79,15 @@ def main():
     else:
         thresholds = {}
 
-    ort = args.orientation
     selected_chr = args.chr
     selected_repeat_type = args.repeat_type
     repeat_len_thresholds = thresholds.get("repeat_len_thr", {})
     default_repeat_len_threshold = tuple(
         thresholds.get("default_repeat_len_thr", DEF_REPEAT_LEN_THR)
     )
-    merge_repeat_dst_thr = thresholds.get(
-        "merge_repeat_dst_thr", DEF_MERGE_REPEAT_DST_THR
+    merge_repeat_dst_thr = thresholds.get("merge_repeat_dst_thr", {})
+    default_merge_repeat_dst_thr = thresholds.get(
+        "default_merge_repeat_dst_thr", DEF_MERGE_REPEAT_DST_THR
     )
 
     # Parse contig start and stop coords.
@@ -112,16 +107,10 @@ def main():
         .cast({"ctg_start": pl.Int64, "ctg_end": pl.Int64})
     )
     # Adjust start and end positions with contig full coords.
-    if ort == "rev":
-        lf = lf.with_columns(
-            start=pl.col("ctg_end") - pl.col("end"),
-            end=pl.col("ctg_end") - pl.col("start"),
-        )
-    else:
-        lf = lf.with_columns(
-            start=pl.col("start") + pl.col("ctg_start"),
-            end=pl.col("end") + pl.col("ctg_start"),
-        )
+    lf = lf.with_columns(
+        start=pl.col("start") + pl.col("ctg_start"),
+        end=pl.col("end") + pl.col("ctg_start"),
+    )
 
     df = lf.select("ctg", "start", "end", "rtype", "rlen").collect()
     dfs = []
@@ -151,18 +140,19 @@ def main():
             .filter(pl.col("rtype") == selected_repeat_type)
             .select("ctg", "start", "end", "rtype", "rlen")
         )
-        if ort == "rev":
-            df_ctg_repeats = df_ctg_repeats.reverse()
 
         # Merge adjacent rows within some dst
         all_rows: list[dict[str, Any]] = list(df_ctg_repeats.iter_rows(named=True))
         curr_pos = 0
+        chr_merge_repeat_dst_thr = merge_repeat_dst_thr.get(
+            chr_name, default_merge_repeat_dst_thr
+        )
         while True:
             try:
                 curr_row = all_rows[curr_pos]
                 next_row = all_rows[curr_pos + 1]
                 dst = next_row["start"] - curr_row["end"]
-                if dst < merge_repeat_dst_thr:
+                if dst < chr_merge_repeat_dst_thr:
                     new_row = {
                         "ctg": curr_row["ctg"],
                         "start": curr_row["start"],
@@ -178,9 +168,6 @@ def main():
             except IndexError:
                 break
 
-        if ort == "rev":
-            df_ctg_repeats = df_ctg_repeats.reverse()
-
         df_ctg_compressed_repeats = pl.DataFrame(
             all_rows, schema=["ctg", "start", "end", "rtype", "rlen"]
         )
@@ -188,26 +175,31 @@ def main():
             continue
 
         # If a chromosome separated by hsat/other repeat or has multiple arrays, set repeat bounds differently.
-        # * edge cases - use min and max coordinate of all repeats filtering smaller alpha-sat repeats.
-        # * single - use min and max coordinate of largest repeat.
-        if chr_name in CHRS_EDGE_CASES:
-            df_repeat_bounds = df_ctg_compressed_repeats.filter(
+        # * asat sep - all repeats filtering smaller alpha-sat repeats.
+        # * chr13/21 - largest repeat and 2 adjacent rows.
+        # * otherwise - largest repeat. single hor array.
+        if chr_name in CHRS_ASAT_SEP:
+            df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(
                 pl.col("rlen") >= 50_000
             )
+        elif chr_name in CHRS_13_21:
+            # Assumes that already correctly oriented!
+            # 2 repeats away for chr13/21
+            largest_rlen_row_num = df_ctg_compressed_repeats.with_row_index().filter(
+                pl.col("rlen") == pl.col("rlen").max()
+            )["index"][0]
+            df_ctg_compressed_repeats = (
+                df_ctg_compressed_repeats.with_row_index()
+                .filter(
+                    (pl.col("index") >= largest_rlen_row_num - 2)
+                    & (pl.col("index") <= largest_rlen_row_num)
+                )
+                .drop("index")
+            )
         else:
-            df_repeat_bounds = df_ctg_compressed_repeats.filter(
+            df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(
                 pl.col("rlen") == pl.col("rlen").max()
             )
-
-        # Min and max
-        repeats_edge_start = df_repeat_bounds.row(0)[1]
-        repeats_edge_end = df_repeat_bounds.row(-1)[2]
-
-        # Allow only repeats within repeat bounds set above.
-        df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(
-            (pl.col("start") >= repeats_edge_start)
-            & (pl.col("end") <= repeats_edge_end)
-        )
         dfs.append(df_ctg_compressed_repeats)
 
     if dfs:
