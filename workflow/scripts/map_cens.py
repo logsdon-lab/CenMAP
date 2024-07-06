@@ -102,15 +102,19 @@ def main():
             pl.col("matches") == pl.col("matches").max().over(["arm"])
         )
 
-        # Determine closeness to start and end of contig.
-
         # Reverse complement if needed.
         df_ort_check = df_ctg_pqarm_mapping.with_columns(
             exp_arm=pl.when(pl.col("query_start") == pl.col("query_start").min())
             .then(pl.lit("p-arm"))
             .otherwise(pl.lit("q-arm"))
         )
-        is_not_rc = (df_ort_check["arm"] == df_ort_check["exp_arm"]).all()
+        if df_ort_check.is_empty():
+            continue
+        elif df_ort_check.shape[0] == 1:
+            # Unable to determine without both arms. Assume already correctly oriented.
+            is_not_rc = True
+        else:
+            is_not_rc = (df_ort_check["arm"] == df_ort_check["exp_arm"]).all()
 
         if is_not_rc:
             adj_ctg_start = ctg_start

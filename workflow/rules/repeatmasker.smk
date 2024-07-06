@@ -205,10 +205,11 @@ rule format_add_control_repeatmasker_output:
         """
         # Copy file and append reference repeatmasker output.
         cp {input.sample_rm_output} {output} 2> {log}
-        {{ grep "chr" {input.ref_rm_output} | sed -e 's/chr/chm13_chr/g';}} >> {output} 2> {log}
+        grep "chr" {input.ref_rm_output} >> {output} 2> {log}
         """
 
 
+# TODO: Will need to be updated if another ref provided.
 rule reverse_complete_repeatmasker_output:
     input:
         rules.format_add_control_repeatmasker_output.output,
@@ -262,6 +263,6 @@ include: "fix_cens_w_repeatmasker.smk"
 
 rule repeatmasker_only:
     input:
-        # rules.merge_corrections_list.output,
-        # expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
+        rules.merge_corrections_list.output,
+        expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
         expand(rules.plot_og_cens_from_rm_by_chr.output, chr=CHROMOSOMES),

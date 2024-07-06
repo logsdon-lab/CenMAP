@@ -176,13 +176,16 @@ def main():
 
         # If a chromosome separated by hsat/other repeat or has multiple arrays, set repeat bounds differently.
         # * asat sep - all repeats filtering smaller alpha-sat repeats.
-        # * chr13/21 - largest repeat and 2 adjacent rows.
+        # * chr13/21 - largest repeat and 1 adjacent repeat.
         # * otherwise - largest repeat. single hor array.
         if chr_name in CHRS_ASAT_SEP:
             df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(
                 pl.col("rlen") >= 50_000
             )
         elif chr_name in CHRS_13_21:
+            df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(
+                pl.col("rlen") >= 50_000
+            )
             # Assumes that already correctly oriented!
             # 2 repeats away for chr13/21
             largest_rlen_row_num = df_ctg_compressed_repeats.with_row_index().filter(
@@ -191,7 +194,7 @@ def main():
             df_ctg_compressed_repeats = (
                 df_ctg_compressed_repeats.with_row_index()
                 .filter(
-                    (pl.col("index") >= largest_rlen_row_num - 2)
+                    (pl.col("index") >= largest_rlen_row_num - 1)
                     & (pl.col("index") <= largest_rlen_row_num)
                 )
                 .drop("index")

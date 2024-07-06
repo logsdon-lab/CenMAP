@@ -4,6 +4,7 @@
         "chr10": [[2000, null]]
     },
     "merge_repeat_dst_thr": {
+        "chr11": 200000,
         "chr15": 200000
     },
     "default_merge_repeat_dst_thr": 100000,
