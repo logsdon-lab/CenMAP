@@ -38,7 +38,7 @@ nucflag:
   output_dir: "results/dna_brnn/nucflag"
   tmp_dir: "/tmp"
   reads_ext: "fastq.gz"
-  config_nucflag: "config/nucflag.toml"
+  config_nucflag: "test/config/nucflag.toml"
   ignore_regions: "config/nucflag_ignore.bed"
   threads_aln: 1
   mem_nucflag: 4
