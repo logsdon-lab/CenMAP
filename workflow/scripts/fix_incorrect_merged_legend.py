@@ -26,6 +26,11 @@ def main() -> int:
         default=sys.stdout,
         type=argparse.FileType("wt"),
     )
+    ap.add_argument(
+        "--ignore_new_names",
+        help="Ignore and don't rename/remap names.",
+        action="store_true",
+    )
 
     args = ap.parse_args()
 
@@ -35,12 +40,15 @@ def main() -> int:
     with open(args.input_corrections) as cens_list_fh:
         reader_cens_renamed = csv.reader(cens_list_fh, delimiter="\t")
         for old, new, ort, is_partial in reader_cens_renamed:
-            if ort == "rev":
-                new = new.replace("chr", "rc-chr")
-
             # Legend uses contig name without coords
             new = new.partition(":")[0]
             old = old.partition(":")[0]
+
+            if ort == "rev":
+                new = new.replace("chr", "rc-chr")
+
+            if args.ignore_new_names:
+                new = old.replace("chr", "rc-chr")
 
             cens_renamed[old] = new
 

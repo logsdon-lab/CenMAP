@@ -110,9 +110,14 @@ def main():
         )
         if df_ort_check.is_empty():
             continue
+        # Either:
+        # * Mapping with pq arm covers same region
+        #   p| | |q (+)
+        #   q| | |p (-)
+        # * Unable to determine without both arms.
+        # Rely on solely aln strand information.
         elif df_ort_check.shape[0] == 1:
-            # Unable to determine without both arms. Assume already correctly oriented.
-            is_not_rc = True
+            is_not_rc = df_ort_check["strand"][0] == "+"
         else:
             is_not_rc = (df_ort_check["arm"] == df_ort_check["exp_arm"]).all()
 

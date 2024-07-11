@@ -91,7 +91,7 @@ rule map_collapse_cens:
             "{sm}_mapped_cens_rc.bed",
         ),
     params:
-        thr_ctg_len=1_000_000,
+        thr_ctg_len=0,
     conda:
         "../env/py.yaml"
     log:

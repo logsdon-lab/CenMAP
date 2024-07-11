@@ -22,6 +22,11 @@ def main() -> int:
         default=sys.stdout,
         type=argparse.FileType("wt"),
     )
+    ap.add_argument(
+        "--ignore_new_names",
+        help="Ignore and don't rename/remap names.",
+        action="store_true",
+    )
 
     args = ap.parse_args()
 
@@ -34,6 +39,9 @@ def main() -> int:
             if ort == "rev":
                 old = old.replace("chr", "rc-chr")
                 new = new.replace("chr", "rc-chr")
+
+            if args.ignore_new_names:
+                new = old
 
             cens_renamed[old] = new
             if is_partial == "true":

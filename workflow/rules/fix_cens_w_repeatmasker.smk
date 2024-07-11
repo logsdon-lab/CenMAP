@@ -14,7 +14,7 @@ rule check_cens_status:
         edge_perc_alr_thr=0.95,
         dst_perc_thr=0.3,
         # Edge-case for chrs whose repeats are small and broken up.
-        max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 30_000,
+        max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 50_000,
         # Only allow mapping changes to 13 and 21 if chr13 or chr21.
         restrict_13_21="--restrict_13_21",
     log:
@@ -94,6 +94,8 @@ rule fix_incorrect_merged_legend:
             "status",
             "{sm}_corrected_merged_legend.txt",
         ),
+    params:
+        ignore_new_names="--ignore_new_names",
     conda:
         "../env/py.yaml"
     log:
@@ -102,7 +104,8 @@ rule fix_incorrect_merged_legend:
         """
         python {input.script} \
         -ic {input.cens_correction_list} \
-        -l {input.merged_legend} > {output}
+        -l {input.merged_legend} \
+        {params.ignore_new_names} > {output}
         """
 
 
@@ -123,6 +126,8 @@ rule fix_incorrect_mapped_cens:
             "all",
             "all_corrected_cens.fa.out",
         ),
+    params:
+        ignore_new_names="--ignore_new_names",
     conda:
         "../env/py.yaml"
     log:
@@ -131,7 +136,8 @@ rule fix_incorrect_mapped_cens:
         """
         python {input.script} \
         -ic {input.cens_correction_list} \
-        -ir {input.reoriented_rm_out} > {output.corrected_rm_out} 2> {log}
+        -ir {input.reoriented_rm_out} \
+        {params.ignore_new_names} > {output.corrected_rm_out} 2> {log}
 
         cut -f 5 {output.corrected_rm_out} | sort | uniq > {output.corrected_cens_list}
         """
