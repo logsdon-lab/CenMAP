@@ -17,9 +17,12 @@ thr_peak_height_std_above = 4
 # Number of std below mean to include valley.
 thr_valley_height_std_below = 4
 
-# Positions with coverage below this percentile are considered misjoins.
-# ex. 0.001 => 0.1th percentile
-thr_misjoin_valley_height_perc_below = 0.000001
+# Valleys with coverage below this threshold are considered misjoins.
+# If float:
+# * ex. 0.1 => Valley where median is less than or equal to 10% of mean
+# If int:
+# * ex. 2 => Valleys with median below 2
+thr_misjoin_valley = 0.2
 
 # Group consecutive positions allowing a maximum gap of x.
 # Larger value groups more positions.
