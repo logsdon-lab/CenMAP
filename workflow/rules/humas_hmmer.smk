@@ -2,95 +2,17 @@
 include: "common.smk"
 
 
-rule fmt_correct_alr_regions:
-    input:
-        alr_fa=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "seq",
-            "{sm}_correct_ALR_regions.fa",
-        ),
-        legend=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "status",
-            "{sm}_corrected_merged_legend.txt",
-        ),
-    output:
-        fmt_alr_fa=temp(
-            os.path.join(
-                config["humas_hmmer"]["output_dir"],
-                "{sm}_fmt_correct_ALR_regions.{comp}.fa",
-            )
-        ),
-    run:
-        with open(str(input.legend)) as legend:
-            replacements = dict(tuple(l.strip().split()) for l in legend.readlines())
-
-        with (
-            open(str(input.alr_fa)) as input_fa,
-            open(str(output.fmt_alr_fa), "wt") as output_fa,
-        ):
-            skip_record = False
-            for line in input_fa.readlines():
-                if line.startswith(">"):
-                    # HG00171_chr22_h1tg000027l#1-26260313
-                    sm, chrm, record_id = line[1:].strip().rsplit("_", maxsplit=2)
-                    record_id, *delim_coords = record_id.partition(":")
-                    replacement = replacements.get(record_id, "")
-                    is_rc = "rc" in replacement
-                    if (
-                        (wildcards.comp == "rc" and not is_rc)
-                        or (wildcards.comp == "c" and is_rc)
-                        or replacement == ""
-                    ):
-                        skip_record = True
-                        continue
-                    output_fa.write(f">{replacement}{''.join(delim_coords)}\n")
-                else:
-                    if skip_record:
-                        skip_record = False
-                        continue
-                    output_fa.write(line)
-
-
-rule merge_correct_alr_regions:
-    input:
-        alr_fa=lambda wc: expand(
-            rules.fmt_correct_alr_regions.output, sm=SAMPLE_NAMES, comp=[wc.comp]
-        ),
-    output:
-        seq=os.path.join(
-            config["humas_hmmer"]["output_dir"],
-            "all_correct_ALR_regions.{comp}.fa",
-        ),
-        idx=os.path.join(
-            config["humas_hmmer"]["output_dir"],
-            "all_correct_ALR_regions.{comp}.fa.fai",
-        ),
-    log:
-        "logs/humas_hmmer/merge_correct_alr_regions_{comp}.log",
-    conda:
-        "../env/tools.yaml"
-    shell:
-        """
-        cat {input.alr_fa} > {output.seq} 2> {log}
-        if [ -s "{output.seq}" ]; then
-            samtools faidx {output.seq} 2> {log}
-        else
-            touch {output.idx}
-        fi
-        """
-
-
 rule extract_cens_for_humas_hmmer:
     input:
-        all_correct_alr_fa=expand(
-            rules.merge_correct_alr_regions.output.seq, comp=["c"]
+        fa=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "seq",
+            "all_complete_correct_cens.fa",
         ),
-        rc_all_correct_alr_fa=expand(
-            rules.merge_correct_alr_regions.output.seq, comp=["rc"]
-        ),
-        corrected_cens_list=os.path.join(
-            config["repeatmasker"]["output_dir"], "status", "corrected_{chr}_cens.list"
+        idx=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "seq",
+            "all_correct_cens.fa.fai",
         ),
     output:
         cens=os.path.join(config["humas_hmmer"]["output_dir"], "{chr}_cens.fa"),
@@ -101,8 +23,7 @@ rule extract_cens_for_humas_hmmer:
         "../env/tools.yaml"
     shell:
         """
-        seqtk subseq {input.all_correct_alr_fa} {input.corrected_cens_list} > {output.cens} 2> {log}
-        seqtk subseq {input.rc_all_correct_alr_fa} {input.corrected_cens_list} >> {output.cens} 2> {log}
+        seqtk subseq {input.fa} <(grep "{wildcards.chr}[:_]" {input.idx} | cut -f 1) > {output.cens} 2> {log}
         if [ -s "{output.cens}" ]; then
             samtools faidx {output.cens} 2> {log}
         else
@@ -173,7 +94,7 @@ rule run_humas_hmmer_for_anvil:
         unpack(humas_hmmer_outputs),
     output:
         touch(
-            os.path.join(config["humas_hmmer"]["input_dir"], "humas_hmmer_{chr}.done")
+            os.path.join(config["humas_hmmer"]["output_dir"], "humas_hmmer_{chr}.done")
         ),
 
 

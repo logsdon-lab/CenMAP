@@ -1,8 +1,15 @@
+include: "common.smk"
+
+
 # https://github.com/lh3/dna-nn/tree/master
 rule run_dna_brnn:
     input:
         model=config["dna_brnn"]["model"],
-        seqs=rules.extract_cens_regions.output.seq,
+        seqs=os.path.join(
+            config["ident_cen_ctgs"]["output_dir"],
+            "seq",
+            "{sm}_centromeric_regions.fa",
+        ),
     output:
         repeat_regions=os.path.join(
             config["dna_brnn"]["output_dir"],
@@ -32,7 +39,10 @@ rule run_dna_brnn:
 use rule run_dna_brnn as run_dna_brnn_ref_cens with:
     input:
         model=config["dna_brnn"]["model"],
-        seqs=rules.extract_ref_hor_arrays.output,
+        seqs=os.path.join(
+            config["extract_ref_hor_arrays"]["output_dir"],
+            f"{REF_NAME}.hor_arrays.{REF_CENS_EDGE_LEN}kbp.bed",
+        ),
     output:
         cens=os.path.join(
             config["dna_brnn"]["output_dir"], REF_NAME, f"{REF_NAME}_cens.trimmed.bed"
@@ -109,36 +119,6 @@ use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions w
         "../env/py.yaml"
 
 
-# Calculate the start and end *-terms
-# ex. chr2
-# awk -v OFS="\t" '{print $1, $2-(*467987), $3+(*522450), $3-$2}' | \
-rule get_dnabrnn_ref_cens_pos:
-    input:
-        script="workflow/scripts/get_cen_pos.py",
-        repeats=(
-            rules.run_dna_brnn_ref_cens.output
-            if config["dna_brnn"].get("ref_alr_file") is None
-            else config["dna_brnn"]["ref_alr_file"]
-        ),
-    output:
-        os.path.join(config["dna_brnn"]["output_dir"], REF_NAME, "{chr}_cens_data.json"),
-    log:
-        "logs/dna_brnn/get_dnabrnn_ref_{chr}_cens_data.log",
-    params:
-        repeat_type_filter=2,
-        repeat_len_thr=1000,
-    conda:
-        "../env/py.yaml"
-    shell:
-        # Read from stdin filtered ref alr repeats. Done separately from above because of formatting.
-        """
-        python {input.script} -o {output} -i &> {log} \
-        <(grep "{wildcards.chr}:" {input.repeats} | \
-        awk -v OFS="\\t" \
-        '{{len=$3-$2; rp_typ=$4; if (rp_typ=={params.repeat_type_filter} && len>{params.repeat_len_thr}) print}}')
-        """
-
-
 # /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py (modified bedminmax) \
 # -i chr2_tmp.fwd.bed | \
 # awk -v OFS="\t" '{print $1, $2, $3, $3-$2}' | \
@@ -148,7 +128,6 @@ rule get_dnabrnn_ref_cens_pos:
 rule aggregate_dnabrnn_alr_regions_by_chr:
     input:
         script="workflow/scripts/filter_cen_ctgs.py",
-        cen_pos=rules.get_dnabrnn_ref_cens_pos.output,
         added_ref_cens=rules.filter_dnabrnn_ref_cens_regions.output,
         sample_cens=lambda wc: expand(
             rules.filter_dnabrnn_sample_cens_regions.output,
@@ -174,6 +153,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         output_cols=" ".join(["chr", "start", "end", "repeat_type"]),
         grp_cols=" ".join(["chr", "repeat_type"]),
         sort_cols=" ".join(["chr", "start"]),
+        bp_edges=500_000,
         # dna-brnn output may not contain repeats from a chr.
         allow_empty="--allow_empty",
     log:
@@ -182,7 +162,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         "../env/py.yaml"
     # Aggregate and bedminmax all.
     # Select cols and calculate length.
-    # Add ~500 kbp on both ends.
+    # Add 500 kbp on both ends.
     # Take only repeats greater than some value.
     # Take abs value.
     shell:
@@ -194,9 +174,8 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
             -g {params.grp_cols} \
             -s {params.sort_cols} {params.allow_empty} | \
         awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2}}' | \
-        awk -v START_POS=$(jq .start {input.cen_pos}) \
-            -v END_POS=$(jq .end {input.cen_pos}) \
-            -v OFS="\\t" '{{print $1, $2-START_POS, $3+END_POS, $3-$2}}' | \
+        awk -v BP_EDGES={params.bp_edges} \
+            -v OFS="\\t" '{{print $1, $2-BP_EDGES, $3+BP_EDGES, $3-$2}}' | \
         awk '$4>{params.repeat_len_thr}' | \
         awk -v OFS="\\t" '$2<0 {{$2=0}}1';}} > {output} 2> {log}
         """

@@ -10,7 +10,7 @@ rule check_cens_status:
             config["repeatmasker"]["output_dir"], "status", "{chr}_cens_status.tsv"
         ),
     params:
-        edge_len=500_000,
+        edge_len=lambda wc: 250_000 if wc.chr in ["chr14"] else 500_000,
         edge_perc_alr_thr=0.95,
         dst_perc_thr=0.3,
         # Edge-case for chrs whose repeats are small and broken up.
@@ -35,45 +35,115 @@ rule check_cens_status:
         """
 
 
-rule create_correct_oriented_cens:
+# TODO: Create second bed with rc so can extract from original assembly.
+rule get_complete_correct_cens_bed:
     input:
-        rm_chr_out=rules.extract_rm_out_by_chr.output.rm_out_by_chr,
-        rm_rev_out=rules.reverse_complete_repeatmasker_output.output,
-        cens_correction_list=rules.check_cens_status.output.cens_status,
+        beds=expand(rules.get_valid_regions_for_rm.output, sm=SAMPLE_NAMES),
+        statuses=expand(rules.check_cens_status.output.cens_status, chr=CHROMOSOMES),
     output:
-        reoriented_rm_out=os.path.join(
+        complete_correct_cens_bed=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "status",
+            "all_complete_correct_cens.bed",
+        ),
+        partial_cens_list=os.path.join(
+            config["repeatmasker"]["output_dir"], "status", "all_partial_cens.list"
+        ),
+    log:
+        "logs/repeatmasker/get_complete_correct_cens_bed.log",
+    shell:
+        """
+        grep -f <(cat {input.statuses} | awk '{{
+            if ($4 == "false") {{
+                split($1, names, ":");
+                print names[1]
+            }} else {{
+                split($1, names, ":");
+                print names[1] >> "{output.partial_cens_list}"
+            }}
+        }}') <(cat {input.beds}) > {output.complete_correct_cens_bed}
+        """
+
+
+use rule extract_and_index_fa as extract_sm_complete_correct_cens with:
+    input:
+        fa=os.path.join(
+            config["concat_asm"]["output_dir"],
+            "{sm}",
+            "{sm}_regions.renamed.reort.fa",
+        ),
+        bed=rules.get_complete_correct_cens_bed.output.complete_correct_cens_bed,
+    output:
+        seq=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "seq",
+            "{sm}_complete_correct_cens.fa",
+        ),
+        idx=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "seq",
+            "{sm}_complete_correct_cens.fa.fai",
+        ),
+    params:
+        added_cmds="",
+    log:
+        "logs/repeatmasker/extract_alr_regions_repeatmasker_{sm}.log",
+
+
+rule merge_all_complete_correct_cens_fa:
+    input:
+        fa=expand(rules.extract_sm_complete_correct_cens.output.seq, sm=SAMPLE_NAMES),
+        idx=expand(rules.extract_sm_complete_correct_cens.output.idx, sm=SAMPLE_NAMES),
+    output:
+        fa=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "seq",
+            "all_complete_correct_cens.fa",
+        ),
+        idx=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "seq",
+            "all_correct_cens.fa.fai",
+        ),
+    conda:
+        "../env/tools.yaml"
+    log:
+        "logs/repeatmasker/merge_all_complete_correct_cens.log",
+    shell:
+        """
+        cat {input.fa} > {output.fa}
+        samtools faidx {output.fa} 2> {log}
+        """
+
+
+rule remove_partial_cens_rm_out:
+    input:
+        partial_cens_list=rules.get_complete_correct_cens_bed.output.partial_cens_list,
+        rm_out=rules.extract_rm_out_by_chr.output,
+    output:
+        corrected_rm_out=os.path.join(
             config["repeatmasker"]["output_dir"],
             "repeats",
             "all",
-            "reoriented_{chr}_cens.fa.out",
+            "complete_correct_{chr}_cens.fa.out",
         ),
     log:
-        "logs/fix_cens_w_repeatmasker/create_correct_oriented_{chr}_cens_list.log",
-    conda:
-        "../env/tools.yaml"
+        "logs/fix_cens_w_repeatmasker/fix_incorrect_mapped_{chr}_cens.log",
     shell:
         """
-        contigs_to_reverse=$(awk '{{ if ($3=="rev") {{ print $1 }} }}' {input.cens_correction_list} | sort | uniq)
-        joined_contigs_to_reverse=$(echo "${{contigs_to_reverse[*]}}" | tr '\\n' '|' | sed 's/.$//')
-        joined_contigs_to_reverse_rc=$(echo "${{joined_contigs_to_reverse[@]}}" | sed 's/chr/rc-chr/g' )
-
-        # If nothing to reverse, just copy file.
-        if [ -z $joined_contigs_to_reverse ]; then
-            cp {input.rm_chr_out} {output.reoriented_rm_out}
-        else
-            # non-matching so everything correctly oriented
-            grep -vE "$joined_contigs_to_reverse" {input.rm_chr_out} > {output.reoriented_rm_out}
-            grep -E "$joined_contigs_to_reverse_rc" {input.rm_rev_out} >> {output.reoriented_rm_out}
-        fi
+        grep -v -f {input.partial_cens_list} {input.rm_out} > {output}
         """
 
 
-rule merge_corrections_list:
+rule merge_all_complete_correct_cens_rm:
     input:
-        expand(rules.check_cens_status.output.cens_status, chr=CHROMOSOMES),
+        expand(rules.remove_partial_cens_rm_out.output, chr=CHROMOSOMES),
     output:
         os.path.join(
-            config["repeatmasker"]["output_dir"], "status", "all_cen_corrections.tsv"
+            config["repeatmasker"]["output_dir"],
+            "repeats",
+            "all",
+            "all_samples_and_ref_complete_correct_cens.fa.out",
         ),
     shell:
         """
@@ -81,102 +151,15 @@ rule merge_corrections_list:
         """
 
 
-rule fix_incorrect_merged_legend:
-    input:
-        script="workflow/scripts/fix_incorrect_merged_legend.py",
-        cens_correction_list=rules.merge_corrections_list.output,
-        merged_legend=os.path.join(
-            config["concat_asm"]["output_dir"], "{sm}", "{sm}_legend.txt"
-        ),
-    output:
-        corrected_legend=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "status",
-            "{sm}_corrected_merged_legend.txt",
-        ),
-    params:
-        ignore_new_names="--ignore_new_names",
-    conda:
-        "../env/py.yaml"
-    log:
-        "logs/fix_cens_w_repeatmasker/fix_incorrect_merged_legend_{sm}.log",
-    shell:
-        """
-        python {input.script} \
-        -ic {input.cens_correction_list} \
-        -l {input.merged_legend} \
-        {params.ignore_new_names} > {output}
-        """
-
-
-rule fix_incorrect_mapped_cens:
-    input:
-        script="workflow/scripts/fix_incorrect_mapped_cens.py",
-        cens_correction_list=rules.merge_corrections_list.output,
-        reoriented_rm_out=expand(
-            rules.create_correct_oriented_cens.output, chr=CHROMOSOMES
-        ),
-    output:
-        corrected_cens_list=os.path.join(
-            config["repeatmasker"]["output_dir"], "status", "all_corrected_cens.list"
-        ),
-        corrected_rm_out=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "all_corrected_cens.fa.out",
-        ),
-    params:
-        ignore_new_names="--ignore_new_names",
-    conda:
-        "../env/py.yaml"
-    log:
-        "logs/fix_cens_w_repeatmasker/fix_incorrect_mapped_cens.log",
-    shell:
-        """
-        python {input.script} \
-        -ic {input.cens_correction_list} \
-        -ir {input.reoriented_rm_out} \
-        {params.ignore_new_names} > {output.corrected_rm_out} 2> {log}
-
-        cut -f 5 {output.corrected_rm_out} | sort | uniq > {output.corrected_cens_list}
-        """
-
-
-rule split_corrected_rm_output:
-    input:
-        corrected_cens_list=rules.fix_incorrect_mapped_cens.output.corrected_cens_list,
-        corrected_rm_out=rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
-    output:
-        corrected_rm_out=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "corrected_{chr}_cens.fa.out",
-        ),
-        corrected_cens_list=os.path.join(
-            config["repeatmasker"]["output_dir"], "status", "corrected_{chr}_cens.list"
-        ),
-    log:
-        "logs/fix_cens_w_repeatmasker/split_corrected_{chr}_rm_output.log",
-    conda:
-        "../env/tools.yaml"
-    shell:
-        """
-        {{ grep "{wildcards.chr}[_:]" {input.corrected_rm_out} || true; }} > {output.corrected_rm_out}
-        {{ grep "{wildcards.chr}[_:]" {input.corrected_cens_list} || true; }} > {output.corrected_cens_list}
-        """
-
-
 rule plot_cens_from_rm_by_chr:
     input:
         script="workflow/scripts/repeatStructure_onlyRM.R",
-        rm_out=rules.split_corrected_rm_output.output.corrected_rm_out,
+        rm_out=rules.remove_partial_cens_rm_out.output,
     output:
         repeat_plot_by_chr=os.path.join(
             config["repeatmasker"]["output_dir"],
             "plot",
-            "{chr}_cens.corrected.pdf",
+            "{chr}_cens.pdf",
         ),
     log:
         "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_rm.log",
@@ -186,17 +169,3 @@ rule plot_cens_from_rm_by_chr:
         """
         Rscript {input.script} {input.rm_out} {output.repeat_plot_by_chr} 2> {log}
         """
-
-
-use rule plot_cens_from_rm_by_chr as plot_og_cens_from_rm_by_chr with:
-    input:
-        script="workflow/scripts/repeatStructure_onlyRM.R",
-        rm_out=rules.extract_rm_out_by_chr.output.rm_out_by_chr,
-    output:
-        repeat_plot_by_chr=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "plot",
-            "{chr}_cens.original.pdf",
-        ),
-    log:
-        "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_rm_og.log",

@@ -73,6 +73,7 @@ rule intersect_with_pq_arm:
         """
 
 
+# TODO: Don't rename sequence.
 rule map_collapse_cens:
     input:
         script="workflow/scripts/map_cens.py",
@@ -129,10 +130,40 @@ module rename_asm:
 use rule * from rename_asm as asm_*
 
 
-use rule extract_and_index_fa_w_rc_bed as extract_cens_regions with:
+# TODO:
+rule fix_ort_asm:
     input:
+        # This is the key. Update as go along.
         bed=rules.asm_create_renamed_bed_n_legend.output.regions_renamed,
         fa=rules.asm_rename_ctgs.output,
+        fai=rules.asm_index_renamed_ctgs.output,
+    output:
+        fa=os.path.join(
+            config["concat_asm"]["output_dir"], "{sm}", "{sm}_regions.renamed.reort.fa"
+        ),
+        faidx=os.path.join(
+            config["concat_asm"]["output_dir"],
+            "{sm}",
+            "{sm}_regions.renamed.reort.fa.fai",
+        ),
+    log:
+        "logs/ident_cen_ctgs/fix_ort_asm_{sm}.log",
+    conda:
+        "../env/tools.yaml"
+    shell:
+        """
+        # Reverse complement sequences and then get everything else.
+        cat <(seqtk subseq <(seqtk seq -r {input.fa}) <(grep "rc-" {input.bed} | cut -f 1)) \
+            <(seqtk subseq {input.fa} <(grep -v -f <(grep "rc-" {input.bed} | cut -f 1) {input.fai} | cut -f 1)) \
+        > {output.fa} 2> {log}
+        samtools faidx {output.fa} 2> {log}
+        """
+
+
+use rule extract_and_index_fa as extract_cens_regions with:
+    input:
+        bed=rules.asm_create_renamed_bed_n_legend.output.regions_renamed,
+        fa=rules.fix_ort_asm.output.fa,
     output:
         seq=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
@@ -154,6 +185,8 @@ rule ident_cen_ctgs_all:
     input:
         # Rename ctgs
         rules.asm_rename_ctg_all.input,
+        # Fix orientation.
+        expand(rules.fix_ort_asm.output, sm=SAMPLE_NAMES),
         expand(
             rules.extract_cens_regions.output,
             sm=SAMPLE_NAMES,

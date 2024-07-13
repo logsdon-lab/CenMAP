@@ -31,12 +31,12 @@ rule get_valid_regions_for_rm:
         """
 
 
-use rule extract_and_index_fa_w_rc_bed as extract_correct_alr_regions_rm with:
+use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
     input:
         fa=os.path.join(
             config["concat_asm"]["output_dir"],
             "{sm}",
-            "{sm}_regions.renamed.fa",
+            "{sm}_regions.renamed.reort.fa",
         ),
         bed=rules.get_valid_regions_for_rm.output,
     output:
@@ -253,8 +253,7 @@ rule extract_rm_out_by_chr:
         "../env/tools.yaml"
     shell:
         """
-        {{ grep "{wildcards.chr}_" {input.rm_out} || true; }}> {output.rm_out_by_chr} 2> {log}
-        {{ grep "{wildcards.chr}:" {input.rm_out} || true; }} >> {output.rm_out_by_chr} 2>> {log}
+        {{ grep "{wildcards.chr}[_:]" {input.rm_out} || true; }}> {output.rm_out_by_chr} 2> {log}
         """
 
 
@@ -263,6 +262,8 @@ include: "fix_cens_w_repeatmasker.smk"
 
 rule repeatmasker_only:
     input:
-        rules.merge_corrections_list.output,
+        rules.get_complete_correct_cens_bed.output,
+        expand(rules.extract_sm_complete_correct_cens.output, sm=SAMPLE_NAMES),
+        expand(rules.merge_all_complete_correct_cens_fa.output, sm=SAMPLE_NAMES),
+        expand(rules.merge_all_complete_correct_cens_rm.output, sm=SAMPLE_NAMES),
         expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
-        expand(rules.plot_og_cens_from_rm_by_chr.output, chr=CHROMOSOMES),

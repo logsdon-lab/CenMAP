@@ -8,7 +8,7 @@ from typing import Any
 
 # Reverse to not greedily match on chr2 instead of chr21
 CHRS = [*[f"chr{i}" for i in range(22, 0, -1)], "chrX", "chrY"]
-CHRS_ASAT_SEP = {"chr3", "chr4", "chr5", "chr7"}
+CHRS_ASAT_SEP = {"chr3", "chr4", "chr5"}
 CHRS_13_21 = {"chr13", "chr21"}
 ORTS = ["fwd", "rev"]
 RGX_CHR = re.compile("|".join(c for c in CHRS))

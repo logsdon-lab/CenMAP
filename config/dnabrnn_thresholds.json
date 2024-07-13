@@ -4,8 +4,11 @@
         "chr10": [[2000, null]]
     },
     "merge_repeat_dst_thr": {
+        "chr7": 500000,
         "chr11": 200000,
-        "chr15": 200000
+        "chr15": 200000,
+        "chr21": 200000,
+        "chr16": 50000
     },
     "default_merge_repeat_dst_thr": 100000,
     "default_repeat_len_thr": [1000, null]

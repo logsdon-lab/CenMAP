@@ -29,9 +29,9 @@ use rule extract_and_index_fa as extract_alr_region_ref_by_chr with:
         f"logs/extract_new_cens_ctgs/extract_alr_region_{REF_NAME}_{{chr}}.log",
 
 
-use rule extract_and_index_fa_w_rc_bed as extract_alr_region_sample_by_chr with:
+use rule extract_and_index_fa as extract_alr_region_sample_by_chr with:
     input:
-        fa=rules.asm_rename_ctgs.output,
+        fa=rules.fix_ort_asm.output.fa,
         bed=rules.aggregate_dnabrnn_alr_regions_by_chr.output,
     output:
         seq=temp(

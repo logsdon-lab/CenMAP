@@ -116,10 +116,18 @@ def main():
         #   q| | |p (-)
         # * Unable to determine without both arms.
         # Rely on solely aln strand information.
-        elif df_ort_check.shape[0] == 1:
+        elif (
+            df_ort_check.shape[0] == 1
+            or df_ort_check.select("reference_name", "reference_start", "reference_end")
+            .unique()
+            .shape[0]
+            == 1
+        ):
             is_not_rc = df_ort_check["strand"][0] == "+"
         else:
-            is_not_rc = (df_ort_check["arm"] == df_ort_check["exp_arm"]).all()
+            is_not_rc = (df_ort_check["arm"] == df_ort_check["exp_arm"]).all() or (
+                df_ort_check["strand"] != "-"
+            ).all()
 
         if is_not_rc:
             adj_ctg_start = ctg_start

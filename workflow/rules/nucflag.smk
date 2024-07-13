@@ -1,11 +1,18 @@
+include: "common.smk"
+
+
 NUCFLAG_CFG = {
     "samples": [
         {
             "name": sm,
-            "asm_fa": rules.asm_rename_ctgs.output,
+            "asm_fa": os.path.join(
+                config["concat_asm"]["output_dir"], sm, f"{sm}_regions.renamed.reort.fa"
+            ),
             "read_dir": os.path.join(config["nucflag"]["hifi_reads_dir"], sm),
             "read_ext": config["nucflag"]["reads_ext"],
-            "region_bed": rules.make_new_cens_bed_file.output.alr_bed,
+            "region_bed": os.path.join(
+                config["new_cens"]["output_dir"], "bed", f"{sm}_ALR_regions.bed"
+            ),
         }
         for sm in SAMPLE_NAMES
     ],

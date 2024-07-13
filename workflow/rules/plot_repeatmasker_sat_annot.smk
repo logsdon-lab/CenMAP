@@ -8,12 +8,11 @@ rule create_annotated_satellites:
             if config["repeatmasker"].get("ref_repeatmasker_output")
             else rules.run_repeatmasker_ref.output
         ),
-        # corrected_rm_out=rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
         corrected_rm_out=os.path.join(
             config["repeatmasker"]["output_dir"],
             "repeats",
             "all",
-            "all_corrected_cens.fa.out",
+            "all_samples_and_ref_complete_correct_cens.fa.out",
         ),
     output:
         os.path.join(
@@ -53,7 +52,7 @@ rule create_ct_track:
             config["repeatmasker"]["output_dir"],
             "repeats",
             "all",
-            "all_corrected_cens.fa.out",
+            "all_samples_and_ref_complete_correct_cens.fa.out",
         ),
     output:
         os.path.join(
