@@ -33,30 +33,24 @@ dna_brnn:
 new_cens:
   output_dir: "results/cens_new"
 
-nucflag:
-  hifi_reads_dir: "test/data/raw_data"
-  output_dir: "results/dna_brnn/nucflag"
-  tmp_dir: "/tmp"
-  reads_ext: "fastq.gz"
-  config_nucflag: "test/config/nucflag.toml"
-  ignore_regions: "config/nucflag_ignore.bed"
-  threads_aln: 1
-  mem_nucflag: 4
-  mem_aln: 4
-  processes_nucflag: 2
-  samtools_view_flag: 2308
+# nucflag:
+#   hifi_reads_dir: "test/data/raw_data"
+#   output_dir: "results/dna_brnn/nucflag"
+#   tmp_dir: "/tmp"
+#   reads_ext: "fastq.gz"
+#   config_nucflag: "test/config/nucflag.toml"
+#   ignore_regions: "config/nucflag_ignore.bed"
+#   threads_aln: 1
+#   mem_nucflag: 4
+#   mem_aln: 4
+#   processes_nucflag: 2
+#   samtools_view_flag: 2308
 
 repeatmasker:
   ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
   ref_repeatmasker_chrY_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   threads: 4
   output_dir: "results/repeatmasker"
-
-
-repeatmasker_sat_annot:
-  output_dir: "results/repeatmasker_sat_annot"
-  config_pattern_colors: "config/repeatmasker_sat_annot_colors.json"
-
 
 humas_hmmer:
   input_dir: "results/humas_hmmer/cens"
@@ -71,12 +65,15 @@ plot_hor_stv:
   mer_order:
     - small
     - large
+  sat_annot_colors: "config/repeatmasker_sat_annot_colors.json"
 
 cluster_cens:
   output_dir: "results/cluster_cens"
   mer_order: "small"
 
 calculate_hor_length:
+  chm1_hor_lengths: "data/annotations/chm1_hor_length.tsv"
+  chm13_hor_lengths: "data/annotations/chm13_hor_length.tsv"
   output_dir: "results/calculate_hor_length"
 
 count_complete_cens:

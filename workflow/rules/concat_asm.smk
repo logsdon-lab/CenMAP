@@ -8,7 +8,7 @@ rule concat_asm:
     params:
         assembly_fname_pattern=".*\.(fa|fasta)",
     resources:
-        mem=config["concat_asm"]["mem"],
+        mem=config["concat_asm"].get("mem", 4),
     log:
         "logs/concat_asm/concat_asm_{sm}.log",
     conda:

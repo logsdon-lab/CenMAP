@@ -51,7 +51,7 @@ use rule alignment from align_asm_to_ref as asm_ref_alignment with:
         # Take concat asm with all types included.
         query=rules.concat_asm.output,
     resources:
-        mem=config["align_asm_to_ref"]["mem"],
+        mem=config["align_asm_to_ref"].get("mem", 4),
 
 
 use rule alignment2 from align_asm_to_ref as asm_ref_alignment2 with:

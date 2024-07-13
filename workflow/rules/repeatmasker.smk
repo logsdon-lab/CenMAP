@@ -9,9 +9,15 @@ wildcard_constraints:
 
 rule get_valid_regions_for_rm:
     input:
-        bed=os.path.join(
-            config["nucflag"]["output_dir"],
-            "{sm}_cen_status.bed",
+        bed=(
+            os.path.join(
+                config["nucflag"]["output_dir"],
+                "{sm}_cen_status.bed",
+            )
+            if "nucflag" in config
+            else os.path.join(
+                config["new_cens"]["output_dir"], "bed", "{sm}_ALR_regions.bed"
+            )
         ),
     output:
         good_regions=os.path.join(
@@ -20,10 +26,14 @@ rule get_valid_regions_for_rm:
             "{sm}_valid_ALR_regions.bed",
         ),
     params:
+        omit_nucflag="nucflag" not in config,
         assembly_filter="good",
     shell:
         """
         awk -v OFS="\\t" '{{
+            if ("{params.omit_nucflag}" == "True") {{
+                $4="good"
+            }}
             if ($4 == "{params.assembly_filter}") {{
                 print $1, $2, $3, $3-$2, $4
             }}

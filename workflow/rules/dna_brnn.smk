@@ -18,7 +18,7 @@ rule run_dna_brnn:
         ),
     threads: config["dna_brnn"]["threads"]
     resources:
-        mem=config["dna_brnn"]["mem"],
+        mem=config["dna_brnn"].get("mem", 4),
     log:
         "logs/dna_brnn/dna_brnn_{sm}.log",
     benchmark:

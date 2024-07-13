@@ -61,7 +61,7 @@ rule get_complete_correct_cens_bed:
                 split($1, names, ":");
                 print names[1] >> "{output.partial_cens_list}"
             }}
-        }}') <(cat {input.beds}) > {output.complete_correct_cens_bed}
+        }}') <(cat {input.beds}) > {output.complete_correct_cens_bed} 2> {log}
         # If no partial cens.
         if [ ! -f {output.partial_cens_list} ]; then
             touch {output.partial_cens_list}
@@ -107,7 +107,7 @@ rule merge_all_complete_correct_cens_fa:
         idx=os.path.join(
             config["repeatmasker"]["output_dir"],
             "seq",
-            "all_correct_cens.fa.fai",
+            "all_complete_correct_cens.fa.fai",
         ),
     conda:
         "../env/tools.yaml"

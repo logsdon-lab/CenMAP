@@ -49,7 +49,7 @@ rule plot_cen_moddotplot:
             config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
         ),
         all_sat_annot_bed=os.path.join(
-            config["repeatmasker_sat_annot"]["output_dir"],
+            config["plot_hor_stv"]["output_dir"],
             "bed",
             "all_cens.annotation.bed",
         ),

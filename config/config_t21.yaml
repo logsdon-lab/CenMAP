@@ -1,16 +1,49 @@
-samples:
-- test_1
+chromosomes:
+  - "chr1"
+  - "chr2"
+  - "chr3"
+  - "chr4"
+  - "chr5"
+  - "chr6"
+  - "chr7"
+  - "chr8"
+  - "chr9"
+  - "chr10"
+  - "chr11"
+  - "chr12"
+  - "chr13"
+  - "chr14"
+  - "chr15"
+  - "chr16"
+  - "chr17"
+  - "chr18"
+  - "chr19"
+  - "chr20"
+  - "chr21"
+  - "chr22"
+  - "chrX"
+  - "chrY"
 
-align_asm_to_ref:
-  reference: "test/data/test.fasta"
-  threads: 4
+samples:
+  - AG16777
+  # - AG16778
+  # - AG16782
 
 concat_asm:
-  input_dir: "test/data/assemblies"
-  output_dir: "data/assemblies/combined"
+  # Expects {input_dir}/{sm}/*.gz
+  input_dir: "data/assemblies_link"
+  output_dir: "results/assemblies/combined"
+  mem: 20
+
+align_asm_to_ref:
+  # Output dir set to results
+  reference: "data/reference/T2T-CHM13v2.fasta"
+  threads: 4
+  mem: 60
 
 extract_ref_hor_arrays:
-  output_dir: "results/masked"
+  output_dir: "results/ref_hor_arrays"
+  # Add bp to extend edges of HOR array for alignment.
   added_bases: 0
 
 ident_cen_ctgs:
@@ -27,6 +60,7 @@ dna_brnn:
   # Optional.
   ref_alr_file: "data/annotations/chm13_cens.trimmed.bed"
   threads: 12
+  mem: 30
   thr_file: "config/dnabrnn_thresholds.json"
   full_alr_thr_file: "config/dnabrnn_full_alr_region_thresholds.json"
 
@@ -34,33 +68,35 @@ new_cens:
   output_dir: "results/cens_new"
 
 nucflag:
-  hifi_reads_dir: "test/data/raw_data"
-  output_dir: "results/dna_brnn/nucflag"
-  tmp_dir: "/tmp"
-  reads_ext: "bam"
+  hifi_reads_dir: "data/raw_data_link"
+  reads_ext: "fastq.gz"
+  output_dir: "results/nucflag"
+  tmp_dir: "temp"
   config_nucflag: "config/nucflag.toml"
   ignore_regions: "config/nucflag_ignore.bed"
-  threads_aln: 4
-  mem_nucflag: 50
-  mem_aln: 120
+  threads_aln: 12
   processes_nucflag: 12
+  mem_nucflag: 50
+  mem_aln: 70
   samtools_view_flag: 2308
 
 repeatmasker:
-  ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
   ref_repeatmasker_chrY_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
-  threads: 40
+  ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
+  threads: 12
   output_dir: "results/repeatmasker"
 
 humas_hmmer:
-  input_dir: "data/chr_cens"
-  output_dir: "output/"
+  # Dir where split cens placed.
+  input_dir: "results/humas_hmmer/cens"
+  output_dir: "results/humas_hmmer"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
-  threads: 30
-  model: "workflow/scripts/HumAS-HMMER_for_AnVIL/AS-HORs-hmmer3.3.2-120124.hmm"
+  threads: 8
+  # NOTE: Change this later to data/models/AS-HORs-hmmer3.0-170921.hmm!
+  model: "data/models/AS-HORs-hmmer3.0-170921.hmm"
 
 plot_hor_stv:
-  output_dir: "test/results/hor_stv"
+  output_dir: "results/hor_stv"
   chm1_stv: "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
   chm13_stv: "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
   # Reorder data to put 'large'-r or 'small'-r -mers on top.

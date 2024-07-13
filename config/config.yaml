@@ -84,10 +84,6 @@ repeatmasker:
   threads: 12
   output_dir: "results/repeatmasker"
 
-repeatmasker_sat_annot:
-  output_dir: "results/repeatmasker_sat_annot"
-  config_pattern_colors: "config/repeatmasker_sat_annot_colors.json"
-
 humas_hmmer:
   # Dir where split cens placed.
   input_dir: "results/humas_hmmer/cens"
@@ -106,6 +102,7 @@ plot_hor_stv:
   mer_order:
     - small
     - large
+  sat_annot_colors: "config/repeatmasker_sat_annot_colors.json"
 
 cluster_cens:
   output_dir: "results/cluster_cens"

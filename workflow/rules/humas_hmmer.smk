@@ -12,7 +12,7 @@ rule extract_cens_for_humas_hmmer:
         idx=os.path.join(
             config["repeatmasker"]["output_dir"],
             "seq",
-            "all_correct_cens.fa.fai",
+            "all_complete_correct_cens.fa.fai",
         ),
     output:
         cens=os.path.join(config["humas_hmmer"]["output_dir"], "{chr}_cens.fa"),
