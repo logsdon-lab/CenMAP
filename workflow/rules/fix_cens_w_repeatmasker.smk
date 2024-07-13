@@ -62,6 +62,10 @@ rule get_complete_correct_cens_bed:
                 print names[1] >> "{output.partial_cens_list}"
             }}
         }}') <(cat {input.beds}) > {output.complete_correct_cens_bed}
+        # If no partial cens.
+        if [ ! -f {output.partial_cens_list} ]; then
+            touch {output.partial_cens_list}
+        fi
         """
 
 
