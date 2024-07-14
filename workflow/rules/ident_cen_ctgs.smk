@@ -73,7 +73,6 @@ rule intersect_with_pq_arm:
         """
 
 
-# TODO: Don't rename sequence.
 rule map_collapse_cens:
     input:
         script="workflow/scripts/map_cens.py",
@@ -130,7 +129,6 @@ module rename_asm:
 use rule * from rename_asm as asm_*
 
 
-# TODO:
 rule fix_ort_asm:
     input:
         # This is the key. Update as go along.

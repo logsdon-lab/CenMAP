@@ -219,37 +219,6 @@ rule format_add_control_repeatmasker_output:
         """
 
 
-# TODO: Will need to be updated if another ref provided.
-rule reverse_complete_repeatmasker_output:
-    input:
-        rules.format_add_control_repeatmasker_output.output,
-    output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "all_samples_and_ref_correct_ALR_regions.rc.fa.out",
-        ),
-    log:
-        "logs/repeatmasker/reverse_complete_repeatmasker_output.log",
-    conda:
-        "../env/tools.yaml"
-    shell:
-        """
-        {{ tac {input} | awk -v OFS="\\t" '{{
-            match($5, ":(.+)-", starts);
-            match($5, ".*-(.+)$", ends);
-            if ($5 ~ !/chm13/) {{
-                new_start=ends[1]-starts[1]-$7+1;
-                new_end=ends[1]-starts[1]-$6+1;
-                $6=new_start;
-                $7=new_end;
-            }}
-            print
-        }}' | sed 's/chr/rc-chr/g' | grep -v "chm13";}} > {output} 2> {log}
-        """
-
-
 rule extract_rm_out_by_chr:
     input:
         rm_out=rules.format_add_control_repeatmasker_output.output,
@@ -272,8 +241,9 @@ include: "fix_cens_w_repeatmasker.smk"
 
 rule repeatmasker_only:
     input:
-        rules.get_complete_correct_cens_bed.output,
+        expand(rules.get_complete_correct_cens_bed.output, sm=SAMPLE_NAMES),
+        expand(rules.fix_ort_asm_final.output, sm=SAMPLE_NAMES),
         expand(rules.extract_sm_complete_correct_cens.output, sm=SAMPLE_NAMES),
         expand(rules.merge_all_complete_correct_cens_fa.output, sm=SAMPLE_NAMES),
-        expand(rules.merge_all_complete_correct_cens_rm.output, sm=SAMPLE_NAMES),
         expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
+        expand(rules.plot_cens_from_original_rm_by_chr.output, chr=CHROMOSOMES),
