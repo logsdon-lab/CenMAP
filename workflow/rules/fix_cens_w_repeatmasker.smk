@@ -16,7 +16,7 @@ rule check_cens_status:
         edge_perc_alr_thr=lambda wc: 0.8 if wc.chr in ["chr7"] else 0.95,
         dst_perc_thr=0.3,
         # Edge-case for chrs whose repeats are small and broken up.
-        max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 50_000,
+        max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 300_000,
         # Only allow mapping changes to 13 and 21 if chr13 or chr21.
         restrict_13_21="--restrict_13_21",
     log:
@@ -234,12 +234,13 @@ rule fix_cens_rm_out:
         """
         # Write everything but the partials and reversed cens.
         grep -v -f \
-            <(grep "{wildcards.chr}[_:]" {input.partial_cens_list} | cat - <(grep "{wildcards.chr}[_:]" {input.reverse_cens_key})) \
+            <(grep "{wildcards.chr}[_:]" {input.partial_cens_list} | cat - <(grep "{wildcards.chr}[_:]" {input.reverse_cens_key} | cut -f 1)) \
             {input.rm_out} > {output} 2> {log}
 
         while IFS='' read -r line; do
             original=$(echo "${{line}}" | awk '{{ print $1}}')
             new=$(echo "${{line}}" | awk '{{ print $2}}')
+            echo "Replacing ${{original}} with ${{new}} and recalculating coordinates." >> {log}
             # Then replace original name with new name and reverse the output.
             grep "${{original}}" {input.rm_out} | \
                 sed "s/${{original}}/${{new}}/g" | \
