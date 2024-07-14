@@ -10,9 +10,9 @@ rule check_cens_status:
             config["repeatmasker"]["output_dir"], "status", "{chr}_cens_status.tsv"
         ),
     params:
-        edge_len=lambda wc: 100_000
-        if wc.chr in ["chr4", "chr6", "chr14", "chrY"]
-        else 500_000,
+        edge_len=lambda wc: (
+            100_000 if wc.chr in ["chr4", "chr6", "chr14", "chrY"] else 500_000
+        ),
         edge_perc_alr_thr=lambda wc: 0.8 if wc.chr in ["chr7"] else 0.95,
         dst_perc_thr=0.3,
         # Edge-case for chrs whose repeats are small and broken up.
@@ -256,6 +256,22 @@ rule fix_cens_rm_out:
                     print \
                 }}' >> {output} 2> {log}
         done < <(grep "{wildcards.chr}[_:]" {input.reverse_cens_key})
+        """
+
+
+rule merge_complete_and_correct_rm_out:
+    input:
+        expand(rules.fix_cens_rm_out.output, chr=CHROMOSOMES),
+    output:
+        os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "repeats",
+            "all",
+            "all_samples_and_ref_complete_correct_cens.fa.out",
+        ),
+    shell:
+        """
+        cat {input} > {output}
         """
 
 

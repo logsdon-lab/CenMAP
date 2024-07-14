@@ -3,11 +3,7 @@ include: "common.smk"
 
 rule create_annotated_satellites:
     input:
-        ref_rm_out=(
-            config["repeatmasker"]["ref_repeatmasker_output"]
-            if config["repeatmasker"].get("ref_repeatmasker_output")
-            else rules.run_repeatmasker_ref.output
-        ),
+        ref_rm_out=config["repeatmasker"]["ref_repeatmasker_output"],
         corrected_rm_out=os.path.join(
             config["repeatmasker"]["output_dir"],
             "repeats",
@@ -43,11 +39,7 @@ rule create_annotated_satellites:
 
 rule create_ct_track:
     input:
-        ref_rm_out=(
-            config["repeatmasker"]["ref_repeatmasker_output"]
-            if config["repeatmasker"].get("ref_repeatmasker_output")
-            else rules.run_repeatmasker_ref.output
-        ),
+        ref_rm_out=config["repeatmasker"]["ref_repeatmasker_output"],
         corrected_rm_out=os.path.join(
             config["repeatmasker"]["output_dir"],
             "repeats",
