@@ -145,6 +145,8 @@ rule fix_ort_asm_final:
             "{sm}",
             "{sm}_regions.renamed.reort.final.fa.fai",
         ),
+    params:
+        tmp_fa="/tmp/{sm}_regions.renamed.reort.final.fa",
     conda:
         "../env/tools.yaml"
     log:
@@ -152,19 +154,19 @@ rule fix_ort_asm_final:
     shell:
         """
         # Get the reverse cens and reverse them.
-        # Get all the non-reversed cens
-        # Join them.
-        cat <(seqtk subseq {input.fa} \
-                <(grep -f <(cut -f 1 {input.reverse_cens_key}) {input.idx} | cut -f 1) 2> {log} | \
-                seqtk seq -r \
-            ) \
-            <(seqtk subseq {input.fa} \
-                <(grep -v -f <(cut -f 1 {input.reverse_cens_key}) {input.idx} | cut -f 1) 2>> {log} \
-            ) > {output.fa}
-
+        # Get all the non-reversed contigs.
+        seqtk subseq {input.fa} \
+            <(grep -f <(cut -f 1 {input.reverse_cens_key}) {input.idx} | cut -f 1) 2> {log} | \
+            seqtk seq -r >> {params.tmp_fa}
+        seqtk subseq {input.fa} \
+            <(grep -v -f <(cut -f 1 {input.reverse_cens_key}) {input.idx} | cut -f 1) 2>> {log} >> {params.tmp_fa}
         # Then replace the names.
-        seqkit replace -p '(\S+)' -r '{{kv}}' \
-        -k {input.reverse_cens_key} {input.fa} --keep-key > {output.fa} 2> {log}
+        if [ -s {input.reverse_cens_key} ]; then
+            seqkit replace -p '(\S+)' -r '{{kv}}' \
+            -k {input.reverse_cens_key} {params.tmp_fa} --keep-key > {output.fa} 2> {log}
+        else
+            mv {params.tmp_fa} {output.fa}
+        fi
         samtools faidx {output.fa} 2>> {log}
         """
 
