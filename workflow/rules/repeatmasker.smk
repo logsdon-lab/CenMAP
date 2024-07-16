@@ -60,8 +60,6 @@ use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
             "seq",
             "{sm}_correct_ALR_regions.fa.fai",
         ),
-    params:
-        added_cmds="",
     log:
         "logs/repeatmasker/extract_alr_regions_repeatmasker_{sm}.log",
 
@@ -74,15 +72,19 @@ rule rename_for_repeatmasker:
     input:
         fa=rules.extract_correct_alr_regions_rm.output.seq,
     output:
-        renamed_fa=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "seq",
-            "{sm}_correct_ALR_regions.renamed.fa",
+        renamed_fa=temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "seq",
+                "{sm}_correct_ALR_regions.renamed.fa",
+            )
         ),
-        renamed_fa_idx=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "seq",
-            "{sm}_correct_ALR_regions.renamed.fa.fai",
+        renamed_fa_idx=temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "seq",
+                "{sm}_correct_ALR_regions.renamed.fa.fai",
+            )
         ),
     params:
         prefix="seq",

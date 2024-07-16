@@ -23,8 +23,6 @@ use rule extract_and_index_fa as extract_alr_region_ref_by_chr with:
                 f"{REF_NAME}_{{chr}}_contigs.ALR.fa.fai",
             )
         ),
-    params:
-        added_cmds="",
     log:
         f"logs/extract_new_cens_ctgs/extract_alr_region_{REF_NAME}_{{chr}}.log",
 

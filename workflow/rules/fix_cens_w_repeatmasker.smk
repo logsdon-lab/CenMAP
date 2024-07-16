@@ -186,8 +186,6 @@ use rule extract_and_index_fa as extract_sm_complete_correct_cens with:
             "seq",
             "{sm}_complete_correct_cens.fa.fai",
         ),
-    params:
-        added_cmds="",
     log:
         "logs/fix_cens_w_repeatmasker/extract_alr_regions_repeatmasker_{sm}.log",
 

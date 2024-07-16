@@ -3,7 +3,10 @@ rule concat_asm:
         # Input directory per sample.
         sm_dir=os.path.join(config["concat_asm"]["input_dir"], "{sm}"),
     output:
-        os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fasta"),
+        fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
+        idx=os.path.join(
+            config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
+        ),
     # https://bioinf.shenwei.me/seqkit/usage/#rmdup
     params:
         assembly_fname_pattern=".*\.(fa|fasta)",
@@ -18,7 +21,8 @@ rule concat_asm:
         {{ cat \
         <(find {input.sm_dir} -regextype posix-egrep -regex "{params.assembly_fname_pattern}\.gz" -size +0 -exec zcat {{}} + ) \
         <(find {input.sm_dir} -regextype posix-egrep -regex "{params.assembly_fname_pattern}" -size +0 -exec cat {{}} + ) | \
-        seqkit rmdup;}} > {output} 2> {log}
+        seqkit rmdup;}} > {output.fa} 2> {log}
+        samtools faidx {output.fa} 2> {log}
         """
 
 

@@ -4,7 +4,7 @@ with open(ASM_TABLE, "wt") as tbl_fh:
     tbl_fh.write("sample\tasm\n")
     for sm in SAMPLE_NAMES:
         concat_asm_fa = os.path.join(
-            config["concat_asm"]["output_dir"], f"{sm}-asm-comb-dedup.fasta"
+            config["concat_asm"]["output_dir"], f"{sm}-asm-comb-dedup.fa"
         )
         tbl_fh.write(f"{sm}\t{concat_asm_fa}\n")
 
@@ -49,7 +49,7 @@ use rule alignment from align_asm_to_ref as asm_ref_alignment with:
     input:
         ref=rules.extract_ref_hor_arrays.output.seq,
         # Take concat asm with all types included.
-        query=rules.concat_asm.output,
+        query=rules.concat_asm.output.fa,
     resources:
         mem=config["align_asm_to_ref"].get("mem", 4),
 
@@ -57,7 +57,7 @@ use rule alignment from align_asm_to_ref as asm_ref_alignment with:
 use rule alignment2 from align_asm_to_ref as asm_ref_alignment2 with:
     input:
         ref_fasta=rules.extract_ref_hor_arrays.output.seq,
-        query=rules.concat_asm.output,
+        query=rules.concat_asm.output.fa,
         # Weird. Blank if passing reference rule output from above. Use string instead.
         aln="temp/{ref}/{sm}.bam",
 

@@ -111,7 +111,7 @@ rule map_collapse_cens:
 RENAME_ASM_CFG = {
     "bed_input_regions": rules.map_collapse_cens.output.resolved_cen_regions_rc,
     "fa_assembly": os.path.join(
-        config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fasta"
+        config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"
     ),
     "output_dir": os.path.join(config["concat_asm"]["output_dir"], "{sm}"),
     "samples": SAMPLE_NAMES,
