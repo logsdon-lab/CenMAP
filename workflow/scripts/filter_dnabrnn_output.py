@@ -4,7 +4,7 @@ import json
 import argparse
 import polars as pl
 
-from enum import StrEnum, auto
+from enum import Enum, auto
 from typing import Any
 
 
@@ -17,16 +17,16 @@ RGX_CHR = re.compile("|".join(c for c in CHRS))
 DEF_MERGE_REPEAT_DST_THR = 100_000
 DEF_REPEAT_LEN_THR = [1_000, None]
 DEF_REPEAT_TYPE = 2
+DEF_COMP_REPEAT_LEN_THR = 100_000
 
-
-class MergeMode(StrEnum):
+class MergeMode(Enum):
     """
     Limit bp that can be merged.
     """
     NoLimit = auto()
     Limit = auto()
 
-class MergeOrt(StrEnum):
+class MergeOrt(Enum):
     Fwd = auto()
     Rev = auto()
 
@@ -104,11 +104,11 @@ def main():
     )
     merge_mode = thresholds.get("merge_mode", {})
     default_merge_mode = thresholds.get(
-        "default_merge_mode", MergeMode.NoLimit
+        "default_merge_mode", "NoLimit"
     )
     merge_ort = thresholds.get("merge_ort", {})
     default_merge_ort = thresholds.get(
-        "default_merge_ort", MergeOrt.Fwd
+        "default_merge_ort", "Fwd"
     )
     # Parse contig start and stop coords.
     # Only one ':' should be in full contig name.
@@ -135,11 +135,11 @@ def main():
     df = lf.select("ctg", "start", "end", "rtype", "rlen").collect()
     dfs = []
 
-    for df_ctg_name, df_ctg in df.group_by(["ctg"]):
-        df_ctg_name = df_ctg_name[0]
+    for ctg_name, df_ctg in df.group_by(["ctg"]):
+        ctg_name = ctg_name[0]
         chr_len_thr_exprs = []
 
-        if mtch_chr_name := re.search(RGX_CHR, df_ctg_name):
+        if mtch_chr_name := re.search(RGX_CHR, ctg_name):
             chr_name = mtch_chr_name.group().strip("_")
             if chr_name != selected_chr:
                 continue
@@ -163,7 +163,7 @@ def main():
 
         # Merge adjacent rows within some dst
         chr_merge_ort = merge_ort.get(chr_name, default_merge_ort)
-        if chr_merge_ort == MergeOrt.Rev:
+        if MergeOrt[chr_merge_ort] == MergeOrt.Rev:
             iter_rows = df_ctg_repeats.reverse().iter_rows(named=True)
         else:
             iter_rows = df_ctg_repeats.iter_rows(named=True)
@@ -177,7 +177,7 @@ def main():
             try:
                 curr_row = all_rows[curr_pos]
                 next_row = all_rows[curr_pos + 1]
-                if chr_merge_ort == MergeOrt.Fwd:
+                if MergeOrt[chr_merge_ort] == MergeOrt.Fwd:
                     dst = next_row["start"] - curr_row["end"]
                     start, end = curr_row["start"], next_row["end"]
                     rlen =  next_row["end"] - curr_row["start"]
@@ -199,7 +199,7 @@ def main():
                     all_rows.insert(curr_pos, new_row)
 
                     # Reduce distance that can be merged.
-                    if chr_merge_mode == MergeMode.Limit:
+                    if MergeMode[chr_merge_mode] == MergeMode.Limit:
                         chr_merge_repeat_dst_thr -= dst
                 else:
                     curr_pos += 1
@@ -209,7 +209,7 @@ def main():
         df_ctg_compressed_repeats = pl.DataFrame(
             all_rows, schema=["ctg", "start", "end", "rtype", "rlen"]
         )
-        if chr_merge_ort == MergeOrt.Rev:
+        if MergeOrt[chr_merge_ort] == MergeOrt.Rev:
             df_ctg_compressed_repeats = df_ctg_compressed_repeats.reverse()
 
         if df_ctg_compressed_repeats.is_empty():
@@ -221,16 +221,21 @@ def main():
         # * otherwise - largest repeat. single hor array.
         if chr_name in CHRS_ASAT_SEP:
             df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(
-                pl.col("rlen") >= 100_000
+                pl.col("rlen") >= DEF_COMP_REPEAT_LEN_THR
             )
         elif chr_name in CHRS_13_21:
             df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(
-                pl.col("rlen") >= 100_000
+                pl.col("rlen") >= DEF_COMP_REPEAT_LEN_THR
             ).with_row_index()
             df_largest_rlen_row = df_ctg_compressed_repeats.filter(
                 pl.col("rlen") == pl.col("rlen").max()
             )
-            largest_rlen_row_num = df_largest_rlen_row["index"][0]
+            try:
+                largest_rlen_row_num = df_largest_rlen_row["index"][0]
+            except IndexError:
+                sys.stderr.write(f"{ctg_name} doesn't have a alpha-satellite repeat larger than {DEF_COMP_REPEAT_LEN_THR:,} bp.\n")
+                continue
+
             # 1 repeats away for main HOR array chr13/21
             # Get side that trims the most.
             if df_ctg_compressed_repeats["index"].median() > largest_rlen_row_num:
