@@ -3,7 +3,10 @@ include: "common.smk"
 
 rule get_stv_row_from_humas_hmmer_out:
     input:
-        humas_hmmer_done=rules.run_humas_hmmer_for_anvil.output,
+        humas_hmmer_done=os.path.join(
+            config["humas_hmmer"]["output_dir"],
+            "humas_hmmer_{chr}.done"
+        ),
         script_filter_live_hor="workflow/scripts/stv_fix/scripts/live_HORs_filter.py",
         script_mon_to_stv="workflow/scripts/stv_fix/scripts/mon2stv.py",
     output:

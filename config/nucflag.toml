@@ -22,7 +22,7 @@ thr_valley_height_std_below = 2
 # * ex. 0.1 => Valley where median is less than or equal to 10% of mean
 # If int:
 # * ex. 2 => Valleys with median below 2
-thr_misjoin_valley = 3
+thr_misjoin_valley = 2
 
 # Group consecutive positions allowing a maximum gap of x.
 # Larger value groups more positions.
@@ -43,7 +43,7 @@ thr_peak_height_std_above = 4
 group_distance = 30_000
 
 # Min group size.
-thr_min_group_size = 3
+thr_min_group_size = 5
 
 # Het ratio to consider second group a collapse if no overlaps in peaks found.
 thr_collapse_het_ratio = 0.2

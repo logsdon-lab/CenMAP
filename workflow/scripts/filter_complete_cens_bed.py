@@ -48,9 +48,13 @@ def main():
 
     args = ap.parse_args()
 
-    df_bed = pl.read_csv(
-        args.infile, new_columns=INFILE_COLS, has_header=False, separator="\t"
-    )
+    try:
+        df_bed = pl.read_csv(
+            args.infile, new_columns=INFILE_COLS, has_header=False, separator="\t"
+        )
+    except pl.exceptions.NoDataError:
+        return
+
     df_fai = (
         pl.read_csv(args.lengths, has_header=False, separator="\t")
         .rename({"column_1": "name", "column_2": "length"})

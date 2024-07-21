@@ -16,7 +16,7 @@ rule check_cens_status:
         edge_perc_alr_thr=lambda wc: 0.8 if wc.chr in ["chr7"] else 0.95,
         dst_perc_thr=0.3,
         # Edge-case for chrs whose repeats are small and broken up.
-        max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 300_000,
+        max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 250_000,
         # Only allow mapping changes to 13 and 21 if chr13 or chr21.
         restrict_13_21="--restrict_13_21",
     log:
@@ -145,27 +145,28 @@ rule fix_ort_asm_final:
             "{sm}",
             "{sm}_regions.renamed.reort.final.fa.fai",
         ),
-    params:
-        tmp_fa="/tmp/{sm}_regions.renamed.reort.final.fa",
     conda:
         "../env/tools.yaml"
     log:
-        "logs/fix_cens_w_repeatmasker/fix_{sm }_asm_orientation.log",
+        "logs/fix_cens_w_repeatmasker/fix_{sm}_asm_orientation.log",
     shell:
         """
         # Get the reverse cens and reverse them.
         # Get all the non-reversed contigs.
-        seqtk subseq {input.fa} \
-            <(grep -f <(cut -f 1 {input.reverse_cens_key}) {input.idx} | cut -f 1) 2> {log} | \
-            seqtk seq -r >> {params.tmp_fa}
-        seqtk subseq {input.fa} \
-            <(grep -v -f <(cut -f 1 {input.reverse_cens_key}) {input.idx} | cut -f 1) 2>> {log} >> {params.tmp_fa}
         # Then replace the names.
         if [ -s {input.reverse_cens_key} ]; then
             seqkit replace -p '(\S+)' -r '{{kv}}' \
-            -k {input.reverse_cens_key} {params.tmp_fa} --keep-key > {output.fa} 2> {log}
+            -k {input.reverse_cens_key} \
+            <(cat \
+                <(seqtk subseq {input.fa} \
+                    <(grep -f <(cut -f 1 {input.reverse_cens_key}) {input.idx} | cut -f 1) | \
+                    seqtk seq -r) \
+                <(seqtk subseq {input.fa} \
+                    <(grep -v -f <(cut -f 1 {input.reverse_cens_key}) {input.idx} | cut -f 1)) \
+            ) \
+            --keep-key > {output.fa} 2> {log}
         else
-            mv {params.tmp_fa} {output.fa}
+            cp {input.fa} {output.fa}
         fi
         samtools faidx {output.fa} 2>> {log}
         """
@@ -256,22 +257,6 @@ rule fix_cens_rm_out:
                     print \
                 }}' >> {output} 2> {log}
         done < <(grep "{wildcards.chr}[_:]" {input.reverse_cens_key})
-        """
-
-
-rule merge_complete_and_correct_rm_out:
-    input:
-        expand(rules.fix_cens_rm_out.output, chr=CHROMOSOMES),
-    output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "all_samples_and_ref_complete_correct_cens.fa.out",
-        ),
-    shell:
-        """
-        cat {input} > {output}
         """
 
 
