@@ -10,11 +10,13 @@ rule check_cens_status:
             config["repeatmasker"]["output_dir"], "status", "{chr}_cens_status.tsv"
         ),
     params:
-        edge_len=lambda wc: 100_000 if wc.chr != "chr16" else 300_000,
-        edge_perc_alr_thr=lambda wc: 0.70 if wc.chr != "chr16" else 0.95,
+        edge_len=lambda wc: (
+            100_000 if wc.chr in ["chr4", "chr6", "chr14", "chrY"] else 500_000
+        ),
+        edge_perc_alr_thr=lambda wc: 0.8 if wc.chr in ["chr7"] else 0.95,
         dst_perc_thr=0.3,
         # Edge-case for chrs whose repeats are small and broken up.
-        max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 30_000,
+        max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 250_000,
         # Only allow mapping changes to 13 and 21 if chr13 or chr21.
         restrict_13_21="--restrict_13_21",
     log:
@@ -35,142 +37,238 @@ rule check_cens_status:
         """
 
 
-rule create_correct_oriented_cens:
+rule get_cen_corrections_lists:
     input:
-        rm_chr_out=rules.extract_rm_out_by_chr.output.rm_out_by_chr,
-        rm_rev_out=rules.reverse_complete_repeatmasker_output.output,
-        cens_correction_list=rules.check_cens_status.output.cens_status,
+        statuses=expand(rules.check_cens_status.output.cens_status, chr=CHROMOSOMES),
     output:
-        reoriented_rm_out=os.path.join(
+        correct_cens_list=os.path.join(
             config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "reoriented_{chr}_cens.fa.out",
+            "status",
+            "all_complete_correct_cens.list",
+        ),
+        # (original_name, new_name)
+        reverse_cens_key=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "status",
+            "all_reverse_cens.tsv",
+        ),
+        partial_cens_list=os.path.join(
+            config["repeatmasker"]["output_dir"], "status", "all_partial_cens.list"
         ),
     log:
-        "logs/fix_cens_w_repeatmasker/create_correct_oriented_{chr}_cens_list.log",
-    conda:
-        "../env/tools.yaml"
+        "logs/fix_cens_w_repeatmasker/get_complete_correct_cens_bed.log",
     shell:
         """
-        contigs_to_reverse=$(awk '{{ if ($3=="rev") {{ print $1 }} }}' {input.cens_correction_list} | sort | uniq)
-        joined_contigs_to_reverse=$(echo "${{contigs_to_reverse[*]}}" | tr '\\n' '|' | sed 's/.$//')
-        joined_contigs_to_reverse_rc=$(echo "${{joined_contigs_to_reverse[@]}}" | sed 's/chr/rc-chr/g' )
-
-        # If nothing to reverse, just copy file.
-        if [ -z $joined_contigs_to_reverse ]; then
-            cp {input.rm_chr_out} {output.reoriented_rm_out}
-        else
-            # non-matching so everything correctly oriented
-            grep -vE "$joined_contigs_to_reverse" {input.rm_chr_out} > {output.reoriented_rm_out}
-            grep -E "$joined_contigs_to_reverse_rc" {input.rm_rev_out} >> {output.reoriented_rm_out}
+        cat {input.statuses} | awk -v OFS="\t" '{{
+            split($1, names, ":");
+            if ($4 == "false") {{
+                if ($3 == "fwd") {{
+                    print names[1] >> "{output.correct_cens_list}"
+                }} else {{
+                    # 1. rc-chrX -> rc-rc-chrX (chrX)
+                    # 2. rc-rc-chrX -> chrX
+                    new_name=names[1]
+                    gsub("chr", "rc-chr", new_name)
+                    gsub("rc-rc-", "", new_name)
+                    print names[1],new_name >> "{output.reverse_cens_key}"
+                }}
+            }} else {{
+                print names[1] >> "{output.partial_cens_list}"
+            }}
+        }}' 2> {log}
+        if [ ! -f {output.partial_cens_list} ]; then
+            echo "No partial cens. Creating empty file." > {log}
+            touch {output.partial_cens_list}
+        fi
+        if [ ! -f {output.reverse_cens_key} ]; then
+            echo "No cens to reverse. Creating empty file." > {log}
+            touch {output.reverse_cens_key}
         fi
         """
 
 
-rule merge_corrections_list:
+rule get_complete_correct_cens_bed:
     input:
-        expand(rules.check_cens_status.output.cens_status, chr=CHROMOSOMES),
-    output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"], "status", "all_cen_corrections.tsv"
+        script="workflow/scripts/filter_complete_cens_bed.py",
+        bed=rules.get_valid_regions_for_rm.output,
+        # Need lengths to determine coordinates for reversed contigs
+        fai=os.path.join(
+            config["concat_asm"]["output_dir"],
+            "{sm}",
+            "{sm}_regions.renamed.reort.fa.fai",
         ),
-    shell:
-        """
-        cat {input} > {output}
-        """
-
-
-rule fix_incorrect_merged_legend:
-    input:
-        script="workflow/scripts/fix_incorrect_merged_legend.py",
-        cens_correction_list=rules.merge_corrections_list.output,
-        merged_legend=os.path.join(
-            config["concat_asm"]["output_dir"], "{sm}", "{sm}_legend.txt"
-        ),
+        correct_cens_list=rules.get_cen_corrections_lists.output.correct_cens_list,
+        partial_cens_list=rules.get_cen_corrections_lists.output.partial_cens_list,
+        reverse_cens_key=rules.get_cen_corrections_lists.output.reverse_cens_key,
     output:
-        corrected_legend=os.path.join(
+        complete_correct_cens_bed=os.path.join(
             config["repeatmasker"]["output_dir"],
-            "status",
-            "{sm}_corrected_merged_legend.txt",
+            "bed",
+            "{sm}_complete_correct_ALR_regions.bed",
         ),
     conda:
         "../env/py.yaml"
     log:
-        "logs/fix_cens_w_repeatmasker/fix_incorrect_merged_legend_{sm}.log",
+        "logs/fix_cens_w_repeatmasker/get_complete_correct_{sm}_cens_bed.log",
     shell:
         """
         python {input.script} \
-        -ic {input.cens_correction_list} \
-        -l {input.merged_legend} > {output}
+        -i {input.bed} \
+        -l {input.fai} \
+        -c {input.correct_cens_list} \
+        -p {input.partial_cens_list} \
+        -r {input.reverse_cens_key} > {output} 2> {log}
         """
 
 
-rule fix_incorrect_mapped_cens:
+rule fix_ort_asm_final:
     input:
-        script="workflow/scripts/fix_incorrect_mapped_cens.py",
-        cens_correction_list=rules.merge_corrections_list.output,
-        reoriented_rm_out=expand(
-            rules.create_correct_oriented_cens.output, chr=CHROMOSOMES
+        fa=os.path.join(
+            config["concat_asm"]["output_dir"],
+            "{sm}",
+            "{sm}_regions.renamed.reort.fa",
         ),
+        idx=os.path.join(
+            config["concat_asm"]["output_dir"],
+            "{sm}",
+            "{sm}_regions.renamed.reort.fa.fai",
+        ),
+        reverse_cens_key=rules.get_cen_corrections_lists.output.reverse_cens_key,
     output:
-        corrected_cens_list=os.path.join(
-            config["repeatmasker"]["output_dir"], "status", "all_corrected_cens.list"
+        fa=os.path.join(
+            config["concat_asm"]["output_dir"],
+            "{sm}",
+            "{sm}_regions.renamed.reort.final.fa",
         ),
-        corrected_rm_out=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "all_corrected_cens.fa.out",
+        idx=os.path.join(
+            config["concat_asm"]["output_dir"],
+            "{sm}",
+            "{sm}_regions.renamed.reort.final.fa.fai",
         ),
-    conda:
-        "../env/py.yaml"
-    log:
-        "logs/fix_cens_w_repeatmasker/fix_incorrect_mapped_cens.log",
-    shell:
-        """
-        python {input.script} \
-        -ic {input.cens_correction_list} \
-        -ir {input.reoriented_rm_out} > {output.corrected_rm_out} 2> {log}
-
-        cut -f 5 {output.corrected_rm_out} | sort | uniq > {output.corrected_cens_list}
-        """
-
-
-rule split_corrected_rm_output:
-    input:
-        corrected_cens_list=rules.fix_incorrect_mapped_cens.output.corrected_cens_list,
-        corrected_rm_out=rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
-    output:
-        corrected_rm_out=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "corrected_{chr}_cens.fa.out",
-        ),
-        corrected_cens_list=os.path.join(
-            config["repeatmasker"]["output_dir"], "status", "corrected_{chr}_cens.list"
-        ),
-    log:
-        "logs/fix_cens_w_repeatmasker/split_corrected_{chr}_rm_output.log",
     conda:
         "../env/tools.yaml"
+    log:
+        "logs/fix_cens_w_repeatmasker/fix_{sm}_asm_orientation.log",
     shell:
         """
-        {{ grep "{wildcards.chr}[_:]" {input.corrected_rm_out} || true; }} > {output.corrected_rm_out}
-        {{ grep "{wildcards.chr}[_:]" {input.corrected_cens_list} || true; }} > {output.corrected_cens_list}
+        # Get the reverse cens and reverse them.
+        # Get all the non-reversed contigs.
+        # Then replace the names.
+        if [ -s {input.reverse_cens_key} ]; then
+            seqkit replace -p '(\S+)' -r '{{kv}}' \
+            -k {input.reverse_cens_key} \
+            <(cat \
+                <(seqtk subseq {input.fa} \
+                    <(grep -f <(cut -f 1 {input.reverse_cens_key}) {input.idx} | cut -f 1) | \
+                    seqtk seq -r) \
+                <(seqtk subseq {input.fa} \
+                    <(grep -v -f <(cut -f 1 {input.reverse_cens_key}) {input.idx} | cut -f 1)) \
+            ) \
+            --keep-key > {output.fa} 2> {log}
+        else
+            cp {input.fa} {output.fa}
+        fi
+        samtools faidx {output.fa} 2>> {log}
+        """
+
+
+use rule extract_and_index_fa as extract_sm_complete_correct_cens with:
+    input:
+        fa=rules.fix_ort_asm_final.output.fa,
+        bed=rules.get_complete_correct_cens_bed.output.complete_correct_cens_bed,
+    output:
+        seq=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "seq",
+            "{sm}_complete_correct_cens.fa",
+        ),
+        idx=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "seq",
+            "{sm}_complete_correct_cens.fa.fai",
+        ),
+    log:
+        "logs/fix_cens_w_repeatmasker/extract_alr_regions_repeatmasker_{sm}.log",
+
+
+rule merge_all_complete_correct_cens_fa:
+    input:
+        fa=expand(rules.extract_sm_complete_correct_cens.output.seq, sm=SAMPLE_NAMES),
+        idx=expand(rules.extract_sm_complete_correct_cens.output.idx, sm=SAMPLE_NAMES),
+    output:
+        fa=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "seq",
+            "all_complete_correct_cens.fa",
+        ),
+        idx=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "seq",
+            "all_complete_correct_cens.fa.fai",
+        ),
+    conda:
+        "../env/tools.yaml"
+    log:
+        "logs/fix_cens_w_repeatmasker/merge_all_complete_correct_cens.log",
+    shell:
+        """
+        cat {input.fa} > {output.fa}
+        samtools faidx {output.fa} 2> {log}
+        """
+
+
+rule fix_cens_rm_out:
+    input:
+        partial_cens_list=rules.get_cen_corrections_lists.output.partial_cens_list,
+        reverse_cens_key=rules.get_cen_corrections_lists.output.reverse_cens_key,
+        rm_out=rules.extract_rm_out_by_chr.output,
+    output:
+        corrected_rm_out=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "repeats",
+            "all",
+            "complete_correct_{chr}_cens.fa.out",
+        ),
+    log:
+        "logs/fix_cens_w_repeatmasker/fix_incorrect_mapped_{chr}_cens.log",
+    shell:
+        """
+        # Write everything but the partials and reversed cens.
+        grep -v -f \
+            <(grep "{wildcards.chr}[_:]" {input.partial_cens_list} | cat - <(grep "{wildcards.chr}[_:]" {input.reverse_cens_key} | cut -f 1)) \
+            {input.rm_out} > {output} 2> {log}
+
+        while IFS='' read -r line; do
+            original=$(echo "${{line}}" | awk '{{ print $1}}')
+            new=$(echo "${{line}}" | awk '{{ print $2}}')
+            echo "Replacing ${{original}} with ${{new}} and recalculating coordinates." >> {log}
+            # Then replace original name with new name and reverse the output.
+            grep "${{original}}" {input.rm_out} | \
+                sed "s/${{original}}/${{new}}/g" | \
+                tac | \
+                awk -v OFS="\\t" '{{
+                    # Get start and end coordinates and adjust for reversing.
+                    match($5, ":(.+)-", starts);
+                    match($5, ".*-(.+)$", ends);
+                    new_start=ends[1]-starts[1]-$7+1;
+                    new_end=ends[1]-starts[1]-$6+1;
+                    $6=new_start;
+                    $7=new_end;
+                    print \
+                }}' >> {output} 2> {log}
+        done < <(grep "{wildcards.chr}[_:]" {input.reverse_cens_key})
         """
 
 
 rule plot_cens_from_rm_by_chr:
     input:
         script="workflow/scripts/repeatStructure_onlyRM.R",
-        rm_out=rules.split_corrected_rm_output.output.corrected_rm_out,
+        rm_out=rules.fix_cens_rm_out.output,
     output:
         repeat_plot_by_chr=os.path.join(
             config["repeatmasker"]["output_dir"],
             "plot",
-            "{chr}_cens.corrected.pdf",
+            "{chr}_cens.pdf",
         ),
     log:
         "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_rm.log",
@@ -182,15 +280,15 @@ rule plot_cens_from_rm_by_chr:
         """
 
 
-use rule plot_cens_from_rm_by_chr as plot_og_cens_from_rm_by_chr with:
+use rule plot_cens_from_rm_by_chr as plot_cens_from_original_rm_by_chr with:
     input:
         script="workflow/scripts/repeatStructure_onlyRM.R",
-        rm_out=rules.extract_rm_out_by_chr.output.rm_out_by_chr,
+        rm_out=rules.extract_rm_out_by_chr.output,
     output:
         repeat_plot_by_chr=os.path.join(
             config["repeatmasker"]["output_dir"],
             "plot",
-            "{chr}_cens.original.pdf",
+            "{chr}_cens_original.pdf",
         ),
     log:
-        "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_rm_og.log",
+        "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_original_rm.log",

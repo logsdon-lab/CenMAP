@@ -6,7 +6,7 @@ rule plot_cens_structure:
     input:
         script="workflow/scripts/repeatStructure.R",
         rm_sat_out=os.path.join(
-            config["repeatmasker_sat_annot"]["output_dir"],
+            config["plot_hor_stv"]["output_dir"],
             "repeats",
             "all_cens_{chr}.annotation.fa.out",
         ),

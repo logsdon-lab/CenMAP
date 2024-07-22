@@ -16,10 +16,7 @@ get_colors <- function(sdf) {
 
 read_bedpe <- function(all.files) {
   l <- lapply(all.files, fread, sep = "\t")
-  df <- rbindlist(l) %>%
-    mutate(
-      is_rc = str_detect(`#query_name`, "rc-")
-    )
+  df <- rbindlist(l)
   ctg_start <- min(df$query_start)
   ctg_end <- max(df$query_end)
 
@@ -28,22 +25,10 @@ read_bedpe <- function(all.files) {
     df$q <- df$`#query_name`
     df <- df %>%
       mutate(
-        q_st = case_when(
-          is_rc ~ ctg_end - query_end,
-          TRUE ~ query_start - ctg_start
-        ),
-        r_st = case_when(
-          is_rc ~ ctg_end - reference_end,
-          TRUE ~ reference_start - ctg_start
-        ),
-        q_en = case_when(
-          is_rc ~ ctg_end - query_start,
-          TRUE ~ query_end - ctg_start
-        ),
-        r_en = case_when(
-          is_rc ~ ctg_end - reference_start,
-          TRUE ~ reference_end - ctg_start
-        )
+        q_st = query_start - ctg_start,
+        r_st = reference_start - ctg_start,
+        q_en = query_end - ctg_start,
+        r_en = reference_end - ctg_start
       )
     df$r <- df$reference_name
   }
@@ -164,7 +149,6 @@ make_dot <- function(sdf, rname = "") {
 
 make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out) {
   df_rname_seq_ident <- df_seq_ident %>% filter(q == rname & r == rname)
-  is_rc <- str_detect(rname, "rc-")
 
   # make the tri sequence identity plots
   df_d <- make_tri_df(df_rname_seq_ident)
@@ -184,11 +168,8 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
   segment_linewidth <- 10
   contig_len <- max(df_rname_seq_ident$q_en) - min(df_rname_seq_ident$q_st)
   # Calculated adjustment factor (y-px / 3.5mb) for segment y position.
-  if (is_rc) {
-    segment_y_adj_factor <- 0.07
-  } else {
-    segment_y_adj_factor <- -0.07
-  }
+  segment_y_adj_factor <- -0.07
+
   segment_y <- segment_y_adj_factor * contig_len
   ct_outline_edges_x <- 5000
 
@@ -256,13 +237,8 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       show.legend = FALSE
     )
 
-  if (is_rc) {
-    plot_ident_cen <- plot_ident_cen + scale_y_continuous()
-  } else {
-    plot_ident_cen <- plot_ident_cen + scale_y_reverse()
-  }
-
   plot_ident_cen <- plot_ident_cen +
+    scale_y_reverse() +
     scale_fill_manual(values = discrete_color_ranges) +
     scale_x_continuous(labels = make_scale, limits = c(0, NA)) +
     theme_cowplot() +

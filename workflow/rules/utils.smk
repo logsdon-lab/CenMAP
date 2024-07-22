@@ -8,7 +8,7 @@ rule extract_and_index_fa:
     log:
         "logs/extract_and_index_fa.log",
     params:
-        added_cmds=lambda wc: "" if wc.ort == "fwd" else "| seqtk seq -r",
+        added_cmds="",
     conda:
         "../env/tools.yaml"
     shell:

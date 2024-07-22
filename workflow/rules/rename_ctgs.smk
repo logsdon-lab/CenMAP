@@ -7,7 +7,7 @@
 #   * fa_assembly
 #       * Assembly with contig names to replace.
 #   * output_dir
-#   * log_dir
+#   * logs_dir
 #   * samples
 #   * orientation
 #       * Default: ("fwd", "rev")
@@ -76,24 +76,16 @@ rule rename_ctgs:
             OUTPUT_DIR,
             "{sm}_regions.renamed.fa",
         ),
-    run:
-        with (
-            open(str(input.legend)) as legend_fh,
-            open(str(input.seq)) as seq_fh,
-            open(str(output), "wt") as out_seq_fh,
-        ):
-            legend = dict(line.strip().split() for line in legend_fh.readlines())
-
-            for line in seq_fh.readlines():
-                # >h1tg000001l#1-110442987
-                # >haplotype1-0000001:56723941-58474753
-                if line.startswith(">"):
-                    seq_id, *coords = line.strip().strip(">").partition(":")
-                    new_seq_id = legend.get(seq_id, seq_id)
-                    out_seq_fh.write(f">{new_seq_id}{''.join(coords)}\n")
-                    # The seq.
-                else:
-                    out_seq_fh.write(line)
+    log:
+        os.path.join(LOG_DIR, "rename_ctgs_{sm}.log"),
+    conda:
+        "../env/tools.yaml"
+    shell:
+        """
+        seqkit replace -p '(\S+)' -r '{{kv}}' \
+        -k {input.legend} {input.seq} \
+        --keep-key > {output} 2> {log}
+        """
 
 
 rule index_renamed_ctgs:

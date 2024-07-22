@@ -1,5 +1,5 @@
 import pytest
-import subprocess
+from test.helpers.integration import run_integration_test
 
 
 @pytest.mark.parametrize(
@@ -12,21 +12,10 @@ import subprocess
     ],
 )
 def test_count_cens(infile: str, expected: str):
-    process = subprocess.run(
-        [
-            "python",
-            "workflow/scripts/count_complete_cens.py",
-            "-i",
-            infile,
-        ],
-        capture_output=True,
-        check=True,
+    run_integration_test(
+        "python",
+        "workflow/scripts/count_complete_cens.py",
+        "-i",
+        infile,
+        expected_output=expected,
     )
-    res = sorted(
-        line.strip().split("\t") for line in process.stdout.decode().split("\n") if line
-    )
-    with open(expected, "rt") as exp_res_fh:
-        exp_res = sorted(
-            line.strip().split("\t") for line in exp_res_fh.readlines() if line
-        )
-        assert res == exp_res

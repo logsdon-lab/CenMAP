@@ -3,6 +3,22 @@
         "chr9": [[9000, 10000], [1000000, null]],
         "chr10": [[2000, null]]
     },
-    "min_repeat_len_perc": 0.5,
+    "merge_repeat_dst_thr": {
+        "chr7": 500000,
+        "chr11": 200000,
+        "chr15": 200000,
+        "chr13": 500000,
+        "chr21": 100000,
+        "chr16": 50000
+    },
+    "merge_mode": {
+        "chr21": "Limit"
+    },
+    "merge_ort": {
+        "chr21": "Rev"
+    },
+    "default_merge_repeat_dst_thr": 100000,
+    "default_merge_mode": "NoLimit",
+    "default_merge_ort": "Fwd",
     "default_repeat_len_thr": [1000, null]
 }

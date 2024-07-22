@@ -206,14 +206,8 @@ read_one_humas_hmmer_input <- function(
       ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
     ) %>%
     mutate(
-      start2 = case_when(
-        str_detect(chr, "rc-") ~ ctg_stop - stop,
-        TRUE ~ start - ctg_start
-      ),
-      stop2 = case_when(
-        str_detect(chr, "rc-") ~ ctg_stop - start,
-        TRUE ~ stop - ctg_start
-      )
+      start2 = start - ctg_start,
+      stop2 = stop - ctg_start
     ) %>%
     mutate(start=start2, stop=stop2)
 
@@ -280,23 +274,5 @@ read_multiple_humas_hmmer_input <- function(
     group_by(mer) %>%
     filter(n() > hor_filter)
 
-  # Fix orientation.
-  df_rc_stv <- df_stv %>%
-    filter(str_detect(chr, "rc")) %>%
-    mutate(
-      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
-      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
-    ) %>%
-    mutate(
-      new_start = ctg_start + abs(ctg_stop - stop),
-      new_stop = ctg_start + abs(ctg_stop - start)
-    ) %>%
-    mutate(start = new_start, stop = new_stop) %>%
-    select(chr, start, stop, hor, strand, length, mer)
-
-  df_stv <- df_stv %>%
-    filter(!str_detect(chr, "rc"))
-  df_both <- rbind(df_rc_stv, df_stv)
-
-  return(df_both)
+  return(df_stv)
 }

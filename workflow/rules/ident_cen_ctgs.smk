@@ -84,27 +84,38 @@ rule map_collapse_cens:
             f"{REF_NAME}_cens",
             "{sm}_mapped_cens.bed",
         ),
+        resolved_cen_regions_rc=os.path.join(
+            config["ident_cen_ctgs"]["output_dir"],
+            "bed",
+            f"{REF_NAME}_cens",
+            "{sm}_mapped_cens_rc.bed",
+        ),
     params:
-        thr_ctg_len=1_000_000,
+        thr_ctg_len=0,
     conda:
         "../env/py.yaml"
     log:
         "logs/ident_cen_ctgs/map_collapse_cens_{sm}.log",
     shell:
         """
-        python {input.script} -i {input.regions} -t {params.thr_ctg_len} > {output} 2> {log}
+        python {input.script} -i {input.regions} -t {params.thr_ctg_len} > {output.resolved_cen_regions} 2> {log}
+        awk -v OFS="\\t" '{{
+            if ($6 == "true") {{
+                $4="rc-"$4
+            }};print
+        }}' {output.resolved_cen_regions} > {output.resolved_cen_regions_rc} 2>> {log}
         """
 
 
 # Make renamed copy of assembly here with mapped chr.
 RENAME_ASM_CFG = {
-    "bed_input_regions": rules.map_collapse_cens.output,
+    "bed_input_regions": rules.map_collapse_cens.output.resolved_cen_regions_rc,
     "fa_assembly": os.path.join(
-        config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fasta"
+        config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"
     ),
     "output_dir": os.path.join(config["concat_asm"]["output_dir"], "{sm}"),
     "samples": SAMPLE_NAMES,
-    "log_dir": "logs/ident_cen_ctgs/rename_cens",
+    "logs_dir": "logs/ident_cen_ctgs/rename_cens",
 }
 
 
@@ -118,63 +129,63 @@ module rename_asm:
 use rule * from rename_asm as asm_*
 
 
-rule filter_cens_oriented_regions:
+rule fix_ort_asm:
     input:
-        all_regions=lambda wc: expand(
-            rules.asm_create_renamed_bed_n_legend.output.regions_renamed,
-            ort=ORIENTATION,
-            sm=[wc.sm],
-        ),
+        # This is the key. Update as go along.
+        bed=rules.asm_create_renamed_bed_n_legend.output.regions_renamed,
+        fa=rules.asm_rename_ctgs.output,
+        fai=rules.asm_index_renamed_ctgs.output,
     output:
-        regions=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "bed",
-            "{sm}_centromeric_regions.{ort}.bed",
+        fa=os.path.join(
+            config["concat_asm"]["output_dir"], "{sm}", "{sm}_regions.renamed.reort.fa"
         ),
-    params:
-        sign=lambda wc: "+" if wc.ort == "fwd" else "-",
+        faidx=os.path.join(
+            config["concat_asm"]["output_dir"],
+            "{sm}",
+            "{sm}_regions.renamed.reort.fa.fai",
+        ),
     log:
-        "logs/ident_cen_ctgs/filter_{ort}_regions_{sm}.log",
+        "logs/ident_cen_ctgs/fix_ort_asm_{sm}.log",
     conda:
         "../env/tools.yaml"
     shell:
         """
-        awk -v OFS="\\t" '{{if ($5=="{params.sign}") print}}' {input.all_regions} > {output.regions} 2> {log}
+        # Reverse complement sequences and then get everything else.
+        cat <(seqtk subseq <(seqtk seq -r {input.fa}) <(grep "rc-" {input.bed} | cut -f 1)) \
+            <(seqtk subseq {input.fa} <(grep -v -f <(grep "rc-" {input.bed} | cut -f 1) {input.fai} | cut -f 1)) \
+        > {output.fa} 2> {log}
+        samtools faidx {output.fa} 2> {log}
         """
 
 
-use rule extract_and_index_fa as extract_cens_oriented_regions with:
+use rule extract_and_index_fa as extract_cens_regions with:
     input:
-        bed=rules.filter_cens_oriented_regions.output.regions,
-        fa=rules.asm_rename_ctgs.output,
+        bed=rules.asm_create_renamed_bed_n_legend.output.regions_renamed,
+        fa=rules.fix_ort_asm.output.fa,
     output:
         seq=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "seq",
-            "{sm}_centromeric_regions.{ort}.fa",
+            "{sm}_centromeric_regions.fa",
         ),
         idx=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "seq",
-            "{sm}_centromeric_regions.{ort}.fa.fai",
+            "{sm}_centromeric_regions.fa.fai",
         ),
-    params:
-        added_cmds=lambda wc: "" if wc.ort == "fwd" else "| seqtk seq -r",
     log:
-        "logs/ident_cen_ctgs/extract_{ort}_regions_{sm}.log",
+        "logs/ident_cen_ctgs/extract_regions_{sm}.log",
+    conda:
+        "../env/tools.yaml"
 
 
 rule ident_cen_ctgs_all:
     input:
         # Rename ctgs
         rules.asm_rename_ctg_all.input,
+        # Fix orientation.
+        expand(rules.fix_ort_asm.output, sm=SAMPLE_NAMES),
         expand(
-            rules.filter_cens_oriented_regions.output,
+            rules.extract_cens_regions.output,
             sm=SAMPLE_NAMES,
-            ort=ORIENTATION,
-        ),
-        expand(
-            rules.extract_cens_oriented_regions.output,
-            sm=SAMPLE_NAMES,
-            ort=ORIENTATION,
         ),

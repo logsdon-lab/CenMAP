@@ -9,9 +9,15 @@ wildcard_constraints:
 
 rule get_valid_regions_for_rm:
     input:
-        bed=os.path.join(
-            config["nucflag"]["output_dir"],
-            "{sm}_cen_status.bed",
+        bed=(
+            os.path.join(
+                config["nucflag"]["output_dir"],
+                "{sm}_cen_status.bed",
+            )
+            if "nucflag" in config
+            else os.path.join(
+                config["new_cens"]["output_dir"], "bed", "{sm}_ALR_regions.bed"
+            )
         ),
     output:
         good_regions=os.path.join(
@@ -20,10 +26,14 @@ rule get_valid_regions_for_rm:
             "{sm}_valid_ALR_regions.bed",
         ),
     params:
+        omit_nucflag="nucflag" not in config,
         assembly_filter="good",
     shell:
         """
         awk -v OFS="\\t" '{{
+            if ("{params.omit_nucflag}" == "True") {{
+                $4="good"
+            }}
             if ($4 == "{params.assembly_filter}") {{
                 print $1, $2, $3, $3-$2, $4
             }}
@@ -36,7 +46,7 @@ use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
         fa=os.path.join(
             config["concat_asm"]["output_dir"],
             "{sm}",
-            "{sm}_regions.renamed.fa",
+            "{sm}_regions.renamed.reort.fa",
         ),
         bed=rules.get_valid_regions_for_rm.output,
     output:
@@ -50,8 +60,6 @@ use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
             "seq",
             "{sm}_correct_ALR_regions.fa.fai",
         ),
-    params:
-        added_cmds="",
     log:
         "logs/repeatmasker/extract_alr_regions_repeatmasker_{sm}.log",
 
@@ -64,15 +72,19 @@ rule rename_for_repeatmasker:
     input:
         fa=rules.extract_correct_alr_regions_rm.output.seq,
     output:
-        renamed_fa=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "seq",
-            "{sm}_correct_ALR_regions.renamed.fa",
+        renamed_fa=temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "seq",
+                "{sm}_correct_ALR_regions.renamed.fa",
+            )
         ),
-        renamed_fa_idx=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "seq",
-            "{sm}_correct_ALR_regions.renamed.fa.fai",
+        renamed_fa_idx=temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "seq",
+                "{sm}_correct_ALR_regions.renamed.fa.fai",
+            )
         ),
     params:
         prefix="seq",
@@ -205,37 +217,7 @@ rule format_add_control_repeatmasker_output:
         """
         # Copy file and append reference repeatmasker output.
         cp {input.sample_rm_output} {output} 2> {log}
-        {{ grep "chr" {input.ref_rm_output} | sed -e 's/chr/chm13_chr/g';}} >> {output} 2> {log}
-        """
-
-
-rule reverse_complete_repeatmasker_output:
-    input:
-        rules.format_add_control_repeatmasker_output.output,
-    output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "all_samples_and_ref_correct_ALR_regions.rc.fa.out",
-        ),
-    log:
-        "logs/repeatmasker/reverse_complete_repeatmasker_output.log",
-    conda:
-        "../env/tools.yaml"
-    shell:
-        """
-        {{ tac {input} | awk -v OFS="\\t" '{{
-            match($5, ":(.+)-", starts);
-            match($5, ".*-(.+)$", ends);
-            if ($5 ~ !/chm13/) {{
-                new_start=ends[1]-starts[1]-$7+1;
-                new_end=ends[1]-starts[1]-$6+1;
-                $6=new_start;
-                $7=new_end;
-            }}
-            print
-        }}' | sed 's/chr/rc-chr/g' | grep -v "chm13";}} > {output} 2> {log}
+        grep "chr" {input.ref_rm_output} >> {output} 2> {log}
         """
 
 
@@ -252,8 +234,7 @@ rule extract_rm_out_by_chr:
         "../env/tools.yaml"
     shell:
         """
-        {{ grep "{wildcards.chr}_" {input.rm_out} || true; }}> {output.rm_out_by_chr} 2> {log}
-        {{ grep "{wildcards.chr}:" {input.rm_out} || true; }} >> {output.rm_out_by_chr} 2>> {log}
+        {{ grep "{wildcards.chr}[_:]" {input.rm_out} || true; }}> {output.rm_out_by_chr} 2> {log}
         """
 
 
@@ -262,6 +243,9 @@ include: "fix_cens_w_repeatmasker.smk"
 
 rule repeatmasker_only:
     input:
-        rules.merge_corrections_list.output,
+        expand(rules.get_complete_correct_cens_bed.output, sm=SAMPLE_NAMES),
+        expand(rules.fix_ort_asm_final.output, sm=SAMPLE_NAMES),
+        expand(rules.extract_sm_complete_correct_cens.output, sm=SAMPLE_NAMES),
+        expand(rules.merge_all_complete_correct_cens_fa.output, sm=SAMPLE_NAMES),
         expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
-        expand(rules.plot_og_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
+        expand(rules.plot_cens_from_original_rm_by_chr.output, chr=CHROMOSOMES),

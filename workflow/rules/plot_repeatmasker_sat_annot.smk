@@ -1,23 +1,37 @@
 include: "common.smk"
 
 
-rule create_annotated_satellites:
+rule merge_complete_and_correct_rm_out:
     input:
-        ref_rm_out=(
-            config["repeatmasker"]["ref_repeatmasker_output"]
-            if config["repeatmasker"].get("ref_repeatmasker_output")
-            else rules.run_repeatmasker_ref.output
-        ),
-        # corrected_rm_out=rules.fix_incorrect_mapped_cens.output.corrected_rm_out,
-        corrected_rm_out=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "all_corrected_cens.fa.out",
+        expand(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "repeats",
+                "all",
+                "complete_correct_{chr}_cens.fa.out",
+            ),
+            chr=CHROMOSOMES
         ),
     output:
         os.path.join(
-            config["repeatmasker_sat_annot"]["output_dir"],
+            config["repeatmasker"]["output_dir"],
+            "repeats",
+            "all",
+            "all_samples_and_ref_complete_correct_cens.fa.out",
+        ),
+    shell:
+        """
+        cat {input} > {output}
+        """
+
+
+rule create_annotated_satellites:
+    input:
+        ref_rm_out=config["repeatmasker"]["ref_repeatmasker_output"],
+        corrected_rm_out=rules.merge_complete_and_correct_rm_out.output,
+    output:
+        os.path.join(
+            config["plot_hor_stv"]["output_dir"],
             "bed",
             "all_cens_{repeat}.satellites.bed",
         ),
@@ -44,21 +58,15 @@ rule create_annotated_satellites:
 
 rule create_ct_track:
     input:
-        ref_rm_out=(
-            config["repeatmasker"]["ref_repeatmasker_output"]
-            if config["repeatmasker"].get("ref_repeatmasker_output")
-            else rules.run_repeatmasker_ref.output
-        ),
+        ref_rm_out=config["repeatmasker"]["ref_repeatmasker_output"],
         corrected_rm_out=os.path.join(
             config["repeatmasker"]["output_dir"],
             "repeats",
             "all",
-            "all_corrected_cens.fa.out",
+            "all_samples_and_ref_complete_correct_cens.fa.out",
         ),
     output:
-        os.path.join(
-            config["repeatmasker_sat_annot"]["output_dir"], "bed", "all_cens.ct.bed"
-        ),
+        os.path.join(config["plot_hor_stv"]["output_dir"], "bed", "all_cens.ct.bed"),
     params:
         color=ANNOTATE_SAT_REPEATS["ct"]["color"],
     log:
@@ -87,7 +95,7 @@ rule aggregate_rm_satellite_annotations:
         ct_track=rules.create_ct_track.output,
     output:
         os.path.join(
-            config["repeatmasker_sat_annot"]["output_dir"],
+            config["plot_hor_stv"]["output_dir"],
             "bed",
             "all_cens.annotation.bed",
         ),
@@ -102,7 +110,7 @@ rule split_rm_satellite_annotations:
         all_annotations=rules.aggregate_rm_satellite_annotations.output,
     output:
         chr_annot=os.path.join(
-            config["repeatmasker_sat_annot"]["output_dir"],
+            config["plot_hor_stv"]["output_dir"],
             "repeats",
             "all_cens_{chr}.annotation.fa.out",
         ),
@@ -120,7 +128,7 @@ rule plot_satellite_annotations:
         chr_annot=rules.split_rm_satellite_annotations.output,
     output:
         chr_plot=os.path.join(
-            config["repeatmasker_sat_annot"]["output_dir"],
+            config["plot_hor_stv"]["output_dir"],
             "plots",
             "all_cens_{chr}.annotation.png",
         ),

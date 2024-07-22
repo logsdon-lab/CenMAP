@@ -2,7 +2,6 @@
 REF_FA = config["align_asm_to_ref"]["reference"]
 REF_NAME = os.path.splitext(os.path.basename(REF_FA).strip(".gz"))[0]
 SAMPLE_NAMES = config["samples"]
-ORIENTATION = ("fwd", "rev")
 HAPLOTYPE = ("haplotype1", "haplotype2")
 MER_ORDER = ("small", "large")
 CHROMOSOMES = config.get(
@@ -36,5 +35,12 @@ CHROMOSOMES = config.get(
 )
 RGX_CHR = re.compile("(chr[0-9XY]+)")
 
-with open(config["repeatmasker_sat_annot"]["config_pattern_colors"]) as fh:
-    ANNOTATE_SAT_REPEATS = json.load(fh)
+if config.get("plot_hor_stv"):
+    with open(config["plot_hor_stv"]["sat_annot_colors"]) as fh:
+        ANNOTATE_SAT_REPEATS = json.load(fh)
+else:
+    ANNOTATE_SAT_REPEATS = {}
+
+REF_CENS_EDGE_LEN = round(
+    (500_000 + config["extract_ref_hor_arrays"].get("added_bases", 0)) / 1000
+)
