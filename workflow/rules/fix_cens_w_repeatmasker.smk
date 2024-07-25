@@ -217,10 +217,37 @@ rule merge_all_complete_correct_cens_fa:
         """
 
 
+rule get_reverse_cens_key_with_ctg_len:
+    input:
+        reverse_cens_key=rules.get_cen_corrections_lists.output.reverse_cens_key,
+        fais=expand(
+            os.path.join(
+                config["concat_asm"]["output_dir"],
+                "{sm}",
+                "{sm}_regions.renamed.reort.fa.fai",
+            ),
+            sm=SAMPLE_NAMES,
+        ),
+    output:
+        reverse_cens_key_w_len=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "status",
+            "all_reverse_cens_w_ctg_len.tsv",
+        ),
+    log:
+        "logs/get_reverse_cens_key_with_ctg_len.log",
+    shell:
+        """
+        {{ join <(sort -k1 {input.reverse_cens_key}) <(sort -k1 {input.fais}) | \
+        sed 's/ /\\t/g'| \
+        cut -f 1,2,3 ;}} > {output} 2> {log}
+        """
+
+
 rule fix_cens_rm_out:
     input:
         partial_cens_list=rules.get_cen_corrections_lists.output.partial_cens_list,
-        reverse_cens_key=rules.get_cen_corrections_lists.output.reverse_cens_key,
+        reverse_cens_key_w_len=rules.get_reverse_cens_key_with_ctg_len.output,
         rm_out=rules.extract_rm_out_by_chr.output,
     output:
         corrected_rm_out=os.path.join(
@@ -235,28 +262,37 @@ rule fix_cens_rm_out:
         """
         # Write everything but the partials and reversed cens.
         grep -v -f \
-            <(grep "{wildcards.chr}[_:]" {input.partial_cens_list} | cat - <(grep "{wildcards.chr}[_:]" {input.reverse_cens_key} | cut -f 1)) \
+            <(grep "{wildcards.chr}[_:]" {input.partial_cens_list} | cat - <(grep "{wildcards.chr}[_:]" {input.reverse_cens_key_w_len} | cut -f 1)) \
             {input.rm_out} > {output} 2> {log}
 
         while IFS='' read -r line; do
             original=$(echo "${{line}}" | awk '{{ print $1}}')
             new=$(echo "${{line}}" | awk '{{ print $2}}')
+            ctg_len=$(echo "${{line}}" | awk '{{ print $3}}')
+
             echo "Replacing ${{original}} with ${{new}} and recalculating coordinates." >> {log}
             # Then replace original name with new name and reverse the output.
+            # Also include contig len to account for reversal.
             grep "${{original}}" {input.rm_out} | \
                 sed "s/${{original}}/${{new}}/g" | \
                 tac | \
-                awk -v OFS="\\t" '{{
+                awk -v CTG_LEN="${{ctg_len}}" -v OFS="\\t" '{{
                     # Get start and end coordinates and adjust for reversing.
+                    match($5, "(.+):", ctgs);
                     match($5, ":(.+)-", starts);
                     match($5, ".*-(.+)$", ends);
                     new_start=ends[1]-starts[1]-$7+1;
                     new_end=ends[1]-starts[1]-$6+1;
                     $6=new_start;
                     $7=new_end;
+                    # Then rename ctg.
+                    new_ctg_start=CTG_LEN-ends[1]+1;
+                    new_ctg_end=CTG_LEN-starts[1]+1;
+                    new_ctg_name=ctgs[1]":"new_ctg_start"-"new_ctg_end;
+                    $5=new_ctg_name;
                     print \
                 }}' >> {output} 2> {log}
-        done < <(grep "{wildcards.chr}[_:]" {input.reverse_cens_key})
+        done < <(grep "{wildcards.chr}[_:]" {input.reverse_cens_key_w_len})
         """
 
 
