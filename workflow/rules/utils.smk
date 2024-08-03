@@ -21,3 +21,19 @@ rule extract_and_index_fa:
             touch {output.idx}
         fi
         """
+
+
+rule plot_rm_out:
+    input:
+        script="workflow/scripts/repeatStructure_onlyRM.R",
+        rm_out="",
+    output:
+        repeat_plot="",
+    log:
+        "logs/plot_rm_out.log",
+    conda:
+        "../env/r.yaml"
+    shell:
+        """
+        Rscript {input.script} {input.rm_out} {output.repeat_plot} 2> {log}
+        """

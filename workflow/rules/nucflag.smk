@@ -26,6 +26,14 @@ NUCFLAG_CFG = {
             "region_bed": os.path.join(
                 config["new_cens"]["output_dir"], "bed", f"{sm}_ALR_regions.bed"
             ),
+            "overlay_beds": [
+                os.path.join(
+                    config["repeatmasker"]["output_dir"],
+                    "bed",
+                    f"{sm}",
+                    f"{sm}_correct_ALR_regions.fa.reformatted.bed",
+                ),
+            ],
         }
         for sm in SAMPLE_NAMES
     ],

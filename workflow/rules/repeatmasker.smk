@@ -7,40 +7,6 @@ wildcard_constraints:
     chr="|".join(CHROMOSOMES),
 
 
-rule get_valid_regions_for_rm:
-    input:
-        bed=(
-            os.path.join(
-                config["nucflag"]["output_dir"],
-                "{sm}_cen_status.bed",
-            )
-            if "nucflag" in config
-            else os.path.join(
-                config["new_cens"]["output_dir"], "bed", "{sm}_ALR_regions.bed"
-            )
-        ),
-    output:
-        good_regions=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "bed",
-            "{sm}_valid_ALR_regions.bed",
-        ),
-    params:
-        omit_nucflag="nucflag" not in config,
-        assembly_filter="good",
-    shell:
-        """
-        awk -v OFS="\\t" '{{
-            if ("{params.omit_nucflag}" == "True") {{
-                $4="good"
-            }}
-            if ($4 == "{params.assembly_filter}") {{
-                print $1, $2, $3, $3-$2, $4
-            }}
-        }}' {input.bed} > {output.good_regions}
-        """
-
-
 use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
     input:
         fa=os.path.join(
@@ -48,7 +14,9 @@ use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
             "{sm}",
             "{sm}_regions.renamed.reort.fa",
         ),
-        bed=rules.get_valid_regions_for_rm.output,
+        bed=os.path.join(
+            config["new_cens"]["output_dir"], "bed", "{sm}_ALR_regions.bed"
+        ),
     output:
         seq=temp(
             os.path.join(
@@ -171,6 +139,71 @@ rule reformat_repeatmasker_output:
         """
 
 
+rule format_repeatmasker_to_overlay_bed:
+    input:
+        rules.reformat_repeatmasker_output.output,
+    output:
+        os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "bed",
+            "{sm}",
+            "{sm}_correct_ALR_regions.fa.reformatted.bed",
+        ),
+    log:
+        "logs/repeatmasker/format_repeatmasker_to_overlay_bed_{sm}.log",
+    params:
+        alr_alpha_color="#8B008B",
+    conda:
+        "../env/tools.yaml"
+    shell:
+        """
+        awk -v OFS="\\t" '{{
+            name=$5; start=$6; end=$7; rType=$10; rClass=$11;
+
+            # Find contig coordinates
+            match(name, "^(.+):", abbr_name);
+            match(name, ":(.+)-", ctg_start);
+            match(name, ".*-(.+)$", ctg_end);
+            new_name=abbr_name[1];
+            new_start=start+ctg_start[1];
+            new_end=end+ctg_start[1];
+
+            # Split repeat class and replace specific repeat types.
+            split(rClass, split_rClass, "/" );
+            new_rClass=split_rClass[1];
+            if (rClass == "Satellite/centr" || rClass == "Satellite") {{
+                new_rClass=rType
+            }}
+            switch (new_rClass) {{
+                case "SAR":
+                    new_rClass="HSat1A";
+                    break;
+                case "HSAT":
+                    new_rClass="HSat1B";
+                    break;
+                case "HSATII":
+                    new_rClass="HSat2";
+                    break;
+                case "(CATTC)n":
+                    new_rClass="HSat2";
+                    break;
+                case "(GAATG)n":
+                    new_rClass="HSat2";
+                    break;
+                default:
+                    break;
+            }}
+
+            # Set action for NucFlag
+            action="plot,ignore:absolute"
+            if (new_rClass == "ALR/Alpha") {{
+                action="plot:{params.alr_alpha_color}"
+            }}
+            print new_name, new_start, new_end, new_rClass, action
+        }}' {input} > {output}
+        """
+
+
 # Merge repeatmasker and convert sep to tab.
 # |1259|28.4|7.4|5.3|GM18989_chr1_hap1-0000003:9717731-15372230|8|560|(5653940)|+|Charlie2b|DNA/hAT-Charlie|120|683|(2099)|1|
 rule merge_repeatmasker_output:
@@ -255,14 +288,22 @@ rule extract_rm_out_by_chr:
         """
 
 
-include: "fix_cens_w_repeatmasker.smk"
+use rule plot_rm_out as plot_cens_from_original_rm_by_chr with:
+    input:
+        script="workflow/scripts/repeatStructure_onlyRM.R",
+        rm_out=rules.extract_rm_out_by_chr.output,
+    output:
+        repeat_plot=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "plot",
+            "{chr}_cens_original.pdf",
+        ),
+    log:
+        "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_original_rm.log",
 
 
 rule repeatmasker_only:
     input:
-        expand(rules.get_complete_correct_cens_bed.output, sm=SAMPLE_NAMES),
-        expand(rules.fix_ort_asm_final.output, sm=SAMPLE_NAMES),
-        expand(rules.extract_sm_complete_correct_cens.output, sm=SAMPLE_NAMES),
-        expand(rules.merge_all_complete_correct_cens_fa.output, sm=SAMPLE_NAMES),
-        expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
+        expand(rules.reformat_repeatmasker_output.output, sm=SAMPLE_NAMES),
+        expand(rules.format_repeatmasker_to_overlay_bed.output, sm=SAMPLE_NAMES),
         expand(rules.plot_cens_from_original_rm_by_chr.output, chr=CHROMOSOMES),
