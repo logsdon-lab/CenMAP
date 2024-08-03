@@ -112,10 +112,8 @@ rule get_cen_corrections_lists:
         "logs/fix_cens_w_repeatmasker/get_complete_correct_cens_bed.log",
     shell:
         """
-        awk -v OFS="\\t" '{{
+        cat {input.statuses} | awk -v OFS="\\t" '{{
             ort=$3; is_partial=$4;
-
-            # Omit nucflag. Won't have column 5 and 6.
             if ("{params.omit_nucflag}" == "True") {{
                 split($1, split_name, ":")
                 is_misassembled=""
@@ -124,7 +122,6 @@ rule get_cen_corrections_lists:
                 is_misassembled=$6
                 name=$5
             }}
-            # Not partial and not misassembled. CHM13 chrs will be empty.
             if (is_partial == "false" && (is_misassembled == "good" || is_misassembled == "")) {{
                 if (ort == "fwd") {{
                     print name >> "{output.correct_cens_list}"
@@ -139,7 +136,7 @@ rule get_cen_corrections_lists:
             }} else {{
                 print name >> "{output.partial_misasm_cens_list}"
             }}
-        }}' {input.statuses} 2> {log}
+        }}' 2> {log}
         if [ ! -f {output.partial_misasm_cens_list} ]; then
             echo "No partial cens. Creating empty file." > {log}
             touch {output.partial_misasm_cens_list}

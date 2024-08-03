@@ -22,7 +22,6 @@ NUCFLAG_CFG = {
                 }
             ),
             "config": config["nucflag"]["config_nucflag"],
-            "ignore_bed": config["nucflag"]["ignore_regions"],
             "region_bed": os.path.join(
                 config["new_cens"]["output_dir"], "bed", f"{sm}_ALR_regions.bed"
             ),

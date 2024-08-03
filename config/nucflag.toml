@@ -29,7 +29,7 @@ thr_misjoin_valley = 0.2
 # * ex. 3.0 => Peaks where minimum is greater than or equal to 300% of mean
 # If int:
 # * ex. 40 => Peaks with minimum above 40
-thr_collapse_peak = 2.0
+thr_collapse_peak = 2.5
 
 # Group consecutive positions allowing a maximum gap of x.
 # Larger value groups more positions.
