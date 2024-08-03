@@ -122,9 +122,9 @@ rule create_renamed_bed_n_legend:
             "{sm}_renamed.bed",
         ),
     log:
-        os.path.join("logs/ident_cen_ctgs/rename_cens", "create_legend_{sm}.log"),
+        "logs/ident_cen_ctgs/rename_cens/create_legend_{sm}.log",
     params:
-        legend_key=f"$1",
+        legend_key="$1",
         legend_val='"_"'.join(f"${col}" for col in (7, 4, 1)),
     conda:
         "../env/tools.yaml"
@@ -170,8 +170,8 @@ rule rename_ctgs:
         """
         seqkit replace -p '(\S+)' -r '{{kv}}' \
         -k {input.legend} {input.seq} \
-        --keep-key > {output} 2> {log}
-        samtools faidx {input} 2>> {log}
+        --keep-key > {output.fa} 2> {log}
+        samtools faidx {output.fa} 2>> {log}
         """
 
 
