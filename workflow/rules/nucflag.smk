@@ -8,8 +8,21 @@ NUCFLAG_CFG = {
             "asm_fa": os.path.join(
                 config["concat_asm"]["output_dir"], sm, f"{sm}_regions.renamed.reort.fa"
             ),
-            "read_dir": os.path.join(config["nucflag"]["hifi_reads_dir"], sm),
-            "read_ext": config["nucflag"]["reads_ext"],
+            # Switch between fofn dir or read dir + ext.
+            **(
+                {
+                    "read_fofn": os.path.join(
+                        config["nucflag"]["hifi_reads_fofn_dir"], f"{sm}.fofn"
+                    ),
+                }
+                if config["nucflag"].get("hifi_reads_fofn_dir")
+                else {
+                    "read_dir": os.path.join(config["nucflag"]["hifi_reads_dir"], sm),
+                    "read_ext": config["nucflag"]["reads_ext"],
+                }
+            ),
+            "config": config["nucflag"]["config_nucflag"],
+            "ignore_bed": config["nucflag"]["ignore_regions"],
             "region_bed": os.path.join(
                 config["new_cens"]["output_dir"], "bed", f"{sm}_ALR_regions.bed"
             ),

@@ -66,6 +66,8 @@ new_cens:
   output_dir: "results/cens_new"
 
 nucflag:
+  # # Or an fofn dir where {hifi_reads_fofn_dir}/{sm}.fofn
+  # hifi_reads_fofn_dir: "data/raw_data_link"
   hifi_reads_dir: "data/raw_data_link"
   reads_ext: "fastq.gz"
   output_dir: "results/nucflag"
