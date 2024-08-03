@@ -50,15 +50,19 @@ use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
         ),
         bed=rules.get_valid_regions_for_rm.output,
     output:
-        seq=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "seq",
-            "{sm}_correct_ALR_regions.fa",
+        seq=temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "seq",
+                "{sm}_correct_ALR_regions.fa",
+            )
         ),
-        idx=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "seq",
-            "{sm}_correct_ALR_regions.fa.fai",
+        idx=temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "seq",
+                "{sm}_correct_ALR_regions.fa.fai",
+            )
         ),
     log:
         "logs/repeatmasker/extract_alr_regions_repeatmasker_{sm}.log",
@@ -107,11 +111,13 @@ rule run_repeatmasker:
     input:
         seq=rules.rename_for_repeatmasker.output.renamed_fa,
     output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "{sm}",
-            "{sm}_correct_ALR_regions.renamed.fa.out",
+        temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "repeats",
+                "{sm}",
+                "{sm}_correct_ALR_regions.renamed.fa.out",
+            )
         ),
     threads: config["repeatmasker"]["threads"]
     params:
@@ -171,11 +177,13 @@ rule merge_repeatmasker_output:
     input:
         expand(rules.reformat_repeatmasker_output.output, sm=SAMPLE_NAMES),
     output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "all_samples_correct_ALR_regions.fa.out",
+        temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "repeats",
+                "all",
+                "all_samples_correct_ALR_regions.fa.out",
+            )
         ),
     shell:
         """
@@ -190,11 +198,13 @@ use rule merge_repeatmasker_output as merge_control_repeatmasker_output with:
         config["repeatmasker"]["ref_repeatmasker_chrY_output"],
         config["repeatmasker"]["ref_repeatmasker_output"],
     output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "ref",
-            "ref_ALR_regions.fa.out",
+        temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "repeats",
+                "ref",
+                "ref_ALR_regions.fa.out",
+            )
         ),
 
 
@@ -203,11 +213,13 @@ rule format_add_control_repeatmasker_output:
         ref_rm_output=rules.merge_control_repeatmasker_output.output,
         sample_rm_output=rules.merge_repeatmasker_output.output,
     output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "all_samples_and_ref_correct_ALR_regions.fa.out",
+        temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "repeats",
+                "all",
+                "all_samples_and_ref_correct_ALR_regions.fa.out",
+            )
         ),
     log:
         "logs/repeatmasker/format_add_control_repeatmasker_output.log",
@@ -225,8 +237,13 @@ rule extract_rm_out_by_chr:
     input:
         rm_out=rules.format_add_control_repeatmasker_output.output,
     output:
-        rm_out_by_chr=os.path.join(
-            config["repeatmasker"]["output_dir"], "repeats", "all", "{chr}_cens.fa.out"
+        rm_out_by_chr=temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "repeats",
+                "all",
+                "{chr}_cens.fa.out",
+            )
         ),
     log:
         "logs/repeatmasker/extract_{chr}_cens_from_rm.log",

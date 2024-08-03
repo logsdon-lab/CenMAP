@@ -108,33 +108,79 @@ rule map_collapse_cens:
 
 
 # Make renamed copy of assembly here with mapped chr.
-RENAME_ASM_CFG = {
-    "bed_input_regions": rules.map_collapse_cens.output.resolved_cen_regions_rc,
-    "fa_assembly": os.path.join(
-        config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"
-    ),
-    "output_dir": os.path.join(config["concat_asm"]["output_dir"], "{sm}"),
-    "samples": SAMPLE_NAMES,
-    "logs_dir": "logs/ident_cen_ctgs/rename_cens",
-}
+rule create_renamed_bed_n_legend:
+    input:
+        regions=rules.map_collapse_cens.output.resolved_cen_regions_rc,
+    output:
+        legend=os.path.join(
+            config["concat_asm"]["output_dir"], "{sm}", "{sm}_legend.txt"
+        ),
+        regions_renamed=os.path.join(
+            config["ident_cen_ctgs"]["output_dir"],
+            "bed",
+            f"{REF_NAME}_cens",
+            "{sm}_renamed.bed",
+        ),
+    log:
+        "logs/ident_cen_ctgs/rename_cens/create_legend_{sm}.log",
+    params:
+        legend_key="$1",
+        legend_val='"_"'.join(f"${col}" for col in (7, 4, 1)),
+    conda:
+        "../env/tools.yaml"
+    shell:
+        """
+        {{ awk -v OFS="\\t" '{{print $0, "{wildcards.sm}"}}' {input.regions} | \
+        awk -v OFS="\\t" '{{
+            print {params.legend_key},{params.legend_val};
+            print {params.legend_val}, $2, $3, $4, $5, $6, $7 >> "{output.regions_renamed}"
+        }}' | \
+        sort -k2,2 | uniq ;}} > {output.legend} 2> {log}
+        """
 
 
-module rename_asm:
-    snakefile:
-        "rename_ctgs.smk"
-    config:
-        RENAME_ASM_CFG
-
-
-use rule * from rename_asm as asm_*
+# Before:
+# >haplotype1-0000003:4-8430174
+# After:
+# >HG00171_chr16_haplotype1-0000003:4-8430174
+rule rename_ctgs:
+    input:
+        legend=rules.create_renamed_bed_n_legend.output.legend,
+        seq=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
+    output:
+        fa=temp(
+            os.path.join(
+                config["concat_asm"]["output_dir"],
+                "{sm}",
+                "{sm}_regions.renamed.fa",
+            )
+        ),
+        idx=temp(
+            os.path.join(
+                config["concat_asm"]["output_dir"],
+                "{sm}",
+                "{sm}_regions.renamed.fa.fai",
+            )
+        ),
+    log:
+        os.path.join("logs/ident_cen_ctgs/rename_cens", "rename_ctgs_{sm}.log"),
+    conda:
+        "../env/tools.yaml"
+    shell:
+        """
+        seqkit replace -p '(\S+)' -r '{{kv}}' \
+        -k {input.legend} {input.seq} \
+        --keep-key > {output.fa} 2> {log}
+        samtools faidx {output.fa} 2>> {log}
+        """
 
 
 rule fix_ort_asm:
     input:
         # This is the key. Update as go along.
-        bed=rules.asm_create_renamed_bed_n_legend.output.regions_renamed,
-        fa=rules.asm_rename_ctgs.output,
-        fai=rules.asm_index_renamed_ctgs.output,
+        bed=rules.create_renamed_bed_n_legend.output.regions_renamed,
+        fa=rules.rename_ctgs.output.fa,
+        fai=rules.rename_ctgs.output.idx,
     output:
         fa=os.path.join(
             config["concat_asm"]["output_dir"], "{sm}", "{sm}_regions.renamed.reort.fa"
@@ -160,7 +206,7 @@ rule fix_ort_asm:
 
 use rule extract_and_index_fa as extract_cens_regions with:
     input:
-        bed=rules.asm_create_renamed_bed_n_legend.output.regions_renamed,
+        bed=rules.create_renamed_bed_n_legend.output.regions_renamed,
         fa=rules.fix_ort_asm.output.fa,
     output:
         seq=os.path.join(
@@ -181,8 +227,6 @@ use rule extract_and_index_fa as extract_cens_regions with:
 
 rule ident_cen_ctgs_all:
     input:
-        # Rename ctgs
-        rules.asm_rename_ctg_all.input,
         # Fix orientation.
         expand(rules.fix_ort_asm.output, sm=SAMPLE_NAMES),
         expand(

@@ -10,7 +10,7 @@ rule merge_complete_and_correct_rm_out:
                 "all",
                 "complete_correct_{chr}_cens.fa.out",
             ),
-            chr=CHROMOSOMES
+            chr=CHROMOSOMES,
         ),
     output:
         os.path.join(
