@@ -22,7 +22,7 @@ rule concat_asm:
         <(find {input.sm_dir} -regextype posix-egrep -regex "{params.assembly_fname_pattern}\.gz" -size +0 -exec zcat {{}} + ) \
         <(find {input.sm_dir} -regextype posix-egrep -regex "{params.assembly_fname_pattern}" -size +0 -exec cat {{}} + ) | \
         seqkit rmdup;}} > {output.fa} 2> {log}
-        samtools faidx {output.fa} 2> {log}
+        samtools faidx {output.fa} 2>> {log}
         """
 
 
