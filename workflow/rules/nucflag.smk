@@ -81,6 +81,7 @@ rule simplify_rm_overlay_bed:
     params:
         color_alr_alpha="#8B008B",
         color_other="gray",
+        color_none="yellow",
     conda:
         "../env/py.yaml"
     log:
@@ -89,6 +90,7 @@ rule simplify_rm_overlay_bed:
         """
         python {input.script} -i {input.bed} \
         --color_alr_alpha "{params.color_alr_alpha}" \
+        --color_none "{params.color_none}" \
         --color_other "{params.color_other}" > {output} 2> {log}
         """
 
