@@ -27,7 +27,7 @@ rule check_cens_status:
         edge_perc_alr_thr=lambda wc: 0.8 if wc.chr in ["chr7"] else 0.95,
         dst_perc_thr=0.3,
         # Edge-case for chrs whose repeats are small and broken up.
-        max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 250_000,
+        max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8", "chrX"] else 250_000,
         # Only allow mapping changes to 13 and 21 if chr13 or chr21.
         restrict_13_21="--restrict_13_21",
     log:

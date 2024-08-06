@@ -66,14 +66,12 @@ new_cens:
   output_dir: "results/cens_new"
 
 nucflag:
-  # # Or an fofn dir where {hifi_reads_fofn_dir}/{sm}.fofn
-  # hifi_reads_fofn_dir: "data/raw_data_link"
-  hifi_reads_dir: "data/raw_data_link"
-  reads_ext: "fastq.gz"
+  hifi_reads_fofn_dir: "data/hifi"
+ # hifi_reads_dir: "data/hifi"
+ # reads_ext: "fastq.gz"
   output_dir: "results/nucflag"
   tmp_dir: "temp"
   config_nucflag: "config/nucflag.toml"
-  ignore_regions: "config/nucflag_ignore.bed"
   threads_aln: 24
   processes_nucflag: 12
   mem_nucflag: 50
