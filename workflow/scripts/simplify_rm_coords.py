@@ -7,9 +7,6 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--input", default=sys.stdin, type=argparse.FileType("rb"))
     ap.add_argument("-o", "--output", default=sys.stdout, type=argparse.FileType("wt"))
-    ap.add_argument("--color_alr_alpha", type=str, default="#8B008B")
-    ap.add_argument("--color_other", type=str, default="gray")
-    ap.add_argument("--color_none", type=str, default="yellow")
 
     args = ap.parse_args()
     df = pl.read_csv(
@@ -33,8 +30,8 @@ def main():
                 # Set color for other and plot.
                 action=(
                     pl.when(pl.col("rtype") == "Other")
-                    .then(pl.lit(f"plot:{args.color_other},ignore:absolute"))
-                    .otherwise(pl.lit(f"plot:{args.color_alr_alpha}"))
+                    .then(pl.lit("ignore:absolute"))
+                    .otherwise(None)
                 ),
             )
             .group_by(["rle_id"])
@@ -54,13 +51,12 @@ def main():
                     & (pl.col("rtype").shift(-1) == "ALR/Alpha")
                     & (pl.col("len") < 10_000)
                 )
-                .then(
-                    pl.col("action").str.replace(",ignore:absolute", "", literal=True)
-                )
+                .then(pl.col("action").str.replace("ignore:absolute", "", literal=True))
                 .otherwise(pl.col("action"))
             )
             .drop("rle_id", "len")
         )
+        # Fill in gaps with no annotation with nulls.
         df_no_annotation = (
             df_grp.with_columns(diff=pl.col("start").shift(-1) - pl.col("stop"))
             .select(
@@ -72,8 +68,8 @@ def main():
                 stop=pl.when(pl.col("diff") > 1)
                 .then(pl.col("start").shift(-1) - 1)
                 .otherwise(None),
-                rtype=pl.lit("None"),
-                action=pl.lit("plot:yellow"),
+                rtype=pl.lit(None),
+                action=pl.lit(None),
             )
             .drop_nulls()
         )

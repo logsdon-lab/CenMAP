@@ -78,20 +78,13 @@ rule simplify_rm_overlay_bed:
             config["nucflag"]["output_dir"],
             "{sm}_correct_ALR_regions.rm.simple.bed",
         ),
-    params:
-        color_alr_alpha="#8B008B",
-        color_other="gray",
-        color_none="yellow",
     conda:
         "../env/py.yaml"
     log:
         "logs/nucflag/simplify_rm_overlay_bed_{sm}.log",
     shell:
         """
-        python {input.script} -i {input.bed} \
-        --color_alr_alpha "{params.color_alr_alpha}" \
-        --color_none "{params.color_none}" \
-        --color_other "{params.color_other}" > {output} 2> {log}
+        python {input.script} -i {input.bed} > {output} 2> {log}
         """
 
 
@@ -119,11 +112,11 @@ NUCFLAG_CFG = {
             "region_bed": os.path.join(
                 config["new_cens"]["output_dir"], "bed", f"{sm}_ALR_regions.bed"
             ),
+            # Ignore regions.
+            "ignore_bed": str(rules.simplify_rm_overlay_bed.output),
             "overlay_beds": [
                 # Original repeatmasker options
                 str(rules.format_repeatmasker_to_overlay_bed.output),
-                # Just ALR
-                str(rules.simplify_rm_overlay_bed.output),
             ],
         }
         for sm in SAMPLE_NAMES
@@ -134,7 +127,9 @@ NUCFLAG_CFG = {
 
 module NucFlag:
     snakefile:
-        github("logsdon-lab/Snakemake-NucFlag", path="workflow/Snakefile", tag="v0.1.0")
+        github(
+            "logsdon-lab/Snakemake-NucFlag", path="workflow/Snakefile", branch="main"
+        )
     config:
         NUCFLAG_CFG
 
