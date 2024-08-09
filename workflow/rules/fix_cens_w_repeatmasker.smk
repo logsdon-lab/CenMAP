@@ -1,22 +1,30 @@
-# Included workflow. Cannot be run separately outside of `repeatmasker.smk`.
+include: "common.smk"
+include: "utils.smk"
 
 
 rule check_cens_status:
     input:
-        rm_out=rules.extract_rm_out_by_chr.output.rm_out_by_chr,
-        rm_ref=rules.merge_control_repeatmasker_output.output,
+        rm_out=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "repeats",
+            "all",
+            "{chr}_cens.fa.out",
+        ),
+        rm_ref=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "repeats",
+            "ref",
+            "ref_ALR_regions.fa.out",
+        ),
     output:
         cens_status=os.path.join(
             config["repeatmasker"]["output_dir"], "status", "{chr}_cens_status.tsv"
         ),
     params:
-        edge_len=lambda wc: (
-            100_000 if wc.chr in ["chr4", "chr6", "chr14", "chrY"] else 500_000
-        ),
-        edge_perc_alr_thr=lambda wc: 0.8 if wc.chr in ["chr7"] else 0.95,
+        edge_len=censtats_status_edge_len,
+        edge_perc_alr_thr=censtats_status_edge_perc_alr_thr,
         dst_perc_thr=0.3,
-        # Edge-case for chrs whose repeats are small and broken up.
-        max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8"] else 250_000,
+        max_alr_len_thr=censtats_status_max_alr_len_thr,
         # Only allow mapping changes to 13 and 21 if chr13 or chr21.
         restrict_13_21="--restrict_13_21",
     log:
@@ -37,9 +45,49 @@ rule check_cens_status:
         """
 
 
+rule join_cen_status_and_nucflag_status:
+    input:
+        nucflag_statuses=(
+            expand(
+                os.path.join(config["nucflag"]["output_dir"], "{sm}_cen_status.bed"),
+                sm=SAMPLE_NAMES,
+            )
+            if config.get("nucflag")
+            else []
+        ),
+        statuses=expand(rules.check_cens_status.output.cens_status, chr=CHROMOSOMES),
+    output:
+        all_statuses=os.path.join(
+            config["repeatmasker"]["output_dir"], "status", "cens_status_w_nucflag.tsv"
+        ),
+    params:
+        censtats_base_name_col=5,
+        nucflag_base_name_col=1,
+        # cs - censtats, nf - nucflag, both
+        # [cs:original_name, cs:new_name, cs:ort, cs:is_partial, both:abbreviated_name, nf:status]
+        output_format="1.1,1.2,1.3,1.4,0,2.2",
+    log:
+        "logs/fix_cens_w_repeatmasker/join_cen_status_and_nucflag_status.log",
+    shell:
+        """
+        join \
+        -1 {params.censtats_base_name_col} -2 {params.nucflag_base_name_col} \
+        -a 1 -a 2 \
+        -o {params.output_format} \
+        <(awk -v OFS="\\t" '{{ split($1, split_name, ":"); print $0, split_name[1]}}' {input.statuses} | \
+            sort -k {params.censtats_base_name_col}) \
+        <(cut -f {params.nucflag_base_name_col},4 {input.nucflag_statuses} | \
+            sort -k {params.nucflag_base_name_col}) > {output} 2> {log}
+        """
+
+
 rule get_cen_corrections_lists:
     input:
-        statuses=expand(rules.check_cens_status.output.cens_status, chr=CHROMOSOMES),
+        statuses=(
+            rules.join_cen_status_and_nucflag_status.output
+            if config.get("nucflag")
+            else expand(rules.check_cens_status.output.cens_status, chr=CHROMOSOMES)
+        ),
     output:
         correct_cens_list=os.path.join(
             config["repeatmasker"]["output_dir"],
@@ -52,33 +100,43 @@ rule get_cen_corrections_lists:
             "status",
             "all_reverse_cens.tsv",
         ),
-        partial_cens_list=os.path.join(
+        partial_misasm_cens_list=os.path.join(
             config["repeatmasker"]["output_dir"], "status", "all_partial_cens.list"
         ),
+    params:
+        omit_nucflag="nucflag" not in config,
     log:
         "logs/fix_cens_w_repeatmasker/get_complete_correct_cens_bed.log",
     shell:
         """
-        cat {input.statuses} | awk -v OFS="\t" '{{
-            split($1, names, ":");
-            if ($4 == "false") {{
-                if ($3 == "fwd") {{
-                    print names[1] >> "{output.correct_cens_list}"
+        cat {input.statuses} | awk -v OFS="\\t" '{{
+            ort=$3; is_partial=$4;
+            if ("{params.omit_nucflag}" == "True") {{
+                split($1, split_name, ":")
+                is_misassembled=""
+                name=split_name[1]
+            }} else {{
+                is_misassembled=$6
+                name=$5
+            }}
+            if (is_partial == "false" && (is_misassembled == "good" || is_misassembled == "")) {{
+                if (ort == "fwd") {{
+                    print name >> "{output.correct_cens_list}"
                 }} else {{
                     # 1. rc-chrX -> rc-rc-chrX (chrX)
                     # 2. rc-rc-chrX -> chrX
-                    new_name=names[1]
+                    new_name=name
                     gsub("chr", "rc-chr", new_name)
                     gsub("rc-rc-", "", new_name)
-                    print names[1],new_name >> "{output.reverse_cens_key}"
+                    print name,new_name >> "{output.reverse_cens_key}"
                 }}
             }} else {{
-                print names[1] >> "{output.partial_cens_list}"
+                print name >> "{output.partial_misasm_cens_list}"
             }}
         }}' 2> {log}
-        if [ ! -f {output.partial_cens_list} ]; then
+        if [ ! -f {output.partial_misasm_cens_list} ]; then
             echo "No partial cens. Creating empty file." > {log}
-            touch {output.partial_cens_list}
+            touch {output.partial_misasm_cens_list}
         fi
         if [ ! -f {output.reverse_cens_key} ]; then
             echo "No cens to reverse. Creating empty file." > {log}
@@ -90,7 +148,9 @@ rule get_cen_corrections_lists:
 rule get_complete_correct_cens_bed:
     input:
         script="workflow/scripts/filter_complete_cens_bed.py",
-        bed=rules.get_valid_regions_for_rm.output,
+        bed=os.path.join(
+            config["new_cens"]["output_dir"], "bed", "{sm}_ALR_regions.bed"
+        ),
         # Need lengths to determine coordinates for reversed contigs
         fai=os.path.join(
             config["concat_asm"]["output_dir"],
@@ -98,7 +158,7 @@ rule get_complete_correct_cens_bed:
             "{sm}_regions.renamed.reort.fa.fai",
         ),
         correct_cens_list=rules.get_cen_corrections_lists.output.correct_cens_list,
-        partial_cens_list=rules.get_cen_corrections_lists.output.partial_cens_list,
+        partial_misasm_cens_list=rules.get_cen_corrections_lists.output.partial_misasm_cens_list,
         reverse_cens_key=rules.get_cen_corrections_lists.output.reverse_cens_key,
     output:
         complete_correct_cens_bed=os.path.join(
@@ -116,7 +176,7 @@ rule get_complete_correct_cens_bed:
         -i {input.bed} \
         -l {input.fai} \
         -c {input.correct_cens_list} \
-        -p {input.partial_cens_list} \
+        -p {input.partial_misasm_cens_list} \
         -r {input.reverse_cens_key} > {output} 2> {log}
         """
 
@@ -246,9 +306,14 @@ rule get_reverse_cens_key_with_ctg_len:
 
 rule fix_cens_rm_out:
     input:
-        partial_cens_list=rules.get_cen_corrections_lists.output.partial_cens_list,
+        partial_misasm_cens_list=rules.get_cen_corrections_lists.output.partial_misasm_cens_list,
         reverse_cens_key_w_len=rules.get_reverse_cens_key_with_ctg_len.output,
-        rm_out=rules.extract_rm_out_by_chr.output,
+        rm_out=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "repeats",
+            "all",
+            "{chr}_cens.fa.out",
+        ),
     output:
         corrected_rm_out=os.path.join(
             config["repeatmasker"]["output_dir"],
@@ -262,7 +327,7 @@ rule fix_cens_rm_out:
         """
         # Write everything but the partials and reversed cens.
         grep -v -f \
-            <(grep "{wildcards.chr}[_:]" {input.partial_cens_list} | cat - <(grep "{wildcards.chr}[_:]" {input.reverse_cens_key_w_len} | cut -f 1)) \
+            <(grep "{wildcards.chr}[_:]" {input.partial_misasm_cens_list} | cat - <(grep "{wildcards.chr}[_:]" {input.reverse_cens_key_w_len} | cut -f 1)) \
             {input.rm_out} > {output} 2> {log}
 
         while IFS='' read -r line; do
@@ -296,35 +361,23 @@ rule fix_cens_rm_out:
         """
 
 
-rule plot_cens_from_rm_by_chr:
+use rule plot_rm_out as plot_cens_from_rm_by_chr with:
     input:
         script="workflow/scripts/repeatStructure_onlyRM.R",
         rm_out=rules.fix_cens_rm_out.output,
     output:
-        repeat_plot_by_chr=os.path.join(
+        repeat_plot=os.path.join(
             config["repeatmasker"]["output_dir"],
             "plot",
             "{chr}_cens.pdf",
         ),
     log:
         "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_rm.log",
-    conda:
-        "../env/r.yaml"
-    shell:
-        """
-        Rscript {input.script} {input.rm_out} {output.repeat_plot_by_chr} 2> {log}
-        """
 
 
-use rule plot_cens_from_rm_by_chr as plot_cens_from_original_rm_by_chr with:
+rule fix_cens_w_repeatmasker_only:
     input:
-        script="workflow/scripts/repeatStructure_onlyRM.R",
-        rm_out=rules.extract_rm_out_by_chr.output,
-    output:
-        repeat_plot_by_chr=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "plot",
-            "{chr}_cens_original.pdf",
-        ),
-    log:
-        "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_original_rm.log",
+        expand(rules.fix_ort_asm_final.output, sm=SAMPLE_NAMES),
+        expand(rules.extract_sm_complete_correct_cens.output, sm=SAMPLE_NAMES),
+        expand(rules.merge_all_complete_correct_cens_fa.output, sm=SAMPLE_NAMES),
+        expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),

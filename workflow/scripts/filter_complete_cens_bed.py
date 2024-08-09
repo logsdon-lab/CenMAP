@@ -3,7 +3,7 @@ import argparse
 import polars as pl
 
 
-INFILE_COLS = ("name", "start", "end", "length", "status")
+INFILE_COLS = ("name", "start", "end", "length")
 
 
 def main():
@@ -78,7 +78,7 @@ def main():
             .then(pl.col("length_right") - pl.col("start"))
             .otherwise(pl.col("end")),
         )
-        .select("new_name", "new_start", "new_end", "length", "status")
+        .select("new_name", "new_start", "new_end", "length")
     )
     df_final_bed.write_csv(args.outfile, include_header=False, separator="\t")
 

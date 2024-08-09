@@ -29,13 +29,13 @@ thr_misjoin_valley = 0.2
 # * ex. 3.0 => Peaks where minimum is greater than or equal to 300% of mean
 # If int:
 # * ex. 40 => Peaks with minimum above 40
-thr_collapse_peak = 2.0
+thr_collapse_peak = 2.5
 
 # Group consecutive positions allowing a maximum gap of x.
 # Larger value groups more positions.
-valley_group_distance = 5_000
+valley_group_distance = 500
 
-peak_group_distance = 5_000
+peak_group_distance = 500
 
 [second]
 # Percent threshold of most freq base to allow second most freq base
@@ -50,7 +50,7 @@ thr_peak_height_std_above = 3
 group_distance = 30_000
 
 # Min group size.
-thr_min_group_size = 3
+thr_min_group_size = 5
 
 [gaps]
 thr_max_allowed_gap_size = 0

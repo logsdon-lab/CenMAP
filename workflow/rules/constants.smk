@@ -44,3 +44,9 @@ else:
 REF_CENS_EDGE_LEN = round(
     (500_000 + config["extract_ref_hor_arrays"].get("added_bases", 0)) / 1000
 )
+
+# Thresholds
+DEF_DNA_BRNN_FULL_ALR_THR = 30_000
+DEF_CENSTATS_STATUS_EDGE_LEN_THR = 500_000
+DEF_CENSTATS_STATUS_EDGE_PERC_ALR_THR = 0.95
+DEF_CENSTATS_STATUS_MAX_ALR_LEN_THR = 250_000

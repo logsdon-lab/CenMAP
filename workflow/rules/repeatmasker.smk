@@ -7,40 +7,6 @@ wildcard_constraints:
     chr="|".join(CHROMOSOMES),
 
 
-rule get_valid_regions_for_rm:
-    input:
-        bed=(
-            os.path.join(
-                config["nucflag"]["output_dir"],
-                "{sm}_cen_status.bed",
-            )
-            if "nucflag" in config
-            else os.path.join(
-                config["new_cens"]["output_dir"], "bed", "{sm}_ALR_regions.bed"
-            )
-        ),
-    output:
-        good_regions=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "bed",
-            "{sm}_valid_ALR_regions.bed",
-        ),
-    params:
-        omit_nucflag="nucflag" not in config,
-        assembly_filter="good",
-    shell:
-        """
-        awk -v OFS="\\t" '{{
-            if ("{params.omit_nucflag}" == "True") {{
-                $4="good"
-            }}
-            if ($4 == "{params.assembly_filter}") {{
-                print $1, $2, $3, $3-$2, $4
-            }}
-        }}' {input.bed} > {output.good_regions}
-        """
-
-
 use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
     input:
         fa=os.path.join(
@@ -48,7 +14,9 @@ use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
             "{sm}",
             "{sm}_regions.renamed.reort.fa",
         ),
-        bed=rules.get_valid_regions_for_rm.output,
+        bed=os.path.join(
+            config["new_cens"]["output_dir"], "bed", "{sm}_ALR_regions.bed"
+        ),
     output:
         seq=temp(
             os.path.join(
@@ -255,14 +223,21 @@ rule extract_rm_out_by_chr:
         """
 
 
-include: "fix_cens_w_repeatmasker.smk"
+use rule plot_rm_out as plot_cens_from_original_rm_by_chr with:
+    input:
+        script="workflow/scripts/repeatStructure_onlyRM.R",
+        rm_out=rules.extract_rm_out_by_chr.output,
+    output:
+        repeat_plot=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "plot",
+            "{chr}_cens_original.pdf",
+        ),
+    log:
+        "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_original_rm.log",
 
 
 rule repeatmasker_only:
     input:
-        expand(rules.get_complete_correct_cens_bed.output, sm=SAMPLE_NAMES),
-        expand(rules.fix_ort_asm_final.output, sm=SAMPLE_NAMES),
-        expand(rules.extract_sm_complete_correct_cens.output, sm=SAMPLE_NAMES),
-        expand(rules.merge_all_complete_correct_cens_fa.output, sm=SAMPLE_NAMES),
-        expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
+        expand(rules.reformat_repeatmasker_output.output, sm=SAMPLE_NAMES),
         expand(rules.plot_cens_from_original_rm_by_chr.output, chr=CHROMOSOMES),
