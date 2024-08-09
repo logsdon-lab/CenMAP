@@ -21,13 +21,10 @@ rule check_cens_status:
             config["repeatmasker"]["output_dir"], "status", "{chr}_cens_status.tsv"
         ),
     params:
-        edge_len=lambda wc: (
-            100_000 if wc.chr in ["chr4", "chr6", "chr14", "chrY"] else 500_000
-        ),
-        edge_perc_alr_thr=lambda wc: 0.8 if wc.chr in ["chr7"] else 0.95,
+        edge_len=censtats_status_edge_len,
+        edge_perc_alr_thr=censtats_status_edge_perc_alr_thr,
         dst_perc_thr=0.3,
-        # Edge-case for chrs whose repeats are small and broken up.
-        max_alr_len_thr=lambda wc: 0 if wc.chr in ["chrY", "chr11", "chr8", "chrX"] else 250_000,
+        max_alr_len_thr=censtats_status_max_alr_len_thr,
         # Only allow mapping changes to 13 and 21 if chr13 or chr21.
         restrict_13_21="--restrict_13_21",
     log:
