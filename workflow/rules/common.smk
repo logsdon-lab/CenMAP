@@ -28,24 +28,13 @@ try:
         CENSTATS_STATUS_CFG = json.load(fh)
         # Edge length to evaluate
         CENSTATS_STATUS_FULL_EDGE_LEN_THR = CENSTATS_STATUS_CFG["edge_len"]
-        CENSTATS_STATUS_DEF_EDGE_LEN_THR = CENSTATS_STATUS_FULL_EDGE_LEN_THR.get(
-            "default", DEF_CENSTATS_STATUS_EDGE_LEN_THR
-        )
         # Edge percent alpha-satellite repeat threshold to be considered partial.
         CENSTATS_STATUS_FULL_EDGE_PERC_ALR_THR = CENSTATS_STATUS_CFG[
             "edge_perc_alr_thr"
         ]
-        CENSTATS_STATUS_DEF_EDGE_PERC_ALR_THR = (
-            CENSTATS_STATUS_FULL_EDGE_PERC_ALR_THR.get(
-                "default", DEF_CENSTATS_STATUS_EDGE_PERC_ALR_THR
-            )
-        )
         # Max required alpha-satellite repeat length threshold
         # Smaller thresholds are edge-case for chrs whose repeats are small and broken up.
         CENSTATS_STATUS_FULL_MAX_ALR_LEN_THR = CENSTATS_STATUS_CFG["max_alr_len_thr"]
-        CENSTATS_STATUS_DEF_MAX_ALR_LEN_THR = CENSTATS_STATUS_FULL_MAX_ALR_LEN_THR.get(
-            "default", DEF_CENSTATS_STATUS_MAX_ALR_LEN_THR
-        )
 except (KeyError, FileNotFoundError):
     CENSTATS_STATUS_FULL_EDGE_LEN_THR = {
         c: DEF_CENSTATS_STATUS_EDGE_LEN_THR for c in CHROMOSOMES
@@ -68,19 +57,19 @@ def dnabrnn_alr_region_threshold(wc) -> int:
 
 def censtats_status_edge_len(wc) -> int:
     return CENSTATS_STATUS_FULL_EDGE_LEN_THR.get(
-        str(wc.chr), CENSTATS_STATUS_DEF_EDGE_LEN_THR
+        str(wc.chr), DEF_CENSTATS_STATUS_EDGE_LEN_THR
     )
 
 
 def censtats_status_edge_perc_alr_thr(wc) -> int:
     return CENSTATS_STATUS_FULL_EDGE_PERC_ALR_THR.get(
-        str(wc.chr), CENSTATS_STATUS_DEF_EDGE_PERC_ALR_THR
+        str(wc.chr), DEF_CENSTATS_STATUS_EDGE_PERC_ALR_THR
     )
 
 
 def censtats_status_max_alr_len_thr(wc) -> int:
     return CENSTATS_STATUS_FULL_MAX_ALR_LEN_THR.get(
-        str(wc.chr), CENSTATS_STATUS_DEF_MAX_ALR_LEN_THR
+        str(wc.chr), DEF_CENSTATS_STATUS_MAX_ALR_LEN_THR
     )
 
 
