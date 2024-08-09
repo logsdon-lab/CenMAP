@@ -19,12 +19,14 @@ rule plot_cens_structure:
         plot=os.path.join(
             config["plot_hor_stv"]["output_dir"],
             "plots",
+            "hor",
             "all_cens_{chr}_{mer_order}.png",
         ),
         cen_plot_dir=directory(
             os.path.join(
                 config["plot_hor_stv"]["output_dir"],
                 "plots",
+                "hor",
                 "{chr}_{mer_order}",
             )
         ),

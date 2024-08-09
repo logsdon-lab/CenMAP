@@ -130,6 +130,7 @@ rule plot_satellite_annotations:
         chr_plot=os.path.join(
             config["plot_hor_stv"]["output_dir"],
             "plots",
+            "satellite",
             "all_cens_{chr}.annotation.png",
         ),
     log:
