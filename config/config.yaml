@@ -31,13 +31,13 @@ concat_asm:
   # Expects {input_dir}/{sm}/*.gz
   input_dir: "data/assemblies"
   output_dir: "data/assemblies/combined"
-  mem: 20
+  mem: 20GB
 
 align_asm_to_ref:
   # Output dir set to results
   reference: "data/reference/T2T-CHM13v2.fasta.gz"
   threads: 4
-  mem: 60
+  mem: 60GB
 
 extract_ref_hor_arrays:
   output_dir: "results/ref_hor_arrays"
@@ -58,7 +58,7 @@ dna_brnn:
   # Optional.
   ref_alr_file: "data/annotations/chm13_cens.trimmed.bed"
   threads: 12
-  mem: 30
+  mem: 30GB
   thr_file: "config/dnabrnn_thresholds.json"
   full_alr_thr_file: "config/dnabrnn_full_alr_region_thresholds.json"
 
@@ -74,8 +74,8 @@ nucflag:
   config_nucflag: "config/nucflag.toml"
   threads_aln: 24
   processes_nucflag: 12
-  mem_nucflag: 50
-  mem_aln: 50
+  mem_nucflag: 50GB
+  mem_aln: 50GB
   samtools_view_flag: 2308
 
 repeatmasker:
@@ -117,5 +117,5 @@ count_complete_cens:
 moddotplot:
   input_dir: null
   output_dir: "results/moddotplot"
-  mem: 10
+  mem: 10GB
   window: 5000
