@@ -159,7 +159,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
     # Take abs value.
     shell:
         """
-        bedtools groupby \
+        {{ bedtools groupby \
         -i <(cat {input.sample_cens} {input.added_ref_cens} | sort | uniq) \
         -g {params.grp_cols} \
         -c 2,3 \
@@ -170,7 +170,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
             if (len > {params.repeat_len_thr}) {{
                 new_start=$3-BP_EDGES
                 new_end=$4+BP_EDGES
-                new_start = ((new_start < 0) ? 0 : new_start)
+                new_start=((new_start < 0) ? 0 : new_start)
                 print $1, new_start, new_end, $4-$3
             }}
         }}';}} > {output} 2> {log}
