@@ -4,7 +4,7 @@ include: "common.smk"
 
 rule plot_cens_structure:
     input:
-        script="workflow/scripts/repeatStructure.R",
+        script="workflow/scripts/plot_cens_all_stv.R",
         rm_sat_out=os.path.join(
             config["plot_hor_stv"]["output_dir"],
             "repeats",

@@ -79,7 +79,7 @@ rule aggregate_format_all_stv_row:
 
 rule plot_stv_with_order:
     input:
-        script="workflow/scripts/StVHORorganization_simplified_2datasets_basedOnStartStop_newcolors.R",
+        script="workflow/scripts/plot_cens_stvHOR.R",
         chm1_stv=config["plot_hor_stv"]["chm1_stv"],
         chm13_stv=config["plot_hor_stv"]["chm13_stv"],
         all_stv=rules.aggregate_format_all_stv_row.output,

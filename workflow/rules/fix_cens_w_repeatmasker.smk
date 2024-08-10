@@ -363,7 +363,7 @@ rule fix_cens_rm_out:
 
 use rule plot_rm_out as plot_cens_from_rm_by_chr with:
     input:
-        script="workflow/scripts/repeatStructure_onlyRM.R",
+        script="workflow/scripts/plot_cens_onlyRM.R",
         rm_out=rules.fix_cens_rm_out.output,
     output:
         repeat_plot=os.path.join(
