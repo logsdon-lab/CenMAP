@@ -25,24 +25,88 @@ chromosomes:
   - "chrY"
 
 samples:
+  - HG00096
   - HG00171
+  - HG00268
+  - HG00512
+  - HG00513
+  - HG00514
+  - HG00733
+  - HG00864
+  - NA19240
+  - NA18939
+  - NA12329
+  - HG00358
+  - HG00731
+  - HG00732
+  - HG01114
+  - HG01352
+  - HG01457
+  - HG01505
+  - HG01573
+  - HG01596
+  - HG01890
+  - HG02011
+  - HG02018
+  - HG02059
+  - HG02106
+  - HG02282
+  - HG02492
+  - HG02554
+  - HG02587
+  - HG02666
+  - HG02769
+  - HG02818
+  - HG02953
+  - HG03009
+  - HG03065
+  - HG03248
+  - HG03371
+  - HG03452
+  - HG03456
+  - HG03520
+  - HG03683
+  - HG03732
+  - HG03807
+  - HG04036
+  - HG04217
+  - NA18534
+  - NA18989
+  - NA19036
+  - NA19129
+  - NA19238
+  - NA19239
+  - NA19317
+  - NA19331
+  - NA19347
+  - NA19384
+  - NA19434
+  - NA19650
+  - NA19705
+  - NA19836
+  - NA19983
+  - NA20355
+  - NA20509
+  - NA20847
+  - NA21487
+  - NA24385
 
 concat_asm:
   # Expects {input_dir}/{sm}/*.gz
-  input_dir: "data/assemblies"
-  output_dir: "data/assemblies/combined"
+  input_dir: "data/assemblies_link"
+  output_dir: "results/assemblies/combined"
   mem: 20
 
 align_asm_to_ref:
   # Output dir set to results
-  reference: "data/reference/T2T-CHM13v2.fasta.gz"
+  reference: "data/reference/T2T-CHM13v2.fasta"
   threads: 4
-  mem: 60
+  mem: 120
 
 extract_ref_hor_arrays:
   output_dir: "results/ref_hor_arrays"
   # Add bp to extend edges of HOR array for alignment.
-  added_bases: 0
+  added_bases: 100_000
 
 ident_cen_ctgs:
   comb_assemblies_dir: "data/assemblies/combined"
@@ -66,12 +130,12 @@ new_cens:
   output_dir: "results/cens_new"
 
 nucflag:
-  hifi_reads_fofn_dir: "data/hifi"
- # hifi_reads_dir: "data/hifi"
- # reads_ext: "fastq.gz"
+  hifi_reads_dir: "data/raw_data_link"
+  reads_ext: "fastq.gz"
   output_dir: "results/nucflag"
   tmp_dir: "temp"
   config_nucflag: "config/nucflag.toml"
+  ignore_regions: "config/nucflag_ignore.bed"
   threads_aln: 24
   processes_nucflag: 12
   mem_nucflag: 50
@@ -81,16 +145,16 @@ nucflag:
 repeatmasker:
   ref_repeatmasker_chrY_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
-  config_censtats_status: "config/censtats.json"
   threads: 12
   output_dir: "results/repeatmasker"
+  config_censtats_status: "config/censtats.json"
 
 humas_hmmer:
   # Dir where split cens placed.
   input_dir: "results/humas_hmmer/cens"
   output_dir: "results/humas_hmmer"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
-  threads: 24
+  threads: 6
   model: "data/models/AS-HORs-hmmer3.0-170921.hmm"
 
 plot_hor_stv:
@@ -114,8 +178,8 @@ count_complete_cens:
   plot_lbl: null
   plot_color: "#DA8B26"
 
-moddotplot:
-  input_dir: null
-  output_dir: "results/moddotplot"
-  mem: 10
-  window: 5000
+# moddotplot:
+#   input_dir: null
+#   output_dir: "results/moddotplot"
+#   mem: 10
+#   window: 5000

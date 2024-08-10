@@ -140,7 +140,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
             "{chr}_contigs.ALR.bed",
         ),
     params:
-        repeat_len_thr=alr_region_threshold,
+        repeat_len_thr=dnabrnn_alr_region_threshold,
         input_cols=" ".join(
             [
                 "chr",

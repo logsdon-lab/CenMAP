@@ -1,0 +1,18 @@
+{
+    "edge_len": {
+        "chr4": 100000,
+        "chr6": 100000,
+        "chr14": 100000,
+        "chrY": 100000,
+        "chr13": 100000
+    },
+    "edge_perc_alr_thr": {
+        "chr7": 0.8
+    },
+    "max_alr_len_thr": {
+        "chrY": 0,
+        "chr11": 0,
+        "chr8": 0,
+        "chrX": 0
+    }
+}
