@@ -151,7 +151,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
     log:
         "logs/dna_brnn/aggregate_dnabrnn_alr_regions_by_{chr}.log",
     conda:
-        "../env/py.yaml"
+        "../env/tools.yaml"
     # Aggregate and bedminmax all.
     # Select cols and calculate length.
     # Add 500 kbp on both ends.
