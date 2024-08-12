@@ -73,16 +73,31 @@ def censtats_status_max_alr_len_thr(wc) -> int:
     )
 
 
-def extract_fa_fnames_and_chr(input_dir: str) -> tuple[list[str], list[str]]:
+def extract_fa_fnames_and_chr(
+    input_dir: str, *, filter_chr: str | None = None
+) -> tuple[list[str], list[str]]:
     fnames = glob_wildcards(os.path.join(input_dir, "{fname}.fa")).fname
-    chrs = []
+    filtered_fnames, chrs = [], []
     for fname in fnames:
-        chr_name = re.search(RGX_CHR, fname)
-        if chr_name:
-            chrs.append(chr_name.group(0))
+        if mtch_chr_name := re.search(RGX_CHR, fname):
+            chr_name = mtch_chr_name.group().strip("_")
 
-    assert len(fnames) == len(
+            if not filter_chr:
+                filtered_fnames.append(fname)
+                chrs.append(chr_name)
+                continue
+
+            # Filter by chr.
+            if chr_name != filter_chr:
+                continue
+
+            filtered_fnames.append(fname)
+            chrs.append(chr_name)
+        else:
+            print("Cannot find chr name in {fname}. Skipping.", file=sys.stderr)
+
+    assert len(filtered_fnames) == len(
         chrs
     ), f"One or more fa files in {input_dir} does not contain a chromosome in its name."
 
-    return fnames, chrs
+    return filtered_fnames, chrs

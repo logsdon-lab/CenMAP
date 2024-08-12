@@ -70,26 +70,10 @@ rule filter_as_hor_stv_bed:
 
 def as_hor_bedfiles(wc):
     _ = checkpoints.split_cens_for_humas_hmmer.get(**wc).output
-    fnames = glob_wildcards(
-        os.path.join(config["humas_hmmer"]["input_dir"], "{fname}.fa")
-    ).fname
-
-    filtered_fnames, chrs = [], []
-    for fname in fnames:
-        if mtch_chr_name := re.search(RGX_CHR, fname):
-            chr_name = mtch_chr_name.group().strip("_")
-            # Filter by chr.
-            if chr_name != wc.chr:
-                continue
-
-            filtered_fnames.append(fname)
-            chrs.append(chr_name)
-        else:
-            print("Cannot find chr name in {fname}. Skipping.", file=sys.stderr)
-
-    return expand(
-        rules.filter_as_hor_stv_bed.output, zip, fname=filtered_fnames, chr=chrs
+    fnames, chrs = extract_fa_fnames_and_chr(
+        config["humas_hmmer"]["input_dir"], filter_chr=str(wc.chr)
     )
+    return expand(rules.filter_as_hor_stv_bed.output, zip, fname=fnames, chr=chrs)
 
 
 rule aggregate_format_all_stv_row:
