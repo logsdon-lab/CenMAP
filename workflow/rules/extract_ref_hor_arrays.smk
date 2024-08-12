@@ -20,7 +20,11 @@ rule adjust_ref_hor_arrays:
 # Extract HOR arrays from reference.
 rule extract_ref_hor_arrays:
     input:
-        ref=REF_FA,
+        ref=(
+            config["align_asm_to_ref"]["reference"]
+            if config["align_asm_to_ref"].get("reference")
+            else REF_FA
+        ),
         cens_regions=rules.adjust_ref_hor_arrays.output,
     output:
         seq=os.path.join(
