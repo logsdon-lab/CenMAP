@@ -37,3 +37,18 @@ rule plot_rm_out:
         """
         Rscript {input.script} {input.rm_out} {output.repeat_plot} 2> {log}
         """
+
+
+rule wget:
+    output:
+        "",
+    params:
+        url="",
+    resources:
+        mem=1,
+    log:
+        "",
+    shell:
+        """
+        wget --no-verbose {params.url} -O {output} 2> {log}
+        """

@@ -1,6 +1,6 @@
 # Globals shared throughout workflow.
-REF_FA = config["align_asm_to_ref"]["reference"]
-REF_NAME = os.path.splitext(os.path.basename(REF_FA).strip(".gz"))[0]
+REF_NAME = "T2T-CHM13"
+REF_FA = f"data/reference/{REF_NAME}.fa.gz"
 SAMPLE_NAMES = config["samples"]
 HAPLOTYPE = ("haplotype1", "haplotype2")
 MER_ORDER = ("small", "large")

@@ -1,10 +1,7 @@
-
 ALN_CFG = {
     "ref": {f"{REF_NAME}_cens": rules.extract_ref_hor_arrays.output.seq},
     "sm": {
-        sm: os.path.join(
-            config["concat_asm"]["output_dir"], f"{sm}-asm-comb-dedup.fa"
-        )
+        sm: os.path.join(config["concat_asm"]["output_dir"], f"{sm}-asm-comb-dedup.fa")
         for sm in SAMPLE_NAMES
     },
     "temp_dir": "temp",
@@ -36,4 +33,4 @@ use rule * from align_asm_to_ref as asm_ref_*
 
 use rule all from align_asm_to_ref as align_asm_ref_all with:
     input:
-        rules.asm_ref_all.input
+        rules.asm_ref_all.input,

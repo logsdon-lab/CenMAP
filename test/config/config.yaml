@@ -2,7 +2,7 @@ samples:
 - test_1
 
 align_asm_to_ref:
-  reference: "test/data/test.fasta"
+  reference: "data/reference/T2T-CHM13.fa.gz"
   threads: 4
 
 concat_asm:
