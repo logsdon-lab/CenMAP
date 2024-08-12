@@ -1,29 +1,25 @@
 include: "common.smk"
+include: "humas_hmmer.smk"
 
 
-rule get_stv_row_from_humas_hmmer_out:
+rule get_live_hor:
     input:
-        humas_hmmer_done=os.path.join(
-            config["humas_hmmer"]["output_dir"], "humas_hmmer_{chr}.done"
-        ),
-        script_filter_live_hor="workflow/scripts/stv_fix/scripts/live_HORs_filter.py",
-        script_mon_to_stv="workflow/scripts/stv_fix/scripts/mon2stv.py",
+        script="workflow/scripts/stv_fix/scripts/live_HORs_filter.py",
+        # fname is wildcard
+        humas_hmmer_out=rules.cens_filter_hmm_res_overlaps_as_hor.output,
     output:
-        directory(
-            os.path.join(
-                config["plot_hor_stv"]["output_dir"], "bed", "results_{chr}_stv"
-            )
+        renamed_bed=os.path.join(
+            config["humas_hmmer"]["output_dir"],
+            "bed",
+            "results_{chr}_stv" "{fname}_renamed.bed",
+        ),
+        live_hor_bed=os.path.join(
+            config["humas_hmmer"]["output_dir"],
+            "bed",
+            "results_{chr}_stv",
+            "{fname}_liveHORs.bed",
         ),
     params:
-        humas_hmmer_dir=lambda wc: config["humas_hmmer"]["output_dir"],
-        renamed_bed=lambda wc, output: os.path.join(str(output), "${fname}_renamed.bed"),
-        live_hor_bed=lambda wc, output: os.path.join(
-            str(output), "${fname}_liveHORs.bed"
-        ),
-        stv_row_bed=lambda wc, output: os.path.join(str(output), "${fname}_stv_row.bed"),
-        as_hor_stv_row_bed=lambda wc, output: os.path.join(
-            str(output), "AS-HOR_${fname}_stv_row.bed"
-        ),
         # Fix inversion for chromosome 1 and 19.
         inversion_fix_cmd=lambda wc: (
             "| sed 's+S1C1/5/19H1L.6/4+S1C1/5/19H1L.6+g'"
@@ -31,39 +27,82 @@ rule get_stv_row_from_humas_hmmer_out:
             else ""
         ),
     log:
-        "logs/plot_hor_stv/get_stv_row_from_{chr}_humas_hmmer_out.log",
+        "logs/plot_hor_stv/get_live_hor_{fname}_{chr}.log",
     conda:
         "../env/py.yaml"
     shell:
         """
-        mkdir -p {output}
-        for fname_full in $(find {params.humas_hmmer_dir} -name 'AS-HOR-vs-*{wildcards.chr}_*.bed'); do
-            fname_base=$(basename $fname_full)
-            fname="${{fname_base%.bed}}"
-            awk -v OFS="\\t" '{{print "{wildcards.chr}", $2, $3, $4, $5, $6, $7, $8, $9, $1}}' $fname_full > "{params.renamed_bed}" 2> {log}
-            {{ python3 {input.script_filter_live_hor} "{params.renamed_bed}" {params.inversion_fix_cmd} ;}} > "{params.live_hor_bed}" 2>> {log}
-            python3 {input.script_mon_to_stv} "{params.live_hor_bed}" > "{params.stv_row_bed}" 2>> {log}
-            awk -v OFS="\\t" 'FNR==NR{{a[NR]=$10;next}}{{$1=a[FNR]}}1' "{params.renamed_bed}" "{params.stv_row_bed}" > "{params.as_hor_stv_row_bed}" 2>> {log}
-        done
+        awk -v OFS="\\t" '{{
+            print "{wildcards.chr}", $2, $3, $4, $5, $6, $7, $8, $9, $1
+        }}' {input.humas_hmmer_out} > {output.renamed_bed} 2> {log}
+        {{ python3 {input.script} {output.renamed_bed} {params.inversion_fix_cmd} ;}} > {output.live_hor_bed} 2>> {log}
         """
+
+
+rule filter_as_hor_stv_bed:
+    input:
+        script="workflow/scripts/stv_fix/scripts/mon2stv.py",
+        live_hor_bed=rules.get_live_hor.output.live_hor_bed,
+        renamed_bed=rules.get_live_hor.output.renamed_bed,
+    output:
+        stv_row_bed=os.path.join(
+            config["humas_hmmer"]["output_dir"],
+            "bed",
+            "results_{chr}_stv",
+            "{fname}_stv_row.bed",
+        ),
+        as_hor_stv_row_bed=os.path.join(
+            config["humas_hmmer"]["output_dir"],
+            "bed",
+            "results_{chr}_stv",
+            "AS-HOR_{fname}_stv_row.bed",
+        ),
+    log:
+        "logs/plot_hor_stv/filter_as_hor_stv_bed_{fname}_{chr}.log",
+    conda:
+        "../env/py.yaml"
+    shell:
+        """
+        python3 {input.script} {input.live_hor_bed} > {output.stv_row_bed} 2>> {log}
+        awk -v OFS="\\t" 'FNR==NR{{a[NR]=$10;next}}{{$1=a[FNR]}}1' {input.renamed_bed} {output.stv_row_bed} > {output.as_hor_stv_row_bed} 2>> {log}
+        """
+
+
+def as_hor_bedfiles(wc):
+    _ = checkpoints.split_cens_for_humas_hmmer.get(**wc).output
+    fnames = glob_wildcards(
+        os.path.join(config["humas_hmmer"]["input_dir"], "{fname}.fa")
+    ).fname
+
+    filtered_fnames, chrs = [], []
+    for fname in fnames:
+        if mtch_chr_name := re.search(RGX_CHR, fname):
+            chr_name = mtch_chr_name.group().strip("_")
+            # Filter by chr.
+            if chr_name != wc.chr:
+                continue
+
+            filtered_fnames.append(fname)
+            chrs.append(chr_name)
+        else:
+            print("Cannot find chr name in {fname}. Skipping.", file=sys.stderr)
+
+    return expand(
+        rules.filter_as_hor_stv_bed.output, zip, fname=filtered_fnames, chr=chrs
+    )
 
 
 rule aggregate_format_all_stv_row:
     input:
-        rules.get_stv_row_from_humas_hmmer_out.output,
+        as_hor_bedfiles,
     output:
         os.path.join(
             config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
-        ),
-    params:
-        stv_row_pattern=lambda wc, input: os.path.join(
-            str(input), "AS-HOR_*_stv_row.bed"
         ),
     log:
         "logs/plot_hor_stv/get_stv_row_from_{chr}_humas_hmmer_out.log",
     shell:
         """
-        ( cat {params.stv_row_pattern} || true ) | \
         awk -v OFS="\\t" '{{
             # Find start in contig name.
             match($1, ":(.+)-", starts);
@@ -73,7 +112,7 @@ rule aggregate_format_all_stv_row:
             $7=$7+starts[1];
             $8=$8+starts[1];
             print
-        }}' > {output}
+        }}' {input} > {output}
         """
 
 
