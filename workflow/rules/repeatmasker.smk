@@ -225,7 +225,7 @@ rule extract_rm_out_by_chr:
 
 use rule plot_rm_out as plot_cens_from_original_rm_by_chr with:
     input:
-        script="workflow/scripts/repeatStructure_onlyRM.R",
+        script="workflow/scripts/plot_cens_onlyRM.R",
         rm_out=rules.extract_rm_out_by_chr.output,
     output:
         repeat_plot=os.path.join(

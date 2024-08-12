@@ -122,29 +122,23 @@ rule fmt_new_cens_bed_file:
 # ex. HG00171 chr22   h1tg000027l     1       26260313        1       4719177 4719177 48      4719177 4719178
 rule make_new_cens_bed_file:
     input:
-        script="workflow/scripts/filter_cen_ctgs.py",
         bed=rules.fmt_new_cens_bed_file.output,
     output:
         alr_bed=os.path.join(
             config["new_cens"]["output_dir"], "bed", "{sm}_ALR_regions.bed"
         ),
     params:
-        io_cols=" ".join(["ctg", "start", "end"]),
-        grp_cols=" ".join(["ctg"]),
-        sort_cols=" ".join(["ctg", "start"]),
+        # "ctg", "start", "end"
+        grp_cols="1",
+        sort_cols="-k1 -k2n",
     conda:
-        "../env/py.yaml"
+        "../env/tools.yaml"
     log:
         "logs/extract_new_cens_ctgs/make_{sm}_bed_files_for_plot.log",
     shell:
         """
-        {{ python {input.script} bedminmax \
-            -i {input.bed} \
-            -ci {params.io_cols} \
-            -co {params.io_cols} \
-            -g {params.grp_cols} \
-            -s {params.sort_cols} | \
-        awk -v OFS="\\t" '{{ print $1, $2, $3, $3-$2, $4}}';}} > {output.alr_bed} 2>> {log}
+        {{ bedtools groupby -i {input.bed} -g {params.grp_cols} -c 2,3 -o min,max | sort {params.sort_cols} | \
+        awk -v OFS="\\t" '{{ print $1, $2, $3, $3-$2}}';}} > {output.alr_bed} 2>> {log}
         """
 
 

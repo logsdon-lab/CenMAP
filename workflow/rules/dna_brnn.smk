@@ -18,7 +18,7 @@ rule run_dna_brnn:
         ),
     threads: config["dna_brnn"]["threads"]
     resources:
-        mem=config["dna_brnn"].get("mem", 4),
+        mem=config["dna_brnn"].get("mem", "4GB"),
     log:
         "logs/dna_brnn/dna_brnn_{sm}.log",
     benchmark:
@@ -127,7 +127,6 @@ use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions w
 # awk -v OFS="\t" '$2<0 {$2=0}1' > chr2_contigs.fwd.repeat.bed
 rule aggregate_dnabrnn_alr_regions_by_chr:
     input:
-        script="workflow/scripts/filter_cen_ctgs.py",
         added_ref_cens=rules.filter_dnabrnn_ref_cens_regions.output,
         sample_cens=lambda wc: expand(
             rules.filter_dnabrnn_sample_cens_regions.output,
@@ -141,25 +140,18 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         ),
     params:
         repeat_len_thr=dnabrnn_alr_region_threshold,
-        input_cols=" ".join(
-            [
-                "chr",
-                "start",
-                "end",
-                "repeat_type",
-                "repeat_length",
-            ]
-        ),
-        output_cols=" ".join(["chr", "start", "end", "repeat_type"]),
-        grp_cols=" ".join(["chr", "repeat_type"]),
-        sort_cols=" ".join(["chr", "start"]),
+        # "chr", "start", "end", "repeat_type", "repeat_len"
+        grp_cols="1,4",
+        # After grouping
+        # "chr", "repeat_type", "start", "end"
+        sort_cols="-k1 -k3n",
         bp_edges=500_000,
         # dna-brnn output may not contain repeats from a chr.
         allow_empty="--allow_empty",
     log:
         "logs/dna_brnn/aggregate_dnabrnn_alr_regions_by_{chr}.log",
     conda:
-        "../env/py.yaml"
+        "../env/tools.yaml"
     # Aggregate and bedminmax all.
     # Select cols and calculate length.
     # Add 500 kbp on both ends.
@@ -167,17 +159,21 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
     # Take abs value.
     shell:
         """
-        {{ python {input.script} bedminmax \
-            -i {input.sample_cens} {input.added_ref_cens} \
-            -ci {params.input_cols} \
-            -co {params.output_cols} \
-            -g {params.grp_cols} \
-            -s {params.sort_cols} {params.allow_empty} | \
-        awk -v OFS="\\t" '{{print $1, $2, $3, $3-$2}}' | \
-        awk -v BP_EDGES={params.bp_edges} \
-            -v OFS="\\t" '{{print $1, $2-BP_EDGES, $3+BP_EDGES, $3-$2}}' | \
-        awk '$4>{params.repeat_len_thr}' | \
-        awk -v OFS="\\t" '$2<0 {{$2=0}}1';}} > {output} 2> {log}
+        {{ bedtools groupby \
+        -i <(cat {input.sample_cens} {input.added_ref_cens} | sort | uniq) \
+        -g {params.grp_cols} \
+        -c 2,3 \
+        -o min,max | \
+        sort {params.sort_cols} | \
+        awk -v BP_EDGES={params.bp_edges} -v OFS="\\t" '{{
+            len=$4-$3
+            if (len > {params.repeat_len_thr}) {{
+                new_start=$3-BP_EDGES
+                new_end=$4+BP_EDGES
+                new_start=((new_start < 0) ? 0 : new_start)
+                print $1, new_start, new_end, $4-$3
+            }}
+        }}';}} > {output} 2> {log}
         """
 
 

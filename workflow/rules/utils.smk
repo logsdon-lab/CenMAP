@@ -25,7 +25,7 @@ rule extract_and_index_fa:
 
 rule plot_rm_out:
     input:
-        script="workflow/scripts/repeatStructure_onlyRM.R",
+        script="workflow/scripts/plot_cens_onlyRM.R",
         rm_out="",
     output:
         repeat_plot="",

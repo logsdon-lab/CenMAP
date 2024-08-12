@@ -42,7 +42,7 @@ rule run_moddotplot:
 
 rule plot_cen_moddotplot:
     input:
-        script="workflow/scripts/repeats_moddotplot.R",
+        script="workflow/scripts/plot_cens_moddotplot.R",
         seq_ident_bed=rules.run_moddotplot.output.bed,
         # TODO: Remove grepping. Pass file directly. Will require stv wf refactor.
         chr_stv_row_bed=os.path.join(

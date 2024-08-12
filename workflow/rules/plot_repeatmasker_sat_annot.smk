@@ -124,7 +124,7 @@ rule split_rm_satellite_annotations:
 
 rule plot_satellite_annotations:
     input:
-        script="workflow/scripts/repeatStructure_satellites.R",
+        script="workflow/scripts/plot_cens_onlysatRM.R",
         chr_annot=rules.split_rm_satellite_annotations.output,
     output:
         chr_plot=os.path.join(
