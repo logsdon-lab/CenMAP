@@ -20,11 +20,12 @@ rule calculate_as_hor_length:
         bp_jump_thr=100_000,
         arr_len_thr=30_000,
     shell:
+        # grep to remove chm13.
         """
-        ( censtats length \
+        {{ censtats length \
         --input {input.fmt_hmmer_output} \
         --bp_jump_thr {params.bp_jump_thr} \
-        --arr_len_thr {params.arr_len_thr} || true ) > {output} 2> {log}
+        --arr_len_thr {params.arr_len_thr} | grep -v ^chr ;}} > {output} 2> {log}
         """
 
 

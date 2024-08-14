@@ -9,14 +9,15 @@ rule get_live_hor:
         humas_hmmer_out=rules.cens_filter_hmm_res_overlaps_as_hor.output,
     output:
         renamed_bed=os.path.join(
-            config["humas_hmmer"]["output_dir"],
+            config["plot_hor_stv"]["output_dir"],
             "bed",
-            "results_{chr}_stv" "{fname}_renamed.bed",
+            "{chr}",
+            "{fname}_renamed.bed",
         ),
         live_hor_bed=os.path.join(
-            config["humas_hmmer"]["output_dir"],
+            config["plot_hor_stv"]["output_dir"],
             "bed",
-            "results_{chr}_stv",
+            "{chr}",
             "{fname}_liveHORs.bed",
         ),
     params:
@@ -46,15 +47,15 @@ rule filter_as_hor_stv_bed:
         renamed_bed=rules.get_live_hor.output.renamed_bed,
     output:
         stv_row_bed=os.path.join(
-            config["humas_hmmer"]["output_dir"],
+            config["plot_hor_stv"]["output_dir"],
             "bed",
-            "results_{chr}_stv",
+            "{chr}",
             "{fname}_stv_row.bed",
         ),
         as_hor_stv_row_bed=os.path.join(
-            config["humas_hmmer"]["output_dir"],
+            config["plot_hor_stv"]["output_dir"],
             "bed",
-            "results_{chr}_stv",
+            "{chr}",
             "AS-HOR_{fname}_stv_row.bed",
         ),
     log:
