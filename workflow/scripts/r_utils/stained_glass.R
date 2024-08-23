@@ -38,8 +38,21 @@ read_bedpe <- function(all.files) {
 
   df <- df %>% mutate(
     new_discrete = case_when(
-      perID_by_events > 0 & perID_by_events < 80 ~ "1-10",
-      perID_by_events >= 80 & perID_by_events < 90 ~ "11-20",
+      perID_by_events > 0 & perID_by_events < 90 ~ "1-10",
+      perID_by_events >= 90 & perID_by_events < 97.5 ~ "11-20",
+      # TODO: There should be a way to do this automatically.
+      #  100 - 95.0 = 5.0 / 10 = 0.5 increment
+      #  100 - 97.5 = 2.5 / 10 = 0.25 increment
+      perID_by_events >= 97.5 & perID_by_events < 97.75 ~ "21",
+      perID_by_events >= 97.75 & perID_by_events < 98.0 ~ "22",
+      perID_by_events >= 98.0 & perID_by_events < 98.25 ~ "23",
+      perID_by_events >= 98.25 & perID_by_events < 98.5 ~ "24",
+      perID_by_events >= 98.5 & perID_by_events < 98.75 ~ "25",
+      perID_by_events >= 98.75 & perID_by_events < 99.0 ~ "26",
+      perID_by_events >= 99.0 & perID_by_events < 99.25 ~ "27",
+      perID_by_events >= 99.25 & perID_by_events < 99.5 ~ "28",
+      perID_by_events >= 99.5 & perID_by_events < 99.75 ~ "29",
+      perID_by_events >= 99.75 & perID_by_events < 100.0 ~ "30",
       .default = as.character(discrete)
     )
   )
