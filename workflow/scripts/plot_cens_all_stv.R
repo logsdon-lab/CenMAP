@@ -85,8 +85,8 @@ df_rm_sat_out <- df_rm_sat_out %>%
   group_by(chr) %>%
   arrange(start2) %>%
   mutate(
-    start2 = start2 - dst_diff,
-    stop2 = stop - dst_diff
+    start2 = start2 - dst_diff - new_min,
+    stop2 = stop - dst_diff - new_min
   )
 
 df_humas_hmmer_stv_out <- df_humas_hmmer_stv_out %>%
@@ -99,8 +99,8 @@ df_humas_hmmer_stv_out <- df_humas_hmmer_stv_out %>%
   group_by(chr) %>%
   arrange(start) %>%
   mutate(
-    start = start - dst_diff,
-    stop = stop - dst_diff
+    start = start - dst_diff - new_min,
+    stop = stop - dst_diff - new_min
   ) %>%
   ungroup(chr)
 

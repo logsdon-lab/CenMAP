@@ -58,16 +58,15 @@ plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, height =
     theme(
       axis.line.x = element_line(colour = "white"),
       axis.line.y = element_line(colour = "white"),
-      axis.title.x = element_blank(),
-      axis.text.x = element_blank(),
-      axis.ticks.x = element_blank(),
       axis.title.y = element_blank(),
-      axis.text.y = element_blank(),
       axis.ticks.y = element_blank(),
       legend.position = "none"
     ) +
     guides(color = guide_legend(override.aes = list(size = 6))) +
-    xlab("Position (kbp)")
+    scale_x_continuous(
+      labels = scales::unit_format(scale = 1e-6, accuracy=0.1, unit="")
+    ) +
+    xlab("Position (Mbp)")
   return(p)
 }
 
@@ -79,7 +78,6 @@ plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
       size = height
     ) +
     scale_color_manual(values = get_rm_sat_annot_colors()) +
-    scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
     # New colorscale.
     new_scale_color() +
     geom_segment(
@@ -89,12 +87,17 @@ plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
     ) +
     scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
     theme_classic() +
-    theme(axis.line.y = element_line(colour = "white")) +
-    theme(legend.position = "bottom") +
-    theme(legend.key.width = unit(1, "cm")) +
-    theme(legend.title = element_blank()) +
+    theme(
+      legend.position = "bottom",
+      legend.key.width = unit(1, "cm"),
+      legend.title = element_blank(),
+      axis.line.y = element_line(colour = "white")
+    ) +
+    scale_x_continuous(
+      labels = scales::unit_format(scale = 1e-6, accuracy=0.1, unit="")
+    ) +
     guides(color = guide_legend(override.aes = list(size = 6))) +
-    xlab("Position (kbp)")
+    xlab("Position (Mbp)")
 
   return(p)
 }
