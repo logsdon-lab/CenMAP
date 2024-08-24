@@ -12,20 +12,17 @@ jobs:
         submodules: 'true'
         lfs: 'true'
 
-    - name: Install Singularity.
-      uses: singularityhub/install-singularity@main
-
     - name: Install Python.
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
 
-    - name: Install yq.
-      uses: mikefarah/yq@master
-
     - name: Install Snakemake and testing dependencies.
       run: |
-        pip install -r <(yq -r '.dependencies[] | select(type == "object") | to_entries[].value[]' env_dev.yaml)
+        pip install -r <(yq -r '.dependencies[] | select(type == "!!map") | to_entries[].value[]' env_dev.yaml)
+
+    - name: Install Singularity.
+      uses: singularityhub/install-singularity@main
 
     - name: Test scripts.
       run: |
