@@ -30,7 +30,7 @@ rule check_cens_status:
     log:
         "logs/fix_cens_w_repeatmasker/check_cens_status_{chr}.log",
     conda:
-        "../envs/cen_stats.yaml"
+        "../envs/py.yaml"
     shell:
         """
         censtats status \

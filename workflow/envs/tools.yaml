@@ -7,3 +7,4 @@ dependencies:
   - samtools
   - seqkit
   - gawk
+  - repeatmasker==4.1.0

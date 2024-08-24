@@ -13,7 +13,7 @@ rule calculate_as_hor_length:
             "{chr}_AS-HOR_lengths.tsv",
         ),
     conda:
-        "../envs/cen_stats.yaml"
+        "../envs/py.yaml"
     log:
         "logs/calculate_hor_length/calculate_{chr}_as_hor_length.log",
     params:

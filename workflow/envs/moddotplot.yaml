@@ -1,7 +1,0 @@
-channels:
-  - conda-forge
-dependencies:
-  - python==3.12
-  - pip
-  - pip:
-    - "git+https://github.com/marbl/ModDotPlot.git@main"

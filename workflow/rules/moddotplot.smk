@@ -23,7 +23,7 @@ rule run_moddotplot:
         ),
         bed=os.path.join(OUTPUT_MODDOTPLOT_DIR, "original_{fname}", "{fname}.bed"),
     conda:
-        "../envs/moddotplot.yaml"
+        "../envs/py.yaml"
     params:
         window=config["moddotplot"]["window"],
         ident_thr=70.0,
@@ -161,7 +161,7 @@ rule _force_moddotplot_env_inclusion:
     output:
         plots=touch("conda_moddotplot.done"),
     conda:
-        "../envs/moddotplot.yaml"
+        "../envs/py.yaml"
     shell:
         "echo ''"
 

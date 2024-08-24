@@ -93,7 +93,7 @@ rule run_repeatmasker:
         species="human",
         engine="rmblast",
     conda:
-        "../envs/repeatmasker.yaml"
+        "../envs/tools.yaml"
     log:
         "logs/repeatmasker/repeatmasker_{sm}.log",
     # Retry in case of .RepeatMaskerCache failure.
