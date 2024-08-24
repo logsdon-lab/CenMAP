@@ -15,23 +15,19 @@ jobs:
     - name: Install Singularity.
       uses: singularityhub/install-singularity@main
 
-    - name: Install Mamba.
-      uses: conda-incubator/setup-miniconda@v3
+    - name: Install Python.
+      uses: actions/setup-python@v5
       with:
-        miniforge-variant: Mambaforge
-        miniforge-version: latest
-        use-mamba: true
-        channel-priority: true
-        activate-environment: test_env
-        environment-file: env_dev.yaml
+        python-version: '3.12'
+
+    - name: Install Snakemake.
+      run: pip install snakemake
 
     - name: Test dry-run workflow.
-      shell: bash -el {0}
       run: |
         snakemake -c 1 -np --configfile test/config/config.yaml
 
     - name: Test chrY workflow.
-      shell: bash -el {0}
       run: |
         snakemake -c 4 -p \
         --configfile test/config/config_HG00731.yaml \
