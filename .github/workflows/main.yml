@@ -25,14 +25,16 @@ jobs:
 
     - name: Test dry-run workflow.
       run: |
-        snakemake -c 1 -np --configfile test/config/config.yaml
+        snakemake -c 1 -np \
+        --workflow-profile none \
+        --configfile test/config/config.yaml
 
     - name: Test chrY workflow.
       run: |
         snakemake -c 4 -p \
+        --workflow-profile none \
         --configfile test/config/config_HG00731.yaml \
-        --use-conda \
-        --use-singularity \
+        --sdm conda apptainer \
         --show-failed-logs \
         --conda-cleanup-pkgs cache
 
