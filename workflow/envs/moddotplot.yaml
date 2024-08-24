@@ -4,4 +4,4 @@ dependencies:
   - python==3.12
   - pip
   - pip:
-    - "../../workflow/scripts/ModDotPlot"
+    - "git+https://github.com/marbl/ModDotPlot.git@main"
