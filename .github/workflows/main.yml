@@ -20,8 +20,16 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: Install Snakemake.
-      run: pip install snakemake
+    - name: Install yq.
+      uses: mikefarah/yq@master
+
+    - name: Install Snakemake and testing dependencies.
+      run: |
+        pip install -r <(yq -r '.dependencies[] | select(type == "object") | to_entries[].value[]' env_dev.yaml)
+
+    - name: Test scripts.
+      run: |
+        pytest -vvv
 
     - name: Test dry-run workflow.
       run: |
@@ -37,8 +45,3 @@ jobs:
         --sdm conda apptainer \
         --show-failed-logs \
         --conda-cleanup-pkgs cache
-
-    - name: Test scripts.
-      shell: bash -el {0}
-      run: |
-        pytest -s
