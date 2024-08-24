@@ -1,9 +1,30 @@
 include: "common.smk"
 
 
+rule compile_dnabrnn:
+    output:
+        os.path.join(config["dna_brnn"]["output_dir"], "dna-nn", "dna-brnn"),
+    conda:
+        "../envs/dna-brnn.yaml"
+    log:
+        "logs/dna_brnn/compile_dna_brnn.log",
+    params:
+        url="https://github.com/lh3/dna-nn",
+        tmp_log="compile_dna_brnn.log",
+        output_dir=lambda wc, output: os.path.dirname(str(output)),
+    shell:
+        """
+        log_path=$(realpath {log})
+        git clone {params.url} {params.output_dir} 2> "${{log_path}}"
+        cd {params.output_dir}
+        make 2>> "${{log_path}}"
+        """
+
+
 # https://github.com/lh3/dna-nn/tree/master
 rule run_dna_brnn:
     input:
+        bin_dnabrnn=rules.compile_dnabrnn.output if not IS_CONTAINERIZE_CMD else [],
         model=config["dna_brnn"]["model"],
         seqs=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
@@ -16,6 +37,10 @@ rule run_dna_brnn:
             "{sm}",
             "{sm}_centromeric_regions.renamed.bed",
         ),
+    params:
+        bin_dnabrnn=lambda wc, input: (
+            input.bin_dnabrnn if input.bin_dnabrnn else "dna-brnn"
+        ),
     threads: config["dna_brnn"]["threads"]
     resources:
         mem=config["dna_brnn"].get("mem", "4GB"),
@@ -23,12 +48,11 @@ rule run_dna_brnn:
         "logs/dna_brnn/dna_brnn_{sm}.log",
     benchmark:
         "benchmarks/dna_brnn/dna_brnn_{sm}.tsv"
-    # No conda recipe. Use singularity if not installed locally.
     singularity:
         "docker://logsdonlab/dna-nn:latest"
     shell:
         """
-        dna-brnn -t {threads} -Ai {input.model} {input.seqs} > {output} 2> {log}
+        {params.bin_dnabrnn} -t {threads} -Ai {input.model} {input.seqs} > {output} 2> {log}
         """
 
 
