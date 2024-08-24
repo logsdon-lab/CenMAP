@@ -68,6 +68,8 @@ rule join_cen_status_and_nucflag_status:
         output_format="1.1,1.2,1.3,1.4,0,2.2",
     log:
         "logs/fix_cens_w_repeatmasker/join_cen_status_and_nucflag_status.log",
+    conda:
+        "../env/tools.yaml"
     shell:
         """
         join \
@@ -103,6 +105,8 @@ rule get_cen_corrections_lists:
         partial_misasm_cens_list=os.path.join(
             config["repeatmasker"]["output_dir"], "status", "all_partial_cens.list"
         ),
+    conda:
+        "../env/tools.yaml"
     params:
         omit_nucflag="nucflag" not in config,
     log:

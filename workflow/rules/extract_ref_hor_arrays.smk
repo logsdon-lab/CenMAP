@@ -9,6 +9,8 @@ rule adjust_ref_hor_arrays:
             config["extract_ref_hor_arrays"]["output_dir"],
             f"{REF_NAME}.hor_arrays.{REF_CENS_EDGE_LEN}kbp.bed",
         ),
+    conda:
+        "../env/tools.yaml"
     params:
         added_bases=config["extract_ref_hor_arrays"].get("added_bases", 0),
     shell:

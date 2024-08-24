@@ -35,6 +35,8 @@ rule create_annotated_satellites:
             "bed",
             "all_cens_{repeat}.satellites.bed",
         ),
+    conda:
+        "../env/tools.yaml"
     params:
         pattern=lambda wc: ANNOTATE_SAT_REPEATS[str(wc.repeat)]["pattern"],
         color=lambda wc: ANNOTATE_SAT_REPEATS[str(wc.repeat)]["color"],

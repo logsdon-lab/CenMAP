@@ -153,6 +153,8 @@ rule merge_repeatmasker_output:
                 "all_samples_correct_ALR_regions.fa.out",
             )
         ),
+    conda:
+        "../env/tools.yaml"
     shell:
         """
         awk -v OFS="\\t" '{{$1=$1; print}}' {input} > {output}

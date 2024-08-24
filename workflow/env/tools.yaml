@@ -5,7 +5,5 @@ dependencies:
   - bedtools
   - seqtk
   - samtools
-  - hmmer
-  - bedops
   - seqkit
-  - pbmm2
+  - gawk

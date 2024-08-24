@@ -86,6 +86,8 @@ rule aggregate_format_all_stv_row:
         ),
     log:
         "logs/plot_hor_stv/get_stv_row_from_{chr}_humas_hmmer_out.log",
+    conda:
+        "../env/tools.yaml"
     shell:
         """
         awk -v OFS="\\t" '{{
