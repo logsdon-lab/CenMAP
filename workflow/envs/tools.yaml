@@ -5,7 +5,6 @@ dependencies:
   - bedtools
   - seqtk
   - samtools
-  - hmmer
-  - bedops
   - seqkit
-  - pbmm2
+  - gawk
+  - repeatmasker==4.1.0

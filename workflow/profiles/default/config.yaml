@@ -1,0 +1,7 @@
+default-resources: mem=8
+software-deployment-method:
+  - conda
+printshellcmds: True
+rerun-incomplete: True
+show-failed-logs: True
+rerun-triggers: mtime

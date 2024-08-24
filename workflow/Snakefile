@@ -5,6 +5,9 @@ min_version("6.0")
 shell.prefix("set -euo pipefail;")
 
 
+containerized: "docker://logsdonlab/cenmap:latest"
+
+
 # Constants loaded here.
 include: "rules/common.smk"
 

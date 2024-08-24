@@ -10,7 +10,7 @@ rule extract_and_index_fa:
     params:
         added_cmds="",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         """
         seqtk subseq {input.fa} {input.bed} {params.added_cmds} > {output.seq} 2> {log}
@@ -32,7 +32,7 @@ rule plot_rm_out:
     log:
         "logs/plot_rm_out.log",
     conda:
-        "../env/r.yaml"
+        "../envs/r.yaml"
     shell:
         """
         Rscript {input.script} {input.rm_out} {output.repeat_plot} 2> {log}

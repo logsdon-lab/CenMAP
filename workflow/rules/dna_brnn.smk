@@ -1,9 +1,34 @@
 include: "common.smk"
 
 
+rule compile_dna_brnn:
+    output:
+        os.path.join(config["dna_brnn"]["output_dir"], "dna-nn", "dna-brnn"),
+    conda:
+        "../envs/dna-brnn.yaml"
+    log:
+        "logs/dna_brnn/compile_dna_brnn.log",
+    params:
+        url="https://github.com/lh3/dna-nn",
+        tmp_log="compile_dna_brnn.log",
+        output_dir=lambda wc, output: os.path.dirname(str(output)),
+    shell:
+        """
+        log_path=$(realpath {log})
+        rm -rf {params.output_dir} && git clone {params.url} {params.output_dir} 2> "${{log_path}}"
+        cd {params.output_dir}
+        conda_env=$(which gcc | sed 's/\\/bin\\/gcc//g')
+        C_INCLUDE_PATH="${{conda_env}}/include/" make >> "${{log_path}}" 2>> "${{log_path}}"
+        """
+
+
 # https://github.com/lh3/dna-nn/tree/master
 rule run_dna_brnn:
     input:
+        # Only compile dna-brnn if conda-only.
+        bin_dnabrnn=(
+            rules.compile_dna_brnn.output if IS_CONDA and not IS_SINGULARITY else []
+        ),
         model=config["dna_brnn"]["model"],
         seqs=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
@@ -16,6 +41,10 @@ rule run_dna_brnn:
             "{sm}",
             "{sm}_centromeric_regions.renamed.bed",
         ),
+    params:
+        bin_dnabrnn=lambda wc, input: (
+            input.bin_dnabrnn if input.bin_dnabrnn else "dna-brnn"
+        ),
     threads: config["dna_brnn"]["threads"]
     resources:
         mem=config["dna_brnn"].get("mem", "4GB"),
@@ -23,12 +52,11 @@ rule run_dna_brnn:
         "logs/dna_brnn/dna_brnn_{sm}.log",
     benchmark:
         "benchmarks/dna_brnn/dna_brnn_{sm}.tsv"
-    # No conda recipe. Use singularity if not installed locally.
     singularity:
         "docker://logsdonlab/dna-nn:latest"
     shell:
         """
-        dna-brnn -t {threads} -Ai {input.model} {input.seqs} > {output} 2> {log}
+        {params.bin_dnabrnn} -t {threads} -Ai {input.model} {input.seqs} > {output} 2> {log}
         """
 
 
@@ -76,7 +104,7 @@ rule filter_dnabrnn_ref_cens_regions:
     log:
         "logs/dna_brnn/filter_dnabrnn_ref_{chr}_cens_regions.log",
     conda:
-        "../env/py.yaml"
+        "../envs/py.yaml"
     shell:
         """
         python {input.script} \
@@ -116,7 +144,7 @@ use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions w
     log:
         "logs/dna_brnn/filter_dnabrnn_{sm}_{chr}_cens_regions.log",
     conda:
-        "../env/py.yaml"
+        "../envs/py.yaml"
 
 
 # /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py (modified bedminmax) \
@@ -151,7 +179,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
     log:
         "logs/dna_brnn/aggregate_dnabrnn_alr_regions_by_{chr}.log",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     # Aggregate and bedminmax all.
     # Select cols and calculate length.
     # Add 500 kbp on both ends.

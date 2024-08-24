@@ -39,3 +39,6 @@ A centromere mapping and annotation pipeline for T2T human genome assemblies imp
 
 ### [Documentation](https://github.com/logsdon-lab/CenMAP/wiki)
 Read the docs on the `CenMAP` [wiki](https://github.com/logsdon-lab/CenMAP/wiki).
+
+### [Tests](https://github.com/logsdon-lab/CenMAP/wiki/6.-Test)
+To run tests, refer to the wiki [page](https://github.com/logsdon-lab/CenMAP/wiki/6.-Test).

@@ -20,7 +20,7 @@ rule extract_cens_for_humas_hmmer:
     log:
         "logs/humas_hmmer/extract_{chr}_cens_for_humas_hmmer.log",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         """
         seqtk subseq {input.fa} <(grep "{wildcards.chr}[:_]" {input.idx} | cut -f 1) > {output.cens} 2> {log}
@@ -47,7 +47,7 @@ checkpoint split_cens_for_humas_hmmer:
     params:
         split_dir=config["humas_hmmer"]["input_dir"],
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         # https://gist.github.com/astatham/621901
         """
@@ -61,18 +61,26 @@ checkpoint split_cens_for_humas_hmmer:
         """
 
 
+MODULE_REPO = "logsdon-lab/Snakemake-HumAS-HMMER"
+MODULE_BRANCH = "main"
+MODULE_PATH = "workflow/Snakefile"
+
+
 module HumAS_HMMER:
     snakefile:
         github(
-            "logsdon-lab/Snakemake-HumAS-HMMER",
-            path="workflow/Snakefile",
-            branch="main",
+            MODULE_REPO,
+            path=MODULE_PATH,
+            branch=MODULE_BRANCH,
         )
     config:
         config["humas_hmmer"]
 
 
 use rule * from HumAS_HMMER as cens_*
+
+
+MODULE_ENV_FILE = rules.cens_humas_hmmer_analysis.__dict__["rule"]._conda_env
 
 
 # https://stackoverflow.com/a/63040288
@@ -98,6 +106,18 @@ rule run_humas_hmmer_for_anvil:
         ),
 
 
+# Force including conda so --containerize includes.
+# Must be done since Snakemake won't know rule metadata until runtime.
+rule _force_humas_hmmer_env_inclusion:
+    output:
+        plots=touch("conda_humas_hmmer.done"),
+    conda:
+        f"https://raw.githubusercontent.com/{MODULE_REPO}/{MODULE_BRANCH}/workflow/{MODULE_ENV_FILE}"
+    shell:
+        "echo ''"
+
+
 rule humas_hmmer_only:
     input:
+        rules._force_humas_hmmer_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
         expand(rules.run_humas_hmmer_for_anvil.output, chr=CHROMOSOMES),

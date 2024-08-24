@@ -23,7 +23,7 @@ rule run_moddotplot:
         ),
         bed=os.path.join(OUTPUT_MODDOTPLOT_DIR, "original_{fname}", "{fname}.bed"),
     conda:
-        "../env/moddotplot.yaml"
+        "../envs/py.yaml"
     params:
         window=config["moddotplot"]["window"],
         ident_thr=70.0,
@@ -78,7 +78,7 @@ rule plot_cen_moddotplot:
             OUTPUT_MODDOTPLOT_DIR, f"{wc.chr}_{wc.fname}_full"
         ),
     conda:
-        "../env/r.yaml"
+        "../envs/r.yaml"
     log:
         "logs/plot_cen_moddotplot/plot_cen_moddotplot_{chr}_{fname}_{mer_order}.log",
     shell:
@@ -156,6 +156,16 @@ else:
             ),
 
 
+# Force moddotplot to be included with --containerize.
+rule _force_moddotplot_env_inclusion:
+    output:
+        plots=touch("conda_moddotplot.done"),
+    conda:
+        "../envs/py.yaml"
+    shell:
+        "echo ''"
+
+
 rule moddotplot_only:
     input:
         (
@@ -163,4 +173,5 @@ rule moddotplot_only:
             if config["moddotplot"].get("input_dir") is None
             else rules.moddotplot_all.input
         ),
+        rules._force_moddotplot_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
     default_target: True

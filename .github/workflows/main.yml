@@ -12,35 +12,33 @@ jobs:
         submodules: 'true'
         lfs: 'true'
 
+    - name: Install Python.
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install Snakemake and testing dependencies.
+      run: |
+        pip install -r <(yq -r '.dependencies[] | select(type == "!!map") | to_entries[].value[]' env_dev.yaml)
+
     - name: Install Singularity.
       uses: singularityhub/install-singularity@main
 
-    - name: Install Mamba.
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        miniforge-variant: Mambaforge
-        miniforge-version: latest
-        use-mamba: true
-        channel-priority: true
-        activate-environment: test_env
-        environment-file: env_dev.yaml
+    - name: Test scripts.
+      run: |
+        pytest -vvv
 
     - name: Test dry-run workflow.
-      shell: bash -el {0}
       run: |
-        snakemake -c 1 -np --configfile test/config/config.yaml
+        snakemake -c 1 -np \
+        --workflow-profile none \
+        --configfile test/config/config.yaml
 
     - name: Test chrY workflow.
-      shell: bash -el {0}
       run: |
         snakemake -c 4 -p \
+        --workflow-profile none \
         --configfile test/config/config_HG00731.yaml \
-        --use-conda \
-        --use-singularity \
+        --sdm apptainer conda \
         --show-failed-logs \
         --conda-cleanup-pkgs cache
-
-    - name: Test scripts.
-      shell: bash -el {0}
-      run: |
-        pytest -s

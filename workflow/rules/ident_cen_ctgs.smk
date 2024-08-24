@@ -17,7 +17,7 @@ rule format_hor_ref_aln_cen_contigs:
             "{sm}_cens.bed",
         ),
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     log:
         "logs/ident_cen_ctgs/format_hor_ref_aln_cen_contigs_{sm}.log",
     shell:
@@ -64,7 +64,7 @@ rule intersect_with_pq_arm:
             "{sm}_pqarm_cens.bed",
         ),
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     log:
         "logs/ident_cen_ctgs/intersect_ref_cen_pqarm_{sm}.log",
     shell:
@@ -93,7 +93,7 @@ rule map_collapse_cens:
     params:
         thr_ctg_len=0,
     conda:
-        "../env/py.yaml"
+        "../envs/py.yaml"
     log:
         "logs/ident_cen_ctgs/map_collapse_cens_{sm}.log",
     shell:
@@ -127,7 +127,7 @@ rule create_renamed_bed_n_legend:
         legend_key="$1",
         legend_val='"_"'.join(f"${col}" for col in (7, 4, 1)),
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         """
         {{ awk -v OFS="\\t" '{{print $0, "{wildcards.sm}"}}' {input.regions} | \
@@ -162,13 +162,16 @@ rule rename_ctgs:
                 "{sm}_regions.renamed.fa.fai",
             )
         ),
+    params:
+        pattern=r"'(\S+)'",
+        replacement=lambda wc: "'{kv}'",
     log:
         os.path.join("logs/ident_cen_ctgs/rename_cens", "rename_ctgs_{sm}.log"),
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         """
-        seqkit replace -p '(\S+)' -r '{{kv}}' \
+        seqkit replace -p {params.pattern} -r {params.replacement} \
         -k {input.legend} {input.seq} \
         --keep-key > {output.fa} 2> {log}
         samtools faidx {output.fa} 2>> {log}
@@ -193,7 +196,7 @@ rule fix_ort_asm:
     log:
         "logs/ident_cen_ctgs/fix_ort_asm_{sm}.log",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         """
         # Reverse complement sequences and then get everything else.
@@ -222,7 +225,7 @@ use rule extract_and_index_fa as extract_cens_regions with:
     log:
         "logs/ident_cen_ctgs/extract_regions_{sm}.log",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
 
 
 rule ident_cen_ctgs_all:

@@ -41,7 +41,7 @@ rule cluster_cens:
     log:
         "logs/cluster_cens/cluster_cens_{chr}.log",
     conda:
-        "../env/py.yaml"
+        "../envs/py.yaml"
     shell:
         """
         python {input.script} \

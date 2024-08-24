@@ -33,7 +33,7 @@ rule plot_cens_structure:
     log:
         "logs/plot_cens_structure/plot_{chr}_{mer_order}_cens_structure.log",
     conda:
-        "../env/r.yaml"
+        "../envs/r.yaml"
     params:
         hor_filter=0,
     shell:

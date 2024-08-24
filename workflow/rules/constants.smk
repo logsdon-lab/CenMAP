@@ -45,6 +45,12 @@ REF_CENS_EDGE_LEN = round(
     (500_000 + config["extract_ref_hor_arrays"].get("added_bases", 0)) / 1000
 )
 
+# Check if command is to containerize workflow.
+ARGUMENTS = set(sys.argv)
+IS_CONTAINERIZE_CMD = "--containerize" in ARGUMENTS
+IS_SINGULARITY = bool(ARGUMENTS.intersection(set(["--use-singularity", "apptainer"])))
+IS_CONDA = bool(ARGUMENTS.intersection(set(["--use-conda", "conda"])))
+
 # Thresholds
 DEF_DNA_BRNN_FULL_ALR_THR = 30_000
 DEF_CENSTATS_STATUS_EDGE_LEN_THR = 500_000

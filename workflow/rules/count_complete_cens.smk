@@ -17,7 +17,7 @@ rule count_complete_cens:
     log:
         "logs/count_cens/count_complete_cens.log",
     conda:
-        "../env/py.yaml"
+        "../envs/py.yaml"
     shell:
         """
         python {input.script} -i {input.hor_arr_len} > {output} 2> {log}
@@ -39,7 +39,7 @@ rule plot_complete_cen_counts:
     log:
         "logs/count_cens/plot_complete_cen_counts.log",
     conda:
-        "../env/r.yaml"
+        "../envs/r.yaml"
     shell:
         """
         Rscript {input.script} --input {input.cmp_cnts} --output {output} 2> {log}

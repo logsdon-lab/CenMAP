@@ -1,5 +1,5 @@
 include: "utils.smk"
-include: "constants.smk"
+include: "common.smk"
 
 
 use rule wget as download_ref_asm with:
