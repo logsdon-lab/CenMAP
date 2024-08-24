@@ -25,7 +25,10 @@ rule compile_dna_brnn:
 # https://github.com/lh3/dna-nn/tree/master
 rule run_dna_brnn:
     input:
-        bin_dnabrnn=rules.compile_dna_brnn.output if not IS_CONTAINERIZE_CMD else [],
+        # Only compile dna-brnn if conda-only.
+        bin_dnabrnn=(
+            rules.compile_dna_brnn.output if IS_CONDA and not IS_SINGULARITY else []
+        ),
         model=config["dna_brnn"]["model"],
         seqs=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],

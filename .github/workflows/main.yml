@@ -39,6 +39,6 @@ jobs:
         snakemake -c 4 -p \
         --workflow-profile none \
         --configfile test/config/config_HG00731.yaml \
-        --sdm conda apptainer \
+        --sdm apptainer conda \
         --show-failed-logs \
         --conda-cleanup-pkgs cache
