@@ -162,13 +162,16 @@ rule rename_ctgs:
                 "{sm}_regions.renamed.fa.fai",
             )
         ),
+    params:
+        pattern=r"'(\S+)'",
+        replacement="'{{kv}}'",
     log:
         os.path.join("logs/ident_cen_ctgs/rename_cens", "rename_ctgs_{sm}.log"),
     conda:
         "../envs/tools.yaml"
     shell:
         """
-        seqkit replace -p '(\S+)' -r '{{kv}}' \
+        seqkit replace -p {params.pattern} -r {params.replacement} \
         -k {input.legend} {input.seq} \
         --keep-key > {output.fa} 2> {log}
         samtools faidx {output.fa} 2>> {log}

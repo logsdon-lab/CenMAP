@@ -117,7 +117,7 @@ rule split_rm_satellite_annotations:
             "all_cens_{chr}.annotation.fa.out",
         ),
     params:
-        chr_pattern=lambda wc: str(wc.chr).replace("chr", "(chr|cen)") + "[_:\-\\tv]",
+        chr_pattern=lambda wc: str(wc.chr).replace("chr", r"(chr|cen)") + r"[_:\-\\tv]",
     shell:
         """
         grep -P "{params.chr_pattern}" {input.all_annotations} > {output.chr_annot}

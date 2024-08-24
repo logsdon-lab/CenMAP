@@ -13,7 +13,7 @@ rule concat_asm:
         ),
     # https://bioinf.shenwei.me/seqkit/usage/#rmdup
     params:
-        assembly_fname_pattern=".*\.(fa|fasta)",
+        assembly_fname_pattern=r".*\.(fa|fasta)",
     resources:
         mem=config["concat_asm"].get("mem", "4GB"),
     log:
