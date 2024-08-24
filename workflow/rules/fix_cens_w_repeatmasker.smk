@@ -209,6 +209,9 @@ rule fix_ort_asm_final:
             "{sm}",
             "{sm}_regions.renamed.reort.final.fa.fai",
         ),
+    params:
+        pattern=r"'(\S+)'",
+        replacement=lambda wc: "'{kv}'",
     conda:
         "../envs/tools.yaml"
     log:
@@ -219,7 +222,7 @@ rule fix_ort_asm_final:
         # Get all the non-reversed contigs.
         # Then replace the names.
         if [ -s {input.reverse_cens_key} ]; then
-            seqkit replace -p '(\S+)' -r '{{kv}}' \
+            seqkit replace -p {params.pattern} -r {params.replacement} \
             -k {input.reverse_cens_key} \
             <(cat \
                 <(seqtk subseq {input.fa} \

@@ -164,7 +164,7 @@ rule rename_ctgs:
         ),
     params:
         pattern=r"'(\S+)'",
-        replacement="'{{kv}}'",
+        replacement=lambda wc: "'{kv}'",
     log:
         os.path.join("logs/ident_cen_ctgs/rename_cens", "rename_ctgs_{sm}.log"),
     conda:
