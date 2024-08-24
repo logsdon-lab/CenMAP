@@ -45,6 +45,9 @@ REF_CENS_EDGE_LEN = round(
     (500_000 + config["extract_ref_hor_arrays"].get("added_bases", 0)) / 1000
 )
 
+# Check if command is to containerize workflow.
+IS_CONTAINERIZE_CMD = "--containerize" in sys.argv
+
 # Thresholds
 DEF_DNA_BRNN_FULL_ALR_THR = 30_000
 DEF_CENSTATS_STATUS_EDGE_LEN_THR = 500_000

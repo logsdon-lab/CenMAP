@@ -156,6 +156,16 @@ else:
             ),
 
 
+# Force moddotplot to be included with --containerize.
+rule _force_moddotplot_env_inclusion:
+    output:
+        plots=touch("conda_moddotplot.done"),
+    conda:
+        "../envs/moddotplot.yaml"
+    shell:
+        "echo ''"
+
+
 rule moddotplot_only:
     input:
         (
@@ -163,4 +173,5 @@ rule moddotplot_only:
             if config["moddotplot"].get("input_dir") is None
             else rules.moddotplot_all.input
         ),
+        rules._force_moddotplot_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
     default_target: True
