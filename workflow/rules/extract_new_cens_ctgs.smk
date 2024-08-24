@@ -79,7 +79,7 @@ rule merge_alr_regions_by_chr:
             config["new_cens"]["output_dir"], "seq", "{chr}_contigs.ALR.fa.fai"
         ),
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     log:
         "logs/extract_new_cens_ctgs/merge_alr_regions_by_{chr}.log",
     shell:
@@ -105,7 +105,7 @@ rule fmt_new_cens_bed_file:
             )
         ),
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     log:
         "logs/extract_new_cens_ctgs/fmt_{sm}_new_cens_bed_file.log",
     shell:
@@ -139,7 +139,7 @@ rule make_new_cens_bed_file:
         grp_cols="1",
         sort_cols="-k1 -k2n",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     log:
         "logs/extract_new_cens_ctgs/make_{sm}_bed_files_for_plot.log",
     shell:

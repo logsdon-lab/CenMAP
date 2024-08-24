@@ -13,7 +13,7 @@ rule calculate_as_hor_length:
             "{chr}_AS-HOR_lengths.tsv",
         ),
     conda:
-        "../env/cen_stats.yaml"
+        "../envs/cen_stats.yaml"
     log:
         "logs/calculate_hor_length/calculate_{chr}_as_hor_length.log",
     params:
@@ -59,7 +59,7 @@ rule plot_as_hor_length:
     log:
         "logs/calculate_hor_length/plot_all_as_hor_length.log",
     conda:
-        "../env/r.yaml"
+        "../envs/r.yaml"
     shell:
         """
         Rscript {input.script} \

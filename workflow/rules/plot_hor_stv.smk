@@ -30,7 +30,7 @@ rule get_live_hor:
     log:
         "logs/plot_hor_stv/get_live_hor_{fname}_{chr}.log",
     conda:
-        "../env/py.yaml"
+        "../envs/py.yaml"
     shell:
         """
         awk -v OFS="\\t" '{{
@@ -61,7 +61,7 @@ rule filter_as_hor_stv_bed:
     log:
         "logs/plot_hor_stv/filter_as_hor_stv_bed_{fname}_{chr}.log",
     conda:
-        "../env/py.yaml"
+        "../envs/py.yaml"
     shell:
         """
         python3 {input.script} {input.live_hor_bed} > {output.stv_row_bed} 2>> {log}
@@ -87,7 +87,7 @@ rule aggregate_format_all_stv_row:
     log:
         "logs/plot_hor_stv/get_stv_row_from_{chr}_humas_hmmer_out.log",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         """
         awk -v OFS="\\t" '{{
@@ -119,7 +119,7 @@ rule plot_stv_with_order:
     log:
         "logs/plot_hor_stv/plot_{chr}_stv_{mer_order}_on_top.log",
     conda:
-        "../env/r.yaml"
+        "../envs/r.yaml"
     shell:
         """
         if ! [ -s {input.all_stv} ]; then

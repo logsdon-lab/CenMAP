@@ -76,7 +76,7 @@ rule filter_dnabrnn_ref_cens_regions:
     log:
         "logs/dna_brnn/filter_dnabrnn_ref_{chr}_cens_regions.log",
     conda:
-        "../env/py.yaml"
+        "../envs/py.yaml"
     shell:
         """
         python {input.script} \
@@ -116,7 +116,7 @@ use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions w
     log:
         "logs/dna_brnn/filter_dnabrnn_{sm}_{chr}_cens_regions.log",
     conda:
-        "../env/py.yaml"
+        "../envs/py.yaml"
 
 
 # /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py (modified bedminmax) \
@@ -151,7 +151,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
     log:
         "logs/dna_brnn/aggregate_dnabrnn_alr_regions_by_{chr}.log",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     # Aggregate and bedminmax all.
     # Select cols and calculate length.
     # Add 500 kbp on both ends.

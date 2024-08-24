@@ -19,7 +19,7 @@ rule format_repeatmasker_to_overlay_bed:
     params:
         color_alr_alpha="#8B008B",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         """
         awk -v OFS="\\t" '{{
@@ -79,7 +79,7 @@ rule simplify_rm_overlay_bed:
             "{sm}_correct_ALR_regions.rm.simple.bed",
         ),
     conda:
-        "../env/py.yaml"
+        "../envs/py.yaml"
     log:
         "logs/nucflag/simplify_rm_overlay_bed_{sm}.log",
     shell:

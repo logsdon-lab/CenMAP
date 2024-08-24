@@ -23,7 +23,7 @@ rule run_moddotplot:
         ),
         bed=os.path.join(OUTPUT_MODDOTPLOT_DIR, "original_{fname}", "{fname}.bed"),
     conda:
-        "../env/moddotplot.yaml"
+        "../envs/moddotplot.yaml"
     params:
         window=config["moddotplot"]["window"],
         ident_thr=70.0,
@@ -78,7 +78,7 @@ rule plot_cen_moddotplot:
             OUTPUT_MODDOTPLOT_DIR, f"{wc.chr}_{wc.fname}_full"
         ),
     conda:
-        "../env/r.yaml"
+        "../envs/r.yaml"
     log:
         "logs/plot_cen_moddotplot/plot_cen_moddotplot_{chr}_{fname}_{mer_order}.log",
     shell:

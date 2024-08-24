@@ -10,7 +10,7 @@ rule adjust_ref_hor_arrays:
             f"{REF_NAME}.hor_arrays.{REF_CENS_EDGE_LEN}kbp.bed",
         ),
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     params:
         added_bases=config["extract_ref_hor_arrays"].get("added_bases", 0),
     shell:
@@ -40,7 +40,7 @@ rule extract_ref_hor_arrays:
     log:
         "logs/extract_ref_hor_arrays/extract_ref_hor_arrays.log",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         """
         seqtk subseq {input.ref} {input.cens_regions} > {output.seq} 2> {log}

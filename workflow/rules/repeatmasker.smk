@@ -61,7 +61,7 @@ rule rename_for_repeatmasker:
     params:
         prefix="seq",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     log:
         "logs/repeatmasker/rename_for_repeatmasker_{sm}.log",
     shell:
@@ -93,7 +93,7 @@ rule run_repeatmasker:
         species="human",
         engine="rmblast",
     conda:
-        "../env/repeatmasker.yaml"
+        "../envs/repeatmasker.yaml"
     log:
         "logs/repeatmasker/repeatmasker_{sm}.log",
     # Retry in case of .RepeatMaskerCache failure.
@@ -132,7 +132,7 @@ rule reformat_repeatmasker_output:
     log:
         "logs/repeatmasker/reformat_repeatmasker_output_{sm}.log",
     conda:
-        "../env/py.yaml"
+        "../envs/py.yaml"
     shell:
         """
         python {input.script} -i {input.rm_out} -of {input.original_fai} -rf {input.renamed_fai} > {output} 2> {log}
@@ -154,7 +154,7 @@ rule merge_repeatmasker_output:
             )
         ),
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         """
         awk -v OFS="\\t" '{{$1=$1; print}}' {input} > {output}
@@ -194,7 +194,7 @@ rule format_add_control_repeatmasker_output:
     log:
         "logs/repeatmasker/format_add_control_repeatmasker_output.log",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         """
         # Copy file and append reference repeatmasker output.
@@ -218,7 +218,7 @@ rule extract_rm_out_by_chr:
     log:
         "logs/repeatmasker/extract_{chr}_cens_from_rm.log",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         """
         {{ grep "{wildcards.chr}[_:]" {input.rm_out} || true; }}> {output.rm_out_by_chr} 2> {log}

@@ -19,7 +19,7 @@ rule concat_asm:
     log:
         "logs/concat_asm/concat_asm_{sm}.log",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         """
         {{ cat \

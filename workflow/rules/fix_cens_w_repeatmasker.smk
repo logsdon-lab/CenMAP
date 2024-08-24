@@ -30,7 +30,7 @@ rule check_cens_status:
     log:
         "logs/fix_cens_w_repeatmasker/check_cens_status_{chr}.log",
     conda:
-        "../env/cen_stats.yaml"
+        "../envs/cen_stats.yaml"
     shell:
         """
         censtats status \
@@ -69,7 +69,7 @@ rule join_cen_status_and_nucflag_status:
     log:
         "logs/fix_cens_w_repeatmasker/join_cen_status_and_nucflag_status.log",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         """
         join \
@@ -106,7 +106,7 @@ rule get_cen_corrections_lists:
             config["repeatmasker"]["output_dir"], "status", "all_partial_cens.list"
         ),
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     params:
         omit_nucflag="nucflag" not in config,
     log:
@@ -171,7 +171,7 @@ rule get_complete_correct_cens_bed:
             "{sm}_complete_correct_ALR_regions.bed",
         ),
     conda:
-        "../env/py.yaml"
+        "../envs/py.yaml"
     log:
         "logs/fix_cens_w_repeatmasker/get_complete_correct_{sm}_cens_bed.log",
     shell:
@@ -210,7 +210,7 @@ rule fix_ort_asm_final:
             "{sm}_regions.renamed.reort.final.fa.fai",
         ),
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     log:
         "logs/fix_cens_w_repeatmasker/fix_{sm}_asm_orientation.log",
     shell:
@@ -271,7 +271,7 @@ rule merge_all_complete_correct_cens_fa:
             "all_complete_correct_cens.fa.fai",
         ),
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     log:
         "logs/fix_cens_w_repeatmasker/merge_all_complete_correct_cens.log",
     shell:

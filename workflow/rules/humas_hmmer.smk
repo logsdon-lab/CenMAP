@@ -20,7 +20,7 @@ rule extract_cens_for_humas_hmmer:
     log:
         "logs/humas_hmmer/extract_{chr}_cens_for_humas_hmmer.log",
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         """
         seqtk subseq {input.fa} <(grep "{wildcards.chr}[:_]" {input.idx} | cut -f 1) > {output.cens} 2> {log}
@@ -47,7 +47,7 @@ checkpoint split_cens_for_humas_hmmer:
     params:
         split_dir=config["humas_hmmer"]["input_dir"],
     conda:
-        "../env/tools.yaml"
+        "../envs/tools.yaml"
     shell:
         # https://gist.github.com/astatham/621901
         """
