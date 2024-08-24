@@ -1,7 +1,7 @@
 include: "common.smk"
 
 
-rule compile_dnabrnn:
+rule compile_dna_brnn:
     output:
         os.path.join(config["dna_brnn"]["output_dir"], "dna-nn", "dna-brnn"),
     conda:
@@ -15,16 +15,17 @@ rule compile_dnabrnn:
     shell:
         """
         log_path=$(realpath {log})
-        git clone {params.url} {params.output_dir} 2> "${{log_path}}"
+        rm -rf {params.output_dir} && git clone {params.url} {params.output_dir} 2> "${{log_path}}"
         cd {params.output_dir}
-        make 2>> "${{log_path}}"
+        conda_env=$(which gcc | sed 's/\\/bin\\/gcc//g')
+        C_INCLUDE_PATH="${{conda_env}}/include/" make >> "${{log_path}}" 2>> "${{log_path}}"
         """
 
 
 # https://github.com/lh3/dna-nn/tree/master
 rule run_dna_brnn:
     input:
-        bin_dnabrnn=rules.compile_dnabrnn.output if not IS_CONTAINERIZE_CMD else [],
+        bin_dnabrnn=rules.compile_dna_brnn.output if not IS_CONTAINERIZE_CMD else [],
         model=config["dna_brnn"]["model"],
         seqs=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
