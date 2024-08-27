@@ -4,6 +4,7 @@ import sys
 import json
 import glob
 from collections import defaultdict
+from snakemake.settings.types import DeploymentMethod
 
 
 # Include contants so can run individual smk files without main Snakefile.
