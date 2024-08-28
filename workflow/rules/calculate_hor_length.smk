@@ -25,7 +25,8 @@ rule calculate_as_hor_length:
         {{ censtats length \
         --input {input.fmt_hmmer_output} \
         --bp_jump_thr {params.bp_jump_thr} \
-        --arr_len_thr {params.arr_len_thr} | grep -v ^chr ;}} > {output} 2> {log}
+        --arr_len_thr {params.arr_len_thr} | \
+        grep -v ^chr  || true ;}}  > {output} 2> {log}
         """
 
 
