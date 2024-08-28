@@ -48,8 +48,11 @@ REF_CENS_EDGE_LEN = round(
 # Check if command is to containerize workflow.
 ARGUMENTS = set(sys.argv)
 IS_CONTAINERIZE_CMD = "--containerize" in ARGUMENTS
-IS_SINGULARITY = bool(ARGUMENTS.intersection(set(["--use-singularity", "apptainer"])))
-IS_CONDA = bool(ARGUMENTS.intersection(set(["--use-conda", "conda"])))
+IS_SINGULARITY = (
+    DeploymentMethod.APPTAINER in workflow.deployment_settings.deployment_method
+)
+IS_CONDA = DeploymentMethod.CONDA in workflow.deployment_settings.deployment_method
+
 
 # Thresholds
 DEF_DNA_BRNN_FULL_ALR_THR = 30_000
