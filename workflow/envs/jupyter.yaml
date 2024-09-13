@@ -1,0 +1,12 @@
+channels:
+  - conda-forge
+dependencies:
+  - python==3.12
+  - jupyter
+  - jupyterlab_code_formatter
+  - pip
+  - pip:
+    - polars
+    - numpy
+    - matplotlib
+    - matplotlib_venn

@@ -188,6 +188,30 @@ use rule * from NucFlag_Minimap2 as mm2_*
 use rule * from NucFlag_Pbmm2 as pbmm2_*
 
 
+rule summarize_benchmark:
+    input:
+        expand(rules.wm_nucflag.input, sm=SAMPLE_NAMES),
+        expand(rules.mm2_nucflag.input, sm=SAMPLE_NAMES),
+        expand(rules.pbmm2_nucflag.input, sm=SAMPLE_NAMES),
+    output:
+        plt_cens_status=os.path.join(
+            "results", "nucflag_aligner_comparison", "cens_status.png"
+        ),
+        plt_mem_usage=os.path.join(
+            "results", "nucflag_aligner_comparison", "memory_usage.png"
+        ),
+        plt_cens_venn=os.path.join(
+            "results", "nucflag_aligner_comparison", "venn_shared_correct_cens.png"
+        ),
+        plt_wall_time=os.path.join(
+            "results", "nucflag_aligner_comparison", "wall_time.png"
+        ),
+    conda:
+        "../envs/jupyter.yaml"
+    notebook:
+        "../notebooks/summarize_bmks.ipynb"
+
+
 rule nucflag_bmk_only:
     input:
         expand(rules.download_bmk_data_all.input, sm=SAMPLE_NAMES),
@@ -196,4 +220,5 @@ rule nucflag_bmk_only:
         expand(rules.wm_nucflag.input, sm=SAMPLE_NAMES),
         expand(rules.mm2_nucflag.input, sm=SAMPLE_NAMES),
         expand(rules.pbmm2_nucflag.input, sm=SAMPLE_NAMES),
+        rules.summarize_benchmark.output,
     default_target: True
