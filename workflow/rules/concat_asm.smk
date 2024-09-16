@@ -3,13 +3,9 @@ rule concat_asm:
         # Input directory per sample.
         sm_dir=os.path.join(config["concat_asm"]["input_dir"], "{sm}"),
     output:
-        fa=temp(
-            os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa")
-        ),
-        idx=temp(
-            os.path.join(
-                config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
-            )
+        fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
+        idx=os.path.join(
+            config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
         ),
     # https://bioinf.shenwei.me/seqkit/usage/#rmdup
     params:

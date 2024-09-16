@@ -98,6 +98,13 @@ if config.get("count_complete_cens"):
     output.append(rules.count_complete_cens_only.input)
 
 
+if config.get("cdr_finder"):
+
+    include: "rules/cdr_finder.smk"
+
+    output.append(rules.cdr_finder_only.input)
+
+
 rule all:
     input:
         output,

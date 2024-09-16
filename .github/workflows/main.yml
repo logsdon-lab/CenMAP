@@ -41,4 +41,5 @@ jobs:
         --configfile test/config/config_HG00731.yaml \
         --sdm apptainer conda \
         --show-failed-logs \
+        --apptainer-args "--bind $HOME:$HOME" \
         --conda-cleanup-pkgs cache
