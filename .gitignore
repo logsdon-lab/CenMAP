@@ -21,3 +21,4 @@ __pycache__
 renv/
 renv.lock
 Rplots.pdf
+*.done

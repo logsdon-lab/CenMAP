@@ -1,55 +1,24 @@
 include: "common.smk"
 
 
-READS_SAMPLE_SHEET = "config/b2_formatted.tsv"
-READS_INPUT_DIR = config["nucflag"]["hifi_reads_fofn_dir"]
 ASMS_INPUT_DIR = config["concat_asm"]["input_dir"]
-SAMPLE_READ_URIS = defaultdict(list)
+READS_INPUT_DIR = config["nucflag"]["hifi_reads_dir"]
+ASM_URIS = {"HG002": "s3://human-pangenomics/T2T/HG002/assemblies/hg002v1.1.fasta.gz"}
+HIFI_URIS = {"HG002": "s3://human-pangenomics/T2T/scratch/HG002/sequencing/hifirevio/"}
 
 
-wildcard_constraints:
-    sm="|".join(SAMPLE_NAMES),
-
-
-with open(READS_SAMPLE_SHEET) as fh:
-    for line in fh.readlines():
-        sm, s3_uri = line.strip().split("\t")
-        SAMPLE_READ_URIS[sm].append(s3_uri)
-
-
-rule download_assemblies:
+rule download_assembly:
     output:
         directory(os.path.join(ASMS_INPUT_DIR, "{sm}")),
     params:
-        verkko_thic_uri="s3://human-pangenomics/submissions/0624338D-1A6F-4E29-A276-D2C247FE0558--verkko-v2.1_intermediate_asms/{sm}/verkko-thic/",
-        verkko_hic_uri="s3://human-pangenomics/submissions/0624338D-1A6F-4E29-A276-D2C247FE0558--verkko-v2.1_intermediate_asms/{sm}/verkko-hi-c/",
+        uri=lambda wc: ASM_URIS[str(wc.sm)],
     conda:
         "../envs/nucflag_bmk.yaml"
+    log:
+        "logs/download_data/download_assembly_{sm}.log",
     shell:
         """
-        aws s3 --no-sign-request sync {params.verkko_thic_uri} {output} \
-        --include "*.bz*" \
-        --exclude "*analysis/*" --exclude "*ribotin/*" || true
-
-        # Separate naming convention.
-        aws s3 --no-sign-request sync {params.verkko_hic_uri} {output} \
-        --include "*.bz*" \
-        --exclude "*analysis/*" --exclude "*ribotin/*" || true
-        """
-
-
-# Call to regenerate.
-rule format_sample_sheet:
-    input:
-        script="workflow/rules/format_sample_list.py",
-        sample_sheet="config/b2.tsv",
-    output:
-        formatted_sample_sheet=READS_SAMPLE_SHEET,
-    conda:
-        "../envs/nucflag_bmk.yaml"
-    shell:
-        """
-        python {input.script} {input.sample_sheet} > {output}
+        aws s3 --no-sign-request cp {params.uri} {output} 2> {log}
         """
 
 
@@ -58,29 +27,26 @@ rule download_hifi:
         directory(os.path.join(READS_INPUT_DIR, "{sm}")),
     threads: 20
     params:
-        files=lambda wc: SAMPLE_READ_URIS[str(wc.sm)],
+        uri=lambda wc: HIFI_URIS[str(wc.sm)],
     conda:
         "../envs/nucflag_bmk.yaml"
+    log:
+        "logs/download_data/download_hifi_{sm}.log",
     shell:
         """
-        mkdir -p {output}
-        parallel -j {threads} aws s3 --no-sign-request cp {{}} {output}" ::: {params.files}
+        aws s3 --no-sign-request sync {params.uri} {output} 2> {log}
         """
 
 
-rule generate_hifi_fofn:
+checkpoint download_data_all:
     input:
-        hifi_dir=rules.download_hifi.output,
+        expand(rules.download_assembly.output, sm=SAMPLE_NAMES),
+        expand(rules.download_hifi.output, sm=SAMPLE_NAMES),
     output:
-        hifi_fofn=os.path.join(READS_INPUT_DIR, "{sm}.fofn"),
-    shell:
-        """
-        find {input.hifi_dir} -type f > {output.hifi_fofn}
-        """
+        touch("download_data.done"),
 
 
 rule download_bmk_data_all:
     input:
-        expand(rules.download_assemblies.output, sm=SAMPLE_NAMES),
-        expand(rules.generate_hifi_fofn.output, sm=SAMPLE_NAMES),
+        rules.download_data_all.output,
     default_target: True

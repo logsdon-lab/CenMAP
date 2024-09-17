@@ -3,6 +3,7 @@ import re
 import sys
 import json
 import glob
+import itertools
 from collections import defaultdict
 from snakemake.settings.types import DeploymentMethod
 

@@ -1,0 +1,121 @@
+chromosomes:
+  - "chr1"
+  - "chr2"
+  - "chr3"
+  - "chr4"
+  - "chr5"
+  - "chr6"
+  - "chr7"
+  - "chr8"
+  - "chr9"
+  - "chr10"
+  - "chr11"
+  - "chr12"
+  - "chr13"
+  - "chr14"
+  - "chr15"
+  - "chr16"
+  - "chr17"
+  - "chr18"
+  - "chr19"
+  - "chr20"
+  - "chr21"
+  - "chr22"
+  - "chrX"
+  - "chrY"
+
+samples:
+  - HG002
+
+concat_asm:
+  # Expects {input_dir}/{sm}/*.gz
+  input_dir: "data/verkko"
+  output_dir: "data/assemblies/combined"
+  mem: 20GB
+
+align_asm_to_ref:
+  # Output dir set to results
+  # reference: "data/reference/T2T-CHM13v2.fasta.gz"
+  threads: 4
+  mem: 60GB
+
+extract_ref_hor_arrays:
+  output_dir: "results/ref_hor_arrays"
+  # Add bp to extend edges of HOR array for alignment.
+  added_bases: 0
+
+ident_cen_ctgs:
+  comb_assemblies_dir: "data/assemblies/combined"
+  output_dir: "results/cens"
+  ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
+  ref_cens_monomeric_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
+
+dna_brnn:
+  output_dir: "results/dna_brnn"
+  # https://github.com/lh3/dna-nn/tree/master/models
+  model: "data/models/attcc-alpha.knm"
+  # File with dna-brnn run on t2t-chm13 ref. Avoids running rule to generate.
+  # Optional.
+  ref_alr_file: "data/annotations/chm13_cens.trimmed.bed"
+  threads: 12
+  mem: 30GB
+  thr_file: "config/dnabrnn_thresholds.json"
+  full_alr_thr_file: "config/dnabrnn_full_alr_region_thresholds.json"
+
+new_cens:
+  output_dir: "results/cens_new"
+
+nucflag:
+  # hifi_reads_fofn_dir: "data/hifi"
+  hifi_reads_dir: "data/hifi"
+  reads_ext: "fastq.gz"
+  output_dir: "results/nucflag"
+  tmp_dir: "temp"
+  config_nucflag: "config/nucflag.toml"
+  threads_aln: 24
+  processes_nucflag: 12
+  mem_nucflag: 50GB
+  mem_aln: 50GB
+  samtools_view_flag: 2308
+
+repeatmasker:
+  ref_repeatmasker_chrY_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
+  ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
+  config_censtats_status: "config/censtats.json"
+  threads: 12
+  output_dir: "results/repeatmasker"
+
+humas_hmmer:
+  # Dir where split cens placed.
+  input_dir: "results/humas_hmmer/cens"
+  output_dir: "results/humas_hmmer"
+  # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
+  threads: 24
+  model: "data/models/AS-HORs-hmmer3.0-170921.hmm"
+
+plot_hor_stv:
+  output_dir: "results/hor_stv"
+  chm1_stv: "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
+  chm13_stv: "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
+  # Reorder data to put 'large'-r or 'small'-r -mers on top.
+  # Specifying both creates both plots.
+  mer_order:
+    - small
+    - large
+  sat_annot_colors: "config/repeatmasker_sat_annot_colors.json"
+
+calculate_hor_length:
+  chm1_hor_lengths: "data/annotations/chm1_hor_length.tsv"
+  chm13_hor_lengths: "data/annotations/chm13_hor_length.tsv"
+  output_dir: "results/calculate_hor_length"
+
+count_complete_cens:
+  output_dir: "results/count_complete_cens"
+  plot_lbl: null
+  plot_color: "#DA8B26"
+
+moddotplot:
+  input_dir: null
+  output_dir: "results/moddotplot"
+  mem: 10GB
+  window: 5000

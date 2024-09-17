@@ -188,11 +188,29 @@ use rule * from NucFlag_Minimap2 as mm2_*
 use rule * from NucFlag_Pbmm2 as pbmm2_*
 
 
+def nucflag_bmk_output(wc):
+    # Wait till everything downloaded before triggering DAG evaluation.
+    _ = checkpoints.download_data_all.get(**wc).output
+
+    return itertools.chain(
+        *[
+            expand(rules.wm_nucflag.input, sm=SAMPLE_NAMES),
+            expand(rules.mm2_nucflag.input, sm=SAMPLE_NAMES),
+            expand(rules.pbmm2_nucflag.input, sm=SAMPLE_NAMES),
+        ]
+    )
+
+
+rule nucflag_done:
+    input:
+        nucflag_bmk_output,
+    output:
+        touch("nucflag_plots.done"),
+
+
 rule summarize_benchmark:
     input:
-        expand(rules.wm_nucflag.input, sm=SAMPLE_NAMES),
-        expand(rules.mm2_nucflag.input, sm=SAMPLE_NAMES),
-        expand(rules.pbmm2_nucflag.input, sm=SAMPLE_NAMES),
+        rules.nucflag_done.output,
     output:
         plt_cens_status=os.path.join(
             "results", "nucflag_aligner_comparison", "cens_status.png"
@@ -214,11 +232,8 @@ rule summarize_benchmark:
 
 rule nucflag_bmk_only:
     input:
-        expand(rules.download_bmk_data_all.input, sm=SAMPLE_NAMES),
         expand(rules.format_repeatmasker_to_overlay_bed.output, sm=SAMPLE_NAMES),
         expand(rules.simplify_rm_overlay_bed.output, sm=SAMPLE_NAMES),
-        expand(rules.wm_nucflag.input, sm=SAMPLE_NAMES),
-        expand(rules.mm2_nucflag.input, sm=SAMPLE_NAMES),
-        expand(rules.pbmm2_nucflag.input, sm=SAMPLE_NAMES),
+        rules.nucflag_done.output,
         rules.summarize_benchmark.output,
     default_target: True
