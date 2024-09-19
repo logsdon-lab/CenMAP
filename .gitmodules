@@ -1,3 +1,3 @@
 [submodule "workflow/scripts/stv_fix"]
 	path = workflow/scripts/stv_fix
-	url = git@github.com:koisland/stv.git
+	url = https://github.com/koisland/stv.git
