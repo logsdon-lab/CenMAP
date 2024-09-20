@@ -194,17 +194,25 @@ rule summarize_benchmark:
         expand(rules.mm2_nucflag.input, sm=SAMPLE_NAMES),
         expand(rules.pbmm2_nucflag.input, sm=SAMPLE_NAMES),
     output:
-        plt_cens_status=os.path.join(
-            "results", "nucflag_aligner_comparison", "cens_status.png"
-        ),
         plt_mem_usage=os.path.join(
             "results", "nucflag_aligner_comparison", "memory_usage.png"
+        ),
+        plt_wall_time=os.path.join(
+            "results", "nucflag_aligner_comparison", "wall_time.png"
         ),
         plt_cens_venn=os.path.join(
             "results", "nucflag_aligner_comparison", "venn_shared_correct_cens.png"
         ),
-        plt_wall_time=os.path.join(
-            "results", "nucflag_aligner_comparison", "wall_time.png"
+        plt_cens_status=os.path.join(
+            "results", "nucflag_aligner_comparison", "cens_status.png"
+        ),
+        plt_cens_venn_by_chrom=os.path.join(
+            "results",
+            "nucflag_aligner_comparison",
+            "venn_shared_correct_cens_by_chrom.png",
+        ),
+        plt_cens_status_by_chrom=os.path.join(
+            "results", "nucflag_aligner_comparison", "cens_status_by_chrom.png"
         ),
     conda:
         "../envs/jupyter.yaml"

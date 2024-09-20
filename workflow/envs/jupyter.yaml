@@ -9,4 +9,4 @@ dependencies:
     - polars
     - numpy
     - matplotlib
-    - matplotlib_venn
+    - matplotlib_set_diagrams
