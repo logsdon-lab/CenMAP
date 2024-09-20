@@ -132,8 +132,10 @@ rule create_renamed_bed_n_legend:
         """
         {{ awk -v OFS="\\t" '{{print $0, "{wildcards.sm}"}}' {input.regions} | \
         awk -v OFS="\\t" '{{
-            print {params.legend_key},{params.legend_val};
-            print {params.legend_val}, $2, $3, $4, $5, $6, $7 >> "{output.regions_renamed}"
+            new_legend_val={params.legend_val}
+            sub($4"_"$4"_", $4"_", new_legend_val);
+            print {params.legend_key},new_legend_val;
+            print new_legend_val, $2, $3, $4, $5, $6, $7 >> "{output.regions_renamed}"
         }}' | \
         sort -k2,2 | uniq ;}} > {output.legend} 2> {log}
         """

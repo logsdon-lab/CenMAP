@@ -1,4 +1,9 @@
 channels:
   - conda-forge
 dependencies:
+  - parallel
   - awscli
+  - python==3.12
+  - pip
+  - pip:
+    - polars
