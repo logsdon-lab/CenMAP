@@ -35,7 +35,6 @@ include: "rules/humas_hmmer.smk"
 rule extract_cens_only:
     input:
         rules.extract_ref_hor_arrays_all.input,
-        rules.concat_asm_all.input,
         rules.align_asm_ref_all.input,
         rules.ident_cen_ctgs_all.input,
 
