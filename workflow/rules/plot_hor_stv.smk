@@ -74,12 +74,17 @@ def as_hor_bedfiles(wc):
     fnames, chrs = extract_fa_fnames_and_chr(
         config["humas_hmmer"]["input_dir"], filter_chr=str(wc.chr)
     )
-    return expand(rules.filter_as_hor_stv_bed.output, zip, fname=fnames, chr=chrs)
+    _ = checkpoints.run_humas_hmmer_for_anvil.get(**wc).output
+    return dict(
+        stv_bed_filtered=expand(
+            rules.filter_as_hor_stv_bed.output, zip, fname=fnames, chr=chrs
+        )
+    )
 
 
-rule aggregate_format_all_stv_row:
+checkpoint aggregate_format_all_stv_row:
     input:
-        as_hor_bedfiles,
+        unpack(as_hor_bedfiles),
     output:
         os.path.join(
             config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"

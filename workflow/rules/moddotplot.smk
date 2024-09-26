@@ -1,5 +1,6 @@
 
 include: "common.smk"
+include: "plot_hor_stv.smk"
 
 
 if config["moddotplot"].get("input_dir"):
@@ -40,11 +41,8 @@ rule run_moddotplot:
         """
 
 
-rule plot_cen_moddotplot:
+rule filter_annotations_moddotplot:
     input:
-        script="workflow/scripts/plot_cens_moddotplot.R",
-        seq_ident_bed=rules.run_moddotplot.output.bed,
-        # TODO: Remove grepping. Pass file directly. Will require stv wf refactor.
         chr_stv_row_bed=os.path.join(
             config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
         ),
@@ -65,6 +63,20 @@ rule plot_cen_moddotplot:
                 "{chr}_{mer_order}_{fname}_stv_row.bed",
             )
         ),
+    shell:
+        """
+        grep '{wildcards.fname}' {input.all_sat_annot_bed} > {output.sat_annot_bed}
+        grep '{wildcards.fname}' {input.chr_stv_row_bed} > {output.stv_row_bed}
+        """
+
+
+rule plot_cen_moddotplot:
+    input:
+        script="workflow/scripts/plot_cens_moddotplot.R",
+        seq_ident_bed=rules.run_moddotplot.output.bed,
+        sat_annot_bed=rules.filter_annotations_moddotplot.output.sat_annot_bed,
+        stv_row_bed=rules.filter_annotations_moddotplot.output.stv_row_bed,
+    output:
         plots=expand(
             os.path.join(
                 OUTPUT_MODDOTPLOT_DIR,
@@ -83,12 +95,10 @@ rule plot_cen_moddotplot:
         "logs/plot_cen_moddotplot/plot_cen_moddotplot_{chr}_{fname}_{mer_order}.log",
     shell:
         """
-        grep '{wildcards.fname}' {input.all_sat_annot_bed} > {output.sat_annot_bed}
-        grep '{wildcards.fname}' {input.chr_stv_row_bed} > {output.stv_row_bed}
         Rscript {input.script} \
         --bed {input.seq_ident_bed} \
-        --hor {output.stv_row_bed} \
-        --sat {output.sat_annot_bed} \
+        --hor {input.stv_row_bed} \
+        --sat {input.sat_annot_bed} \
         --mer_order {wildcards.mer_order} \
         --outdir {params.output_dir} 2>> {log}
         """
@@ -97,18 +107,19 @@ rule plot_cen_moddotplot:
 # https://stackoverflow.com/a/63040288
 def moddotplot_outputs_no_input_dir(wc):
     # Wait until done.
-    try:
-        _ = checkpoints.split_cens_for_humas_hmmer.get(**wc).output
-    except AttributeError:
-        pass
+    _ = checkpoints.split_cens_for_humas_hmmer.get(**wc).output
 
-    fnames, chrs = extract_fa_fnames_and_chr(config["humas_hmmer"]["input_dir"])
+    fnames, chrs = extract_fa_fnames_and_chr(
+        config["humas_hmmer"]["input_dir"], filter_chr=wc.chr
+    )
 
     wildcard_constraints:
         fname="|".join(fnames),
 
+    _ = checkpoints.aggregate_format_all_stv_row.get(**wc).output
+
     return dict(
-        modotplot=expand(rules.run_moddotplot.output, fname=fnames),
+        moddotplot=expand(rules.run_moddotplot.output, fname=fnames),
         cen_moddoplot=expand(
             expand(
                 rules.plot_cen_moddotplot.output,
