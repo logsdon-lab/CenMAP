@@ -97,7 +97,7 @@ def humas_hmmer_outputs(wc):
     }
 
 
-rule run_humas_hmmer_for_anvil:
+checkpoint run_humas_hmmer_for_anvil:
     input:
         unpack(humas_hmmer_outputs),
     output:
