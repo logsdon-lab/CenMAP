@@ -79,8 +79,15 @@ rule generate_hifi_fofn:
         """
 
 
-rule download_bmk_data_all:
+checkpoint download_data_all:
     input:
         expand(rules.download_assemblies.output, sm=SAMPLE_NAMES),
         expand(rules.generate_hifi_fofn.output, sm=SAMPLE_NAMES),
+    output:
+        touch("download_data.done"),
+
+
+rule download_bmk_data_all:
+    input:
+        rules.download_data_all.output,
     default_target: True
