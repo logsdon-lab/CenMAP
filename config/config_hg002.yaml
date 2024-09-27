@@ -42,7 +42,7 @@ align_asm_to_ref:
 extract_ref_hor_arrays:
   output_dir: "results/ref_hor_arrays"
   # Add bp to extend edges of HOR array for alignment.
-  added_bases: 0
+  added_bases: 500_000
 
 ident_cen_ctgs:
   comb_assemblies_dir: "data/assemblies/combined"

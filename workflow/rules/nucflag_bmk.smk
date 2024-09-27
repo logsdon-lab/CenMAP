@@ -221,13 +221,21 @@ rule summarize_benchmark:
         plt_cens_venn=os.path.join(
             "results", "nucflag_aligner_comparison", "venn_shared_correct_cens.png"
         ),
-        plt_cens_status=os.path.join(
-            "results", "nucflag_aligner_comparison", "cens_status.png"
-        ),
         plt_cens_venn_by_chrom=os.path.join(
             "results",
             "nucflag_aligner_comparison",
             "venn_shared_correct_cens_by_chrom.png",
+        ),
+        plt_incorrect_cens_venn=os.path.join(
+            "results", "nucflag_aligner_comparison", "venn_shared_incorrect_cens.png"
+        ),
+        plt_incorrect_cens_venn_by_chrom=os.path.join(
+            "results",
+            "nucflag_aligner_comparison",
+            "venn_shared_incorrect_cens_by_chrom.png",
+        ),
+        plt_cens_status=os.path.join(
+            "results", "nucflag_aligner_comparison", "cens_status.png"
         ),
         plt_cens_status_by_chrom=os.path.join(
             "results", "nucflag_aligner_comparison", "cens_status_by_chrom.png"
