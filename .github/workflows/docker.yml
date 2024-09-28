@@ -10,9 +10,6 @@
 name: Publish Docker image
 
 on:
-  push:
-    branches:
-      - feature/ci-dockerhub-upload
   release:
     types: [published]
 
