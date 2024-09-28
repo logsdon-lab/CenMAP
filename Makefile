@@ -1,4 +1,4 @@
-.PHONY: conda update_submodules docker singularity docker-upload
+.PHONY: conda update_submodules docker_local singularity_local docker_local_upload dockerfile
 
 ORG := "logsdonlab"
 PROJECT_NAME := "cenmap"
@@ -14,14 +14,17 @@ update_submodules:
 	git submodule init
 	git submodule update --remote --recursive
 
-docker:
+dockerfile:
+	snakemake -p -c 1 --sdm apptainer --configfile test/config/config.yaml --containerize > Dockerfile
+
+docker_local:
 	snakemake -p -c 1 --sdm apptainer --configfile test/config/config.yaml --containerize | \
 	sudo docker build -t "${TAG_NAME}" -f - .
 
-singularity:
-	$(MAKE) docker
+singularity_local:
+	$(MAKE) docker_local
 	sudo apptainer build "${PROJECT_NAME}.sif" "docker-daemon://${TAG_NAME}"
 
-docker-upload:
-	$(MAKE) docker
+docker_local_upload:
+	$(MAKE) docker_local
 	sudo docker image push "${TAG_NAME}"
