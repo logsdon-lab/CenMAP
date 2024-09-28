@@ -119,3 +119,19 @@ moddotplot:
   output_dir: "results/moddotplot"
   mem: 10GB
   window: 5000
+
+cdr_finder:
+  # Expects sample subdir in input_dir.
+  # Uses find and file pattern to merge bam.
+  input_bam_dir: "data/ont"
+  output_dir: "results/cdr_finder"
+  aln_mem: 50GB
+  aln_threads: 24
+  file_pattern: ".*prom_pass\\.bam"
+  window_size: 5000
+  alr_threshold: 100000
+  bp_merge: 1
+  bp_alr_merge: 1000
+  bp_edge: 500_000
+  height_perc_valley_threshold: 0.34
+  prom_perc_valley_threshold: 0.3

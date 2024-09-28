@@ -6,6 +6,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+    # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
+    - name: Delete huge unnecessary tools folder
+      run: rm -rf /opt/hostedtoolcache
+
     - name: Checkout directory.
       uses: actions/checkout@v3
       with:
@@ -26,7 +30,7 @@ jobs:
 
     - name: Test scripts.
       run: |
-        pytest -vvv
+        pytest test/ -vvv
 
     - name: Test dry-run workflow.
       run: |
@@ -41,4 +45,5 @@ jobs:
         --configfile test/config/config_HG00731.yaml \
         --sdm apptainer conda \
         --show-failed-logs \
+        --apptainer-args "--bind $HOME:$HOME" \
         --conda-cleanup-pkgs cache

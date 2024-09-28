@@ -160,7 +160,7 @@ make_dot <- function(sdf, rname = "") {
 }
 
 
-make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out) {
+make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out, df_cdr) {
   df_rname_seq_ident <- df_seq_ident %>% filter(q == rname & r == rname)
 
   # make the tri sequence identity plots
@@ -186,7 +186,19 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
   segment_y <- segment_y_adj_factor * contig_len
   ct_outline_edges_x <- 5000
 
-  plot_ident_cen <- ggplot() +
+  plot_ident_cen <- ggplot()
+
+  # If df_chr is provided, add lines for CDR on top.
+  if (!(typeof(df_cdr) == "logical")) {
+    plot_ident_cen <- plot_ident_cen +
+      geom_segment(
+        data = df_cdr,
+        aes(x = start2, y = segment_y * 2, xend = stop2, yend = segment_y * 2),
+        linewidth = 1
+      )
+  }
+
+  plot_ident_cen <- plot_ident_cen +
     # Make larger ct segment as outline
     geom_segment(
       data = df_rm_sat_out_ct,

@@ -121,3 +121,8 @@ rule humas_hmmer_only:
     input:
         rules._force_humas_hmmer_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
         expand(rules.run_humas_hmmer_for_anvil.output, chr=CHROMOSOMES),
+
+
+rule humas_hmmer_split_cens_only:
+    input:
+        expand(rules.split_cens_for_humas_hmmer.output, chr=CHROMOSOMES),

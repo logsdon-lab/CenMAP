@@ -1,3 +1,6 @@
 [submodule "workflow/scripts/stv_fix"]
 	path = workflow/scripts/stv_fix
 	url = https://github.com/koisland/stv.git
+[submodule "workflow/rules/CDR-Finder"]
+	path = workflow/rules/CDR-Finder
+	url = https://github.com/koisland/CDR-Finder.git

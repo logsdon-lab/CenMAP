@@ -279,3 +279,27 @@ read_multiple_humas_hmmer_input <- function(
 
   return(df_stv)
 }
+
+read_one_cdr_input <- function(input_cdr) {
+  df_cdr <- fread(
+    input_cdr,
+    header = FALSE,
+    select = c(1:3),
+    col.names = c("chr", "start", "stop")
+  )
+  if (nrow(df_cdr) == 0) {
+    return(NA)
+  }
+
+  df_cdr <- df_cdr %>%
+    mutate(
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+    ) %>%
+    mutate(
+      start2 = start - ctg_start,
+      stop2 = stop - ctg_start
+    )
+
+  return(df_cdr)
+}
