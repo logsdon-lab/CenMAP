@@ -8,8 +8,8 @@ A centromere mapping and annotation pipeline for T2T human genome assemblies imp
   <tr>
     <td>
       <figure float="center">
-        <img align="middle" src="docs/chr2:91800001-95600000_large.tri.png" width="100%">
-        <figcaption>CHM13 chr2 centromere HOR structure and self-identity plot.</figcaption>
+        <img align="middle" src="docs/HG00733_rc-chr8_haplotype2-0000087:42951047-46874722_large.tri.png" width="100%">
+        <figcaption>HGSVC3 chr8 centromere HOR structure, centromere dip regions, and self-identity plot.</figcaption>
       </figure>
     </td>
     <td>
@@ -29,6 +29,7 @@ A centromere mapping and annotation pipeline for T2T human genome assemblies imp
 * [`Verkko`](https://github.com/marbl/verkko) or [`hifiasm`](https://github.com/chhylp123/hifiasm) human genome assemblies
 * PacBio HiFi reads used in the assemblies
 * [`CHM13`](https://github.com/marbl/CHM13) reference genome assembly
+* (Optional) Unaligned BAM files with 5mC modifications at CpG sites.
 
 ### [Output](https://github.com/logsdon-lab/CenMAP/wiki/5.-Output)
 * Complete and correctly assembled centromere sequences and their regions.
@@ -36,6 +37,7 @@ A centromere mapping and annotation pipeline for T2T human genome assemblies imp
 * [`RepeatMasker`](https://www.repeatmasker.org/) and [`HumAS-HMMER`](https://github.com/enigene/HumAS-HMMER) alpha-satellite HOR monomer annotations and plots.
 * [`ModDotPlot`](https://github.com/marbl/ModDotPlot) sequence identity plots.
 * Combined sequence identity and HOR array structure plots.
+* (Optional) Centromere dip region (CDRs) with [`CDR-Finder`](https://github.com/koisland/CDR-Finder)
 
 ### [Documentation](https://github.com/logsdon-lab/CenMAP/wiki)
 Read the docs on the `CenMAP` [wiki](https://github.com/logsdon-lab/CenMAP/wiki).
