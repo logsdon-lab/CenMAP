@@ -13,6 +13,10 @@ print(
 )
 
 
+wildcard_constraints:
+    sm="|".join(SAMPLE_NAMES_INTERSECTION),
+
+
 rule merge_methyl_bam_to_fq:
     input:
         os.path.join(config["cdr_finder"]["input_bam_dir"], "{sm}"),
@@ -133,7 +137,7 @@ rule get_original_coords:
         "../envs/tools.yaml"
     shell:
         """
-        join -1 3 -2 1 \
+        {{ join -1 3 -2 1 \
             <(sed 's/_/\\t/g' {input.bed} | sort -k 3 | cut -f 1,2,3,4,5) \
             <(cut -f 1,2 {input.asm_faidx} | sort -k 1) | \
         awk -v OFS="\\t" '{{
@@ -146,8 +150,8 @@ rule get_original_coords:
                 adj_end=$6-start
             }}
             print $1, adj_start, adj_end > "{output.og_coords}"
-            print $1, adj_start, adj_end, ctg, start, end
-        }}' > {output.og_coords_key}
+            print $1, adj_start, adj_end, ctg, start, end, $6
+        }}';}} > {output.og_coords_key} 2> {log}
         """
 
 
@@ -167,13 +171,10 @@ CDR_FINDER_CONFIG = {
 }
 
 
+# Avoid using github() due to Snakemake caching causing reruns.
 module CDR_Finder:
     snakefile:
-        github(
-            "koisland/CDR-Finder",
-            path="workflow/Snakefile",
-            branch="feature/add-test-data",
-        )
+        "CDR-Finder/workflow/Snakefile"
     config:
         CDR_FINDER_CONFIG
 
@@ -187,6 +188,53 @@ use rule calc_windows from CDR_Finder as cdr_calc_windows with:
         hrs=1,
 
 
+rule reorient_cdr_bed:
+    input:
+        cdr_bed=lambda wc: expand(rules.cdr_call_cdrs.output, sample=wc.sm),
+        og_coords_key=rules.get_original_coords.output.og_coords_key,
+    output:
+        os.path.join(
+            config["cdr_finder"]["output_dir"],
+            "bed",
+            "{sm}_cdr_final.bed",
+        ),
+    log:
+        "logs/cdr_finder/reorient_cdr_bed_{sm}.log",
+    conda:
+        "../envs/tools.yaml"
+    shell:
+        """
+        {{ join -1 1 -2 1 \
+            <(sort -k1 {input.cdr_bed}) \
+            <(awk -v OFS="\\t" '{{ print $1, $4":"$5"-"$6, $7 }}' {input.og_coords_key}) | \
+        awk -v OFS="\\t" '{{
+            is_rc=($4 ~ "rc-");
+            if (is_rc) {{
+                print $4, $5-$3, $5-$2
+            }} else {{
+                print $4, $2, $3
+            }}
+        }}';}} > {output} 2> {log}
+        """
+
+
+rule merge_cdr_beds:
+    input:
+        expand(rules.reorient_cdr_bed.output, sm=SAMPLE_NAMES_INTERSECTION),
+    output:
+        os.path.join(
+            config["cdr_finder"]["output_dir"],
+            "bed",
+            "all_cdrs.bed",
+        ),
+    shell:
+        """
+        cat {input} > {output}
+        """
+
+
 rule cdr_finder_only:
     input:
         expand(rules.cdr_all.input, sm=SAMPLE_NAMES_INTERSECTION),
+        expand(rules.reorient_cdr_bed.output, sm=SAMPLE_NAMES_INTERSECTION),
+        expand(rules.merge_cdr_beds.output, sm=SAMPLE_NAMES_INTERSECTION),

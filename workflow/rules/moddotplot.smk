@@ -3,6 +3,11 @@ include: "common.smk"
 include: "plot_hor_stv.smk"
 
 
+if config.get("cdr_finder"):
+
+    include: "cdr_finder.smk"
+
+
 if config["moddotplot"].get("input_dir"):
     INPUT_FA_DIR = config["moddotplot"]["input_dir"]
 else:
@@ -17,24 +22,30 @@ rule run_moddotplot:
     output:
         plots=expand(
             os.path.join(
-                OUTPUT_MODDOTPLOT_DIR, "original_{{fname}}", "{{fname}}_{otype}.{ext}"
+                OUTPUT_MODDOTPLOT_DIR,
+                "original",
+                "{{chr}}",
+                "{{fname}}",
+                "{{fname}}_{otype}.{ext}",
             ),
             otype=["FULL", "HIST", "TRI"],
             ext=["png", "pdf"],
         ),
-        bed=os.path.join(OUTPUT_MODDOTPLOT_DIR, "original_{fname}", "{fname}.bed"),
+        bed=os.path.join(
+            OUTPUT_MODDOTPLOT_DIR, "original", "{chr}", "{fname}", "{fname}.bed"
+        ),
     conda:
         "../envs/py.yaml"
     params:
         window=config["moddotplot"]["window"],
         ident_thr=70.0,
-        outdir=lambda wc: os.path.join(OUTPUT_MODDOTPLOT_DIR, f"original_{wc.fname}"),
+        outdir=lambda wc, output: os.path.dirname(output.bed),
     resources:
         mem=config["moddotplot"]["mem"],
     log:
-        "logs/moddotplot/moddotplot_{fname}.log",
+        "logs/moddotplot/moddotplot_{chr}_{fname}.log",
     benchmark:
-        "benchmarks/moddotplot/moddotplot_{fname}.tsv"
+        "benchmarks/moddotplot/moddotplot_{chr}_{fname}.tsv"
     shell:
         """
         moddotplot static -f {input.fasta} -w {params.window} -o {params.outdir} -id {params.ident_thr} &> {log}
@@ -51,6 +62,7 @@ rule filter_annotations_moddotplot:
             "bed",
             "all_cens.annotation.bed",
         ),
+        all_cdr_bed=rules.merge_cdr_beds.output if config.get("cdr_finder") else [],
     output:
         sat_annot_bed=temp(
             os.path.join(
@@ -63,10 +75,24 @@ rule filter_annotations_moddotplot:
                 "{chr}_{mer_order}_{fname}_stv_row.bed",
             )
         ),
+        cdr_bed=temp(
+            os.path.join(
+                OUTPUT_MODDOTPLOT_DIR,
+                "{chr}_{mer_order}_{fname}_cdrs.bed",
+            )
+        ),
+    params:
+        all_cdr_bed_exists=lambda wc, input: 1 if input.all_cdr_bed else 0,
+        fname_base=lambda wc: wc.fname.split(":")[0],
     shell:
         """
         grep '{wildcards.fname}' {input.all_sat_annot_bed} > {output.sat_annot_bed}
         grep '{wildcards.fname}' {input.chr_stv_row_bed} > {output.stv_row_bed}
+        if [ {params.all_cdr_bed_exists} -eq 1 ]; then
+            ( grep '{params.fname_base}' {input.all_cdr_bed} || true ) > {output.cdr_bed}
+        else
+            touch {output.cdr_bed}
+        fi
         """
 
 
@@ -76,19 +102,19 @@ rule plot_cen_moddotplot:
         seq_ident_bed=rules.run_moddotplot.output.bed,
         sat_annot_bed=rules.filter_annotations_moddotplot.output.sat_annot_bed,
         stv_row_bed=rules.filter_annotations_moddotplot.output.stv_row_bed,
+        cdr_bed=rules.filter_annotations_moddotplot.output.cdr_bed,
     output:
         plots=expand(
             os.path.join(
                 OUTPUT_MODDOTPLOT_DIR,
-                "{{chr}}_{{fname}}_full",
+                "combined",
+                "{{chr}}",
                 "{{fname}}_{{mer_order}}.tri.{ext}",
             ),
             ext=["png", "pdf"],
         ),
     params:
-        output_dir=lambda wc: os.path.join(
-            OUTPUT_MODDOTPLOT_DIR, f"{wc.chr}_{wc.fname}_full"
-        ),
+        output_dir=lambda wc, output: os.path.dirname(output.plots[0]),
     conda:
         "../envs/r.yaml"
     log:
@@ -99,6 +125,7 @@ rule plot_cen_moddotplot:
         --bed {input.seq_ident_bed} \
         --hor {input.stv_row_bed} \
         --sat {input.sat_annot_bed} \
+        --cdr {input.cdr_bed} \
         --mer_order {wildcards.mer_order} \
         --outdir {params.output_dir} 2>> {log}
         """
@@ -119,7 +146,7 @@ def moddotplot_outputs_no_input_dir(wc):
     _ = checkpoints.aggregate_format_all_stv_row.get(**wc).output
 
     return dict(
-        moddotplot=expand(rules.run_moddotplot.output, fname=fnames),
+        moddotplot=expand(rules.run_moddotplot.output, zip, chr=chrs, fname=fnames),
         cen_moddoplot=expand(
             expand(
                 rules.plot_cen_moddotplot.output,
@@ -153,6 +180,8 @@ else:
         input:
             expand(
                 rules.run_moddotplot.output,
+                zip,
+                chr=chrs,
                 fname=fnames,
             ),
             expand(

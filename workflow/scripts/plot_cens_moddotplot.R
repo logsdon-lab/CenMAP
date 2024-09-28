@@ -46,6 +46,12 @@ parser <- add_argument(
 )
 parser <- add_argument(
   parser,
+  "--cdr",
+  help = "bedfile with CDRs",
+  default = NA
+)
+parser <- add_argument(
+  parser,
   "--outdir",
   default = "results",
   help = "Output directory.",
@@ -86,6 +92,12 @@ df_humas_hmmer_stv_out <- switch(args$mer_order,
   "small" = df_humas_hmmer_stv_out %>% arrange(-mer),
   stop(paste("Invalid mer reordering option:", args$mer_order))
 )
+# Read CDR dataframe if provided.
+if (!is.na(args$cdr)) {
+  df_cdr <- read_one_cdr_input(args$cdr)
+} else {
+  df_cdr <- NA
+}
 
 df_rm_sat_out <- read_one_repeatmasker_sat_input(bed_sat_annot)
 df_seq_ident <- read_bedpe(bed_seq_ident)
@@ -95,7 +107,8 @@ plots <- make_cen_plot(
   rname,
   df_seq_ident,
   df_humas_hmmer_stv_out,
-  df_rm_sat_out
+  df_rm_sat_out,
+  df_cdr
 )
 plot_cen <- plots[["cen"]]
 plot_cen_legend <- get_legend(plot_cen)
