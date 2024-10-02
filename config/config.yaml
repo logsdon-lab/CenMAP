@@ -135,3 +135,4 @@ cdr_finder:
   bp_edge: 500_000
   height_perc_valley_threshold: 0.34
   prom_perc_valley_threshold: 0.3
+  extend_edges_std: -1
