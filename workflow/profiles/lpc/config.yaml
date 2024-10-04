@@ -5,6 +5,7 @@ default-resources:
   mem: 8
   # Specific for Logsdon Lab
   lsf_queue: epistasis_long
+  lsf_project: default
   # Hard memory limit that prevents out of memory for jobs.
   # LSF doesn't respect solely just rusage.
   lsf_extra: "'-M 50GB'"

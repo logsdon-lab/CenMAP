@@ -6,6 +6,7 @@ results*/
 benchmarks*/
 venv/
 temp*/
+exp/
 Dockerfile
 
 RM_*
