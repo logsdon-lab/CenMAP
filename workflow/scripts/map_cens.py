@@ -47,19 +47,19 @@ def main():
         args.input, separator="\t", new_columns=ALN_HEADER, has_header=False
     )
 
-    # To pass, a given query sequence must have both p and q arms mapped.
-    # The acrocentrics are exceptions and only require the q-arm.
-    df = df.filter(
-        pl.when(~pl.col("reference_name").is_in(ACRO_CHRS))
-        .then(
-            pl.all_horizontal(
-                (pl.col("arm") == "p-arm").any(), (pl.col("arm") == "q-arm").any()
-            ).over("query_name")
-        )
-        .otherwise(
-            pl.all_horizontal((pl.col("arm") == "q-arm").any()).over("query_name")
-        )
-    )
+    # # To pass, a given query sequence must have both p and q arms mapped.
+    # # The acrocentrics are exceptions and only require the q-arm.
+    # df = df.filter(
+    #     pl.when(~pl.col("reference_name").is_in(ACRO_CHRS))
+    #     .then(
+    #         pl.all_horizontal(
+    #             (pl.col("arm") == "p-arm").any(), (pl.col("arm") == "q-arm").any()
+    #         ).over("query_name")
+    #     )
+    #     .otherwise(
+    #         pl.all_horizontal((pl.col("arm") == "q-arm").any()).over("query_name")
+    #     )
+    # )
 
     df_qarms = df.filter(pl.col("arm") == "q-arm").filter(
         pl.col("matches") == pl.col("matches").max().over(["query_name"])
@@ -71,13 +71,21 @@ def main():
         .select("query_name", "reference_name", "reference_name_right", "arm_right")
         .unique()
         # But if has alignment to q-arm, take that instead.
+        # Allow all contigs through.
         .with_columns(
             reference_name=pl.when(pl.col("arm_right") == "q-arm")
-            .then(pl.col("reference_name_right"))
+            .then(
+                pl.when(
+                    pl.col("reference_name_right").is_null()
+                )
+                .then(pl.col("reference_name"))
+                .otherwise(pl.col("reference_name_right"))
+            )
             .otherwise(pl.col("reference_name"))
         )
-        .select(["query_name", "reference_name_right"])
+        .select(["query_name", "reference_name"])
     )
+
     df_ctg_groups = (
         df.join(df_concensus_mapping, on=["query_name"], how="left")
         .rename(
@@ -85,6 +93,7 @@ def main():
                 "reference_name_right": "final_reference_name",
             }
         )
+        .filter(pl.col("final_reference_name").is_not_null())
         .group_by(["query_name", "final_reference_name"])
     )
 

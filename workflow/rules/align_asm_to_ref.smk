@@ -5,9 +5,9 @@ ALN_CFG = {
         for sm in SAMPLE_NAMES
     },
     "temp_dir": "temp",
-    "output_dir": "results",
-    "logs_dir": "logs",
-    "benchmarks_dir": "benchmarks",
+    "output_dir": "results/asm_to_ref",
+    "logs_dir": "logs/asm_to_ref",
+    "benchmarks_dir": "benchmarks/asm_to_ref",
     "aln_threads": config["align_asm_to_ref"]["threads"],
     "mm2_opts": "-x asm20 --secondary=no -s 25000 -K 15G",
 }
