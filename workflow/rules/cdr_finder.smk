@@ -1,4 +1,5 @@
 include: "common.smk"
+include: "utils.smk"
 
 
 # Get sample names with subdirs in cdr_finder.input_bam_dir
@@ -188,9 +189,9 @@ use rule calc_windows from CDR_Finder as cdr_calc_windows with:
         hrs=1,
 
 
-rule reorient_cdr_bed:
+use rule reorient_bed as reorient_cdr_bed with:
     input:
-        cdr_bed=lambda wc: expand(rules.cdr_call_cdrs.output, sample=wc.sm),
+        bed=lambda wc: expand(rules.cdr_call_cdrs.output, sample=wc.sm),
         og_coords_key=rules.get_original_coords.output.og_coords_key,
     output:
         os.path.join(
@@ -200,22 +201,34 @@ rule reorient_cdr_bed:
         ),
     log:
         "logs/cdr_finder/reorient_cdr_bed_{sm}.log",
-    conda:
-        "../envs/tools.yaml"
-    shell:
-        """
-        {{ join -1 1 -2 1 \
-            <(sort -k1 {input.cdr_bed}) \
-            <(awk -v OFS="\\t" '{{ print $1, $4":"$5"-"$6, $7 }}' {input.og_coords_key}) | \
-        awk -v OFS="\\t" '{{
-            is_rc=($4 ~ "rc-");
-            if (is_rc) {{
-                print $4, $5-$3, $5-$2
-            }} else {{
-                print $4, $2, $3
-            }}
-        }}';}} > {output} 2> {log}
-        """
+    params:
+        legend_col_chrom_og="$1",
+        legend_col_chrom_new='$4":"$5"-"$6',
+        legend_col_chrom_len="$7",
+        additional_cols="",
+
+
+use rule reorient_bed as reorient_binned_methyl_bed with:
+    input:
+        bed=lambda wc: expand(
+            rules.cdr_add_target_bed_coords_windows.output, sample=wc.sm
+        ),
+        og_coords_key=rules.get_original_coords.output.og_coords_key,
+    output:
+        temp(
+            os.path.join(
+                config["cdr_finder"]["output_dir"],
+                "bed",
+                "{sm}_binned_freq_adj_final.bed",
+            )
+        ),
+    log:
+        "logs/cdr_finder/reorient_binned_methyl_bed_{sm}.log",
+    params:
+        legend_col_chrom_og="$1",
+        legend_col_chrom_new='$4":"$5"-"$6',
+        legend_col_chrom_len="$7",
+        additional_cols=", $4",
 
 
 rule merge_cdr_beds:
@@ -231,6 +244,19 @@ rule merge_cdr_beds:
         """
         cat {input} > {output}
         """
+
+
+use rule merge_cdr_beds as merge_binned_methyl_beds with:
+    input:
+        expand(rules.reorient_binned_methyl_bed.output, sm=SAMPLE_NAMES_INTERSECTION),
+    output:
+        temp(
+            os.path.join(
+                config["cdr_finder"]["output_dir"],
+                "bed",
+                "all_binned_freq.bed",
+            )
+        ),
 
 
 rule cdr_finder_only:

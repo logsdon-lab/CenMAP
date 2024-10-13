@@ -52,6 +52,12 @@ parser <- add_argument(
 )
 parser <- add_argument(
   parser,
+  "--methyl",
+  help = "bedfile with binned methylation percents.",
+  default = NA
+)
+parser <- add_argument(
+  parser,
   "--outdir",
   default = "results",
   help = "Output directory.",
@@ -95,8 +101,18 @@ df_humas_hmmer_stv_out <- switch(args$mer_order,
 # Read CDR dataframe if provided.
 if (!is.na(args$cdr)) {
   df_cdr <- read_one_cdr_input(args$cdr)
+  height_adj_cdr <- 0.1
 } else {
   df_cdr <- NA
+  height_adj_methyl_binned <- 0
+}
+
+if (!is.na(args$methyl)) {
+  df_methyl_binned <- read_one_methyl_bed_input(args$methyl)
+  height_adj_methyl_binned <- 0.5
+} else {
+  df_methyl_binned <- NA
+  height_adj_methyl_binned <- 0
 }
 
 df_rm_sat_out <- read_one_repeatmasker_sat_input(bed_sat_annot)
@@ -108,10 +124,18 @@ plots <- make_cen_plot(
   df_seq_ident,
   df_humas_hmmer_stv_out,
   df_rm_sat_out,
-  df_cdr
+  df_cdr,
+  df_methyl_binned
 )
+plot_methyl <- plots[["methyl"]]
 plot_cen <- plots[["cen"]]
-plot_cen_legend <- get_legend(plot_cen)
+plot_cen_legend <- get_legend(
+  plot_cen +
+  theme(
+    legend.justification="center",
+    legend.box.just = "left",
+  )
+)
 plot_cen <- plot_cen + theme(legend.position = "none")
 plot_hist <- plots[["hist"]]
 
@@ -121,13 +145,24 @@ bottom_row <- cowplot::plot_grid(
   rel_widths = c(0.1, 1, 1, 0.1),
   labels = NULL
 )
-plot <- cowplot::plot_grid(
-  plot_cen, bottom_row,
-  nrow=2,
-  ncol=1,
-  rel_heights = c(1.2, 0.8),
-  labels = NULL
-)
+
+if (!typeof(plot_methyl) == "logical") {
+  plot <- cowplot::plot_grid(
+    plot_methyl, plot_cen, bottom_row,
+    nrow=3,
+    ncol=1,
+    rel_heights = c(0.3, 1.2, 0.8),
+    labels = NULL
+  )
+} else {
+  plot <- cowplot::plot_grid(
+    plot_cen, bottom_row,
+    nrow=2,
+    ncol=1,
+    rel_heights = c(1.2, 0.8),
+    labels = NULL
+  )
+}
 
 if (is.na(args$width)) {
   final_width <- 9
@@ -136,7 +171,7 @@ if (is.na(args$width)) {
 }
 
 if (is.na(args$height)) {
-  final_height <- 9
+  final_height <- 9 + height_adj_methyl_binned + height_adj_cdr
 } else {
   final_height <- args$height
 }

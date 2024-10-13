@@ -63,6 +63,9 @@ rule filter_annotations_moddotplot:
             "all_cens.annotation.bed",
         ),
         all_cdr_bed=rules.merge_cdr_beds.output if config.get("cdr_finder") else [],
+        all_binned_methyl_bed=rules.merge_binned_methyl_beds.output
+        if config.get("cdr_finder")
+        else [],
     output:
         sat_annot_bed=temp(
             os.path.join(
@@ -81,17 +84,25 @@ rule filter_annotations_moddotplot:
                 "{chr}_{mer_order}_{fname}_cdrs.bed",
             )
         ),
+        binned_methyl_bed=temp(
+            os.path.join(
+                OUTPUT_MODDOTPLOT_DIR,
+                "{chr}_{mer_order}_{fname}_methyl.bed",
+            )
+        ),
     params:
-        all_cdr_bed_exists=lambda wc, input: 1 if input.all_cdr_bed else 0,
+        cdr_output=config.get("cdr_finder"),
         fname_base=lambda wc: wc.fname.split(":")[0],
     shell:
         """
         grep '{wildcards.fname}' {input.all_sat_annot_bed} > {output.sat_annot_bed}
         grep '{wildcards.fname}' {input.chr_stv_row_bed} > {output.stv_row_bed}
-        if [ {params.all_cdr_bed_exists} -eq 1 ]; then
+        if [ {params.cdr_output} != "None" ]; then
             ( grep '{params.fname_base}' {input.all_cdr_bed} || true ) > {output.cdr_bed}
+            ( grep '{params.fname_base}' {input.all_binned_methyl_bed} || true ) > {output.binned_methyl_bed}
         else
             touch {output.cdr_bed}
+            touch {output.binned_methyl_bed}
         fi
         """
 
@@ -103,6 +114,7 @@ rule plot_cen_moddotplot:
         sat_annot_bed=rules.filter_annotations_moddotplot.output.sat_annot_bed,
         stv_row_bed=rules.filter_annotations_moddotplot.output.stv_row_bed,
         cdr_bed=rules.filter_annotations_moddotplot.output.cdr_bed,
+        binned_methyl_bed=rules.filter_annotations_moddotplot.output.binned_methyl_bed,
     output:
         plots=expand(
             os.path.join(
@@ -126,6 +138,7 @@ rule plot_cen_moddotplot:
         --hor {input.stv_row_bed} \
         --sat {input.sat_annot_bed} \
         --cdr {input.cdr_bed} \
+        --methyl {input.binned_methyl_bed} \
         --mer_order {wildcards.mer_order} \
         --outdir {params.output_dir} 2>> {log}
         """

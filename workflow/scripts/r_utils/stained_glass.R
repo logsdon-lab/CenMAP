@@ -88,8 +88,8 @@ make_hist <- function(sdf) {
     ) +
     scale_y_continuous(labels = make_k) +
     coord_cartesian(xlim = c(bot, 100)) +
-    xlab("% identity") +
-    ylab("# of alignments (k)")
+    xlab("Average Nucleotide Identity (%)") +
+    ylab("Number of Intervals (k)")
   return(p)
 }
 
@@ -160,7 +160,7 @@ make_dot <- function(sdf, rname = "") {
 }
 
 
-make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out, df_cdr) {
+make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out, df_cdr, df_methyl_binned) {
   df_rname_seq_ident <- df_seq_ident %>% filter(q == rname & r == rname)
 
   # make the tri sequence identity plots
@@ -188,12 +188,36 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
 
   plot_ident_cen <- ggplot()
 
+  # Also plot methyl binned if present.
+  if (!typeof(df_methyl_binned) == "logical") {
+    plot_methyl_binned <- ggplot() +
+      geom_area(
+        data = df_methyl_binned,
+        aes(x = start2, y = meth_prob),
+        fill = "black",
+      ) +
+      scale_x_continuous(expand=c(0,0)) +
+      theme_cowplot() +
+      theme(
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+      ) +
+      theme(
+        plot.margin = margin(t = 20, b = 0, l = 23, r = 50)
+      ) +
+      ylab("Methylation\n(%)")
+  } else {
+    plot_methyl_binned <- NA
+  }
+
   # If df_chr is provided, add lines for CDR on top.
   if (!(typeof(df_cdr) == "logical")) {
     plot_ident_cen <- plot_ident_cen +
       geom_segment(
         data = df_cdr,
-        aes(x = start2, y = segment_y * 2, xend = stop2, yend = segment_y * 2),
+        aes(x = start2, y = segment_y * 2.5, xend = stop2, yend = segment_y * 2.5),
         linewidth = 1
       )
   }
@@ -224,6 +248,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
         yend = segment_y,
         color = region
       ),
+      key_glyph = "rect",
       linewidth = segment_linewidth
     ) +
     geom_segment(
@@ -233,12 +258,16 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
         y = segment_y,
         xend = stop2 + 1000,
         yend = segment_y,
-        color = region
+        color = region,
       ),
+      key_glyph = "rect",
       linewidth = segment_linewidth
     ) +
-    guides(color = guide_legend(nrow = 2)) +
+    guides(
+      color = guide_legend(nrow = 2, override.aes = list(linewidth=0.5))
+    ) +
     scale_color_manual(values = get_rm_sat_annot_colors()) +
+    labs(color="Sequence Composition") +
     scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
     # New colorscale for hor monomers
     new_scale_color() +
@@ -249,20 +278,24 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
         xend = stop + 2000,
         y = segment_y,
         yend = segment_y,
-        color = as.factor(mer)
+        color = as.factor(mer),
       ),
+      key_glyph = "rect",
       linewidth = segment_linewidth
     ) +
-    guides(color = guide_legend(nrow = 5)) +
+    guides(
+      color = guide_legend(nrow = 5, override.aes = list(linewidth=0.5)),
+    ) +
     scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
-    # New colorscale for stainedglass.
+    labs(color="Alpha-satellite HOR Monomers")
+
+  # New colorscale for stainedglass.
+  plot_ident_cen <- plot_ident_cen +
     geom_polygon(
       df_d,
       mapping = aes(x = x, y = y, fill = new_discrete, group = group),
       show.legend = FALSE
-    )
-
-  plot_ident_cen <- plot_ident_cen +
+    ) +
     scale_y_reverse() +
     scale_fill_manual(values = discrete_color_ranges) +
     scale_x_continuous(labels = make_scale, limits = c(0, NA)) +
@@ -270,7 +303,6 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     # Adjust legend.
     theme(
       legend.position = "right",
-      legend.title = element_blank(),
       legend.background = element_blank(),
       legend.key = element_rect(color = "black", fill = NA),
     ) +
@@ -283,5 +315,13 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     ) +
     xlab("Position (Mbp)")
 
-  return(list(cen=plot_ident_cen, hist=plot_hist))
+  if (!typeof(df_methyl_binned) == "logical") {
+    plot_ident_cen <- plot_ident_cen +
+      # Expand margins to account for y-axis elements on methylation plot.
+      theme(
+        plot.margin = margin(t = 0, b = 0, l = 50, r = 24)
+      )
+  }
+
+  return(list(methyl=plot_methyl_binned, cen=plot_ident_cen, hist=plot_hist))
 }
