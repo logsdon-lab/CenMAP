@@ -204,8 +204,9 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
         axis.ticks.x = element_blank(),
         axis.line.x = element_blank(),
       ) +
+      # Negative margins??? ggplot >:(
       theme(
-        plot.margin = margin(t = 20, b = 0, l = 23, r = 50)
+        plot.margin = margin(t = 20, b = -10, l = 23, r = 50)
       ) +
       ylab("Methylation\n(%)")
   } else {
@@ -217,7 +218,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     plot_ident_cen <- plot_ident_cen +
       geom_segment(
         data = df_cdr,
-        aes(x = start2, y = segment_y * 2.5, xend = stop2, yend = segment_y * 2.5),
+        aes(x = start2, y = segment_y * 2.1, xend = stop2, yend = segment_y * 2.1),
         linewidth = 1
       )
   }
