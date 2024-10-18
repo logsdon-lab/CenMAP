@@ -24,10 +24,10 @@ rule cluster_cens:
     input:
         script="workflow/scripts/cluster_cens.py",
         live_hor_bed=rules.aggregate_all_live_hor.output,
-        cen_img_dir=os.path.join(
+        cen_img_dir=lambda wc: os.path.join(
             config["plot_hor_stv"]["output_dir"],
             "plots",
-            f"{{chr}}_{config['cluster_cens']['mer_order']}",
+            f"{wc.chr}_{MONOMER_ORDER[wc.chr]}",
         ),
     output:
         plot=os.path.join(

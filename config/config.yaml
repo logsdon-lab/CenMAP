@@ -97,11 +97,6 @@ plot_hor_stv:
   output_dir: "results/hor_stv"
   chm1_stv: "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
   chm13_stv: "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
-  # Reorder data to put 'large'-r or 'small'-r -mers on top.
-  # Specifying both creates both plots.
-  mer_order:
-    - small
-    - large
   sat_annot_colors: "config/repeatmasker_sat_annot_colors.json"
 
 calculate_hor_length:

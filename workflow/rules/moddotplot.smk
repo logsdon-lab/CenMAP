@@ -68,26 +68,24 @@ rule filter_annotations_moddotplot:
         else [],
     output:
         sat_annot_bed=temp(
-            os.path.join(
-                OUTPUT_MODDOTPLOT_DIR, "{chr}_{mer_order}_{fname}_sat_annot.bed"
-            )
+            os.path.join(OUTPUT_MODDOTPLOT_DIR, "{chr}_{fname}_sat_annot.bed")
         ),
         stv_row_bed=temp(
             os.path.join(
                 OUTPUT_MODDOTPLOT_DIR,
-                "{chr}_{mer_order}_{fname}_stv_row.bed",
+                "{chr}_{fname}_stv_row.bed",
             )
         ),
         cdr_bed=temp(
             os.path.join(
                 OUTPUT_MODDOTPLOT_DIR,
-                "{chr}_{mer_order}_{fname}_cdrs.bed",
+                "{chr}_{fname}_cdrs.bed",
             )
         ),
         binned_methyl_bed=temp(
             os.path.join(
                 OUTPUT_MODDOTPLOT_DIR,
-                "{chr}_{mer_order}_{fname}_methyl.bed",
+                "{chr}_{fname}_methyl.bed",
             )
         ),
     params:
@@ -121,16 +119,17 @@ rule plot_cen_moddotplot:
                 OUTPUT_MODDOTPLOT_DIR,
                 "combined",
                 "{{chr}}",
-                "{{fname}}_{{mer_order}}.tri.{ext}",
+                "{{fname}}.tri.{ext}",
             ),
             ext=["png", "pdf"],
         ),
     params:
+        mer_order=lambda wc: MONOMER_ORDER[wc.chr],
         output_dir=lambda wc, output: os.path.dirname(output.plots[0]),
     conda:
         "../envs/r.yaml"
     log:
-        "logs/plot_cen_moddotplot/plot_cen_moddotplot_{chr}_{fname}_{mer_order}.log",
+        "logs/plot_cen_moddotplot/plot_cen_moddotplot_{chr}_{fname}.log",
     shell:
         """
         Rscript {input.script} \
@@ -139,7 +138,7 @@ rule plot_cen_moddotplot:
         --sat {input.sat_annot_bed} \
         --cdr {input.cdr_bed} \
         --methyl {input.binned_methyl_bed} \
-        --mer_order {wildcards.mer_order} \
+        --mer_order {params.mer_order} \
         --outdir {params.output_dir} 2>> {log}
         """
 
@@ -166,9 +165,7 @@ def moddotplot_outputs_no_input_dir(wc):
                 zip,
                 fname=fnames,
                 chr=chrs,
-                mer_order=["{mer_order}"] * len(fnames),
             ),
-            mer_order=config["plot_hor_stv"]["mer_order"],
         ),
     )
 
@@ -203,9 +200,7 @@ else:
                     zip,
                     fname=fnames,
                     chr=chrs,
-                    mer_order=["{mer_order}"] * len(fnames),
                 ),
-                mer_order=config["plot_hor_stv"]["mer_order"],
             ),
 
 
