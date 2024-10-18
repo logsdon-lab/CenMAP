@@ -342,8 +342,19 @@ read_one_hor_mon_ort_input <- function(input_hor_ort) {
     ) %>%
     mutate(
       # Reverse arrows if -
-      start2 = ifelse(strand == "+", start - ctg_start, stop - ctg_start),
-      stop2 = ifelse(strand == "+", stop - ctg_start, start - ctg_start)
+      # Add some bases to not visually clutter arrows.
+      # Not true but this image is only for qualitative analysis.
+      # TODO: This may fail on smaller contigs. Maybe group_by to find length and use some prop (1% maybe.)
+      start2 = ifelse(
+        strand == "+",
+        start - ctg_start + 20000,
+        stop - ctg_start - 20000
+      ),
+      stop2 = ifelse(
+        strand == "+",
+        stop - ctg_start - 30000,
+        start - ctg_start + 30000
+      )
     ) %>%
     select(chr, start2, stop2, strand)
 

@@ -210,7 +210,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       theme(
         plot.margin = margin(t = 20, b = -10, l = 23, r = 50)
       ) +
-      ylab("Methylation\n(%)")
+      ylab("CpG Methylation\n(%)")
   } else {
     plot_methyl_binned <- NA
   }
@@ -222,8 +222,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
         data = df_cdr,
         aes(x = start2, y = 100, xend = stop2, yend = 100),
         linewidth = 1,
-        colour = "red",
-        alpha = 0.75
+        colour = "black",
       )
   }
   plot_ident_cen <- plot_ident_cen +
@@ -235,17 +234,13 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
         xend = stop2,
         y = segment_y * 2,
         yend = segment_y * 2,
-        colour=strand
       ),
+      size = 1.5,
+      lineend = "butt",
+      linejoin = "mitre",
       # Point arrow to last position. See https://rdrr.io/r/grid/arrow.html
-      arrow = arrow(length = unit(0.1, "cm"), ends = "last")
+      arrow = arrow(length = unit(0.3, "cm"), ends = "last", type = "closed")
     ) +
-    labs(color="Alpha-satellite HOR Monomer Orientation") +
-    # Only two elements in legend. Single row.
-    guides(
-      color = guide_legend(nrow = 1, override.aes = list(linewidth=0.5))
-    ) +
-    new_scale_color() +
     # Make larger ct segment as outline
     geom_segment(
       data = df_rm_sat_out_ct,
