@@ -58,6 +58,11 @@ parser <- add_argument(
 )
 parser <- add_argument(
   parser,
+  "--hor_ort",
+  help = "bedfile with hor ort. Can be derived from --hor but this stopgap is here because there are no good interval tree libraries in R.",
+)
+parser <- add_argument(
+  parser,
   "--outdir",
   default = "results",
   help = "Output directory.",
@@ -85,6 +90,7 @@ args <- parse_args(parser)
 bed_seq_ident <- args$bed
 bed_sat_annot <- args$sat
 bed_hor_mon <- args$hor
+bed_hor_mon_ort <- args$hor_ort
 outdir <- args$outdir
 mer_order <- args$mer_order
 dir.create(outdir)
@@ -98,6 +104,7 @@ df_humas_hmmer_stv_out <- switch(args$mer_order,
   "small" = df_humas_hmmer_stv_out %>% arrange(-mer),
   stop(paste("Invalid mer reordering option:", args$mer_order))
 )
+df_hor_ort <- read_one_hor_mon_ort_input(bed_hor_mon_ort)
 # Read CDR dataframe if provided.
 if (!is.na(args$cdr)) {
   df_cdr <- read_one_cdr_input(args$cdr)
@@ -125,6 +132,7 @@ plots <- make_cen_plot(
   df_humas_hmmer_stv_out,
   df_rm_sat_out,
   df_cdr,
+  df_hor_ort,
   df_methyl_binned
 )
 plot_methyl <- plots[["methyl"]]

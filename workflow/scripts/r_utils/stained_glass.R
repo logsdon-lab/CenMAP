@@ -160,7 +160,7 @@ make_dot <- function(sdf, rname = "") {
 }
 
 
-make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out, df_cdr, df_methyl_binned) {
+make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out, df_cdr, df_hor_ort, df_methyl_binned) {
   df_rname_seq_ident <- df_seq_ident %>% filter(q == rname & r == rname)
 
   # make the tri sequence identity plots
@@ -172,6 +172,8 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
   # Filter data.
   # Get centromeric transition regions separately to outline.
   df_rm_sat_out <- df_rm_sat_out[order(df_rm_sat_out$region)] %>%
+    filter(chr == rname)
+  df_humas_hmmer_stv_out <- df_humas_hmmer_stv_out %>%
     filter(chr == rname)
   df_rm_sat_out_ct <- df_rm_sat_out %>%
     filter(region == "ct" & chr == rname)
@@ -213,17 +215,37 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     plot_methyl_binned <- NA
   }
 
-  # If df_chr is provided, add lines for CDR on top.
-  if (!(typeof(df_cdr) == "logical")) {
-    plot_ident_cen <- plot_ident_cen +
+  # If df_cdr and methyl bins are provided, add lines for CDR on top.
+  if (!(typeof(df_cdr) == "logical") && (!(typeof(plot_methyl_binned) == "logical")))  {
+    plot_methyl_binned <- plot_methyl_binned +
       geom_segment(
         data = df_cdr,
-        aes(x = start2, y = segment_y * 2.1, xend = stop2, yend = segment_y * 2.1),
-        linewidth = 1
+        aes(x = start2, y = 100, xend = stop2, yend = 100),
+        linewidth = 1,
+        colour = "red",
+        alpha = 0.75
       )
   }
-
   plot_ident_cen <- plot_ident_cen +
+    # Add HOR orientation segments.
+    geom_segment(
+      data=df_hor_ort,
+      aes(
+        x = start2,
+        xend = stop2,
+        y = segment_y * 2,
+        yend = segment_y * 2,
+        colour=strand
+      ),
+      # Point arrow to last position. See https://rdrr.io/r/grid/arrow.html
+      arrow = arrow(length = unit(0.1, "cm"), ends = "last")
+    ) +
+    labs(color="Alpha-satellite HOR Monomer Orientation") +
+    # Only two elements in legend. Single row.
+    guides(
+      color = guide_legend(nrow = 1, override.aes = list(linewidth=0.5))
+    ) +
+    new_scale_color() +
     # Make larger ct segment as outline
     geom_segment(
       data = df_rm_sat_out_ct,

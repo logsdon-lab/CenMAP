@@ -327,3 +327,25 @@ read_one_methyl_bed_input <- function(input_methyl) {
 
   return(df_methyl_binned)
 }
+
+read_one_hor_mon_ort_input <- function(input_hor_ort) {
+  df_hor_ort <- fread(
+    input_hor_ort,
+    header = FALSE,
+    select = c(1:4),
+    col.names = c("chr", "start", "stop", "strand")
+  )
+  df_hor_ort <- df_hor_ort %>%
+    mutate(
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+    ) %>%
+    mutate(
+      # Reverse arrows if -
+      start2 = ifelse(strand == "+", start - ctg_start, stop - ctg_start),
+      stop2 = ifelse(strand == "+", stop - ctg_start, start - ctg_start)
+    ) %>%
+    select(chr, start2, stop2, strand)
+
+  return(df_hor_ort)
+}

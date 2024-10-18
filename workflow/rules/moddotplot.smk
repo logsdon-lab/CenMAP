@@ -107,6 +107,34 @@ rule filter_annotations_moddotplot:
         """
 
 
+# Get HOR monomer ort and merge monomers enforcing strandness.
+# TODO: This should be doable in R but there are no correct interval libraries that meet all requirements:
+# * are equivalent to bedtools without outright just wrapping bedtools (bedr, bedtoolsr, ...)
+# * are correct (valr - removes interval edges when merging)
+# * are simple/tidy (grange - wth)
+# TODO: Remove R
+rule get_stv_row_ort_bed:
+    input:
+        stv_row_bed=rules.filter_annotations_moddotplot.output.stv_row_bed,
+    output:
+        # 4-col BED (chrom, start, end, strand)
+        temp(
+            os.path.join(
+                OUTPUT_MODDOTPLOT_DIR, "{chr}_{mer_order}_{fname}_hor_ort.bed"
+            )
+        ),
+    params:
+        dst_merge=100_000,
+    conda:
+        "../envs/tools.yaml"
+    log:
+        "logs/plot_cen_moddotplot/get_hor_mon_ort_{chr}_{fname}_{mer_order}.log",
+    shell:
+        """
+        bedtools merge -i {input} -s -d {params.dst_merge} -c 6 -o distinct > {output} 2> {log}
+        """
+
+
 rule plot_cen_moddotplot:
     input:
         script="workflow/scripts/plot_cens_moddotplot.R",
@@ -114,6 +142,7 @@ rule plot_cen_moddotplot:
         sat_annot_bed=rules.filter_annotations_moddotplot.output.sat_annot_bed,
         stv_row_bed=rules.filter_annotations_moddotplot.output.stv_row_bed,
         cdr_bed=rules.filter_annotations_moddotplot.output.cdr_bed,
+        stv_row_ort_bed=rules.get_stv_row_ort_bed.output,
         binned_methyl_bed=rules.filter_annotations_moddotplot.output.binned_methyl_bed,
     output:
         plots=expand(
@@ -136,6 +165,7 @@ rule plot_cen_moddotplot:
         Rscript {input.script} \
         --bed {input.seq_ident_bed} \
         --hor {input.stv_row_bed} \
+        --hor_ort {input.stv_row_ort_bed} \
         --sat {input.sat_annot_bed} \
         --cdr {input.cdr_bed} \
         --methyl {input.binned_methyl_bed} \
