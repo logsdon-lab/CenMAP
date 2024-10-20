@@ -188,8 +188,8 @@ read_one_repeatmasker_sat_input <- function(input_file) {
   # Set to always start at 0.
   df <- df %>%
     mutate(
-      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
-      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), "0")),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), "0"))
     ) %>%
     # Because coords originate from rm output, already correctly oriented.
     mutate(
@@ -245,8 +245,8 @@ read_one_humas_hmmer_input <- function(
 
   df_stv <- df_stv %>%
     mutate(
-      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
-      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), "0")),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), "0"))
     ) %>%
     mutate(
       start2 = start - ctg_start,
@@ -352,8 +352,8 @@ read_one_cdr_input <- function(input_cdr) {
 
   df_cdr <- df_cdr %>%
     mutate(
-      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
-      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), "0")),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), "0"))
     ) %>%
     mutate(
       start2 = start - ctg_start,
@@ -384,8 +384,8 @@ read_one_methyl_bed_input <- function(input_methyl) {
   }
   df_methyl_binned <- df_methyl_binned %>%
     mutate(
-      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
-      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), "0")),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), "0"))
     ) %>%
     mutate(
       start2 = start - ctg_start,
@@ -413,8 +413,8 @@ read_one_hor_mon_ort_input <- function(input_hor_ort) {
   )
   df_hor_ort <- df_hor_ort %>%
     mutate(
-      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
-      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), "0")),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), "0"))
     ) %>%
     mutate(
       # Reverse arrows if -
