@@ -108,6 +108,33 @@ checkpoint aggregate_format_all_stv_row:
         """
 
 
+# Get HOR monomer ort and merge monomers enforcing strandness.
+# TODO: This should be doable in R but there are no correct interval libraries that meet all requirements:
+# * are equivalent to bedtools without outright just wrapping bedtools (bedr, bedtoolsr, ...)
+# * are correct (valr - removes interval edges when merging)
+# * are simple/tidy (grange - wth)
+# TODO: Remove R
+rule get_stv_row_ort_bed:
+    input:
+        stv_row_bed=rules.aggregate_format_all_stv_row.output,
+    output:
+        # 4-col BED (chrom, start, end, strand)
+        os.path.join(
+            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.ort.bed"
+        ),
+    params:
+        dst_merge=100_000,
+    conda:
+        "../envs/tools.yaml"
+    log:
+        "logs/plot_cen_moddotplot/get_hor_mon_ort_{chr}.log",
+    shell:
+        """
+        bedtools merge -i <(sort -k1,1 -k2,2n {input}) -s -d {params.dst_merge} -c 6 -o distinct > {output} 2> {log}
+        """
+
+
+# No ort added.
 rule plot_stv_with_order:
     input:
         script="workflow/scripts/plot_cens_stvHOR.R",

@@ -32,10 +32,18 @@ p <- add_argument(p, "--input_stv",
 )
 p <- add_argument(p, "--input_stv_chm13",
   help = "Input CHM13 HumAS-HMMER formatted output",
-  type = "character"
+  type = "character", default = NA
 )
 p <- add_argument(p, "--input_stv_chm1",
   help = "Input CHM1 HumAS-HMMER formatted output",
+  type = "character", default = NA
+)
+p <- add_argument(p, "--input_stv_ort",
+  help = "Input HumAS-HMMER monomer stv ort output.",
+  type = "character", default = NA
+)
+p <- add_argument(p, "--input_cdr",
+  help = "Input CDR output.",
   type = "character"
 )
 p <- add_argument(p, "--chr",
@@ -58,6 +66,10 @@ p <- add_argument(p, "--mer_order",
   help = "Reorder data to put 'large'-r or 'small'-r -mers on top.",
   type = "character", default = "large"
 )
+# p <- add_argument(p, "--subset",
+#   help = "Subset and order based on list. Expects a column of names.",
+#   type = "character", default = NA
+# )
 
 argv <- parse_args(p)
 
@@ -71,7 +83,12 @@ df_humas_hmmer_stv_out <- read_multiple_humas_hmmer_input(
   argv$hor_filter
 ) %>%
   filter(chr %in% df_rm_sat_out$chr)
-df_rm_sat_out <- df_rm_sat_out %>% filter(chr %in% df_humas_hmmer_stv_out$chr)
+df_rm_sat_out <- df_rm_sat_out %>%
+  filter(chr %in% df_humas_hmmer_stv_out$chr)
+df_stv_ort <- read_one_hor_mon_ort_input(argv$input_stv_ort) %>%
+  filter(chr %in% df_rm_sat_out$chr)
+df_cdr <- read_one_cdr_input(argv$input_cdr) %>%
+  filter(chr %in% df_rm_sat_out$chr)
 
 # Set new minimum and standardize scales.
 new_min <- min(df_rm_sat_out$start2)
@@ -131,7 +148,7 @@ if (!is.na(argv$output_dir)) {
 }
 
 # Generate full plot.
-plt <- plot_all_ctgs(df_rm_sat_out, df_humas_hmmer_stv_out)
+plt <- plot_all_ctgs(df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_ort)
 
 # Scale height to fit number contigs.
 height <- length(unique(df_humas_hmmer_stv_out$chr)) * 0.5

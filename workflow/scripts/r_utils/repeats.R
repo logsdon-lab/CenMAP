@@ -70,7 +70,7 @@ plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, height =
   return(p)
 }
 
-plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
+plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_ort, height = 8) {
   p <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
     geom_segment(
       aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region),
@@ -99,6 +99,34 @@ plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
     guides(color = guide_legend(override.aes = list(size = 6))) +
     xlab("Position (Mbp)")
 
+  if (!(typeof(df_cdr) == "logical"))  {
+    p <- p +
+      geom_segment(
+        data = df_cdr,
+        aes(x = start2, y = chr, xend = stop2, yend = chr),
+        linewidth = 1,
+        position = position_nudge(y=0.3),
+        colour = "black",
+      )
+  }
+  if (!(typeof(df_stv_ort) == "logical")) {
+    p <- p +
+      geom_segment(
+        data=df_stv_ort,
+        aes(
+          x = start2,
+          xend = stop2,
+          y = chr,
+          yend = chr,
+        ),
+        position = position_nudge(y=0.45),
+        size = 1.5,
+        lineend = "butt",
+        linejoin = "mitre",
+        # Point arrow to last position. See https://rdrr.io/r/grid/arrow.html
+        arrow = arrow(length = unit(0.3, "cm"), ends = "last", type = "closed")
+      )
+  }
   return(p)
 }
 
@@ -119,7 +147,13 @@ read_multiple_repeatmasker_sat_input <- function(input_file) {
     mutate(chr=str_replace(chr, "cen", "chr")) %>%
     filter(!str_detect(chr, "^chr[0-9XY]+$")) %>%
     # Correct for version and different naming of chr. ex. chm1_cen1v8 -> chm1_chr1
-    mutate(chr=str_remove(chr, "v\\d+"))
+    mutate(chr=str_remove(chr, "v\\d+")) %>%
+    mutate(
+      ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+    ) %>%
+    select(-chr) %>%
+    rename(chr=ctg_name)
+
 
   # reorder rows so that live arrays are plotted on top
   df$region <- factor(df$region, levels = c("ct", "asat", "bsat", "gsat", "hsat1A", "hsat1B", "hsat2", "hsat3"), ordered = T)
@@ -161,7 +195,13 @@ read_one_repeatmasker_sat_input <- function(input_file) {
     mutate(
       start2 = start - ctg_start,
       stop2 = stop - ctg_start
-    )
+    ) %>%
+    mutate(
+      ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+    ) %>%
+    select(-chr) %>%
+    rename(chr=ctg_name)
+
 
   return(df)
 }
@@ -212,7 +252,13 @@ read_one_humas_hmmer_input <- function(
       start2 = start - ctg_start,
       stop2 = stop - ctg_start
     ) %>%
-    mutate(start=start2, stop=stop2)
+    mutate(start=start2, stop=stop2) %>%
+    mutate(
+      ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+    ) %>%
+    select(-chr) %>%
+    rename(chr=ctg_name)
+
 
    return(df_stv)
 }
@@ -222,60 +268,70 @@ read_multiple_humas_hmmer_input <- function(
     input_chm1,
     input_chm13,
     chr_name,
-    hor_filter = 0) {
+    hor_filter = 0
+) {
   cols_to_take <- seq(5)
   monomer_len <- 170
   cols <- c("chr", "start", "stop", "hor", "strand")
 
-  chm13 <- fread(input_chm13,
-    sep = "\t",
-    stringsAsFactors = TRUE,
-    fill = TRUE, quote = "",
-    header = FALSE, select = cols_to_take
-  )
-  chm1 <- fread(input_chm1,
-    sep = "\t",
-    stringsAsFactors = TRUE,
-    fill = TRUE, quote = "",
-    header = FALSE, select = cols_to_take
-  )
   samples <- fread(input_chr,
     sep = "\t",
     stringsAsFactors = TRUE,
     fill = TRUE, quote = "",
     header = FALSE, select = cols_to_take
   )
-
-  colnames(chm13) <- cols
-  colnames(chm1) <- cols
   colnames(samples) <- cols
+  all_samples <- samples
 
-  # combine the CHM1 and samples centromeres
-  chm13$chr <- gsub("chr", "chm13_chr", chm13$chr)
-  chm1$chr <- gsub("chr", "chm1_chr", chm1$chr)
+  if (!is.na(input_chm13)) {
+    chm13 <- fread(input_chm13,
+      sep = "\t",
+      stringsAsFactors = TRUE,
+      fill = TRUE, quote = "",
+      header = FALSE, select = cols_to_take
+    )
+    colnames(chm13) <- cols
+    chm13$chr <- gsub("chr", "chm13_chr", chm13$chr)
+    all_samples <- rbind(all_samples, chm13)
+  }
 
-  # Requires coordinates in name. ex. chr?:1-2
-  chm13_chm1_samples <- rbind(chm13, chm1, samples)
+  if (!is.na(input_chm1)) {
+    chm1 <- fread(input_chm1,
+      sep = "\t",
+      stringsAsFactors = TRUE,
+      fill = TRUE, quote = "",
+      header = FALSE, select = cols_to_take
+    )
+    colnames(chm1) <- cols
+    chm1$chr <- gsub("chr", "chm1_chr", chm1$chr)
+    all_samples <- rbind(all_samples, chm1)
+  }
 
   # determine distance between start and stop
-  chm13_chm1_samples$length <- chm13_chm1_samples$stop - chm13_chm1_samples$start
+  all_samples$length <- all_samples$stop - all_samples$start
 
   # calculate monomer size and round
-  chm13_chm1_samples$mer <- as.numeric(round(chm13_chm1_samples$length / monomer_len))
+  all_samples$mer <- as.numeric(round(all_samples$length / monomer_len))
 
   # filter monomers
-  chm13_chm1_samples <- switch(chr_name,
-    "chr10" = subset(chm13_chm1_samples, as.numeric(mer) >= 5),
-    "chr20" = subset(chm13_chm1_samples, as.numeric(mer) >= 5),
-    "chrY" = subset(chm13_chm1_samples, as.numeric(mer) >= 30),
-    "chr17" = subset(chm13_chm1_samples, as.numeric(mer) >= 4),
-    chm13_chm1_samples
+  all_samples <- switch(chr_name,
+    "chr10" = subset(all_samples, as.numeric(mer) >= 5),
+    "chr20" = subset(all_samples, as.numeric(mer) >= 5),
+    "chrY" = subset(all_samples, as.numeric(mer) >= 30),
+    "chr17" = subset(all_samples, as.numeric(mer) >= 4),
+    all_samples
   )
 
   # filter for HORs that occur at least 20 times (10 times per haplotype)
-  df_stv <- chm13_chm1_samples %>%
+  df_stv <- all_samples %>%
     group_by(mer) %>%
-    filter(n() > hor_filter)
+    filter(n() > hor_filter) %>%
+    mutate(
+      ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+    ) %>%
+    select(-chr) %>%
+    rename(chr=ctg_name)
+
 
   return(df_stv)
 }
@@ -299,7 +355,13 @@ read_one_cdr_input <- function(input_cdr) {
     mutate(
       start2 = start - ctg_start,
       stop2 = stop - ctg_start
-    )
+    ) %>%
+    mutate(
+      ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+    ) %>%
+    select(-chr) %>%
+    rename(chr=ctg_name)
+
 
   return(df_cdr)
 }
@@ -323,7 +385,12 @@ read_one_methyl_bed_input <- function(input_methyl) {
       start2 = start - ctg_start,
       stop2 = stop - ctg_start
     ) %>%
-    select(chr, start2, stop2, meth_prob)
+    select(chr, start2, stop2, meth_prob) %>%
+    mutate(
+      ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+    ) %>%
+    select(-chr) %>%
+    rename(chr=ctg_name)
 
   return(df_methyl_binned)
 }
@@ -356,7 +423,12 @@ read_one_hor_mon_ort_input <- function(input_hor_ort) {
         start - ctg_start + 30000
       )
     ) %>%
-    select(chr, start2, stop2, strand)
+    select(chr, start2, stop2, strand) %>%
+    mutate(
+      ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+    ) %>%
+    select(-chr) %>%
+    rename(chr=ctg_name)
 
   return(df_hor_ort)
 }
