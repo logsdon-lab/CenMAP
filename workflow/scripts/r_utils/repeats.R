@@ -91,7 +91,8 @@ plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_
       legend.position = "bottom",
       legend.key.width = unit(1, "cm"),
       legend.title = element_blank(),
-      axis.line.y = element_line(colour = "white")
+      axis.line.y = element_line(colour = "white"),
+      axis.title.y = element_blank()
     ) +
     scale_x_continuous(
       labels = scales::unit_format(scale = 1e-6, accuracy=0.1, unit="")

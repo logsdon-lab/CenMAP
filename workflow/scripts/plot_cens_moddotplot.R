@@ -156,11 +156,11 @@ bottom_row <- cowplot::plot_grid(
   labels = NULL
 )
 
-title <- make_cen_plot_title(original_rname)
+plot_title <- make_cen_plot_title(original_rname)
 
 if (!typeof(plot_methyl) == "logical") {
   plot <- cowplot::plot_grid(
-    title, plot_methyl, plot_cen, bottom_row,
+    plot_title, plot_methyl, plot_cen, bottom_row,
     nrow=4,
     ncol=1,
     rel_heights = c(0.05, 0.3, 1.2, 0.8),
