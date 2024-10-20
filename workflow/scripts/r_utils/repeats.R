@@ -337,6 +337,9 @@ read_multiple_humas_hmmer_input <- function(
 }
 
 read_one_cdr_input <- function(input_cdr) {
+  if (is.na(input_cdr)) {
+    return(NA)
+  }
   df_cdr <- fread(
     input_cdr,
     header = FALSE,
@@ -367,6 +370,9 @@ read_one_cdr_input <- function(input_cdr) {
 }
 
 read_one_methyl_bed_input <- function(input_methyl) {
+   if (is.na(input_methyl)) {
+    return(NA)
+  }
   df_methyl_binned <- fread(
     input_methyl,
     header = FALSE,
@@ -396,6 +402,9 @@ read_one_methyl_bed_input <- function(input_methyl) {
 }
 
 read_one_hor_mon_ort_input <- function(input_hor_ort) {
+   if (is.na(input_hor_ort)) {
+    return(NA)
+  }
   df_hor_ort <- fread(
     input_hor_ort,
     header = FALSE,

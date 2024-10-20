@@ -44,7 +44,7 @@ p <- add_argument(p, "--input_stv_ort",
 )
 p <- add_argument(p, "--input_cdr",
   help = "Input CDR output.",
-  type = "character"
+  type = "character", default = NA
 )
 p <- add_argument(p, "--chr",
   help = "Chromosome to plot. ex. chrX",
@@ -66,15 +66,16 @@ p <- add_argument(p, "--mer_order",
   help = "Reorder data to put 'large'-r or 'small'-r -mers on top.",
   type = "character", default = "large"
 )
-# p <- add_argument(p, "--subset",
-#   help = "Subset and order based on list. Expects a column of names.",
-#   type = "character", default = NA
-# )
+p <- add_argument(p, "--subset",
+  help = "Subset and order based on list. Expects a column of names.",
+  type = "character", default = NA
+)
 
 argv <- parse_args(p)
 
 df_rm_sat_out <- read_multiple_repeatmasker_sat_input(argv$input_rm_sat)
 # Filter out chr without annotations.
+# Need both stv and rm annotations.
 df_humas_hmmer_stv_out <- read_multiple_humas_hmmer_input(
   argv$input_stv,
   argv$input_stv_chm1,
@@ -85,10 +86,46 @@ df_humas_hmmer_stv_out <- read_multiple_humas_hmmer_input(
   filter(chr %in% df_rm_sat_out$chr)
 df_rm_sat_out <- df_rm_sat_out %>%
   filter(chr %in% df_humas_hmmer_stv_out$chr)
-df_stv_ort <- read_one_hor_mon_ort_input(argv$input_stv_ort) %>%
-  filter(chr %in% df_rm_sat_out$chr)
-df_cdr <- read_one_cdr_input(argv$input_cdr) %>%
-  filter(chr %in% df_rm_sat_out$chr)
+
+if (!is.na(argv$subset)) {
+  chr_subset_order <- fread(
+    argv$subset,
+    sep = "\t",
+    stringsAsFactors = TRUE,
+    fill = TRUE, quote = "",
+    header = FALSE,
+    col.names = c("chr")
+  ) %>%
+  mutate(
+    ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+  ) %>%
+  select(-chr) %>%
+  rename(chr=ctg_name)
+  # Subset to list given and set order.
+  chr_subset_order <- df_rm_sat_out %>% select(chr) %>% unique() %>% filter(chr %in% chr_subset_order$chr)
+} else {
+  chr_subset_order <- df_rm_sat_out %>% select(chr) %>% unique()
+}
+
+# Filter by give chr_order from df$chr and set factor order.
+filter_set_facet_order_chr <- function(df, chr_order) {
+  return(
+    df %>% filter(chr %in% chr_order$chr) %>% mutate(factor(chr, levels = chr_order))
+  )
+}
+
+# Update order and filter.
+df_humas_hmmer_stv_out <- df_humas_hmmer_stv_out %>% filter_set_facet_order_chr(chr_subset_order)
+df_rm_sat_out <- df_rm_sat_out %>% filter_set_facet_order_chr(chr_subset_order)
+
+df_stv_ort <- read_one_hor_mon_ort_input(argv$input_stv_ort)
+if (!(typeof(df_stv_ort) == "logical")) {
+  df_stv_ort <- df_stv_ort %>% filter_set_facet_order_chr(chr_subset_order)
+}
+df_cdr <- read_one_cdr_input(argv$input_cdr)
+if (!(typeof(df_cdr) == "logical")) {
+  df_cdr <- df_cdr %>% filter_set_facet_order_chr(chr_subset_order)
+}
 
 # Set new minimum and standardize scales.
 new_min <- min(df_rm_sat_out$start2)
