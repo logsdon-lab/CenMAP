@@ -36,26 +36,34 @@ read_bedpe <- function(all.files) {
   df$first_pos <- df$q_st / window
   df$second_pos <- df$r_st / window
 
-  df <- df %>% mutate(
-    new_discrete = case_when(
-      perID_by_events > 0 & perID_by_events < 90 ~ "1-10",
-      perID_by_events >= 90 & perID_by_events < 97.5 ~ "11-20",
-      # TODO: There should be a way to do this automatically.
-      #  100 - 95.0 = 5.0 / 10 = 0.5 increment
-      #  100 - 97.5 = 2.5 / 10 = 0.25 increment
-      perID_by_events >= 97.5 & perID_by_events < 97.75 ~ "21",
-      perID_by_events >= 97.75 & perID_by_events < 98.0 ~ "22",
-      perID_by_events >= 98.0 & perID_by_events < 98.25 ~ "23",
-      perID_by_events >= 98.25 & perID_by_events < 98.5 ~ "24",
-      perID_by_events >= 98.5 & perID_by_events < 98.75 ~ "25",
-      perID_by_events >= 98.75 & perID_by_events < 99.0 ~ "26",
-      perID_by_events >= 99.0 & perID_by_events < 99.25 ~ "27",
-      perID_by_events >= 99.25 & perID_by_events < 99.5 ~ "28",
-      perID_by_events >= 99.5 & perID_by_events < 99.75 ~ "29",
-      perID_by_events >= 99.75 & perID_by_events < 100.0 ~ "30",
-      .default = as.character(discrete)
-    )
-  )
+  df <- df %>%
+    mutate(
+      new_discrete = case_when(
+        perID_by_events > 0 & perID_by_events < 90 ~ "1-10",
+        perID_by_events >= 90 & perID_by_events < 97.5 ~ "11-20",
+        # TODO: There should be a way to do this automatically.
+        #  100 - 95.0 = 5.0 / 10 = 0.5 increment
+        #  100 - 97.5 = 2.5 / 10 = 0.25 increment
+        perID_by_events >= 97.5 & perID_by_events < 97.75 ~ "21",
+        perID_by_events >= 97.75 & perID_by_events < 98.0 ~ "22",
+        perID_by_events >= 98.0 & perID_by_events < 98.25 ~ "23",
+        perID_by_events >= 98.25 & perID_by_events < 98.5 ~ "24",
+        perID_by_events >= 98.5 & perID_by_events < 98.75 ~ "25",
+        perID_by_events >= 98.75 & perID_by_events < 99.0 ~ "26",
+        perID_by_events >= 99.0 & perID_by_events < 99.25 ~ "27",
+        perID_by_events >= 99.25 & perID_by_events < 99.5 ~ "28",
+        perID_by_events >= 99.5 & perID_by_events < 99.75 ~ "29",
+        perID_by_events >= 99.75 & perID_by_events < 100.0 ~ "30",
+        .default = as.character(discrete)
+      )
+    ) %>%
+    mutate(
+      ctg_name = str_extract(r, "^(.*?):|^(.*?)$", 1),
+      or = r
+    ) %>%
+    select(-c(r, q)) %>%
+    mutate(r=ctg_name, q=ctg_name)
+
   return(df)
 }
 
@@ -157,6 +165,23 @@ make_dot <- function(sdf, rname = "") {
     ggtitle(rname)
 
   return(plt)
+}
+
+make_cen_plot_title <- function(title) {
+  return(
+    ggdraw() +
+    draw_label(
+      title,
+      fontface = 'bold',
+      x = 0,
+      hjust = 0
+    ) +
+    theme(
+      # add margin on the left of the drawing canvas,
+      # so title is aligned with left edge of first plot
+      plot.margin = margin(0, 0, 0, 7)
+    )
+  )
 }
 
 

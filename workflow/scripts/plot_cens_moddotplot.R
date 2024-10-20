@@ -124,9 +124,11 @@ if (!is.na(args$methyl)) {
 
 df_rm_sat_out <- read_one_repeatmasker_sat_input(bed_sat_annot)
 df_seq_ident <- read_bedpe(bed_seq_ident)
-rname <- df_seq_ident$q[[1]]
-
+# Get original reference name.
+original_rname <- df_seq_ident$or[[1]]
+rname <- df_seq_ident$r[[1]]
 plots <- make_cen_plot(
+  # Trimmed reference name.
   rname,
   df_seq_ident,
   df_humas_hmmer_stv_out,
@@ -154,20 +156,22 @@ bottom_row <- cowplot::plot_grid(
   labels = NULL
 )
 
+title <- make_cen_plot_title(original_rname)
+
 if (!typeof(plot_methyl) == "logical") {
   plot <- cowplot::plot_grid(
-    plot_methyl, plot_cen, bottom_row,
-    nrow=3,
+    title, plot_methyl, plot_cen, bottom_row,
+    nrow=4,
     ncol=1,
-    rel_heights = c(0.3, 1.2, 0.8),
+    rel_heights = c(0.05, 0.3, 1.2, 0.8),
     labels = NULL
   )
 } else {
   plot <- cowplot::plot_grid(
-    plot_cen, bottom_row,
-    nrow=2,
+    title, plot_cen, bottom_row,
+    nrow=3,
     ncol=1,
-    rel_heights = c(1.2, 0.8),
+    rel_heights = c(0.05, 1.2, 0.8),
     labels = NULL
   )
 }
@@ -179,21 +183,21 @@ if (is.na(args$width)) {
 }
 
 if (is.na(args$height)) {
-  final_height <- 9 + height_adj_methyl_binned + height_adj_cdr
+  final_height <- 9.1 + height_adj_methyl_binned + height_adj_cdr
 } else {
   final_height <- args$height
 }
 
 ggsave(
   plot = plot,
-  file = glue("{outdir}/{rname}_{mer_order}.tri.png"),
+  file = glue("{outdir}/{original_rname}_{mer_order}.tri.png"),
   height = final_height,
   width = final_width,
   dpi = 600
 )
 ggsave(
   plot = plot,
-  file = glue("{outdir}/{rname}_{mer_order}.tri.pdf"),
+  file = glue("{outdir}/{original_rname}_{mer_order}.tri.pdf"),
   height = final_height,
   width = final_width
 )

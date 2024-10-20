@@ -152,8 +152,7 @@ read_multiple_repeatmasker_sat_input <- function(input_file) {
       ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
     ) %>%
     select(-chr) %>%
-    rename(chr=ctg_name)
-
+    mutate(chr=ctg_name)
 
   # reorder rows so that live arrays are plotted on top
   df$region <- factor(df$region, levels = c("ct", "asat", "bsat", "gsat", "hsat1A", "hsat1B", "hsat2", "hsat3"), ordered = T)
@@ -200,8 +199,7 @@ read_one_repeatmasker_sat_input <- function(input_file) {
       ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
     ) %>%
     select(-chr) %>%
-    rename(chr=ctg_name)
-
+    mutate(chr=ctg_name)
 
   return(df)
 }
@@ -257,8 +255,7 @@ read_one_humas_hmmer_input <- function(
       ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
     ) %>%
     select(-chr) %>%
-    rename(chr=ctg_name)
-
+    mutate(chr=ctg_name)
 
    return(df_stv)
 }
@@ -330,8 +327,7 @@ read_multiple_humas_hmmer_input <- function(
       ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
     ) %>%
     select(-chr) %>%
-    rename(chr=ctg_name)
-
+    mutate(chr=ctg_name)
 
   return(df_stv)
 }
@@ -363,8 +359,7 @@ read_one_cdr_input <- function(input_cdr) {
       ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
     ) %>%
     select(-chr) %>%
-    rename(chr=ctg_name)
-
+    mutate(chr=ctg_name)
 
   return(df_cdr)
 }
@@ -396,7 +391,7 @@ read_one_methyl_bed_input <- function(input_methyl) {
       ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
     ) %>%
     select(-chr) %>%
-    rename(chr=ctg_name)
+    mutate(chr=ctg_name)
 
   return(df_methyl_binned)
 }
@@ -437,7 +432,7 @@ read_one_hor_mon_ort_input <- function(input_hor_ort) {
       ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
     ) %>%
     select(-chr) %>%
-    rename(chr=ctg_name)
+    mutate(chr=ctg_name)
 
   return(df_hor_ort)
 }
