@@ -61,10 +61,13 @@ plot_cen_counts <- function(df, means, lbl_colors, plt_title = NULL, hline_color
       linetype = "dashed",
       color = hline_colors
     ) +
-    annotate(
-      "label",
-      x = length(unique(df$sample)) - 5, y = 100,
-      label = paste0("Mean = ", round(means, 1), "%", collapse = "\n"),
+    geom_label(
+      aes(
+        x = 1,
+        y = means,
+        label = paste0("Mean = ", round(means, 1), "%", collapse = "\n"),
+      ),
+      fill = "white",
       size = 5
     ) +
     theme(legend.position = "bottom")

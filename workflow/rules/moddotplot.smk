@@ -54,9 +54,8 @@ rule run_moddotplot:
 
 rule filter_annotations_moddotplot:
     input:
-        chr_stv_row_bed=os.path.join(
-            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
-        ),
+        chr_stv_row_bed=rules.aggregate_format_all_stv_row.output,
+        chr_stv_row_ort_bed=rules.get_stv_row_ort_bed.output,
         all_sat_annot_bed=os.path.join(
             config["plot_hor_stv"]["output_dir"],
             "bed",
@@ -74,6 +73,12 @@ rule filter_annotations_moddotplot:
             os.path.join(
                 OUTPUT_MODDOTPLOT_DIR,
                 "{chr}_{fname}_stv_row.bed",
+            )
+        ),
+        stv_row_ort_bed=temp(
+            os.path.join(
+                OUTPUT_MODDOTPLOT_DIR,
+                "{chr}_{fname}_stv_row_ort.bed",
             )
         ),
         cdr_bed=temp(
@@ -95,6 +100,7 @@ rule filter_annotations_moddotplot:
         """
         grep '{wildcards.fname}' {input.all_sat_annot_bed} > {output.sat_annot_bed}
         grep '{wildcards.fname}' {input.chr_stv_row_bed} > {output.stv_row_bed}
+        grep '{wildcards.fname}' {input.chr_stv_row_ort_bed} > {output.stv_row_ort_bed}
         if [ {params.cdr_output} != "None" ]; then
             ( grep '{params.fname_base}' {input.all_cdr_bed} || true ) > {output.cdr_bed}
             ( grep '{params.fname_base}' {input.all_binned_methyl_bed} || true ) > {output.binned_methyl_bed}
@@ -112,6 +118,7 @@ rule plot_cen_moddotplot:
         sat_annot_bed=rules.filter_annotations_moddotplot.output.sat_annot_bed,
         stv_row_bed=rules.filter_annotations_moddotplot.output.stv_row_bed,
         cdr_bed=rules.filter_annotations_moddotplot.output.cdr_bed,
+        stv_row_ort_bed=rules.filter_annotations_moddotplot.output.stv_row_ort_bed,
         binned_methyl_bed=rules.filter_annotations_moddotplot.output.binned_methyl_bed,
     output:
         plots=expand(
@@ -135,6 +142,7 @@ rule plot_cen_moddotplot:
         Rscript {input.script} \
         --bed {input.seq_ident_bed} \
         --hor {input.stv_row_bed} \
+        --hor_ort {input.stv_row_ort_bed} \
         --sat {input.sat_annot_bed} \
         --cdr {input.cdr_bed} \
         --methyl {input.binned_methyl_bed} \

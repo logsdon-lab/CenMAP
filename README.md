@@ -8,8 +8,8 @@ A centromere mapping and annotation pipeline for T2T human genome assemblies imp
   <tr>
     <td>
       <figure float="center">
-        <img align="middle" src="docs/HG01596_chr8_haplotype1-0000012:42621140-46552438_large.tri.png" width="100%">
-        <figcaption>HGSVC3 chr8 centromere HOR structure, centromere dip regions, and self-identity plot.</figcaption>
+        <img align="middle" src="docs/HG02106_rc-chr1_haplotype2-0000103:121087497-126026281_large.tri.png" width="100%">
+        <figcaption>HGSVC3 chr1 centromere HOR structure, centromere dip regions, and self-identity plot.</figcaption>
       </figure>
     </td>
     <td>
