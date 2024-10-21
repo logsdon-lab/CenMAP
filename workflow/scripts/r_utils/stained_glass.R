@@ -167,24 +167,6 @@ make_dot <- function(sdf, rname = "") {
   return(plt)
 }
 
-make_cen_plot_title <- function(title) {
-  return(
-    ggdraw() +
-    draw_label(
-      title,
-      fontface = 'bold',
-      x = 0,
-      hjust = 0
-    ) +
-    theme(
-      # add margin on the left of the drawing canvas,
-      # so title is aligned with left edge of first plot
-      plot.margin = margin(7, 0, -7, 25)
-    )
-  )
-}
-
-
 make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out, df_cdr, df_hor_ort, df_methyl_binned) {
   df_rname_seq_ident <- df_seq_ident %>% filter(q == rname & r == rname)
 
@@ -263,7 +245,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
         y = segment_y * 2,
         yend = segment_y * 2,
       ),
-      size = 1.5,
+      linewidth = 1.5,
       lineend = "butt",
       linejoin = "mitre",
       # Point arrow to last position. See https://rdrr.io/r/grid/arrow.html
@@ -372,5 +354,52 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       )
   }
 
-  return(list(methyl=plot_methyl_binned, cen=plot_ident_cen, hist=plot_hist))
+  plot_cen_legend <- get_legend(
+    plot_ident_cen +
+    theme(
+      legend.justification="center",
+      legend.box.just = "left",
+    )
+  )
+  plot_ident_cen <- plot_ident_cen + theme(legend.position = "none")
+
+  grid_bottom_row <- cowplot::plot_grid(
+    plotlist = list(NULL, plot_cen_legend, plot_hist, NULL),
+    nrow = 1,
+    rel_widths = c(0.1, 1, 1, 0.1),
+    labels = NULL
+  )
+
+  plot_title <- ggdraw() +
+    draw_label(
+      rname,
+      fontface = 'bold',
+      x = 0,
+      hjust = 0
+    ) +
+    theme(
+      # add margin on the left of the drawing canvas,
+      # so title is aligned with left edge of first plot
+      plot.margin = margin(7, 0, -7, 60)
+    )
+
+  if (!typeof(plot_methyl_binned) == "logical") {
+    plot <- cowplot::plot_grid(
+      plot_title, plot_methyl_binned, plot_ident_cen, grid_bottom_row,
+      nrow=4,
+      ncol=1,
+      rel_heights = c(0.05, 0.3, 1.2, 0.8),
+      labels = NULL
+    )
+  } else {
+    plot <- cowplot::plot_grid(
+      plot_title, plot_ident_cen, grid_bottom_row,
+      nrow=3,
+      ncol=1,
+      rel_heights = c(0.05, 1.2, 0.8),
+      labels = NULL
+    )
+  }
+
+  return(plot)
 }

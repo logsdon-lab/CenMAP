@@ -127,7 +127,7 @@ df_seq_ident <- read_bedpe(bed_seq_ident)
 # Get original reference name.
 original_rname <- df_seq_ident$or[[1]]
 rname <- df_seq_ident$r[[1]]
-plots <- make_cen_plot(
+plot <- make_cen_plot(
   # Trimmed reference name.
   rname,
   df_seq_ident,
@@ -137,44 +137,6 @@ plots <- make_cen_plot(
   df_hor_ort,
   df_methyl_binned
 )
-plot_methyl <- plots[["methyl"]]
-plot_cen <- plots[["cen"]]
-plot_cen_legend <- get_legend(
-  plot_cen +
-  theme(
-    legend.justification="center",
-    legend.box.just = "left",
-  )
-)
-plot_cen <- plot_cen + theme(legend.position = "none")
-plot_hist <- plots[["hist"]]
-
-bottom_row <- cowplot::plot_grid(
-  plotlist = list(NULL, plot_cen_legend, plot_hist, NULL),
-  nrow = 1,
-  rel_widths = c(0.1, 1, 1, 0.1),
-  labels = NULL
-)
-
-plot_title <- make_cen_plot_title(original_rname)
-
-if (!typeof(plot_methyl) == "logical") {
-  plot <- cowplot::plot_grid(
-    plot_title, plot_methyl, plot_cen, bottom_row,
-    nrow=4,
-    ncol=1,
-    rel_heights = c(0.05, 0.3, 1.2, 0.8),
-    labels = NULL
-  )
-} else {
-  plot <- cowplot::plot_grid(
-    title, plot_cen, bottom_row,
-    nrow=3,
-    ncol=1,
-    rel_heights = c(0.05, 1.2, 0.8),
-    labels = NULL
-  )
-}
 
 if (is.na(args$width)) {
   final_width <- 9
