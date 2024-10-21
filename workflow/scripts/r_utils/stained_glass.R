@@ -179,7 +179,7 @@ make_cen_plot_title <- function(title) {
     theme(
       # add margin on the left of the drawing canvas,
       # so title is aligned with left edge of first plot
-      plot.margin = margin(0, 0, 0, 7)
+      plot.margin = margin(7, 0, -7, 25)
     )
   )
 }
@@ -233,9 +233,12 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       ) +
       # Negative margins??? ggplot >:(
       theme(
-        plot.margin = margin(t = 20, b = -10, l = 23, r = 50)
+        plot.margin = margin(t = 20, b = -10, l = 7, r = 35)
       ) +
-      ylab("CpG Methylation\n(%)")
+      ylab("Average CpG\nMethylation (%)") +
+      theme(
+        axis.title.y = element_text(size = 12)
+      )
   } else {
     plot_methyl_binned <- NA
   }
@@ -356,13 +359,16 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       axis.ticks.y = element_blank(),
       axis.line.y = element_blank()
     ) +
-    xlab("Position (Mbp)")
+    xlab("Position (Mbp)") +
+    theme(
+      axis.title.x = element_text(size = 12)
+    )
 
   if (!typeof(df_methyl_binned) == "logical") {
     plot_ident_cen <- plot_ident_cen +
       # Expand margins to account for y-axis elements on methylation plot.
       theme(
-        plot.margin = margin(t = 0, b = 0, l = 50, r = 24)
+        plot.margin = margin(t = 0, b = 0, l = 30, r = 7)
       )
   }
 
