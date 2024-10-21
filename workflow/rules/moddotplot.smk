@@ -78,7 +78,7 @@ rule filter_annotations_moddotplot:
         stv_row_ort_bed=temp(
             os.path.join(
                 OUTPUT_MODDOTPLOT_DIR,
-                "{chr}_{mer_order}_{fname}_stv_row_ort.bed",
+                "{chr}_{fname}_stv_row_ort.bed",
             )
         ),
         cdr_bed=temp(
