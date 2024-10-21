@@ -102,7 +102,7 @@ if (!is.na(argv$subset)) {
   select(-chr) %>%
   rename(chr=ctg_name)
   # Subset to list given and set order.
-  chr_subset_order <- df_rm_sat_out %>% select(chr) %>% unique() %>% filter(chr %in% chr_subset_order$chr)
+  chr_subset_order <- chr_subset_order %>% select(chr) %>% arrange(desc(row_number()))
 } else {
   chr_subset_order <- df_rm_sat_out %>% select(chr) %>% unique()
 }
@@ -110,7 +110,7 @@ if (!is.na(argv$subset)) {
 # Filter by give chr_order from df$chr and set factor order.
 filter_set_facet_order_chr <- function(df, chr_order) {
   return(
-    df %>% filter(chr %in% chr_order$chr) %>% mutate(factor(chr, levels = chr_order))
+    df %>% filter(chr %in% chr_order$chr) %>% mutate(chr=factor(chr, levels = chr_order$chr)) %>% arrange(chr)
   )
 }
 
