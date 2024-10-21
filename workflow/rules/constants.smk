@@ -3,7 +3,6 @@ REF_NAME = "T2T-CHM13"
 REF_FA = f"data/reference/{REF_NAME}.fa.gz"
 SAMPLE_NAMES = config["samples"]
 HAPLOTYPE = ("haplotype1", "haplotype2")
-MER_ORDER = ("small", "large")
 CHROMOSOMES = config.get(
     "chromosomes",
     (
@@ -34,7 +33,32 @@ CHROMOSOMES = config.get(
     ),
 )
 RGX_CHR = re.compile("(chr[0-9XY]+)")
-
+MONOMER_ORDER = {
+    "chr1": "large",
+    "chr2": "small",
+    "chr3": "small",
+    "chr4": "small",
+    "chr5": "small",
+    "chr6": "small",
+    "chr7": "small",
+    "chr8": "small",
+    "chr9": " large",
+    "chr10": "large",
+    "chr11": "small",
+    "chr12": "small",
+    "chr13": "small",
+    "chr14": "large",
+    "chr15": "small",
+    "chr16": "small",
+    "chr17": "large",
+    "chr18": "small",
+    "chr19": "large",
+    "chr20": "large",
+    "chr21": "small",
+    "chr22": "small",
+    "chrX": "large",
+    "chrY": "small",
+}
 if config.get("plot_hor_stv"):
     with open(config["plot_hor_stv"]["sat_annot_colors"]) as fh:
         ANNOTATE_SAT_REPEATS = json.load(fh)
