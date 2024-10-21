@@ -146,10 +146,12 @@ rule plot_stv_with_order:
             config["plot_hor_stv"]["output_dir"],
             "plots",
             "hor",
-            "{chr}_{mer_order}ontop.png",
+            "{chr}.png",
         ),
+    params:
+        mer_order=lambda wc: MONOMER_ORDER[wc.chr],
     log:
-        "logs/plot_hor_stv/plot_{chr}_stv_{mer_order}_on_top.log",
+        "logs/plot_hor_stv/plot_{chr}_stv.log",
     conda:
         "../envs/r.yaml"
     shell:
@@ -163,7 +165,7 @@ rule plot_stv_with_order:
             --input_chm1 {input.chm1_stv} \
             --output {output.hor_array_plot} \
             --chr {wildcards.chr} \
-            --mer_order {wildcards.mer_order} 2> {log}
+            --mer_order {params.mer_order} 2> {log}
         fi
         """
 
@@ -173,5 +175,4 @@ rule plot_hor_stv_only:
         expand(
             rules.plot_stv_with_order.output,
             chr=CHROMOSOMES,
-            mer_order=config["plot_hor_stv"]["mer_order"],
         ),

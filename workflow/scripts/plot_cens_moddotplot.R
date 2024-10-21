@@ -152,14 +152,14 @@ if (is.na(args$height)) {
 
 ggsave(
   plot = plot,
-  file = glue("{outdir}/{original_rname}_{mer_order}.tri.png"),
+  file = glue("{outdir}/{original_rname}.tri.png"),
   height = final_height,
   width = final_width,
   dpi = 600
 )
 ggsave(
   plot = plot,
-  file = glue("{outdir}/{original_rname}_{mer_order}.tri.pdf"),
+  file = glue("{outdir}/{original_rname}.tri.pdf"),
   height = final_height,
   width = final_width
 )
