@@ -36,8 +36,44 @@ get_rm_sat_annot_colors <- function() {
   return(myColors)
 }
 
-plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
-  p <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ] %>% filter(chr == ctg)) +
+add_cdr_to_plot <- function(plot, df_cdr) {
+  if (!(typeof(df_cdr) == "logical"))  {
+    plot <- plot +
+      geom_segment(
+        data = df_cdr,
+        aes(x = start2, y = chr, xend = stop2, yend = chr),
+        linewidth = 1,
+        position = position_nudge(y=0.3),
+        colour = "black",
+      )
+  }
+  return(plot)
+}
+
+add_stv_ort_to_plot <- function(plot, df_stv_ort) {
+  if (!(typeof(df_stv_ort) == "logical")) {
+    plot <- plot +
+      geom_segment(
+        data=df_stv_ort,
+        aes(
+          x = start2,
+          xend = stop2,
+          y = chr,
+          yend = chr,
+        ),
+        position = position_nudge(y=0.45),
+        size = 1.5,
+        lineend = "butt",
+        linejoin = "mitre",
+        # Point arrow to last position. See https://rdrr.io/r/grid/arrow.html
+        arrow = arrow(length = unit(0.3, "cm"), ends = "last", type = "closed")
+      )
+  }
+  return(plot)
+}
+
+plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_ort, height = 10) {
+  plot <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ] %>% filter(chr == ctg)) +
     geom_segment(
       aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region),
       alpha = 1,
@@ -67,11 +103,24 @@ plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, height =
       labels = scales::unit_format(scale = 1e-6, accuracy=0.1, unit="")
     ) +
     xlab("Position (Mbp)")
-  return(p)
+
+  if (!(typeof(df_cdr) == "logical"))  {
+    df_cdr_ctg <- df_cdr %>% filter(chr == ctg)
+  } else {
+    df_cdr_ctg <- df_cdr
+  }
+  if (!(typeof(df_stv_ort) == "logical"))  {
+    df_stv_ort_ctg <- df_stv_ort %>% filter(chr == ctg)
+  } else {
+    df_stv_ort_ctg <- df_stv_ort
+  }
+  plot <- add_cdr_to_plot(plot, df_cdr_ctg)
+  plot <- add_stv_ort_to_plot(plot, df_stv_ort_ctg)
+  return(plot)
 }
 
 plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_ort, height = 8) {
-  p <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
+  plot <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
     geom_segment(
       aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region),
       alpha = 1,
@@ -100,35 +149,9 @@ plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_
     guides(color = guide_legend(override.aes = list(size = 6))) +
     xlab("Position (Mbp)")
 
-  if (!(typeof(df_cdr) == "logical"))  {
-    p <- p +
-      geom_segment(
-        data = df_cdr,
-        aes(x = start2, y = chr, xend = stop2, yend = chr),
-        linewidth = 1,
-        position = position_nudge(y=0.3),
-        colour = "black",
-      )
-  }
-  if (!(typeof(df_stv_ort) == "logical")) {
-    p <- p +
-      geom_segment(
-        data=df_stv_ort,
-        aes(
-          x = start2,
-          xend = stop2,
-          y = chr,
-          yend = chr,
-        ),
-        position = position_nudge(y=0.45),
-        size = 1.5,
-        lineend = "butt",
-        linejoin = "mitre",
-        # Point arrow to last position. See https://rdrr.io/r/grid/arrow.html
-        arrow = arrow(length = unit(0.3, "cm"), ends = "last", type = "closed")
-      )
-  }
-  return(p)
+  plot <- add_cdr_to_plot(plot, df_cdr)
+  plot <- add_stv_ort_to_plot(plot, df_stv_ort)
+  return(plot)
 }
 
 read_multiple_repeatmasker_sat_input <- function(input_file) {

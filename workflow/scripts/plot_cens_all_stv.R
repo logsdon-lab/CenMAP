@@ -162,13 +162,19 @@ if (!is.na(argv$output_dir)) {
   dir.create(argv$output_dir)
 
   for (ctg in unique(df_rm_sat_out$chr)) {
-    plt_ctg <- plot_single_ctg(ctg, df_rm_sat_out, df_humas_hmmer_stv_out)
+    plt_ctg <- plot_single_ctg(
+      ctg,
+      df_rm_sat_out,
+      df_humas_hmmer_stv_out,
+      df_cdr,
+      df_stv_ort
+    )
 
     ggsave(
       paste0(argv$output_dir, "/", ctg, ".png"),
       plot = plt_ctg,
       width = 12,
-      height = 1
+      height = 1.5
     )
     while (!is.null(dev.list())) dev.off()
   }

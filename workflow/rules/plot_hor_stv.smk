@@ -100,7 +100,7 @@ checkpoint aggregate_format_all_stv_row:
         "../envs/tools.yaml"
     shell:
         """
-        awk -v OFS="\\t" '{{
+        {{ awk -v OFS="\\t" '{{
             # Find start in contig name.
             match($1, ":(.+)-", starts);
             # Update start and end
@@ -109,7 +109,8 @@ checkpoint aggregate_format_all_stv_row:
             $7=$7+starts[1];
             $8=$8+starts[1];
             print
-        }}' {input} > {output} 2> {log}
+        }}' {input} | \
+        grep -P "{wildcards.chr}[_:]" ;}} > {output} 2> {log}
         """
 
 
