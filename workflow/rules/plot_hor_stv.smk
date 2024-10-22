@@ -77,8 +77,13 @@ def as_hor_bedfiles(wc):
     _ = checkpoints.run_humas_hmmer_for_anvil.get(**wc).output
     return dict(
         stv_bed_filtered=expand(
-            rules.filter_as_hor_stv_bed.output, zip, fname=fnames, chr=chrs
-        )
+            rules.filter_as_hor_stv_bed.output.as_hor_stv_row_bed,
+            zip,
+            fname=fnames,
+            chr=chrs,
+        ),
+        chm1_stv=config["plot_hor_stv"]["chm1_stv"],
+        chm13_stv=config["plot_hor_stv"]["chm13_stv"],
     )
 
 
@@ -95,7 +100,7 @@ checkpoint aggregate_format_all_stv_row:
         "../envs/tools.yaml"
     shell:
         """
-        awk -v OFS="\\t" '{{
+        {{ awk -v OFS="\\t" '{{
             # Find start in contig name.
             match($1, ":(.+)-", starts);
             # Update start and end
@@ -104,15 +109,41 @@ checkpoint aggregate_format_all_stv_row:
             $7=$7+starts[1];
             $8=$8+starts[1];
             print
-        }}' {input} > {output}
+        }}' {input} | \
+        grep -P "{wildcards.chr}[_:]" ;}} > {output} 2> {log}
         """
 
 
+# Get HOR monomer ort and merge monomers enforcing strandness.
+# TODO: This should be doable in R but there are no correct interval libraries that meet all requirements:
+# * are equivalent to bedtools without outright just wrapping bedtools (bedr, bedtoolsr, ...)
+# * are correct (valr - removes interval edges when merging)
+# * are simple/tidy (grange - wth)
+# TODO: Remove R
+rule get_stv_row_ort_bed:
+    input:
+        stv_row_bed=rules.aggregate_format_all_stv_row.output,
+    output:
+        # 4-col BED (chrom, start, end, strand)
+        os.path.join(
+            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.ort.bed"
+        ),
+    params:
+        dst_merge=100_000,
+    conda:
+        "../envs/tools.yaml"
+    log:
+        "logs/plot_cen_moddotplot/get_hor_mon_ort_{chr}.log",
+    shell:
+        """
+        bedtools merge -i <(sort -k1,1 -k2,2n {input}) -s -d {params.dst_merge} -c 6 -o distinct > {output} 2> {log}
+        """
+
+
+# No ort added.
 rule plot_stv_with_order:
     input:
         script="workflow/scripts/plot_cens_stvHOR.R",
-        chm1_stv=config["plot_hor_stv"]["chm1_stv"],
-        chm13_stv=config["plot_hor_stv"]["chm13_stv"],
         all_stv=rules.aggregate_format_all_stv_row.output,
     output:
         hor_array_plot=os.path.join(
@@ -134,8 +165,6 @@ rule plot_stv_with_order:
         else
             Rscript {input.script} \
             --input {input.all_stv} \
-            --input_chm13 {input.chm13_stv} \
-            --input_chm1 {input.chm1_stv} \
             --output {output.hor_array_plot} \
             --chr {wildcards.chr} \
             --mer_order {params.mer_order} 2> {log}

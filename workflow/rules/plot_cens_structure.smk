@@ -1,5 +1,38 @@
 
 include: "common.smk"
+include: "plot_hor_stv.smk"
+
+
+if config.get("cdr_finder"):
+
+    include: "cdr_finder.smk"
+
+
+rule filter_annotations_cens_structure:
+    input:
+        all_cdr_bed=rules.merge_cdr_beds.output if config.get("cdr_finder") else [],
+    output:
+        cdr_bed=temp(
+            os.path.join(
+                config["plot_hor_stv"]["output_dir"],
+                "bed",
+                "{chr}_cdrs.bed",
+            )
+        ),
+    params:
+        cdr_output=config.get("cdr_finder"),
+    log:
+        "logs/plot_cens_structure/filter_annotations_{chr}_cens_structure.log",
+    conda:
+        "../envs/tools.yaml"
+    shell:
+        """
+        if [ {params.cdr_output} != "None" ]; then
+            ( grep '{wildcards.chr}_' {input.all_cdr_bed} || true ) > {output.cdr_bed}
+        else
+            touch {output.cdr_bed}
+        fi
+        """
 
 
 rule plot_cens_structure:
@@ -13,8 +46,10 @@ rule plot_cens_structure:
         hor_stv_out=os.path.join(
             config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
         ),
-        chm1_stv=config["plot_hor_stv"]["chm1_stv"],
-        chm13_stv=config["plot_hor_stv"]["chm13_stv"],
+        hor_stv_ort=os.path.join(
+            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.ort.bed"
+        ),
+        cdrs=rules.filter_annotations_cens_structure.output.cdr_bed,
     output:
         plot=os.path.join(
             config["plot_hor_stv"]["output_dir"],
@@ -46,8 +81,8 @@ rule plot_cens_structure:
             Rscript {input.script} \
             --input_rm_sat {input.rm_sat_out} \
             --input_stv {input.hor_stv_out} \
-            --input_stv_chm13 {input.chm13_stv} \
-            --input_stv_chm1 {input.chm1_stv} \
+            --input_stv_ort {input.hor_stv_ort} \
+            --input_cdr {input.cdrs} \
             --chr {wildcards.chr} \
             --output {output.plot} \
             --output_dir {output.cen_plot_dir} \
@@ -63,3 +98,4 @@ rule plot_cens_structure_only:
             rules.plot_cens_structure.output,
             chr=CHROMOSOMES,
         ),
+    default_target: True

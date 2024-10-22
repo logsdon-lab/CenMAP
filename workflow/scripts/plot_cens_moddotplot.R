@@ -58,6 +58,11 @@ parser <- add_argument(
 )
 parser <- add_argument(
   parser,
+  "--hor_ort",
+  help = "bedfile with hor ort. Can be derived from --hor but this stopgap is here because there are no good interval tree libraries in R.",
+)
+parser <- add_argument(
+  parser,
   "--outdir",
   default = "results",
   help = "Output directory.",
@@ -85,6 +90,7 @@ args <- parse_args(parser)
 bed_seq_ident <- args$bed
 bed_sat_annot <- args$sat
 bed_hor_mon <- args$hor
+bed_hor_mon_ort <- args$hor_ort
 outdir <- args$outdir
 mer_order <- args$mer_order
 dir.create(outdir)
@@ -98,6 +104,7 @@ df_humas_hmmer_stv_out <- switch(args$mer_order,
   "small" = df_humas_hmmer_stv_out %>% arrange(-mer),
   stop(paste("Invalid mer reordering option:", args$mer_order))
 )
+df_hor_ort <- read_one_hor_mon_ort_input(bed_hor_mon_ort)
 # Read CDR dataframe if provided.
 if (!is.na(args$cdr)) {
   df_cdr <- read_one_cdr_input(args$cdr)
@@ -117,52 +124,19 @@ if (!is.na(args$methyl)) {
 
 df_rm_sat_out <- read_one_repeatmasker_sat_input(bed_sat_annot)
 df_seq_ident <- read_bedpe(bed_seq_ident)
-rname <- df_seq_ident$q[[1]]
-
-plots <- make_cen_plot(
+# Get original reference name.
+original_rname <- df_seq_ident$or[[1]]
+rname <- df_seq_ident$r[[1]]
+plot <- make_cen_plot(
+  # Trimmed reference name.
   rname,
   df_seq_ident,
   df_humas_hmmer_stv_out,
   df_rm_sat_out,
   df_cdr,
+  df_hor_ort,
   df_methyl_binned
 )
-plot_methyl <- plots[["methyl"]]
-plot_cen <- plots[["cen"]]
-plot_cen_legend <- get_legend(
-  plot_cen +
-  theme(
-    legend.justification="center",
-    legend.box.just = "left",
-  )
-)
-plot_cen <- plot_cen + theme(legend.position = "none")
-plot_hist <- plots[["hist"]]
-
-bottom_row <- cowplot::plot_grid(
-  plotlist = list(NULL, plot_cen_legend, plot_hist, NULL),
-  nrow = 1,
-  rel_widths = c(0.1, 1, 1, 0.1),
-  labels = NULL
-)
-
-if (!typeof(plot_methyl) == "logical") {
-  plot <- cowplot::plot_grid(
-    plot_methyl, plot_cen, bottom_row,
-    nrow=3,
-    ncol=1,
-    rel_heights = c(0.3, 1.2, 0.8),
-    labels = NULL
-  )
-} else {
-  plot <- cowplot::plot_grid(
-    plot_cen, bottom_row,
-    nrow=2,
-    ncol=1,
-    rel_heights = c(1.2, 0.8),
-    labels = NULL
-  )
-}
 
 if (is.na(args$width)) {
   final_width <- 9
@@ -171,21 +145,21 @@ if (is.na(args$width)) {
 }
 
 if (is.na(args$height)) {
-  final_height <- 9 + height_adj_methyl_binned + height_adj_cdr
+  final_height <- 9.1 + height_adj_methyl_binned + height_adj_cdr
 } else {
   final_height <- args$height
 }
 
 ggsave(
   plot = plot,
-  file = glue("{outdir}/{rname}.tri.png"),
+  file = glue("{outdir}/{original_rname}.tri.png"),
   height = final_height,
   width = final_width,
   dpi = 600
 )
 ggsave(
   plot = plot,
-  file = glue("{outdir}/{rname}.tri.pdf"),
+  file = glue("{outdir}/{original_rname}.tri.pdf"),
   height = final_height,
   width = final_width
 )

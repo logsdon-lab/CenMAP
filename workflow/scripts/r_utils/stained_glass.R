@@ -36,26 +36,34 @@ read_bedpe <- function(all.files) {
   df$first_pos <- df$q_st / window
   df$second_pos <- df$r_st / window
 
-  df <- df %>% mutate(
-    new_discrete = case_when(
-      perID_by_events > 0 & perID_by_events < 90 ~ "1-10",
-      perID_by_events >= 90 & perID_by_events < 97.5 ~ "11-20",
-      # TODO: There should be a way to do this automatically.
-      #  100 - 95.0 = 5.0 / 10 = 0.5 increment
-      #  100 - 97.5 = 2.5 / 10 = 0.25 increment
-      perID_by_events >= 97.5 & perID_by_events < 97.75 ~ "21",
-      perID_by_events >= 97.75 & perID_by_events < 98.0 ~ "22",
-      perID_by_events >= 98.0 & perID_by_events < 98.25 ~ "23",
-      perID_by_events >= 98.25 & perID_by_events < 98.5 ~ "24",
-      perID_by_events >= 98.5 & perID_by_events < 98.75 ~ "25",
-      perID_by_events >= 98.75 & perID_by_events < 99.0 ~ "26",
-      perID_by_events >= 99.0 & perID_by_events < 99.25 ~ "27",
-      perID_by_events >= 99.25 & perID_by_events < 99.5 ~ "28",
-      perID_by_events >= 99.5 & perID_by_events < 99.75 ~ "29",
-      perID_by_events >= 99.75 & perID_by_events < 100.0 ~ "30",
-      .default = as.character(discrete)
-    )
-  )
+  df <- df %>%
+    mutate(
+      new_discrete = case_when(
+        perID_by_events > 0 & perID_by_events < 90 ~ "1-10",
+        perID_by_events >= 90 & perID_by_events < 97.5 ~ "11-20",
+        # TODO: There should be a way to do this automatically.
+        #  100 - 95.0 = 5.0 / 10 = 0.5 increment
+        #  100 - 97.5 = 2.5 / 10 = 0.25 increment
+        perID_by_events >= 97.5 & perID_by_events < 97.75 ~ "21",
+        perID_by_events >= 97.75 & perID_by_events < 98.0 ~ "22",
+        perID_by_events >= 98.0 & perID_by_events < 98.25 ~ "23",
+        perID_by_events >= 98.25 & perID_by_events < 98.5 ~ "24",
+        perID_by_events >= 98.5 & perID_by_events < 98.75 ~ "25",
+        perID_by_events >= 98.75 & perID_by_events < 99.0 ~ "26",
+        perID_by_events >= 99.0 & perID_by_events < 99.25 ~ "27",
+        perID_by_events >= 99.25 & perID_by_events < 99.5 ~ "28",
+        perID_by_events >= 99.5 & perID_by_events < 99.75 ~ "29",
+        perID_by_events >= 99.75 & perID_by_events < 100.0 ~ "30",
+        .default = as.character(discrete)
+      )
+    ) %>%
+    mutate(
+      ctg_name = str_extract(r, "^(.*?):|^(.*?)$", 1),
+      or = r
+    ) %>%
+    select(-c(r, q)) %>%
+    mutate(r=ctg_name, q=ctg_name)
+
   return(df)
 }
 
@@ -159,8 +167,7 @@ make_dot <- function(sdf, rname = "") {
   return(plt)
 }
 
-
-make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out, df_cdr, df_methyl_binned) {
+make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out, df_cdr, df_hor_ort, df_methyl_binned) {
   df_rname_seq_ident <- df_seq_ident %>% filter(q == rname & r == rname)
 
   # make the tri sequence identity plots
@@ -172,6 +179,8 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
   # Filter data.
   # Get centromeric transition regions separately to outline.
   df_rm_sat_out <- df_rm_sat_out[order(df_rm_sat_out$region)] %>%
+    filter(chr == rname)
+  df_humas_hmmer_stv_out <- df_humas_hmmer_stv_out %>%
     filter(chr == rname)
   df_rm_sat_out_ct <- df_rm_sat_out %>%
     filter(region == "ct" & chr == rname)
@@ -206,24 +215,42 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       ) +
       # Negative margins??? ggplot >:(
       theme(
-        plot.margin = margin(t = 20, b = -10, l = 23, r = 50)
+        plot.margin = margin(t = 20, b = -10, l = 7, r = 35)
       ) +
-      ylab("Methylation\n(%)")
+      ylab("Average CpG\nMethylation (%)") +
+      theme(
+        axis.title.y = element_text(size = 12)
+      )
   } else {
     plot_methyl_binned <- NA
   }
 
-  # If df_chr is provided, add lines for CDR on top.
-  if (!(typeof(df_cdr) == "logical")) {
-    plot_ident_cen <- plot_ident_cen +
+  # If df_cdr and methyl bins are provided, add lines for CDR on top.
+  if (!(typeof(df_cdr) == "logical") && (!(typeof(plot_methyl_binned) == "logical")))  {
+    plot_methyl_binned <- plot_methyl_binned +
       geom_segment(
         data = df_cdr,
-        aes(x = start2, y = segment_y * 2.1, xend = stop2, yend = segment_y * 2.1),
-        linewidth = 1
+        aes(x = start2, y = 100, xend = stop2, yend = 100),
+        linewidth = 1,
+        colour = "black",
       )
   }
-
   plot_ident_cen <- plot_ident_cen +
+    # Add HOR orientation segments.
+    geom_segment(
+      data=df_hor_ort,
+      aes(
+        x = start2,
+        xend = stop2,
+        y = segment_y * 2,
+        yend = segment_y * 2,
+      ),
+      linewidth = 1.5,
+      lineend = "butt",
+      linejoin = "mitre",
+      # Point arrow to last position. See https://rdrr.io/r/grid/arrow.html
+      arrow = arrow(length = unit(0.3, "cm"), ends = "last", type = "closed")
+    ) +
     # Make larger ct segment as outline
     geom_segment(
       data = df_rm_sat_out_ct,
@@ -314,15 +341,65 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       axis.ticks.y = element_blank(),
       axis.line.y = element_blank()
     ) +
-    xlab("Position (Mbp)")
+    xlab("Position (Mbp)") +
+    theme(
+      axis.title.x = element_text(size = 12)
+    )
 
   if (!typeof(df_methyl_binned) == "logical") {
     plot_ident_cen <- plot_ident_cen +
       # Expand margins to account for y-axis elements on methylation plot.
       theme(
-        plot.margin = margin(t = 0, b = 0, l = 50, r = 24)
+        plot.margin = margin(t = 0, b = 0, l = 30, r = 7)
       )
   }
 
-  return(list(methyl=plot_methyl_binned, cen=plot_ident_cen, hist=plot_hist))
+  plot_cen_legend <- get_legend(
+    plot_ident_cen +
+    theme(
+      legend.justification="center",
+      legend.box.just = "left",
+    )
+  )
+  plot_ident_cen <- plot_ident_cen + theme(legend.position = "none")
+
+  grid_bottom_row <- cowplot::plot_grid(
+    plotlist = list(NULL, plot_cen_legend, plot_hist, NULL),
+    nrow = 1,
+    rel_widths = c(0.1, 1, 1, 0.1),
+    labels = NULL
+  )
+
+  plot_title <- ggdraw() +
+    draw_label(
+      rname,
+      fontface = 'bold',
+      x = 0,
+      hjust = 0
+    ) +
+    theme(
+      # add margin on the left of the drawing canvas,
+      # so title is aligned with left edge of first plot
+      plot.margin = margin(7, 0, -7, 60)
+    )
+
+  if (!typeof(plot_methyl_binned) == "logical") {
+    plot <- cowplot::plot_grid(
+      plot_title, plot_methyl_binned, plot_ident_cen, grid_bottom_row,
+      nrow=4,
+      ncol=1,
+      rel_heights = c(0.05, 0.3, 1.2, 0.8),
+      labels = NULL
+    )
+  } else {
+    plot <- cowplot::plot_grid(
+      plot_title, plot_ident_cen, grid_bottom_row,
+      nrow=3,
+      ncol=1,
+      rel_heights = c(0.05, 1.2, 0.8),
+      labels = NULL
+    )
+  }
+
+  return(plot)
 }

@@ -36,8 +36,44 @@ get_rm_sat_annot_colors <- function() {
   return(myColors)
 }
 
-plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
-  p <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ] %>% filter(chr == ctg)) +
+add_cdr_to_plot <- function(plot, df_cdr) {
+  if (!(typeof(df_cdr) == "logical"))  {
+    plot <- plot +
+      geom_segment(
+        data = df_cdr,
+        aes(x = start2, y = chr, xend = stop2, yend = chr),
+        linewidth = 1,
+        position = position_nudge(y=0.3),
+        colour = "black",
+      )
+  }
+  return(plot)
+}
+
+add_stv_ort_to_plot <- function(plot, df_stv_ort) {
+  if (!(typeof(df_stv_ort) == "logical")) {
+    plot <- plot +
+      geom_segment(
+        data=df_stv_ort,
+        aes(
+          x = start2,
+          xend = stop2,
+          y = chr,
+          yend = chr,
+        ),
+        position = position_nudge(y=0.45),
+        size = 1.5,
+        lineend = "butt",
+        linejoin = "mitre",
+        # Point arrow to last position. See https://rdrr.io/r/grid/arrow.html
+        arrow = arrow(length = unit(0.3, "cm"), ends = "last", type = "closed")
+      )
+  }
+  return(plot)
+}
+
+plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_ort, height = 10) {
+  plot <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ] %>% filter(chr == ctg)) +
     geom_segment(
       aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region),
       alpha = 1,
@@ -67,11 +103,24 @@ plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, height =
       labels = scales::unit_format(scale = 1e-6, accuracy=0.1, unit="")
     ) +
     xlab("Position (Mbp)")
-  return(p)
+
+  if (!(typeof(df_cdr) == "logical"))  {
+    df_cdr_ctg <- df_cdr %>% filter(chr == ctg)
+  } else {
+    df_cdr_ctg <- df_cdr
+  }
+  if (!(typeof(df_stv_ort) == "logical"))  {
+    df_stv_ort_ctg <- df_stv_ort %>% filter(chr == ctg)
+  } else {
+    df_stv_ort_ctg <- df_stv_ort
+  }
+  plot <- add_cdr_to_plot(plot, df_cdr_ctg)
+  plot <- add_stv_ort_to_plot(plot, df_stv_ort_ctg)
+  return(plot)
 }
 
-plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
-  p <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
+plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_ort, height = 8) {
+  plot <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
     geom_segment(
       aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region),
       alpha = 1,
@@ -91,7 +140,8 @@ plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
       legend.position = "bottom",
       legend.key.width = unit(1, "cm"),
       legend.title = element_blank(),
-      axis.line.y = element_line(colour = "white")
+      axis.line.y = element_line(colour = "white"),
+      axis.title.y = element_blank()
     ) +
     scale_x_continuous(
       labels = scales::unit_format(scale = 1e-6, accuracy=0.1, unit="")
@@ -99,7 +149,9 @@ plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, height = 10) {
     guides(color = guide_legend(override.aes = list(size = 6))) +
     xlab("Position (Mbp)")
 
-  return(p)
+  plot <- add_cdr_to_plot(plot, df_cdr)
+  plot <- add_stv_ort_to_plot(plot, df_stv_ort)
+  return(plot)
 }
 
 read_multiple_repeatmasker_sat_input <- function(input_file) {
@@ -119,7 +171,12 @@ read_multiple_repeatmasker_sat_input <- function(input_file) {
     mutate(chr=str_replace(chr, "cen", "chr")) %>%
     filter(!str_detect(chr, "^chr[0-9XY]+$")) %>%
     # Correct for version and different naming of chr. ex. chm1_cen1v8 -> chm1_chr1
-    mutate(chr=str_remove(chr, "v\\d+"))
+    mutate(chr=str_remove(chr, "v\\d+")) %>%
+    mutate(
+      ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+    ) %>%
+    select(-chr) %>%
+    mutate(chr=ctg_name)
 
   # reorder rows so that live arrays are plotted on top
   df$region <- factor(df$region, levels = c("ct", "asat", "bsat", "gsat", "hsat1A", "hsat1B", "hsat2", "hsat3"), ordered = T)
@@ -154,14 +211,19 @@ read_one_repeatmasker_sat_input <- function(input_file) {
   # Set to always start at 0.
   df <- df %>%
     mutate(
-      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
-      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), "0")),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), "0"))
     ) %>%
     # Because coords originate from rm output, already correctly oriented.
     mutate(
       start2 = start - ctg_start,
       stop2 = stop - ctg_start
-    )
+    ) %>%
+    mutate(
+      ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+    ) %>%
+    select(-chr) %>%
+    mutate(chr=ctg_name)
 
   return(df)
 }
@@ -205,82 +267,72 @@ read_one_humas_hmmer_input <- function(
 
   df_stv <- df_stv %>%
     mutate(
-      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
-      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), "0")),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), "0"))
     ) %>%
     mutate(
       start2 = start - ctg_start,
       stop2 = stop - ctg_start
     ) %>%
-    mutate(start=start2, stop=stop2)
+    mutate(start=start2, stop=stop2) %>%
+    mutate(
+      ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+    ) %>%
+    select(-chr) %>%
+    mutate(chr=ctg_name)
 
    return(df_stv)
 }
 
 read_multiple_humas_hmmer_input <- function(
     input_chr,
-    input_chm1,
-    input_chm13,
     chr_name,
-    hor_filter = 0) {
+    hor_filter = 0
+) {
   cols_to_take <- seq(5)
   monomer_len <- 170
   cols <- c("chr", "start", "stop", "hor", "strand")
 
-  chm13 <- fread(input_chm13,
-    sep = "\t",
-    stringsAsFactors = TRUE,
-    fill = TRUE, quote = "",
-    header = FALSE, select = cols_to_take
-  )
-  chm1 <- fread(input_chm1,
-    sep = "\t",
-    stringsAsFactors = TRUE,
-    fill = TRUE, quote = "",
-    header = FALSE, select = cols_to_take
-  )
   samples <- fread(input_chr,
     sep = "\t",
     stringsAsFactors = TRUE,
     fill = TRUE, quote = "",
     header = FALSE, select = cols_to_take
   )
-
-  colnames(chm13) <- cols
-  colnames(chm1) <- cols
   colnames(samples) <- cols
 
-  # combine the CHM1 and samples centromeres
-  chm13$chr <- gsub("chr", "chm13_chr", chm13$chr)
-  chm1$chr <- gsub("chr", "chm1_chr", chm1$chr)
-
-  # Requires coordinates in name. ex. chr?:1-2
-  chm13_chm1_samples <- rbind(chm13, chm1, samples)
-
   # determine distance between start and stop
-  chm13_chm1_samples$length <- chm13_chm1_samples$stop - chm13_chm1_samples$start
+  samples$length <- samples$stop - samples$start
 
   # calculate monomer size and round
-  chm13_chm1_samples$mer <- as.numeric(round(chm13_chm1_samples$length / monomer_len))
+  samples$mer <- as.numeric(round(samples$length / monomer_len))
 
   # filter monomers
-  chm13_chm1_samples <- switch(chr_name,
-    "chr10" = subset(chm13_chm1_samples, as.numeric(mer) >= 5),
-    "chr20" = subset(chm13_chm1_samples, as.numeric(mer) >= 5),
-    "chrY" = subset(chm13_chm1_samples, as.numeric(mer) >= 30),
-    "chr17" = subset(chm13_chm1_samples, as.numeric(mer) >= 4),
-    chm13_chm1_samples
+  samples <- switch(chr_name,
+    "chr10" = subset(samples, as.numeric(mer) >= 5),
+    "chr20" = subset(samples, as.numeric(mer) >= 5),
+    "chrY" = subset(samples, as.numeric(mer) >= 30),
+    "chr17" = subset(samples, as.numeric(mer) >= 4),
+    samples
   )
 
   # filter for HORs that occur at least 20 times (10 times per haplotype)
-  df_stv <- chm13_chm1_samples %>%
+  df_stv <- samples %>%
     group_by(mer) %>%
-    filter(n() > hor_filter)
+    filter(n() > hor_filter) %>%
+    mutate(
+      ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+    ) %>%
+    select(-chr) %>%
+    mutate(chr=ctg_name)
 
   return(df_stv)
 }
 
 read_one_cdr_input <- function(input_cdr) {
+  if (is.na(input_cdr)) {
+    return(NA)
+  }
   df_cdr <- fread(
     input_cdr,
     header = FALSE,
@@ -293,18 +345,26 @@ read_one_cdr_input <- function(input_cdr) {
 
   df_cdr <- df_cdr %>%
     mutate(
-      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
-      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), "0")),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), "0"))
     ) %>%
     mutate(
       start2 = start - ctg_start,
       stop2 = stop - ctg_start
-    )
+    ) %>%
+    mutate(
+      ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+    ) %>%
+    select(-chr) %>%
+    mutate(chr=ctg_name)
 
   return(df_cdr)
 }
 
 read_one_methyl_bed_input <- function(input_methyl) {
+   if (is.na(input_methyl)) {
+    return(NA)
+  }
   df_methyl_binned <- fread(
     input_methyl,
     header = FALSE,
@@ -316,14 +376,60 @@ read_one_methyl_bed_input <- function(input_methyl) {
   }
   df_methyl_binned <- df_methyl_binned %>%
     mutate(
-      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), 0)),
-      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), 0))
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), "0")),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), "0"))
     ) %>%
     mutate(
       start2 = start - ctg_start,
       stop2 = stop - ctg_start
     ) %>%
-    select(chr, start2, stop2, meth_prob)
+    select(chr, start2, stop2, meth_prob) %>%
+    mutate(
+      ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+    ) %>%
+    select(-chr) %>%
+    mutate(chr=ctg_name)
 
   return(df_methyl_binned)
+}
+
+read_one_hor_mon_ort_input <- function(input_hor_ort) {
+   if (is.na(input_hor_ort)) {
+    return(NA)
+  }
+  df_hor_ort <- fread(
+    input_hor_ort,
+    header = FALSE,
+    select = c(1:4),
+    col.names = c("chr", "start", "stop", "strand")
+  )
+  df_hor_ort <- df_hor_ort %>%
+    mutate(
+      ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), "0")),
+      ctg_stop = as.integer(replace_na(str_extract(chr, "-(\\d+)$", 1), "0"))
+    ) %>%
+    mutate(
+      # Reverse arrows if -
+      # Add some bases to not visually clutter arrows.
+      # Not true but this image is only for qualitative analysis.
+      # TODO: This may fail on smaller contigs. Maybe group_by to find length and use some prop (1% maybe.)
+      start2 = ifelse(
+        strand == "+",
+        start - ctg_start + 20000,
+        stop - ctg_start - 20000
+      ),
+      stop2 = ifelse(
+        strand == "+",
+        stop - ctg_start - 30000,
+        start - ctg_start + 30000
+      )
+    ) %>%
+    select(chr, start2, stop2, strand) %>%
+    mutate(
+      ctg_name = str_extract(chr, "^(.*?):|^(.*?)$", 1)
+    ) %>%
+    select(-chr) %>%
+    mutate(chr=ctg_name)
+
+  return(df_hor_ort)
 }
