@@ -20,14 +20,6 @@ p <- add_argument(p, "--input",
   help = "Input HumAS-HMMER formatted output.",
   type = "character"
 )
-p <- add_argument(p, "--input_chm13",
-  help = "Input CHM13 HumAS-HMMER formatted output",
-  type = "character"
-)
-p <- add_argument(p, "--input_chm1",
-  help = "Input CHM1 HumAS-HMMER formatted output",
-  type = "character"
-)
 p <- add_argument(p, "--chr",
   help = "Chromosome to plot. ex. chrX",
   type = "character"
@@ -76,57 +68,31 @@ cols_to_take <- seq(5)
 monomer_len <- 170
 cols <- c("chr", "start", "stop", "hor", "strand")
 
-chm13 <- fread(args$input_chm13,
-  sep = "\t",
-  stringsAsFactors = TRUE,
-  fill = TRUE, quote = "",
-  header = FALSE, select = cols_to_take
-)
-chm1 <- fread(args$input_chm1,
-  sep = "\t",
-  stringsAsFactors = TRUE,
-  fill = TRUE, quote = "",
-  header = FALSE, select = cols_to_take
-)
 samples <- fread(args$input,
   sep = "\t",
   stringsAsFactors = TRUE,
   fill = TRUE, quote = "",
-  header = FALSE, select = cols_to_take
+  header = FALSE, select = cols_to_take,
+  col.names = cols
 )
 
-colnames(chm13) <- cols
-colnames(chm1) <- cols
-colnames(samples) <- cols
-
-# select the chr
-chm13_select <- chm13 %>%
-  filter(str_detect(chr, paste0(args$chr, "$")))
-chm1_select <- chm1 %>%
-  filter(str_detect(chr, paste0(args$chr, "$")))
-
-# combine the CHM1 and samples centromeres
-chm13_select$chr <- gsub("chr", "chm13_chr", chm13_select$chr)
-chm1_select$chr <- gsub("chr", "chm1_chr", chm1_select$chr)
-chm13_chm1_samples <- rbind(chm13_select, chm1_select, samples)
-
 # determine distance between start and stop
-chm13_chm1_samples$length <- chm13_chm1_samples$stop - chm13_chm1_samples$start
+samples$length <- samples$stop - samples$start
 
 # calculate monomer size and round
-chm13_chm1_samples$mer <- as.numeric(round(chm13_chm1_samples$length / monomer_len))
+samples$mer <- as.numeric(round(samples$length / monomer_len))
 
 # filter monomers
-chm13_chm1_samples <- switch(args$chr,
-  "chr10" = subset(chm13_chm1_samples, as.numeric(mer) >= 5),
-  "chr20" = subset(chm13_chm1_samples, as.numeric(mer) >= 5),
-  "chrY" = subset(chm13_chm1_samples, as.numeric(mer) >= 30),
-  "chr17" = subset(chm13_chm1_samples, as.numeric(mer) >= 4),
-  chm13_chm1_samples
+samples <- switch(args$chr,
+  "chr10" = subset(samples, as.numeric(mer) >= 5),
+  "chr20" = subset(samples, as.numeric(mer) >= 5),
+  "chrY" = subset(samples, as.numeric(mer) >= 30),
+  "chr17" = subset(samples, as.numeric(mer) >= 4),
+  samples
 )
 
 # filter for HORs that occur at least 20 times (10 times per haplotype)
-df_mer <- chm13_chm1_samples %>%
+df_mer <- samples %>%
   group_by(mer) %>%
   filter(n() > args$hor_filter) #
 

@@ -77,8 +77,13 @@ def as_hor_bedfiles(wc):
     _ = checkpoints.run_humas_hmmer_for_anvil.get(**wc).output
     return dict(
         stv_bed_filtered=expand(
-            rules.filter_as_hor_stv_bed.output, zip, fname=fnames, chr=chrs
-        )
+            rules.filter_as_hor_stv_bed.output.as_hor_stv_row_bed,
+            zip,
+            fname=fnames,
+            chr=chrs,
+        ),
+        chm1_stv=config["plot_hor_stv"]["chm1_stv"],
+        chm13_stv=config["plot_hor_stv"]["chm13_stv"],
     )
 
 
@@ -104,7 +109,7 @@ checkpoint aggregate_format_all_stv_row:
             $7=$7+starts[1];
             $8=$8+starts[1];
             print
-        }}' {input} > {output}
+        }}' {input} > {output} 2> {log}
         """
 
 
@@ -138,8 +143,6 @@ rule get_stv_row_ort_bed:
 rule plot_stv_with_order:
     input:
         script="workflow/scripts/plot_cens_stvHOR.R",
-        chm1_stv=config["plot_hor_stv"]["chm1_stv"],
-        chm13_stv=config["plot_hor_stv"]["chm13_stv"],
         all_stv=rules.aggregate_format_all_stv_row.output,
     output:
         hor_array_plot=os.path.join(
@@ -161,8 +164,6 @@ rule plot_stv_with_order:
         else
             Rscript {input.script} \
             --input {input.all_stv} \
-            --input_chm13 {input.chm13_stv} \
-            --input_chm1 {input.chm1_stv} \
             --output {output.hor_array_plot} \
             --chr {wildcards.chr} \
             --mer_order {params.mer_order} 2> {log}

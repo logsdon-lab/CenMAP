@@ -30,14 +30,6 @@ p <- add_argument(p, "--input_stv",
   help = "Input sample HumAS-HMMER formatted output.",
   type = "character"
 )
-p <- add_argument(p, "--input_stv_chm13",
-  help = "Input CHM13 HumAS-HMMER formatted output",
-  type = "character", default = NA
-)
-p <- add_argument(p, "--input_stv_chm1",
-  help = "Input CHM1 HumAS-HMMER formatted output",
-  type = "character", default = NA
-)
 p <- add_argument(p, "--input_stv_ort",
   help = "Input HumAS-HMMER monomer stv ort output.",
   type = "character", default = NA
@@ -78,8 +70,6 @@ df_rm_sat_out <- read_multiple_repeatmasker_sat_input(argv$input_rm_sat)
 # Need both stv and rm annotations.
 df_humas_hmmer_stv_out <- read_multiple_humas_hmmer_input(
   argv$input_stv,
-  argv$input_stv_chm1,
-  argv$input_stv_chm13,
   argv$chr,
   argv$hor_filter
 ) %>%

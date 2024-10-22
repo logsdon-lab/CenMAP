@@ -1,5 +1,6 @@
 
 include: "common.smk"
+include: "plot_hor_stv.smk"
 
 
 if config.get("cdr_finder"):
@@ -45,8 +46,6 @@ rule plot_cens_structure:
         hor_stv_out=os.path.join(
             config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
         ),
-        chm1_stv=config["plot_hor_stv"]["chm1_stv"],
-        chm13_stv=config["plot_hor_stv"]["chm13_stv"],
         hor_stv_ort=os.path.join(
             config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.ort.bed"
         ),
@@ -84,8 +83,6 @@ rule plot_cens_structure:
             --input_stv {input.hor_stv_out} \
             --input_stv_ort {input.hor_stv_ort} \
             --input_cdr {input.cdrs} \
-            --input_stv_chm13 {input.chm13_stv} \
-            --input_stv_chm1 {input.chm1_stv} \
             --chr {wildcards.chr} \
             --output {output.plot} \
             --output_dir {output.cen_plot_dir} \
@@ -101,3 +98,4 @@ rule plot_cens_structure_only:
             rules.plot_cens_structure.output,
             chr=CHROMOSOMES,
         ),
+    default_target: True

@@ -263,8 +263,6 @@ read_one_humas_hmmer_input <- function(
 
 read_multiple_humas_hmmer_input <- function(
     input_chr,
-    input_chm1,
-    input_chm13,
     chr_name,
     hor_filter = 0
 ) {
@@ -279,49 +277,24 @@ read_multiple_humas_hmmer_input <- function(
     header = FALSE, select = cols_to_take
   )
   colnames(samples) <- cols
-  all_samples <- samples
-
-  if (!is.na(input_chm13)) {
-    chm13 <- fread(input_chm13,
-      sep = "\t",
-      stringsAsFactors = TRUE,
-      fill = TRUE, quote = "",
-      header = FALSE, select = cols_to_take
-    )
-    colnames(chm13) <- cols
-    chm13$chr <- gsub("chr", "chm13_chr", chm13$chr)
-    all_samples <- rbind(all_samples, chm13)
-  }
-
-  if (!is.na(input_chm1)) {
-    chm1 <- fread(input_chm1,
-      sep = "\t",
-      stringsAsFactors = TRUE,
-      fill = TRUE, quote = "",
-      header = FALSE, select = cols_to_take
-    )
-    colnames(chm1) <- cols
-    chm1$chr <- gsub("chr", "chm1_chr", chm1$chr)
-    all_samples <- rbind(all_samples, chm1)
-  }
 
   # determine distance between start and stop
-  all_samples$length <- all_samples$stop - all_samples$start
+  samples$length <- samples$stop - samples$start
 
   # calculate monomer size and round
-  all_samples$mer <- as.numeric(round(all_samples$length / monomer_len))
+  samples$mer <- as.numeric(round(samples$length / monomer_len))
 
   # filter monomers
-  all_samples <- switch(chr_name,
-    "chr10" = subset(all_samples, as.numeric(mer) >= 5),
-    "chr20" = subset(all_samples, as.numeric(mer) >= 5),
-    "chrY" = subset(all_samples, as.numeric(mer) >= 30),
-    "chr17" = subset(all_samples, as.numeric(mer) >= 4),
-    all_samples
+  samples <- switch(chr_name,
+    "chr10" = subset(samples, as.numeric(mer) >= 5),
+    "chr20" = subset(samples, as.numeric(mer) >= 5),
+    "chrY" = subset(samples, as.numeric(mer) >= 30),
+    "chr17" = subset(samples, as.numeric(mer) >= 4),
+    samples
   )
 
   # filter for HORs that occur at least 20 times (10 times per haplotype)
-  df_stv <- all_samples %>%
+  df_stv <- samples %>%
     group_by(mer) %>%
     filter(n() > hor_filter) %>%
     mutate(
