@@ -83,3 +83,10 @@ DEF_DNA_BRNN_FULL_ALR_THR = 30_000
 DEF_CENSTATS_STATUS_EDGE_LEN_THR = 500_000
 DEF_CENSTATS_STATUS_EDGE_PERC_ALR_THR = 0.95
 DEF_CENSTATS_STATUS_MAX_ALR_LEN_THR = 250_000
+
+
+# Set shared constraints.
+wildcard_constraints:
+    chr="|".join(CHROMOSOMES),
+    sm="|".join(SAMPLE_NAMES),
+    hap="|".join(HAPLOTYPE),

@@ -10,14 +10,6 @@ containerized: "docker://logsdonlab/cenmap:latest"
 
 # Constants loaded here.
 include: "rules/common.smk"
-
-
-wildcard_constraints:
-    chr="|".join(CHROMOSOMES),
-    sm="|".join(SAMPLE_NAMES),
-    hap="|".join(HAPLOTYPE),
-
-
 include: "rules/utils.smk"
 include: "rules/download_ref.smk"
 include: "rules/concat_asm.smk"
