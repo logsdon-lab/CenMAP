@@ -10,7 +10,11 @@ if config.get("cdr_finder"):
 
 rule filter_annotations_cens_structure:
     input:
-        all_cdr_bed=rules.merge_cdr_beds.output if config.get("cdr_finder") else [],
+        all_cdr_bed=lambda wc: (
+            rules.merge_cdr_beds.output.reorient_cdr_output
+            if config.get("cdr_finder")
+            else []
+        ),
     output:
         cdr_bed=temp(
             os.path.join(
@@ -20,17 +24,17 @@ rule filter_annotations_cens_structure:
             )
         ),
     params:
-        cdr_output=config.get("cdr_finder"),
+        cdr_output=bool(config.get("cdr_finder", False)),
     log:
         "logs/plot_cens_structure/filter_annotations_{chr}_cens_structure.log",
     conda:
         "../envs/tools.yaml"
     shell:
         """
-        if [ {params.cdr_output} != "None" ]; then
-            ( grep '{wildcards.chr}_' {input.all_cdr_bed} || true ) > {output.cdr_bed}
-        else
+        if [ "{params.cdr_output}" == "False" ]; then
             touch {output.cdr_bed}
+        else
+            ( grep '{wildcards.chr}_' {input.all_cdr_bed} || true ) > {output.cdr_bed}
         fi
         """
 

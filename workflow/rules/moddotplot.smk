@@ -61,10 +61,16 @@ rule filter_annotations_moddotplot:
             "bed",
             "all_cens.annotation.bed",
         ),
-        all_cdr_bed=rules.merge_cdr_beds.output if config.get("cdr_finder") else [],
-        all_binned_methyl_bed=rules.merge_binned_methyl_beds.output
-        if config.get("cdr_finder")
-        else [],
+        all_cdr_bed=lambda wc: (
+            rules.merge_cdr_beds.output.reorient_cdr_output
+            if config.get("cdr_finder")
+            else []
+        ),
+        all_binned_methyl_bed=lambda wc: (
+            rules.merge_cdr_beds.output.reorient_methyl_cdr_output
+            if config.get("cdr_finder")
+            else []
+        ),
     output:
         sat_annot_bed=temp(
             os.path.join(OUTPUT_MODDOTPLOT_DIR, "{chr}_{fname}_sat_annot.bed")
@@ -94,14 +100,15 @@ rule filter_annotations_moddotplot:
             )
         ),
     params:
-        cdr_output=config.get("cdr_finder"),
+        cdr_output=bool(config.get("cdr_finder", False)),
+        # Use base of fname incase of off by ones in name coords
         fname_base=lambda wc: wc.fname.split(":")[0],
     shell:
         """
-        grep '{wildcards.fname}' {input.all_sat_annot_bed} > {output.sat_annot_bed}
-        grep '{wildcards.fname}' {input.chr_stv_row_bed} > {output.stv_row_bed}
-        grep '{wildcards.fname}' {input.chr_stv_row_ort_bed} > {output.stv_row_ort_bed}
-        if [ {params.cdr_output} != "None" ]; then
+        ( grep '{params.fname_base}' {input.all_sat_annot_bed} || true ) > {output.sat_annot_bed}
+        ( grep '{params.fname_base}' {input.chr_stv_row_bed} || true ) > {output.stv_row_bed}
+        ( grep '{params.fname_base}' {input.chr_stv_row_ort_bed} || true) > {output.stv_row_ort_bed}
+        if [ "{params.cdr_output}" != "False" ]; then
             ( grep '{params.fname_base}' {input.all_cdr_bed} || true ) > {output.cdr_bed}
             ( grep '{params.fname_base}' {input.all_binned_methyl_bed} || true ) > {output.binned_methyl_bed}
         else
@@ -152,18 +159,17 @@ rule plot_cen_moddotplot:
 
 
 # https://stackoverflow.com/a/63040288
-def moddotplot_outputs_no_input_dir(wc):
-    # Wait until done.
-    _ = checkpoints.split_cens_for_humas_hmmer.get(**wc).output
+def moddotplot_outputs(wc):
+    if config["moddotplot"].get("input_dir") is None:
+        # Wait until done.
+        _ = checkpoints.aggregate_format_all_stv_row.get(**wc).output
 
-    fnames, chrs = extract_fa_fnames_and_chr(
-        config["humas_hmmer"]["input_dir"], filter_chr=wc.chr
-    )
-
-    wildcard_constraints:
-        fname="|".join(fnames),
-
-    _ = checkpoints.aggregate_format_all_stv_row.get(**wc).output
+        fnames, chrs = extract_fnames_and_chr(
+            os.path.join(config["humas_hmmer"]["input_dir"], "{fname}.fa"),
+            filter_chr=wc.chr,
+        )
+    else:
+        fnames, chrs = extract_fnames_and_chr(os.path.join(INPUT_FA_DIR, "{fname}.fa"))
 
     return dict(
         moddotplot=expand(rules.run_moddotplot.output, zip, chr=chrs, fname=fnames),
@@ -178,38 +184,11 @@ def moddotplot_outputs_no_input_dir(wc):
     )
 
 
-# Conditionally change based on provided input dir.
-if config["moddotplot"].get("input_dir") is None:
-
-    rule moddotplot_all:
-        input:
-            unpack(moddotplot_outputs_no_input_dir),
-        output:
-            touch(os.path.join(OUTPUT_MODDOTPLOT_DIR, "moddotplot_{chr}.done")),
-
-else:
-    # Extract filenames and chromosome names from input directory.
-    fnames, chrs = extract_fa_fnames_and_chr(INPUT_FA_DIR)
-
-    wildcard_constraints:
-        fname="|".join(fnames),
-
-    rule moddotplot_all:
-        input:
-            expand(
-                rules.run_moddotplot.output,
-                zip,
-                chr=chrs,
-                fname=fnames,
-            ),
-            expand(
-                expand(
-                    rules.plot_cen_moddotplot.output,
-                    zip,
-                    fname=fnames,
-                    chr=chrs,
-                ),
-            ),
+rule moddotplot_all:
+    input:
+        unpack(moddotplot_outputs),
+    output:
+        touch(os.path.join(OUTPUT_MODDOTPLOT_DIR, "moddotplot_{chr}.done")),
 
 
 # Force moddotplot to be included with --containerize.

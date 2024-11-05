@@ -75,10 +75,10 @@ def censtats_status_max_alr_len_thr(wc) -> int:
     )
 
 
-def extract_fa_fnames_and_chr(
-    input_dir: str, *, filter_chr: str | None = None
+def extract_fnames_and_chr(
+    pattern: str, *, filter_chr: str | None = None
 ) -> tuple[list[str], list[str]]:
-    fnames = glob_wildcards(os.path.join(input_dir, "{fname}.fa")).fname
+    fnames = glob_wildcards(pattern).fname
     filtered_fnames, chrs = [], []
     for fname in fnames:
         if mtch_chr_name := re.search(RGX_CHR, fname):
@@ -100,6 +100,6 @@ def extract_fa_fnames_and_chr(
 
     assert len(filtered_fnames) == len(
         chrs
-    ), f"One or more fa files in {input_dir} does not contain a chromosome in its name."
+    ), f"One or more fa files ({pattern}) does not contain a chromosome in its name."
 
     return filtered_fnames, chrs

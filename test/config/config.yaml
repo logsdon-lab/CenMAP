@@ -58,7 +58,7 @@ humas_hmmer:
   output_dir: "output/"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
   threads: 30
-  model: "workflow/scripts/HumAS-HMMER_for_AnVIL/AS-HORs-hmmer3.3.2-120124.hmm"
+  model: "data/models/AS-HORs-hmmer3.0-170921.hmm"
 
 plot_hor_stv:
   output_dir: "test/results/hor_stv"
