@@ -99,11 +99,13 @@ df_humas_hmmer_stv_out <- read_one_humas_hmmer_input(bed_hor_mon)
 # First sort by val. This sorts the dataframe but NOT the factor levels.
 # larger HORs on top
 # smaller HORs on top
-df_humas_hmmer_stv_out <- switch(args$mer_order,
-  "large" = df_humas_hmmer_stv_out %>% arrange(mer),
-  "small" = df_humas_hmmer_stv_out %>% arrange(-mer),
-  stop(paste("Invalid mer reordering option:", args$mer_order))
-)
+if ("mer" %in% colnames(df_humas_hmmer_stv_out)) {
+  df_humas_hmmer_stv_out <- switch(args$mer_order,
+    "large" = df_humas_hmmer_stv_out %>% arrange(mer),
+    "small" = df_humas_hmmer_stv_out %>% arrange(-mer),
+    stop(paste("Invalid mer reordering option:", args$mer_order))
+  )
+}
 df_hor_ort <- read_one_hor_mon_ort_input(bed_hor_mon_ort)
 # Read CDR dataframe if provided.
 if (!is.na(args$cdr)) {
