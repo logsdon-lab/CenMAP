@@ -12,6 +12,29 @@ print(
     f"that have subdirs in {config['cdr_finder']['input_bam_dir']} for CDR-Finder.",
     file=sys.stderr,
 )
+ALIGNER = config["cdr_finder"].get("aligner", "minimap2")
+ADDED_ALIGNER_OPTS = config["cdr_finder"].get("aligner_added_opts", "")
+ALL_ALIGNER_SETTINGS = {
+    "minimap2": {
+        "preset": "lr:hqae",
+        "split_idx_num_base": "10G",
+        "min_peak_dp_aln_score": "-s 4000",
+        "additional": ADDED_ALIGNER_OPTS,
+    },
+    # https://www.biorxiv.org/content/10.1101/2024.11.01.621587v1
+    "winnowmap": {
+        "preset": "map-ont",
+        "split_idx_num_base": "10G",
+        "min_peak_dp_aln_score": "-s 4000",
+        "additional": "-W {input.kmer_cnts} " + ADDED_ALIGNER_OPTS,
+    },
+}
+try:
+    ALIGNER_SETTINGS = ALL_ALIGNER_SETTINGS[ALIGNER]
+except KeyError:
+    raise ValueError(
+        f"Invalid aligner option ({ALIGNER}) for CDR-Finder. Choose: {tuple(ALL_ALIGNER_SETTINGS.keys())} "
+    )
 
 
 wildcard_constraints:
@@ -80,31 +103,36 @@ rule align_methyl_bam_to_asm:
     input:
         ref=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
         query=rules.merge_methyl_bam_to_fq.output,
-        kmer_cnts=rules.get_kmer_cnts.output.kmer_cnts_list,
+        kmer_cnts=(
+            rules.get_kmer_cnts.output.kmer_cnts_list if ALIGNER == "winnowmap" else []
+        ),
     output:
         bam=os.path.join(config["cdr_finder"]["output_dir"], "aln", "{sm}.bam"),
     params:
-        preset="map-ont",
+        aligner=ALIGNER,
+        aligner_added_opts=ADDED_ALIGNER_OPTS,
+        preset=ALIGNER_SETTINGS["preset"],
         samtools_view_flag=2038,
-        min_peak_dp_aln_score=4000,
-        split_idx_num_base="10G",
+        min_peak_dp_aln_score=ALIGNER_SETTINGS["min_peak_dp_aln_score"],
+        split_idx_num_base=ALIGNER_SETTINGS["split_idx_num_base"],
     threads: config["cdr_finder"]["aln_threads"]
     resources:
         mem=config["cdr_finder"]["aln_mem"],
     conda:
-        "../envs/winnowmap.yaml"
+        f"../envs/{ALIGNER}.yaml"
     log:
         "logs/cdr_finder/align_methyl_bam_to_asm_{sm}.log",
     benchmark:
         "benchmarks/cdr_finder/align_methyl_bam_to_asm_{sm}.tsv"
     shell:
         """
-        {{ winnowmap -W {input.kmer_cnts} \
+        {{ {params.aligner} \
         -y --eqx \
         -ax {params.preset} \
-        -s {params.min_peak_dp_aln_score} \
         -t {threads} \
-        -I {params.split_idx_num_base} \
+        {params.min_peak_dp_aln_score} \
+        {params.split_idx_num_base} \
+        {params.aligner_added_opts} \
         {input.ref} {input.query} | \
         samtools view -u -F {params.samtools_view_flag} - | \
         samtools sort -o {output.bam} ;}} 2> {log}

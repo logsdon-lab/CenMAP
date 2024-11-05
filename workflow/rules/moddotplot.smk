@@ -62,9 +62,9 @@ rule filter_annotations_moddotplot:
             "all_cens.annotation.bed",
         ),
         all_cdr_bed=rules.merge_cdr_beds.output if config.get("cdr_finder") else [],
-        all_binned_methyl_bed=rules.merge_binned_methyl_beds.output
-        if config.get("cdr_finder")
-        else [],
+        all_binned_methyl_bed=(
+            rules.merge_binned_methyl_beds.output if config.get("cdr_finder") else []
+        ),
     output:
         sat_annot_bed=temp(
             os.path.join(OUTPUT_MODDOTPLOT_DIR, "{chr}_{fname}_sat_annot.bed")

@@ -2,4 +2,4 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - winnowmap==2.03
+  - minimap2==2.28
