@@ -233,34 +233,31 @@ use rule reorient_bed as reorient_binned_methyl_bed with:
 
 rule merge_cdr_beds:
     input:
-        expand(rules.reorient_cdr_bed.output, sm=SAMPLE_NAMES_INTERSECTION),
+        reorient_cdr_output=expand(
+            rules.reorient_cdr_bed.output, sm=SAMPLE_NAMES_INTERSECTION
+        ),
+        reorient_methyl_cdr_output=expand(
+            rules.reorient_binned_methyl_bed.output, sm=SAMPLE_NAMES_INTERSECTION
+        ),
     output:
-        os.path.join(
+        reorient_cdr_output=os.path.join(
             config["cdr_finder"]["output_dir"],
             "bed",
             "all_cdrs.bed",
         ),
+        reorient_methyl_cdr_output=os.path.join(
+            config["cdr_finder"]["output_dir"],
+            "bed",
+            "all_binned_freq.bed",
+        ),
     shell:
         """
-        cat {input} > {output}
+        cat {input.reorient_cdr_output} > {output.reorient_cdr_output}
+        cat {input.reorient_methyl_cdr_output} > {output.reorient_methyl_cdr_output}
         """
-
-
-use rule merge_cdr_beds as merge_binned_methyl_beds with:
-    input:
-        expand(rules.reorient_binned_methyl_bed.output, sm=SAMPLE_NAMES_INTERSECTION),
-    output:
-        temp(
-            os.path.join(
-                config["cdr_finder"]["output_dir"],
-                "bed",
-                "all_binned_freq.bed",
-            )
-        ),
 
 
 rule cdr_finder_only:
     input:
-        expand(rules.cdr_all.input, sm=SAMPLE_NAMES_INTERSECTION),
-        expand(rules.reorient_cdr_bed.output, sm=SAMPLE_NAMES_INTERSECTION),
-        expand(rules.merge_cdr_beds.output, sm=SAMPLE_NAMES_INTERSECTION),
+        expand(rules.get_original_coords.output, sm=SAMPLE_NAMES_INTERSECTION),
+        rules.merge_cdr_beds.output,
