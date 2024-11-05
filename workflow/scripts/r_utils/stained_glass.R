@@ -217,7 +217,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       theme(
         plot.margin = margin(t = 20, b = -10, l = 7, r = 35)
       ) +
-      ylab("Average CpG\nMethylation (%)") +
+      ylab("Mean CpG\nmethylation (%)") +
       theme(
         axis.title.y = element_text(size = 12)
       )
@@ -249,7 +249,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       lineend = "butt",
       linejoin = "mitre",
       # Point arrow to last position. See https://rdrr.io/r/grid/arrow.html
-      arrow = arrow(length = unit(0.3, "cm"), ends = "last", type = "closed")
+      arrow = arrow(length = unit(0.25, "cm"), ends = "last", type = "closed")
     ) +
     # Make larger ct segment as outline
     geom_segment(
@@ -295,7 +295,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       color = guide_legend(nrow = 2, override.aes = list(linewidth=0.5))
     ) +
     scale_color_manual(values = get_rm_sat_annot_colors()) +
-    labs(color="Sequence Composition") +
+    labs(color="Sequence composition") +
     scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
     # New colorscale for hor monomers
     new_scale_color() +
@@ -315,7 +315,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
       color = guide_legend(nrow = 5, override.aes = list(linewidth=0.5)),
     ) +
     scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
-    labs(color="Alpha-satellite HOR Monomers")
+    labs(color="Alpha-satellite HOR monomers")
 
   # New colorscale for stainedglass.
   plot_ident_cen <- plot_ident_cen +

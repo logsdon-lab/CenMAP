@@ -61,12 +61,12 @@ add_stv_ort_to_plot <- function(plot, df_stv_ort) {
           y = chr,
           yend = chr,
         ),
-        position = position_nudge(y=0.45),
+        position = position_nudge(y=-0.45),
         size = 1.5,
         lineend = "butt",
         linejoin = "mitre",
         # Point arrow to last position. See https://rdrr.io/r/grid/arrow.html
-        arrow = arrow(length = unit(0.3, "cm"), ends = "last", type = "closed")
+        arrow = arrow(length = unit(0.2, "cm"), ends = "last", type = "closed")
       )
   }
   return(plot)
@@ -155,6 +155,7 @@ plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_
 }
 
 read_multiple_repeatmasker_sat_input <- function(input_file) {
+  cols <- c("chr", "start", "stop", "region", "value", "strand", "start2", "stop2", "rgb")
   df <- fread(
     input_file,
     select = c(1:9),
@@ -162,10 +163,14 @@ read_multiple_repeatmasker_sat_input <- function(input_file) {
     fill = TRUE,
     sep = "\t",
     quote = "",
-    header = FALSE
+    header = FALSE,
+    col.names = cols
   )
-  cols <- c("chr", "start", "stop", "region", "value", "strand", "start2", "stop2", "rgb")
-  colnames(df) <- cols
+
+  if (nrow(df) == 0) {
+    df <- data.table(matrix(ncol=length(cols), nrow=0))
+    colnames(df) <- cols
+  }
   # Filter duplicated chm13 rows.
   df <- df %>%
     mutate(chr=str_replace(chr, "cen", "chr")) %>%
@@ -186,6 +191,7 @@ read_multiple_repeatmasker_sat_input <- function(input_file) {
 
 read_one_repeatmasker_sat_input <- function(input_file) {
   # read in BED file
+  cols <- c("chr", "start", "stop", "region", "value", "strand", "start2", "stop2", "rgb")
   df <- fread(
     input_file,
     select = c(1:9),
@@ -193,10 +199,13 @@ read_one_repeatmasker_sat_input <- function(input_file) {
     fill = TRUE,
     sep = "\t",
     quote = "",
-    header = FALSE
+    header = FALSE,
+    col.names = cols
   )
-  cols <- c("chr", "start", "stop", "region", "value", "strand", "start2", "stop2", "rgb")
-  colnames(df) <- cols
+  if (nrow(df) == 0) {
+    df <- data.table(matrix(ncol=length(cols), nrow=0))
+    colnames(df) <- cols
+  }
   # Filter duplicated chm13 rows.
   df <- df %>%
     mutate(chr = str_replace(chr, "cen", "chr")) %>%
@@ -239,12 +248,17 @@ read_one_humas_hmmer_input <- function(
     sep = "\t",
     stringsAsFactors = TRUE,
     fill = TRUE, quote = "",
-    header = FALSE, select = cols_to_take
+    header = FALSE, select = cols_to_take, col.names = cols
   )
-  colnames(df_samples) <- cols
+  if (nrow(df_samples) == 0) {
+    df_samples <- data.table(matrix(ncol=length(cols), nrow=0))
+    colnames(df_samples) <- cols
+  }
 
-  chr_name <- str_extract(df_samples$chr, "(chr[\\dXY]+)")[[1]]
-
+  chr_name <- first(str_extract(df_samples$chr, "(chr[\\dXY]+)"))
+  if (length(chr_name) == 0) {
+    chr_name = c("")
+  }
   # determine distance between start and stop
   df_samples$length <- df_samples$stop - df_samples$start
 
@@ -297,9 +311,12 @@ read_multiple_humas_hmmer_input <- function(
     sep = "\t",
     stringsAsFactors = TRUE,
     fill = TRUE, quote = "",
-    header = FALSE, select = cols_to_take
+    header = FALSE, select = cols_to_take, col.names = cols
   )
-  colnames(samples) <- cols
+  if (nrow(samples) == 0) {
+    samples <- data.table(matrix(ncol=length(cols), nrow=0))
+    colnames(samples) <- cols
+  }
 
   # determine distance between start and stop
   samples$length <- samples$stop - samples$start
@@ -397,12 +414,17 @@ read_one_hor_mon_ort_input <- function(input_hor_ort) {
    if (is.na(input_hor_ort)) {
     return(NA)
   }
+  cols <- c("chr", "start", "stop", "strand")
   df_hor_ort <- fread(
     input_hor_ort,
     header = FALSE,
     select = c(1:4),
-    col.names = c("chr", "start", "stop", "strand")
+    col.names = cols
   )
+  if (nrow(df_hor_ort) == 0) {
+    df_hor_ort <- data.table(matrix(ncol=length(cols), nrow=0))
+    colnames(df_hor_ort) <- cols
+  }
   df_hor_ort <- df_hor_ort %>%
     mutate(
       ctg_start = as.integer(replace_na(str_extract(chr, ":(\\d+)-", 1), "0")),

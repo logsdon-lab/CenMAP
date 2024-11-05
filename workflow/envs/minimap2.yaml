@@ -3,3 +3,4 @@ channels:
   - bioconda
 dependencies:
   - minimap2==2.28
+  - samtools
