@@ -17,14 +17,14 @@ ADDED_ALIGNER_OPTS = config["cdr_finder"].get("aligner_added_opts", "")
 ALL_ALIGNER_SETTINGS = {
     "minimap2": {
         "preset": "lr:hqae",
-        "split_idx_num_base": "10G",
+        "split_idx_num_base": "-I 10G",
         "min_peak_dp_aln_score": "-s 4000",
         "additional": ADDED_ALIGNER_OPTS,
     },
     # https://www.biorxiv.org/content/10.1101/2024.11.01.621587v1
     "winnowmap": {
         "preset": "map-ont",
-        "split_idx_num_base": "10G",
+        "split_idx_num_base": "-I 10G",
         "min_peak_dp_aln_score": "-s 4000",
         "additional": "-W {input.kmer_cnts} " + ADDED_ALIGNER_OPTS,
     },

@@ -169,7 +169,10 @@ def moddotplot_outputs(wc):
             filter_chr=wc.chr,
         )
     else:
-        fnames, chrs = extract_fnames_and_chr(os.path.join(INPUT_FA_DIR, "{fname}.fa"))
+        fnames, chrs = extract_fnames_and_chr(
+            os.path.join(INPUT_FA_DIR, "{fname}.fa"),
+            filter_chr=wc.chr,
+        )
 
     return dict(
         moddotplot=expand(rules.run_moddotplot.output, zip, chr=chrs, fname=fnames),
