@@ -1,8 +1,8 @@
 get_humas_hmmer_stv_annot_colors <- function() {
   myColors <- c(
-    "#A8275C", "#9AC78A", "#A53D63", "#3997C6", "#29A3CE", "#5EB2A7", "#38A49B", "#45B4CE", "#A53D63", "#AA1B63", "#3F66A0",
-    "#D66C54", "#BFDD97", "#C0D875", "#E5E57A", "#B75361", "#F9E193", "#C6625D", "#E5D1A1", "#A1B5E5", "#9F68A5", "#81B25B",
-    "#F4DC78", "#7EC0B3", "#A8275C", "#8CC49F", "#893F89", "#6565AA"
+    "#A8275C", "#9AC78A", "#CC8FC1", "#3997C6", "#8882C4", "#8ABDD6", "#096858", "#45B4CE", "#AFA7D8", "#A874B5", "#3F66A0",
+    "#D66C54", "#BFDD97", "#AF5D87", "#E5E57A", "#ED975D", "#F9E193", "#93430C", "#E5D1A1", "#A1B5E5", "#9F68A5", "#81B25B",
+    "#F4DC78", "#7EC0B3", "#B23F73", "#8CC49F", "#893F89", "#6565AA"
   )
   names(myColors) <- levels(as.factor(c(
     "1", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
@@ -269,7 +269,7 @@ read_one_humas_hmmer_input <- function(
   df_samples <- switch(chr_name,
     "chr10" = subset(df_samples, as.numeric(mer) >= 5),
     "chr20" = subset(df_samples, as.numeric(mer) >= 5),
-    "chrY" = subset(df_samples, as.numeric(mer) >= 30),
+    "chrY" = subset(df_samples, as.numeric(mer) >= 20),
     "chr17" = subset(df_samples, as.numeric(mer) >= 4),
     df_samples
   )

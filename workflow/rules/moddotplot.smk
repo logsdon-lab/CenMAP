@@ -169,7 +169,10 @@ def moddotplot_outputs(wc):
             filter_chr=wc.chr,
         )
     else:
-        fnames, chrs = extract_fnames_and_chr(os.path.join(INPUT_FA_DIR, "{fname}.fa"))
+        fnames, chrs = extract_fnames_and_chr(
+            os.path.join(INPUT_FA_DIR, "{fname}.fa"),
+            filter_chr=wc.chr,
+        )
 
     return dict(
         moddotplot=expand(rules.run_moddotplot.output, zip, chr=chrs, fname=fnames),
@@ -203,10 +206,6 @@ rule _force_moddotplot_env_inclusion:
 
 rule moddotplot_only:
     input:
-        (
-            expand(rules.moddotplot_all.output, chr=CHROMOSOMES)
-            if config["moddotplot"].get("input_dir") is None
-            else rules.moddotplot_all.input
-        ),
+        expand(rules.moddotplot_all.output, chr=CHROMOSOMES),
         rules._force_moddotplot_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
     default_target: True

@@ -8,6 +8,7 @@ venv/
 temp*/
 exp/
 Dockerfile
+.cache/
 
 RM_*
 .RepeatMaskerCache/
