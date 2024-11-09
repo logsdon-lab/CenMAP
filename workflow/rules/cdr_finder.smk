@@ -47,14 +47,13 @@ rule merge_methyl_bam_to_fq:
     output:
         temp(
             os.path.join(
-                config["cdr_finder"]["output_dir"], "aln", "{sm}_methyl.fq.gz"
+                config["cdr_finder"]["output_dir"], "aln", "{sm}_methyl.fq"
             )
         ),
     params:
         file_pattern=config["cdr_finder"]["file_pattern"],
     resources:
         mem="16G",
-        sort_mem="8G",
     threads: config["cdr_finder"]["aln_threads"]
     log:
         "logs/cdr_finder/merge_methyl_bam_{sm}.log",
@@ -65,8 +64,7 @@ rule merge_methyl_bam_to_fq:
     shell:
         """
         {{ samtools merge -@ {threads} - $(find {input} -regex {params.file_pattern}) | \
-        samtools bam2fq -T "*" -@ {threads} - | \
-        bgzip ;}} > {output} 2> {log}
+        samtools bam2fq -T "*" -@ {threads} - ;}} > {output} 2> {log}
         """
 
 
