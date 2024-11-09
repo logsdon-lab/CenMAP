@@ -206,10 +206,6 @@ rule _force_moddotplot_env_inclusion:
 
 rule moddotplot_only:
     input:
-        (
-            expand(rules.moddotplot_all.output, chr=CHROMOSOMES)
-            if config["moddotplot"].get("input_dir") is None
-            else rules.moddotplot_all.input
-        ),
+        expand(rules.moddotplot_all.output, chr=CHROMOSOMES),
         rules._force_moddotplot_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
     default_target: True
