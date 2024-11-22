@@ -1,10 +1,10 @@
 include: "common.smk"
-include: "humas_hmmer.smk"
+include: "humas_sd.smk"
 
 
 checkpoint aggregate_format_all_stv_row:
     input:
-        unpack(humas_hmmer_stv_outputs),
+        unpack(humas_sd_stv_outputs),
     output:
         os.path.join(
             config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"

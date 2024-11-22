@@ -1,6 +1,6 @@
-[submodule "workflow/scripts/stv_fix"]
-	path = workflow/scripts/stv_fix
-	url = https://github.com/koisland/stv.git
 [submodule "workflow/rules/CDR-Finder"]
 	path = workflow/rules/CDR-Finder
 	url = https://github.com/logsdon-lab/CDR-Finder
+[submodule "workflow/rules/Snakemake-HumAS-SD"]
+	path = workflow/rules/Snakemake-HumAS-SD
+	url = https://github.com/logsdon-lab/Snakemake-HumAS-SD.git

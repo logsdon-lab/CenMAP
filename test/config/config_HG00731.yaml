@@ -53,11 +53,11 @@ repeatmasker:
   output_dir: "results/repeatmasker"
   config_censtats_status: "config/censtats.json"
 
-humas_hmmer:
-  input_dir: "results/humas_hmmer/cens"
-  output_dir: "results/humas_hmmer"
+humas_sd:
+  input_dir: "results/humas_sd/cens"
+  output_dir: "results/humas_sd"
   threads: 4
-  model: "data/models/AS-HORs-hmmer3.0-170921.hmm"
+  hmm_profile: "data/models/AS-HORs-hmmer3.0-170921.hmm"
 
 plot_hor_stv:
   output_dir: "results/hor_stv"

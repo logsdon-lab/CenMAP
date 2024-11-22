@@ -11,7 +11,7 @@ if config.get("cdr_finder"):
 if config["moddotplot"].get("input_dir"):
     INPUT_FA_DIR = config["moddotplot"]["input_dir"]
 else:
-    INPUT_FA_DIR = config["humas_hmmer"]["input_dir"]
+    INPUT_FA_DIR = config["humas_sd"]["input_dir"]
 
 OUTPUT_MODDOTPLOT_DIR = config["moddotplot"].get("output_dir", "results/moddotplot")
 

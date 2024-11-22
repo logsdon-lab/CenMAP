@@ -20,7 +20,7 @@ include: "rules/dna_brnn.smk"
 include: "rules/extract_new_cens_ctgs.smk"
 include: "rules/repeatmasker.smk"
 include: "rules/fix_cens_w_repeatmasker.smk"
-include: "rules/humas_hmmer.smk"
+include: "rules/humas_sd.smk"
 
 
 rule extract_cens_only:
@@ -37,7 +37,7 @@ output = [
     rules.extract_new_cens_all.input,
     rules.repeatmasker_only.input,
     rules.fix_cens_w_repeatmasker_only.input,
-    rules.humas_hmmer_only.input,
+    rules.humas_sd_all.input,
 ]
 
 # Download T2T-CHM13 reference assembly if existing path not provided.
