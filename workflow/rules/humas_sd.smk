@@ -2,39 +2,17 @@
 include: "common.smk"
 
 
-rule extract_cens_for_humas_sd:
-    input:
-        fa=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "seq",
-            "all_complete_correct_cens.fa",
-        ),
-        idx=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "seq",
-            "all_complete_correct_cens.fa.fai",
-        ),
-    output:
-        cens=os.path.join(config["humas_sd"]["output_dir"], "{chr}_cens.fa"),
-        idx=os.path.join(config["humas_sd"]["output_dir"], "{chr}_cens.fa.fai"),
-    log:
-        "logs/humas_sd/extract_{chr}_cens_for_humas_sd.log",
-    conda:
-        "../envs/tools.yaml"
-    shell:
-        """
-        seqtk subseq {input.fa} <(grep "{wildcards.chr}[:_]" {input.idx} | cut -f 1) > {output.cens} 2> {log}
-        if [ -s "{output.cens}" ]; then
-            samtools faidx {output.cens} 2> {log}
-        else
-            touch {output.idx}
-        fi
-        """
-
-
+# TODO: Needs to be after repeatmasker correction.
 checkpoint split_cens_for_humas_sd:
     input:
-        rules.extract_cens_for_humas_sd.output.cens,
+        fa=lambda wc: expand(
+            rules.extract_alr_region_sample_by_chr.output.seq,
+            sm=SAMPLE_NAMES,
+            chr=wc.chr,
+        ),
+        rename_key=lambda wc: expand(
+            rules.map_collapse_cens.output.renamed_cens_key, sm=SAMPLE_NAMES
+        ),
     output:
         touch(
             os.path.join(
@@ -52,12 +30,21 @@ checkpoint split_cens_for_humas_sd:
         # https://gist.github.com/astatham/621901
         """
         mkdir -p {params.split_dir}
-        cat {input} | awk '{{
+        awk '{{
+            # Read key values in first file.
+            if (FNR == NR) {{
+                # Add coords to name.
+                kv[$1]=$2;
+                next;
+            }}
             if (substr($0, 1, 1)==">") {{
-                filename=("{params.split_dir}/" substr($0,2) ".fa")
+                ctg_name=substr($0,2)
+                split(ctg_name, ctg_name_parts, ":")
+                new_ctg_name=kv[ctg_name_parts[1]]":"ctg_name_parts[2]
+                filename=("{params.split_dir}/" new_ctg_name ".fa")
             }}
             print $0 > filename
-        }}' 2> {log}
+        }}' <(awk -v OFS="\\t" '$5=="{wildcards.chr}"' {input.rename_key}) <(cat {input.fa}) 2> {log}
         """
 
 
@@ -80,16 +67,17 @@ def humas_sd_outputs(wc):
     )
     return {
         "hor_bed": expand(
-            rules.cens_convert_to_bed9.output, zip, fname=FNAMES, chr=CHRS
+            rules.cens_convert_to_bed9.output, zip, fname=fnames, chr=chrs
         ),
         "stv_row_bed": expand(
-            rules.cens_generate_stv.output, zip, fname=FNAMES, chr=CHRS
+            rules.cens_generate_stv.output, zip, fname=fnames, chr=chrs
         ),
     }
 
 
 checkpoint run_humas_sd:
     input:
+        rules.cens_generate_monomers.output,
         unpack(humas_sd_outputs),
     output:
         touch(os.path.join(config["humas_sd"]["output_dir"], "humas_sd_{chr}.done")),
@@ -99,13 +87,14 @@ checkpoint run_humas_sd:
 def humas_sd_stv_outputs(wc):
     _ = checkpoints.run_humas_sd.get(**wc).output
     fnames, chrs = extract_fnames_and_chr(
-        rules.cens_filter_hmm_res_overlaps_as_hor.output[0], filter_chr=str(wc.chr)
+        os.path.join(config["humas_sd"]["input_dir"], "{fname}.fa"),
+        filter_chr=str(wc.chr),
     )
     return {
         "stv": [
             config["plot_hor_stv"]["chm1_stv"],
             config["plot_hor_stv"]["chm13_stv"],
-            *expand(rules.cens_generate_stv.output, zip, fname=FNAMES, chr=CHRS),
+            *expand(rules.cens_generate_stv.output, zip, fname=fnames, chr=chrs),
         ],
     }
 

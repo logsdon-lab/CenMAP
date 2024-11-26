@@ -33,13 +33,14 @@ rule run_dna_brnn:
         seqs=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "seq",
-            "{sm}_centromeric_regions.fa",
+            "{sm}",
+            "{sm}_{chr}_{fname}.fa",
         ),
     output:
         repeat_regions=os.path.join(
             config["dna_brnn"]["output_dir"],
-            "{sm}",
-            "{sm}_centromeric_regions.renamed.bed",
+            "{chr}",
+            "{sm}_{chr}_{fname}_centromeric_regions.bed",
         ),
     params:
         bin_dnabrnn=lambda wc, input: (
@@ -49,9 +50,9 @@ rule run_dna_brnn:
     resources:
         mem=config["dna_brnn"].get("mem", "4GB"),
     log:
-        "logs/dna_brnn/dna_brnn_{sm}.log",
+        "logs/dna_brnn/dna_brnn_{sm}_{chr}_{fname}.log",
     benchmark:
-        "benchmarks/dna_brnn/dna_brnn_{sm}.tsv"
+        "benchmarks/dna_brnn/dna_brnn_{sm}_{chr}_{fname}.tsv"
     singularity:
         "docker://logsdonlab/dna-nn:latest"
     shell:
@@ -101,6 +102,9 @@ rule filter_dnabrnn_ref_cens_regions:
         ),
     params:
         repeat_type_filter=2,
+        # Only take chr.
+        # Reference chr name must be in format: chr[\dXY]+[:_]
+        infile=lambda wc, input: f"<(grep -P '{wc.chr}[:_]' {input.repeats})",
     log:
         "logs/dna_brnn/filter_dnabrnn_ref_{chr}_cens_regions.log",
     conda:
@@ -108,7 +112,7 @@ rule filter_dnabrnn_ref_cens_regions:
     shell:
         """
         python {input.script} \
-        -i {input.repeats} \
+        -i {params.infile} \
         -o {output} \
         -t {input.thresholds} \
         --chr {wildcards.chr} \
@@ -135,16 +139,41 @@ use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions w
         tmp_alr_ctgs=temp(
             os.path.join(
                 config["dna_brnn"]["output_dir"],
-                "{sm}",
-                "{chr}_{sm}_contigs.ALR.bed",
+                "{chr}",
+                "{sm}_{chr}_{fname}.ALR.bed",
             )
         ),
     params:
         repeat_type_filter=2,
+        infile=lambda wc, input: input.repeats,
     log:
-        "logs/dna_brnn/filter_dnabrnn_{sm}_{chr}_cens_regions.log",
+        "logs/dna_brnn/filter_dnabrnn_{sm}_{chr}_{fname}_cens_regions.log",
     conda:
         "../envs/py.yaml"
+
+
+def dna_brnn_output(wc):
+    outdirs = [checkpoints.split_fa_dnabrnn.get(sm=sm).output[0] for sm in SAMPLE_NAMES]
+    sms_all, chrs_all, fnames_all = [], [], []
+    wc_chrom = str(wc.chr)
+    for outdir in outdirs:
+        wcs = glob_wildcards(os.path.join(outdir, "{sm}_{chr}_{fname}.fa"))
+        for sm, chrom, fname in zip(wcs.sm, wcs.chr, wcs.fname):
+            # Filter by chr.
+            if chrom != wc_chrom:
+                continue
+
+            sms_all.append(sm)
+            fnames_all.append(fname)
+            chrs_all.append(chrom)
+
+    return expand(
+        rules.filter_dnabrnn_sample_cens_regions.output,
+        zip,
+        sm=sms_all,
+        chr=chrs_all,
+        fname=fnames_all,
+    )
 
 
 # /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py (modified bedminmax) \
@@ -156,11 +185,7 @@ use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions w
 rule aggregate_dnabrnn_alr_regions_by_chr:
     input:
         added_ref_cens=rules.filter_dnabrnn_ref_cens_regions.output,
-        sample_cens=lambda wc: expand(
-            rules.filter_dnabrnn_sample_cens_regions.output,
-            sm=SAMPLE_NAMES,
-            chr=[wc.chr],
-        ),
+        sample_cens=dna_brnn_output,
     output:
         os.path.join(
             config["dna_brnn"]["output_dir"],
@@ -174,8 +199,6 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         # "chr", "repeat_type", "start", "end"
         sort_cols="-k1 -k3n",
         bp_edges=500_000,
-        # dna-brnn output may not contain repeats from a chr.
-        allow_empty="--allow_empty",
     log:
         "logs/dna_brnn/aggregate_dnabrnn_alr_regions_by_{chr}.log",
     conda:

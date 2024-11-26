@@ -45,11 +45,7 @@ rule merge_methyl_bam_to_fq:
     input:
         os.path.join(config["cdr_finder"]["input_bam_dir"], "{sm}"),
     output:
-        temp(
-            os.path.join(
-                config["cdr_finder"]["output_dir"], "aln", "{sm}_methyl.fq"
-            )
-        ),
+        temp(os.path.join(config["cdr_finder"]["output_dir"], "aln", "{sm}_methyl.fq")),
     params:
         file_pattern=config["cdr_finder"]["file_pattern"],
     resources:
@@ -110,7 +106,7 @@ rule align_methyl_bam_to_asm:
         aligner=ALIGNER,
         aligner_added_opts=ADDED_ALIGNER_OPTS,
         preset=ALIGNER_SETTINGS["preset"],
-        samtools_view_flag=2038,
+        samtools_view_flag=2308,
         min_peak_dp_aln_score=ALIGNER_SETTINGS["min_peak_dp_aln_score"],
         split_idx_num_base=ALIGNER_SETTINGS["split_idx_num_base"],
     threads: config["cdr_finder"]["aln_threads"]

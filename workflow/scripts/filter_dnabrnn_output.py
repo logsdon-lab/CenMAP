@@ -1,4 +1,3 @@
-import re
 import sys
 import json
 import argparse
@@ -13,22 +12,25 @@ CHRS = [*[f"chr{i}" for i in range(22, 0, -1)], "chrX", "chrY"]
 CHRS_ASAT_SEP = {"chr3", "chr4", "chr5"}
 CHRS_13_21 = {"chr13", "chr21"}
 ORTS = ["fwd", "rev"]
-RGX_CHR = re.compile("|".join(c for c in CHRS))
 DEF_MERGE_REPEAT_DST_THR = 100_000
 DEF_REPEAT_LEN_THR = [1_000, None]
 DEF_REPEAT_TYPE = 2
 DEF_COMP_REPEAT_LEN_THR = 100_000
 
+
 class MergeMode(Enum):
     """
     Limit bp that can be merged.
     """
+
     NoLimit = auto()
     Limit = auto()
+
 
 class MergeOrt(Enum):
     Fwd = auto()
     Rev = auto()
+
 
 def build_interval_expr(interval: tuple[int, int | None]) -> pl.Expr | None:
     try:
@@ -48,7 +50,13 @@ def main():
     ap = argparse.ArgumentParser(
         description="Filter alpha-satellite repeats from dna-brnn output."
     )
-    ap.add_argument("-i", "--input", required=True, help="Input dna-brnn output.")
+    ap.add_argument(
+        "-i",
+        "--input",
+        required=True,
+        help="Input dna-brnn output.",
+        type=argparse.FileType("rb"),
+    )
     ap.add_argument(
         "-o",
         "--output",
@@ -64,7 +72,7 @@ def main():
         "--chr",
         choices=CHRS,
         required=True,
-        help="Chromosome to filter for.",
+        help="Chromosome of sequence for dna-brnn output.",
         metavar="{chr1|...|chr22|chrX|chrY}",
     )
     ap.add_argument(
@@ -103,13 +111,9 @@ def main():
         "default_merge_repeat_dst_thr", DEF_MERGE_REPEAT_DST_THR
     )
     merge_mode = thresholds.get("merge_mode", {})
-    default_merge_mode = thresholds.get(
-        "default_merge_mode", "NoLimit"
-    )
+    default_merge_mode = thresholds.get("default_merge_mode", "NoLimit")
     merge_ort = thresholds.get("merge_ort", {})
-    default_merge_ort = thresholds.get(
-        "default_merge_ort", "Fwd"
-    )
+    default_merge_ort = thresholds.get("default_merge_ort", "Fwd")
     # Parse contig start and stop coords.
     # Only one ':' should be in full contig name.
     # ex. sample_chr_ctgname:start-end
@@ -139,20 +143,13 @@ def main():
         ctg_name = ctg_name[0]
         chr_len_thr_exprs = []
 
-        if mtch_chr_name := re.search(RGX_CHR, ctg_name):
-            chr_name = mtch_chr_name.group().strip("_")
-            if chr_name != selected_chr:
-                continue
-
-            # Build repeat len filtering expressions.
-            for len_thr in repeat_len_thresholds.get(
-                chr_name, [default_repeat_len_threshold]
-            ):
-                thr_expr = build_interval_expr(tuple(len_thr))
-                if isinstance(thr_expr, pl.Expr):
-                    chr_len_thr_exprs.append(thr_expr)
-        else:
-            continue
+        # Build repeat len filtering expressions.
+        for len_thr in repeat_len_thresholds.get(
+            selected_chr, [default_repeat_len_threshold]
+        ):
+            thr_expr = build_interval_expr(tuple(len_thr))
+            if isinstance(thr_expr, pl.Expr):
+                chr_len_thr_exprs.append(thr_expr)
 
         # Apply repeat len filters.
         df_ctg_repeats = (
@@ -162,7 +159,7 @@ def main():
         )
 
         # Merge adjacent rows within some dst
-        chr_merge_ort = merge_ort.get(chr_name, default_merge_ort)
+        chr_merge_ort = merge_ort.get(selected_chr, default_merge_ort)
         if MergeOrt[chr_merge_ort] == MergeOrt.Rev:
             iter_rows = df_ctg_repeats.reverse().iter_rows(named=True)
         else:
@@ -170,9 +167,9 @@ def main():
         all_rows: list[dict[str, Any]] = list(iter_rows)
         curr_pos = 0
         chr_merge_repeat_dst_thr = merge_repeat_dst_thr.get(
-            chr_name, default_merge_repeat_dst_thr
+            selected_chr, default_merge_repeat_dst_thr
         )
-        chr_merge_mode = merge_mode.get(chr_name, default_merge_mode)
+        chr_merge_mode = merge_mode.get(selected_chr, default_merge_mode)
         while True:
             try:
                 curr_row = all_rows[curr_pos]
@@ -180,7 +177,7 @@ def main():
                 if MergeOrt[chr_merge_ort] == MergeOrt.Fwd:
                     dst = next_row["start"] - curr_row["end"]
                     start, end = curr_row["start"], next_row["end"]
-                    rlen =  next_row["end"] - curr_row["start"]
+                    rlen = next_row["end"] - curr_row["start"]
                 else:
                     dst = curr_row["start"] - next_row["end"]
                     start, end = next_row["start"], curr_row["end"]
@@ -219,11 +216,11 @@ def main():
         # * asat sep - all repeats filtering smaller alpha-sat repeats.
         # * chr13/21 - largest repeat and 1 adjacent repeat.
         # * otherwise - largest repeat. single hor array.
-        if chr_name in CHRS_ASAT_SEP:
+        if selected_chr in CHRS_ASAT_SEP:
             df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(
                 pl.col("rlen") >= DEF_COMP_REPEAT_LEN_THR
             )
-        elif chr_name in CHRS_13_21:
+        elif selected_chr in CHRS_13_21:
             df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(
                 pl.col("rlen") >= DEF_COMP_REPEAT_LEN_THR
             ).with_row_index()
@@ -233,7 +230,9 @@ def main():
             try:
                 largest_rlen_row_num = df_largest_rlen_row["index"][0]
             except IndexError:
-                sys.stderr.write(f"{ctg_name} doesn't have a alpha-satellite repeat larger than {DEF_COMP_REPEAT_LEN_THR:,} bp.\n")
+                sys.stderr.write(
+                    f"{ctg_name} doesn't have a alpha-satellite repeat larger than {DEF_COMP_REPEAT_LEN_THR:,} bp.\n"
+                )
                 continue
 
             # 1 repeats away for main HOR array chr13/21
@@ -246,22 +245,19 @@ def main():
                 adj_row_num = None
 
             if isinstance(adj_row_num, int):
-                df_ctg_compressed_repeats = (
-                    pl.concat(
-                        [
-                            df_largest_rlen_row,
-                            # Get adjacent row and trim 500kbp ahead.
-                            # This replaces closest row with boundaries which will be min/maxed in following scripts.
-                            df_ctg_compressed_repeats.filter(
-                                pl.col("index") == adj_row_num
-                            ).with_columns(
-                                start=pl.col("end") + 500_000,
-                                end=pl.col("end") + 500_000,
-                            ),
-                        ]
-                    )
-                    .sort(by="start")
-                )
+                df_ctg_compressed_repeats = pl.concat(
+                    [
+                        df_largest_rlen_row,
+                        # Get adjacent row and trim 500kbp ahead.
+                        # This replaces closest row with boundaries which will be min/maxed in following scripts.
+                        df_ctg_compressed_repeats.filter(
+                            pl.col("index") == adj_row_num
+                        ).with_columns(
+                            start=pl.col("end") + 500_000,
+                            end=pl.col("end") + 500_000,
+                        ),
+                    ]
+                ).sort(by="start")
             df_ctg_compressed_repeats = df_ctg_compressed_repeats.drop("index")
         else:
             df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(

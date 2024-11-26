@@ -6,6 +6,7 @@ include: "utils.smk"
 include: "common.smk"
 
 
+# Convert rustybam stats bedfile by adjusting start and end positions.
 rule format_hor_ref_aln_cen_contigs:
     input:
         aln_bed=os.path.join("results", f"{REF_NAME}_cens", "bed", "{sm}.bed"),
@@ -13,7 +14,6 @@ rule format_hor_ref_aln_cen_contigs:
         cen_regions=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
-            f"{REF_NAME}_cens",
             "{sm}_cens.bed",
         ),
     conda:
@@ -51,7 +51,7 @@ rule format_hor_ref_aln_cen_contigs:
         """
 
 
-# Add monomeric pq arms and intersect with alignments.
+# Add unique regions in monomeric pq arms and intersect with alignments.
 rule intersect_with_pq_arm:
     input:
         aln_cens_bed=rules.format_hor_ref_aln_cen_contigs.output,
@@ -60,7 +60,6 @@ rule intersect_with_pq_arm:
         qarms_cen_regions=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
-            f"{REF_NAME}_cens",
             "{sm}_pqarm_cens.bed",
         ),
     conda:
@@ -73,22 +72,24 @@ rule intersect_with_pq_arm:
         """
 
 
+# Map each centromeric contig to a chromosome based on intersection with CHM13 monomeric regions.
+# Also attempt to reorient.
+# No length threshold at this point.
 rule map_collapse_cens:
     input:
         script="workflow/scripts/map_cens.py",
         regions=rules.intersect_with_pq_arm.output,
     output:
-        resolved_cen_regions=os.path.join(
+        cens_key=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
-            f"{REF_NAME}_cens",
             "{sm}_mapped_cens.bed",
         ),
-        resolved_cen_regions_rc=os.path.join(
+        # old_name, new_name, coords, sample, chrom, is_reverse
+        renamed_cens_key=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
-            f"{REF_NAME}_cens",
-            "{sm}_mapped_cens_rc.bed",
+            "{sm}_renamed_cens.tsv",
         ),
     params:
         thr_ctg_len=0,
@@ -98,129 +99,37 @@ rule map_collapse_cens:
         "logs/ident_cen_ctgs/map_collapse_cens_{sm}.log",
     shell:
         """
-        python {input.script} -i {input.regions} -t {params.thr_ctg_len} > {output.resolved_cen_regions} 2> {log}
+        python {input.script} -i {input.regions} -t {params.thr_ctg_len} > {output.cens_key} 2> {log}
         awk -v OFS="\\t" '{{
-            if ($6 == "true") {{
-                $4="rc-"$4
-            }};print
-        }}' {output.resolved_cen_regions} > {output.resolved_cen_regions_rc} 2>> {log}
+            st=$2+1
+            end=$3
+            coords=st"-"end
+            old_name=$1
+            new_name="{wildcards.sm}_"$4"_"$1
+            print old_name,new_name,coords,"{wildcards.sm}",$4,$6
+        }}' {output.cens_key} > {output.renamed_cens_key} 2> {log}
         """
 
 
-# Make renamed copy of assembly here with mapped chr.
-rule create_renamed_bed_n_legend:
+# Extract centromeric contigs.
+use rule extract_and_index_fa as extract_cens_regions with:
     input:
-        regions=rules.map_collapse_cens.output.resolved_cen_regions_rc,
+        bed=rules.map_collapse_cens.output,
+        fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
     output:
-        legend=os.path.join(
-            config["concat_asm"]["output_dir"], "{sm}", "{sm}_legend.txt"
-        ),
-        regions_renamed=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "bed",
-            f"{REF_NAME}_cens",
-            "{sm}_renamed.bed",
-        ),
-    log:
-        "logs/ident_cen_ctgs/rename_cens/create_legend_{sm}.log",
-    params:
-        legend_key="$1",
-        legend_val='"_"'.join(f"${col}" for col in (7, 4, 1)),
-    conda:
-        "../envs/tools.yaml"
-    shell:
-        """
-        {{ awk -v OFS="\\t" '{{print $0, "{wildcards.sm}"}}' {input.regions} | \
-        awk -v OFS="\\t" '{{
-            print {params.legend_key},{params.legend_val};
-            print {params.legend_val}, $2, $3, $4, $5, $6, $7 >> "{output.regions_renamed}"
-        }}' | \
-        sort -k2,2 | uniq ;}} > {output.legend} 2> {log}
-        """
-
-
-# Before:
-# >haplotype1-0000003:4-8430174
-# After:
-# >HG00171_chr16_haplotype1-0000003:4-8430174
-rule rename_ctgs:
-    input:
-        legend=rules.create_renamed_bed_n_legend.output.legend,
-        seq=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
-    output:
-        fa=temp(
+        seq=temp(
             os.path.join(
-                config["concat_asm"]["output_dir"],
-                "{sm}",
-                "{sm}_regions.renamed.fa",
+                config["ident_cen_ctgs"]["output_dir"],
+                "seq",
+                "{sm}_centromeric_regions.fa",
             )
         ),
         idx=temp(
             os.path.join(
-                config["concat_asm"]["output_dir"],
-                "{sm}",
-                "{sm}_regions.renamed.fa.fai",
+                config["ident_cen_ctgs"]["output_dir"],
+                "seq",
+                "{sm}_centromeric_regions.fa.fai",
             )
-        ),
-    params:
-        pattern=r"'(\S+)'",
-        replacement=lambda wc: "'{kv}'",
-    log:
-        os.path.join("logs/ident_cen_ctgs/rename_cens", "rename_ctgs_{sm}.log"),
-    conda:
-        "../envs/tools.yaml"
-    shell:
-        """
-        seqkit replace -p {params.pattern} -r {params.replacement} \
-        -k {input.legend} {input.seq} \
-        --keep-key > {output.fa} 2> {log}
-        samtools faidx {output.fa} 2>> {log}
-        """
-
-
-rule fix_ort_asm:
-    input:
-        # This is the key. Update as go along.
-        bed=rules.create_renamed_bed_n_legend.output.regions_renamed,
-        fa=rules.rename_ctgs.output.fa,
-        fai=rules.rename_ctgs.output.idx,
-    output:
-        fa=os.path.join(
-            config["concat_asm"]["output_dir"], "{sm}", "{sm}_regions.renamed.reort.fa"
-        ),
-        faidx=os.path.join(
-            config["concat_asm"]["output_dir"],
-            "{sm}",
-            "{sm}_regions.renamed.reort.fa.fai",
-        ),
-    log:
-        "logs/ident_cen_ctgs/fix_ort_asm_{sm}.log",
-    conda:
-        "../envs/tools.yaml"
-    shell:
-        """
-        # Reverse complement sequences and then get everything else.
-        cat <(seqtk subseq <(seqtk seq -r {input.fa}) <(grep "rc-" {input.bed} | cut -f 1)) \
-            <(seqtk subseq {input.fa} <(grep -v -f <(grep "rc-" {input.bed} | cut -f 1) {input.fai} | cut -f 1)) \
-        > {output.fa} 2> {log}
-        samtools faidx {output.fa} 2> {log}
-        """
-
-
-use rule extract_and_index_fa as extract_cens_regions with:
-    input:
-        bed=rules.create_renamed_bed_n_legend.output.regions_renamed,
-        fa=rules.fix_ort_asm.output.fa,
-    output:
-        seq=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "seq",
-            "{sm}_centromeric_regions.fa",
-        ),
-        idx=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "seq",
-            "{sm}_centromeric_regions.fa.fai",
         ),
     log:
         "logs/ident_cen_ctgs/extract_regions_{sm}.log",
@@ -228,11 +137,46 @@ use rule extract_and_index_fa as extract_cens_regions with:
         "../envs/tools.yaml"
 
 
+# Then split them into unique files per contig.
+checkpoint split_fa_dnabrnn:
+    input:
+        fa=rules.extract_cens_regions.output.seq,
+        rename_key=rules.map_collapse_cens.output.renamed_cens_key,
+    output:
+        temp(
+            directory(
+                os.path.join(config["ident_cen_ctgs"]["output_dir"], "seq", "{sm}")
+            )
+        ),
+    log:
+        "logs/split_fa_{sm}.log",
+    params:
+        split_dir=os.path.join(config["ident_cen_ctgs"]["output_dir"], "seq", "{sm}"),
+    shell:
+        """
+        mkdir -p {params.split_dir}
+        awk '{{
+            # Read key values in first file.
+            if (FNR == NR) {{
+                # Add coords to name.
+                kv[$1":"$3]=$2":"$3;
+                next;
+            }}
+
+            if (substr($0, 1, 1)==">") {{
+                fname=substr($0,2)
+                repl_fname=kv[fname]
+                filename=("{params.split_dir}/" repl_fname ".fa")
+            }}
+            print $0 > filename
+        }}' {input.rename_key} {input.fa} 2> {log}
+        """
+
+
 rule ident_cen_ctgs_all:
     input:
-        # Fix orientation.
-        expand(rules.fix_ort_asm.output, sm=SAMPLE_NAMES),
         expand(
             rules.extract_cens_regions.output,
             sm=SAMPLE_NAMES,
         ),
+        expand(rules.split_fa_dnabrnn.output, sm=SAMPLE_NAMES),

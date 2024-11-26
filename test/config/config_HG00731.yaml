@@ -57,7 +57,7 @@ humas_sd:
   input_dir: "results/humas_sd/cens"
   output_dir: "results/humas_sd"
   threads: 4
-  hmm_profile: "data/models/AS-HORs-hmmer3.0-170921.hmm"
+  hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
 
 plot_hor_stv:
   output_dir: "results/hor_stv"
