@@ -7,33 +7,64 @@ wildcard_constraints:
     chr="|".join(CHROMOSOMES),
 
 
-use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
+checkpoint split_cens_for_rm:
     input:
-        fa=os.path.join(
-            config["concat_asm"]["output_dir"],
-            "{sm}",
-            "{sm}_regions.renamed.reort.fa",
+        fa=lambda wc: expand(
+            os.path.join(
+                config["ident_cen_ctgs"]["output_dir"],
+                "seq",
+                "interm",
+                "{chr}_{sm}_contigs.ALR.fa",
+            ),
+            sm=wc.sm,
+            chr=CHROMOSOMES,
         ),
-        bed=os.path.join(
-            config["new_cens"]["output_dir"], "bed", "{sm}_ALR_regions.bed"
+        # [old_name, new_name, coords, sm, chr, is_reversed]
+        rename_key=lambda wc: expand(
+            os.path.join(
+                config["ident_cen_ctgs"]["output_dir"],
+                "bed",
+                "interm",
+                "{sm}_renamed_cens.tsv",
+            ),
+            sm=wc.sm,
         ),
     output:
-        seq=temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "seq",
-                "{sm}_correct_ALR_regions.fa",
-            )
-        ),
-        idx=temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "seq",
-                "{sm}_correct_ALR_regions.fa.fai",
+        temp(
+            directory(
+                os.path.join(
+                    config["repeatmasker"]["output_dir"], "seq", "interm", "{sm}"
+                )
             )
         ),
     log:
-        "logs/repeatmasker/extract_alr_regions_repeatmasker_{sm}.log",
+        "logs/humas_sd/split_{sm}_cens_for_humas_sd.log",
+    params:
+        split_dir=lambda wc, output: output[0],
+    conda:
+        "../envs/tools.yaml"
+    shell:
+        # https://gist.github.com/astatham/621901
+        """
+        mkdir -p {params.split_dir}
+        awk '{{
+            # Read key values in first file.
+            if (FNR == NR) {{
+                # Add coords to name.
+                kv[$1]=$2;
+                next;
+            }}
+            if (substr($0, 1, 1)==">") {{
+                ctg_name=substr($0,2)
+                split(ctg_name, ctg_name_parts, ":")
+                new_ctg_name=kv[ctg_name_parts[1]]":"ctg_name_parts[2]
+                filename=("{params.split_dir}/" new_ctg_name ".fa")
+                print ">"new_ctg_name > filename
+            }} else {{
+                print $0 > filename
+            }}
+        }}' <(awk -v OFS="\\t" '$4=="{wildcards.sm}"' {input.rename_key}) <(cat {input.fa}) 2> {log}
+        """
 
 
 # RepeatMasker has a limit of 50 characters for sequence names.
@@ -42,20 +73,23 @@ use rule extract_and_index_fa as extract_correct_alr_regions_rm with:
 # So I downgraded the repeatmasker70 image to v4.1.0.
 rule rename_for_repeatmasker:
     input:
-        fa=rules.extract_correct_alr_regions_rm.output.seq,
+        fa=os.path.join(rules.split_cens_for_rm.output[0], "{fname}.fa"),
     output:
+        original_fa_idx=temp(
+            os.path.join(rules.split_cens_for_rm.output[0], "{fname}.fa.fai"),
+        ),
         renamed_fa=temp(
             os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "seq",
-                "{sm}_correct_ALR_regions.renamed.fa",
+                rules.split_cens_for_rm.output[0],
+                "renamed",
+                "{fname}_correct_ALR_regions.renamed.fa",
             )
         ),
         renamed_fa_idx=temp(
             os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "seq",
-                "{sm}_correct_ALR_regions.renamed.fa.fai",
+                rules.split_cens_for_rm.output[0],
+                "renamed",
+                "{fname}_correct_ALR_regions.renamed.fa.fai",
             )
         ),
     params:
@@ -63,10 +97,11 @@ rule rename_for_repeatmasker:
     conda:
         "../envs/tools.yaml"
     log:
-        "logs/repeatmasker/rename_for_repeatmasker_{sm}.log",
+        "logs/repeatmasker/rename_for_repeatmasker_{sm}_{fname}.log",
     shell:
         """
-        seqtk rename {input.fa} {params.prefix} > {output.renamed_fa} 2> {log}
+        samtools faidx {input.fa} 2> {log}
+        seqtk rename {input.fa} {params.prefix} > {output.renamed_fa} 2>> {log}
         if [ -s {output.renamed_fa} ]; then
             samtools faidx {output.renamed_fa} 2>> {log}
         else
@@ -84,7 +119,7 @@ rule run_repeatmasker:
                 config["repeatmasker"]["output_dir"],
                 "repeats",
                 "{sm}",
-                "{sm}_correct_ALR_regions.renamed.fa.out",
+                "{fname}_correct_ALR_regions.renamed.fa.out",
             )
         ),
     threads: config["repeatmasker"]["threads"]
@@ -95,11 +130,11 @@ rule run_repeatmasker:
     conda:
         "../envs/tools.yaml"
     log:
-        "logs/repeatmasker/repeatmasker_{sm}.log",
+        "logs/repeatmasker/repeatmasker_{sm}_{fname}.log",
     # Retry in case of .RepeatMaskerCache failure.
     retries: 2
     benchmark:
-        "benchmarks/repeatmasker/repeatmasker_{sm}.tsv"
+        "benchmarks/repeatmasker/repeatmasker_{sm}_{fname}.tsv"
     shell:
         """
         if [ -s {input.seq} ]; then
@@ -120,17 +155,17 @@ rule reformat_repeatmasker_output:
     input:
         script="workflow/scripts/reformat_rm.py",
         rm_out=rules.run_repeatmasker.output,
-        original_fai=rules.extract_correct_alr_regions_rm.output.idx,
+        original_fai=rules.rename_for_repeatmasker.output.original_fa_idx,
         renamed_fai=rules.rename_for_repeatmasker.output.renamed_fa_idx,
     output:
         os.path.join(
             config["repeatmasker"]["output_dir"],
             "repeats",
             "{sm}",
-            "{sm}_correct_ALR_regions.fa.reformatted.out",
+            "{fname}_correct_ALR_regions.fa.reformatted.out",
         ),
     log:
-        "logs/repeatmasker/reformat_repeatmasker_output_{sm}.log",
+        "logs/repeatmasker/reformat_repeatmasker_output_{sm}_{fname}.log",
     conda:
         "../envs/py.yaml"
     shell:
@@ -139,18 +174,29 @@ rule reformat_repeatmasker_output:
         """
 
 
-# Merge repeatmasker and convert sep to tab.
-# |1259|28.4|7.4|5.3|GM18989_chr1_hap1-0000003:9717731-15372230|8|560|(5653940)|+|Charlie2b|DNA/hAT-Charlie|120|683|(2099)|1|
-rule merge_repeatmasker_output:
+# Gather all RM output
+def refmt_rm_output(wc):
+    _ = checkpoints.split_cens_for_rm.get(**wc).output
+    fa_glob_pattern = os.path.join(
+        config["repeatmasker"]["output_dir"], "seq", "interm", str(wc.sm), "{fname}.fa"
+    )
+    fnames, _ = extract_fnames_and_chr(fa_glob_pattern)
+    assert (
+        len(fnames) != 0
+    ), f"No fasta files found for repeatmasker in {fa_glob_pattern}"
+    return expand(rules.reformat_repeatmasker_output.output, sm=wc.sm, fname=fnames)
+
+
+rule format_repeatmasker_output:
     input:
-        expand(rules.reformat_repeatmasker_output.output, sm=SAMPLE_NAMES),
+        refmt_rm_output,
     output:
         temp(
             os.path.join(
                 config["repeatmasker"]["output_dir"],
                 "repeats",
                 "all",
-                "all_samples_correct_ALR_regions.fa.out",
+                "{sm}_cens.fa.out",
             )
         ),
     conda:
@@ -161,12 +207,36 @@ rule merge_repeatmasker_output:
         """
 
 
+# Merge repeatmasker and convert sep to tab.
+# |1259|28.4|7.4|5.3|GM18989_chr1_hap1-0000003:9717731-15372230|8|560|(5653940)|+|Charlie2b|DNA/hAT-Charlie|120|683|(2099)|1|
+rule merge_repeatmasker_output:
+    input:
+        expand(rules.format_repeatmasker_output.output, sm=SAMPLE_NAMES),
+    output:
+        temp(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "repeats",
+                "all",
+                "all_samples_cens.fa.out",
+            )
+        ),
+    params:
+        added_cmd="",
+    shell:
+        """
+        cat {input} {params.added_cmd} > {output}
+        """
+
+
 # Format repeatmasker reference output.
 use rule merge_repeatmasker_output as merge_control_repeatmasker_output with:
     input:
         # Contains header. Should be first.
         config["repeatmasker"]["ref_repeatmasker_chrY_output"],
         config["repeatmasker"]["ref_repeatmasker_output"],
+    params:
+        added_cmd="| awk -v OFS='\\t' '{{$1=$1; print}}' | cut -f 1-15",
     output:
         temp(
             os.path.join(
@@ -188,7 +258,7 @@ rule format_add_control_repeatmasker_output:
                 config["repeatmasker"]["output_dir"],
                 "repeats",
                 "all",
-                "all_samples_and_ref_correct_ALR_regions.fa.out",
+                "all_samples_and_ref_cens.fa.out",
             )
         ),
     log:
@@ -199,7 +269,7 @@ rule format_add_control_repeatmasker_output:
         """
         # Copy file and append reference repeatmasker output.
         cp {input.sample_rm_output} {output} 2> {log}
-        grep "chr" {input.ref_rm_output} >> {output} 2> {log}
+        {{ awk -v OFS="\\t" '{{$1=$1; print}}' {input.ref_rm_output} | grep "chr" ;}} >> {output} 2> {log}
         """
 
 
@@ -221,7 +291,7 @@ rule extract_rm_out_by_chr:
         "../envs/tools.yaml"
     shell:
         """
-        {{ grep "{wildcards.chr}[_:]" {input.rm_out} || true; }}> {output.rm_out_by_chr} 2> {log}
+        ( grep "{wildcards.chr}[_:]" {input.rm_out} || true) | cut -f 1-15 > {output.rm_out_by_chr} 2> {log}
         """
 
 
@@ -241,5 +311,5 @@ use rule plot_rm_out as plot_cens_from_original_rm_by_chr with:
 
 rule repeatmasker_only:
     input:
-        expand(rules.reformat_repeatmasker_output.output, sm=SAMPLE_NAMES),
+        expand(rules.format_repeatmasker_output.output, sm=SAMPLE_NAMES),
         expand(rules.plot_cens_from_original_rm_by_chr.output, chr=CHROMOSOMES),

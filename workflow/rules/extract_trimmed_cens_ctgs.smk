@@ -1,3 +1,4 @@
+# Extract trimmed cens from dna-brnn.
 include: "common.smk"
 
 
@@ -21,15 +22,17 @@ use rule extract_and_index_fa as extract_alr_region_ref_by_chr with:
     output:
         seq=temp(
             os.path.join(
-                config["new_cens"]["output_dir"],
+                config["ident_cen_ctgs"]["output_dir"],
                 "seq",
+                "interm",
                 f"{REF_NAME}_{{chr}}_contigs.ALR.fa",
             )
         ),
         idx=temp(
             os.path.join(
-                config["new_cens"]["output_dir"],
+                config["ident_cen_ctgs"]["output_dir"],
                 "seq",
+                "interm",
                 f"{REF_NAME}_{{chr}}_contigs.ALR.fa.fai",
             )
         ),
@@ -47,52 +50,19 @@ use rule extract_and_index_fa as extract_alr_region_sample_by_chr with:
     output:
         seq=temp(
             os.path.join(
-                config["new_cens"]["output_dir"],
+                config["ident_cen_ctgs"]["output_dir"],
                 "seq",
+                "interm",
                 "{chr}_{sm}_contigs.ALR.fa",
             )
         ),
         idx=temp(
             os.path.join(
-                config["new_cens"]["output_dir"],
+                config["ident_cen_ctgs"]["output_dir"],
                 "seq",
+                "interm",
                 "{chr}_{sm}_contigs.ALR.fa.fai",
             )
         ),
     log:
         "logs/extract_new_cens_ctgs/extract_alr_region_{sm}_{chr}.log",
-
-
-rule make_new_cens_bed_file:
-    input:
-        faidx=lambda wc: expand(
-            rules.extract_alr_region_sample_by_chr.output.idx,
-            chr=CHROMOSOMES,
-            sm=[wc.sm],
-        ),
-    output:
-        alr_bed=os.path.join(
-            config["new_cens"]["output_dir"], "bed", "{sm}_ALR_regions.bed"
-        ),
-    conda:
-        "../envs/tools.yaml"
-    log:
-        "logs/extract_new_cens_ctgs/fmt_{sm}_new_cens_bed_file.log",
-    shell:
-        # Only filter for sample to avoid malformed output ref cols in alr bed.
-        """
-        {{ cat {input.faidx} | \
-        awk -v OFS="\\t" '{{
-            match($1, "^(.+):", ctgs);
-            match($1, ":(.+)-", starts);
-            match($1, ".*-(.+)$", ends);
-            print ctgs[1], starts[1], ends[1]
-        }}' | \
-        sort | \
-        uniq;}} > {output} 2> {log}
-        """
-
-
-rule extract_trimmed_cens_all:
-    input:
-        expand(rules.make_new_cens_bed_file.output, sm=SAMPLE_NAMES),

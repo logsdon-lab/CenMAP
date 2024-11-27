@@ -14,6 +14,7 @@ rule format_hor_ref_aln_cen_contigs:
         cen_regions=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
+            "interm",
             "{sm}_cens.bed",
         ),
     conda:
@@ -60,6 +61,7 @@ rule intersect_with_pq_arm:
         qarms_cen_regions=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
+            "interm",
             "{sm}_pqarm_cens.bed",
         ),
     conda:
@@ -83,12 +85,14 @@ rule map_collapse_cens:
         cens_key=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
+            "interm",
             "{sm}_mapped_cens.bed",
         ),
         # old_name, new_name, coords, sample, chrom, is_reverse
         renamed_cens_key=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
+            "interm",
             "{sm}_renamed_cens.tsv",
         ),
     params:
@@ -121,6 +125,7 @@ use rule extract_and_index_fa as extract_cens_regions with:
             os.path.join(
                 config["ident_cen_ctgs"]["output_dir"],
                 "seq",
+                "interm",
                 "{sm}_centromeric_regions.fa",
             )
         ),
@@ -128,6 +133,7 @@ use rule extract_and_index_fa as extract_cens_regions with:
             os.path.join(
                 config["ident_cen_ctgs"]["output_dir"],
                 "seq",
+                "interm",
                 "{sm}_centromeric_regions.fa.fai",
             )
         ),
@@ -137,46 +143,9 @@ use rule extract_and_index_fa as extract_cens_regions with:
         "../envs/tools.yaml"
 
 
-# Then split them into unique files per contig.
-checkpoint split_fa_dnabrnn:
-    input:
-        fa=rules.extract_cens_regions.output.seq,
-        rename_key=rules.map_collapse_cens.output.renamed_cens_key,
-    output:
-        temp(
-            directory(
-                os.path.join(config["ident_cen_ctgs"]["output_dir"], "seq", "{sm}")
-            )
-        ),
-    log:
-        "logs/split_fa_{sm}.log",
-    params:
-        split_dir=os.path.join(config["ident_cen_ctgs"]["output_dir"], "seq", "{sm}"),
-    shell:
-        """
-        mkdir -p {params.split_dir}
-        awk '{{
-            # Read key values in first file.
-            if (FNR == NR) {{
-                # Add coords to name.
-                kv[$1":"$3]=$2":"$3;
-                next;
-            }}
-
-            if (substr($0, 1, 1)==">") {{
-                fname=substr($0,2)
-                repl_fname=kv[fname]
-                filename=("{params.split_dir}/" repl_fname ".fa")
-            }}
-            print $0 > filename
-        }}' {input.rename_key} {input.fa} 2> {log}
-        """
-
-
 rule ident_cen_ctgs_all:
     input:
         expand(
-            rules.extract_cens_regions.output,
+            rules.map_collapse_cens.output,
             sm=SAMPLE_NAMES,
         ),
-        expand(rules.split_fa_dnabrnn.output, sm=SAMPLE_NAMES),

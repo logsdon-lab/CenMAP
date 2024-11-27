@@ -1,6 +1,44 @@
 include: "common.smk"
 
 
+# Then split them into unique files per contig.
+checkpoint split_fa_dnabrnn:
+    input:
+        fa=rules.extract_cens_regions.output.seq,
+        rename_key=rules.map_collapse_cens.output.renamed_cens_key,
+    output:
+        temp(
+            directory(
+                os.path.join(
+                    config["ident_cen_ctgs"]["output_dir"], "seq", "interm", "{sm}"
+                )
+            )
+        ),
+    log:
+        "logs/split_fa_{sm}.log",
+    params:
+        split_dir=lambda wc, output: output[0],
+    shell:
+        """
+        mkdir -p {params.split_dir}
+        awk '{{
+            # Read key values in first file.
+            if (FNR == NR) {{
+                # Add coords to name.
+                kv[$1":"$3]=$2":"$3;
+                next;
+            }}
+
+            if (substr($0, 1, 1)==">") {{
+                fname=substr($0,2)
+                repl_fname=kv[fname]
+                filename=("{params.split_dir}/" repl_fname ".fa")
+            }}
+            print $0 > filename
+        }}' {input.rename_key} {input.fa} 2> {log}
+        """
+
+
 rule compile_dna_brnn:
     output:
         os.path.join(config["dna_brnn"]["output_dir"], "dna-nn", "dna-brnn"),
@@ -31,9 +69,7 @@ rule run_dna_brnn:
         ),
         model=config["dna_brnn"]["model"],
         seqs=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "seq",
-            "{sm}",
+            rules.split_fa_dnabrnn.output[0],
             "{sm}_{chr}_{fname}.fa",
         ),
     output:

@@ -2,7 +2,7 @@
 include: "common.smk"
 
 
-# TODO: Needs to be after repeatmasker correction.
+# TODO: Needs to be done on corrected assembly after repeatmasker correction.
 checkpoint split_cens_for_humas_sd:
     input:
         fa=lambda wc: expand(
