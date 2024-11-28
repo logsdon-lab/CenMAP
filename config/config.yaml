@@ -62,9 +62,6 @@ dna_brnn:
   thr_file: "config/dnabrnn_thresholds.json"
   full_alr_thr_file: "config/dnabrnn_full_alr_region_thresholds.json"
 
-new_cens:
-  output_dir: "results/cens_new"
-
 nucflag:
   hifi_reads_fofn_dir: "data/hifi"
  # hifi_reads_dir: "data/hifi"

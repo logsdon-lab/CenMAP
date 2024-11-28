@@ -35,12 +35,12 @@ new_cens:
 
 # nucflag:
 #   hifi_reads_dir: "test/data/raw_data"
-#   output_dir: "results/dna_brnn/nucflag"
+#   output_dir: "results/nucflag"
 #   tmp_dir: "/tmp"
 #   reads_ext: "fastq.gz"
 #   config_nucflag: "test/config/nucflag.toml"
 #   ignore_regions: "config/nucflag_ignore.bed"
-#   threads_aln: 1
+#   threads_aln: 4
 #   mem_nucflag: 4
 #   mem_aln: 4
 #   processes_nucflag: 2
@@ -58,6 +58,7 @@ humas_sd:
   output_dir: "results/humas_sd"
   threads: 4
   hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
+  identity_thr: 95.0
 
 plot_hor_stv:
   output_dir: "results/hor_stv"

@@ -2,26 +2,56 @@
 include: "common.smk"
 
 
-# TODO: Needs to be done on corrected assembly after repeatmasker correction.
+use rule extract_and_index_fa as extract_cens_for_humas_sd with:
+    input:
+        fa=os.path.join(
+            config["humas_sd"]["output_dir"],
+            "{sm}",
+            "{sm}_regions.renamed.reort.fa",
+        ),
+        bed=os.path.join(
+            config["ident_cen_ctgs"]["output_dir"],
+            "bed",
+            "interm",
+            "{sm}_complete_cens.bed",
+        ),
+    output:
+        seq=temp(
+            os.path.join(
+                config["humas_sd"]["output_dir"],
+                "seq",
+                "interm",
+                "{sm}_cens.fa",
+            )
+        ),
+        idx=temp(
+            os.path.join(
+                config["humas_sd"]["output_dir"],
+                "seq",
+                "interm",
+                "{sm}_cens.fa.fai",
+            )
+        ),
+    log:
+        "logs/humas_sd/extract_cens_for_humas_sd_{sm}.log",
+
+
 checkpoint split_cens_for_humas_sd:
     input:
-        fa=lambda wc: expand(
-            rules.extract_alr_region_sample_by_chr.output.seq,
-            sm=SAMPLE_NAMES,
-            chr=wc.chr,
-        ),
-        rename_key=lambda wc: expand(
-            rules.map_collapse_cens.output.renamed_cens_key, sm=SAMPLE_NAMES
+        fa=os.path.join(
+            config["concat_asm"]["output_dir"],
+            "{sm}",
+            "{sm}_regions.renamed.reort.fa",
         ),
     output:
         touch(
             os.path.join(
                 config["humas_sd"]["output_dir"],
-                "split_cens_for_humas_sd_{chr}.done",
+                "split_cens_for_humas_sd_{sm}.done",
             )
         ),
     log:
-        "logs/humas_sd/split_{chr}_cens_for_humas_sd.log",
+        "logs/humas_sd/split_{sm}_cens_for_humas_sd.log",
     params:
         split_dir=config["humas_sd"]["input_dir"],
     conda:
@@ -31,20 +61,11 @@ checkpoint split_cens_for_humas_sd:
         """
         mkdir -p {params.split_dir}
         awk '{{
-            # Read key values in first file.
-            if (FNR == NR) {{
-                # Add coords to name.
-                kv[$1]=$2;
-                next;
-            }}
             if (substr($0, 1, 1)==">") {{
-                ctg_name=substr($0,2)
-                split(ctg_name, ctg_name_parts, ":")
-                new_ctg_name=kv[ctg_name_parts[1]]":"ctg_name_parts[2]
-                filename=("{params.split_dir}/" new_ctg_name ".fa")
+                filename=("{params.split_dir}/" substr($0,2) ".fa")
             }}
             print $0 > filename
-        }}' <(awk -v OFS="\\t" '$5=="{wildcards.chr}"' {input.rename_key}) <(cat {input.fa}) 2> {log}
+        }}' {input.fa} 2> {log}
         """
 
 
@@ -80,7 +101,9 @@ checkpoint run_humas_sd:
         rules.cens_generate_monomers.output,
         unpack(humas_sd_outputs),
     output:
-        touch(os.path.join(config["humas_sd"]["output_dir"], "humas_sd_{chr}.done")),
+        touch(
+            os.path.join(config["humas_sd"]["output_dir"], "humas_sd_{sm}_{chr}.done")
+        ),
 
 
 # https://stackoverflow.com/a/63040288
@@ -106,9 +129,33 @@ checkpoint create_humas_sd_stv:
         touch(
             os.path.join(
                 config["humas_sd"]["output_dir"],
-                "create_humas_sd_stv_{chr}.done",
+                "create_humas_sd_stv_{sm}_{chr}.done",
             )
         ),
+
+
+def humas_sd_stv_sm_outputs(wc):
+    _ = [
+        checkpoints.run_humas_sd.get(**{"sm": wc.sm, "chr": chrom}).output
+        for chrom in CHROMOSOMES
+    ]
+    wcs = glob_wildcards(
+        os.path.join(config["humas_sd"]["input_dir"], "{sm}_{chr}_{ctg_name}.fa")
+    )
+    outputs = []
+    for sm, chrom, ctg_name in zip(wcs.sm, wcs.chr, wcs.ctg_name):
+        if sm != wc.sm:
+            continue
+
+        outputs.extend(
+            expand(
+                rules.cens_generate_stv.output,
+                zip,
+                fname=f"{sm}_{chrom}_{ctg_name}",
+                chr=[chrom],
+            )
+        )
+    return outputs
 
 
 # Force including conda so --containerize includes.
@@ -125,10 +172,10 @@ rule _force_humas_sd_env_inclusion:
 rule humas_sd_all:
     input:
         rules._force_humas_sd_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
-        expand(rules.run_humas_sd.output, chr=CHROMOSOMES),
-        expand(rules.create_humas_sd_stv.output, chr=CHROMOSOMES),
+        expand(rules.run_humas_sd.output, sm=SAMPLE_NAMES, chr=CHROMOSOMES),
+        expand(rules.create_humas_sd_stv.output, sm=SAMPLE_NAMES, chr=CHROMOSOMES),
 
 
 rule humas_sd_split_cens_only:
     input:
-        expand(rules.split_cens_for_humas_sd.output, chr=CHROMOSOMES),
+        expand(rules.split_cens_for_humas_sd.output, sm=SAMPLE_NAMES, chr=CHROMOSOMES),
