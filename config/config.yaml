@@ -86,6 +86,7 @@ humas_sd:
   output_dir: "results/humas_sd"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
   threads: 24
+  mem: 60GB
   hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
 
 plot_hor_stv:
