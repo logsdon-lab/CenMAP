@@ -156,7 +156,7 @@ rule get_final_rename_key:
 
 # Generate a centromere BED4 file for all cens and mark misassembled cens.
 # Also output a repeatmasker reorient key.
-rule make_complete_cens_bed_file:
+rule make_complete_cens_bed:
     input:
         faidx=os.path.join(
             config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
@@ -164,21 +164,17 @@ rule make_complete_cens_bed_file:
         final_rename_key=rules.get_final_rename_key.output,
     output:
         # (name, st, end, is_misassembled)
-        cen_bed=temp(
-            os.path.join(
-                config["ident_cen_ctgs"]["output_dir"],
-                "bed",
-                "interm",
-                "{sm}_complete_cens.bed",
-            )
+        cen_bed=os.path.join(
+            config["ident_cen_ctgs"]["output_dir"],
+            "bed",
+            "interm",
+            "{sm}_complete_cens.bed",
         ),
         # (old_name, new_name, ort, ctg_len)
-        rm_rename_key=temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "status",
-                "{sm}_rm_rename_key.tsv",
-            )
+        rm_rename_key=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "status",
+            "{sm}_rm_rename_key.tsv",
         ),
     conda:
         "../envs/tools.yaml"
@@ -255,7 +251,7 @@ rule rename_reort_asm:
 
 rule fix_cens_rm_out:
     input:
-        rm_rename_key=rules.make_complete_cens_bed_file.output.rm_rename_key,
+        rm_rename_key=rules.make_complete_cens_bed.output.rm_rename_key,
         rm_out=os.path.join(
             config["repeatmasker"]["output_dir"],
             "repeats",
@@ -345,8 +341,8 @@ use rule plot_rm_out as plot_cens_from_rm_by_chr with:
         "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_rm.log",
 
 
-rule fix_cens_w_repeatmasker_only:
+rule fix_cens_w_repeatmasker_all:
     input:
-        expand(rules.make_complete_cens_bed_file.output, sm=SAMPLE_NAMES),
+        expand(rules.make_complete_cens_bed.output, sm=SAMPLE_NAMES),
         expand(rules.rename_reort_asm.output, sm=SAMPLE_NAMES),
         expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),

@@ -309,7 +309,7 @@ use rule plot_rm_out as plot_cens_from_original_rm_by_chr with:
         "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_original_rm.log",
 
 
-rule repeatmasker_only:
+rule repeatmasker_all:
     input:
         expand(rules.format_repeatmasker_output.output, sm=SAMPLE_NAMES),
         expand(rules.plot_cens_from_original_rm_by_chr.output, chr=CHROMOSOMES),

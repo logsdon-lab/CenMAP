@@ -33,18 +33,18 @@ dna_brnn:
 new_cens:
   output_dir: "results/cens_new"
 
-# nucflag:
-#   hifi_reads_dir: "test/data/raw_data"
-#   output_dir: "results/nucflag"
-#   tmp_dir: "/tmp"
-#   reads_ext: "fastq.gz"
-#   config_nucflag: "test/config/nucflag.toml"
-#   ignore_regions: "config/nucflag_ignore.bed"
-#   threads_aln: 4
-#   mem_nucflag: 4
-#   mem_aln: 4
-#   processes_nucflag: 2
-#   samtools_view_flag: 2308
+nucflag:
+  hifi_reads_dir: "test/data/raw_data"
+  output_dir: "results/nucflag"
+  tmp_dir: "/tmp"
+  reads_ext: "fastq.gz"
+  config_nucflag: "test/config/nucflag.toml"
+  ignore_regions: "config/nucflag_ignore.bed"
+  threads_aln: 4
+  mem_nucflag: 4
+  mem_aln: 4
+  processes_nucflag: 2
+  samtools_view_flag: 2308
 
 repeatmasker:
   ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
@@ -65,6 +65,7 @@ plot_hor_stv:
   chm1_stv: "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
   chm13_stv: "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
   sat_annot_colors: "config/repeatmasker_sat_annot_colors.json"
+  stv_annot_colors: "config/stv_annot_colors.tsv"
 
 cluster_cens:
   output_dir: "results/cluster_cens"

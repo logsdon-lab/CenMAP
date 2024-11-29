@@ -73,6 +73,7 @@ rule format_repeatmasker_to_overlay_bed:
 rule format_stv_to_overlay_bed:
     input:
         stv=humas_sd_stv_sm_outputs,
+        annot_colors=config["plot_hor_stv"]["stv_annot_colors"],
     output:
         os.path.join(
             config["nucflag"]["output_dir"],
@@ -87,48 +88,22 @@ rule format_stv_to_overlay_bed:
     shell:
         """
         awk -v OFS="\\t" '{{
+            # Load stv colors from first file.
+            if (NR == FNR) {{ stv_colors[$1]=$2; next;}}
             name=$1;
             st=$2; end=$3;
             hor=$4;
             hor_len=$3-$2;
             num_mon=int(hor_len / {params.hor_mon_len})
-            switch (num_mon) {{
-                case 1: color="\\#A8275C"; break;
-                case 10: color="\\#9AC78A"; break;
-                case 11: color="\\#CC8FC1"; break;
-                case 12: color="\\#3997C6"; break;
-                case 13: color="\\#8882C4"; break;
-                case 14: color="\\#8ABDD6"; break;
-                case 15: color="\\#096858"; break;
-                case 16: color="\\#45B4CE"; break;
-                case 17: color="\\#AFA7D8"; break;
-                case 18: color="\\#A874B5"; break;
-                case 19: color="\\#3F66A0"; break;
-                case 2: color="\\#D66C54"; break;
-                case 20: color="\\#BFDD97"; break;
-                case 21: color="\\#AF5D87"; break;
-                case 22: color="\\#E5E57A"; break;
-                case 24: color="\\#ED975D"; break;
-                case 26: color="\\#F9E193"; break;
-                case 3: color="\\#93430C"; break;
-                case 30: color="\\#E5D1A1"; break;
-                case 32: color="\\#A1B5E5"; break;
-                case 34: color="\\#9F68A5"; break;
-                case 35: color="\\#81B25B"; break;
-                case 4: color="\\#F4DC78"; break;
-                case 5: color="\\#7EC0B3"; break;
-                case 6: color="\\#B23F73"; break;
-                case 7: color="\\#8CC49F"; break;
-                case 8: color="\\#893F89"; break;
-                case 9: color="\\#6565AA"; break;
-                default: color="gray"; break;
-            }}
-            print name, st, end, num_mon, "plot:"color
-        }}' {input} > {output} 2> {log}
+            stv_color=stv_colors[num_mon]
+            if (stv_color == "") {{ stv_color="gray"; }}
+            print name, st, end, num_mon, "plot:"stv_color
+        }}' {input.annot_colors} {input.stv} > {output} 2> {log}
         """
 
 
 # Create bedfile that only looks at live HOR and ignores everything else.
+# Also add ignore bed if provided.
 rule format_stv_nucflag_ignore_bed:
     input:
         fai=os.path.join(
@@ -137,6 +112,11 @@ rule format_stv_nucflag_ignore_bed:
             "{sm}_regions.renamed.reort.fa.fai",
         ),
         stv=humas_sd_stv_sm_outputs,
+        ignore_bed=(
+            config["nucflag"]["ignore_regions"]
+            if config["nucflag"].get("ignore_regions")
+            else []
+        ),
     output:
         os.path.join(
             config["nucflag"]["output_dir"],
@@ -144,6 +124,10 @@ rule format_stv_nucflag_ignore_bed:
         ),
     params:
         bp_annot_gap_thr=1,
+        # Concatenate ignore bed.
+        ignore_bed=lambda wc, input: f"| cat - {input.ignore_bed}"
+        if input.ignore_bed
+        else "",
     conda:
         "../envs/tools.yaml"
     log:
@@ -160,7 +144,7 @@ rule format_stv_nucflag_ignore_bed:
             if (len > {params.bp_annot_gap_thr}) {{
                 print $0, "non-HOR", "ignore:absolute"
             }}
-        }}';}} > {output} 2> {log}
+        }}' {params.ignore_bed};}} > {output} 2> {log}
         """
 
 
@@ -215,8 +199,6 @@ module NucFlag:
 use rule * from NucFlag
 
 
-rule nucflag_only:
+rule nucflag_all:
     input:
-        expand(rules.format_repeatmasker_to_overlay_bed.output, sm=SAMPLE_NAMES),
-        expand(rules.format_stv_to_overlay_bed.output, sm=SAMPLE_NAMES),
         expand(rules.nucflag.input, sm=SAMPLE_NAMES),

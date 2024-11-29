@@ -22,6 +22,7 @@ include: "rules/extract_trimmed_cens_ctgs.smk"
 include: "rules/repeatmasker.smk"
 include: "rules/fix_cens_w_repeatmasker.smk"
 include: "rules/humas_sd.smk"
+include: "rules/get_complete_correct_cens.smk"
 
 
 rule extract_cens_only:
@@ -35,9 +36,10 @@ output = [
     # Required output.
     rules.extract_cens_only.input,
     rules.dna_brnn_all.input,
-    rules.repeatmasker_only.input,
-    rules.fix_cens_w_repeatmasker_only.input,
+    rules.repeatmasker_all.input,
+    rules.fix_cens_w_repeatmasker_all.input,
     rules.humas_sd_all.input,
+    rules.get_complete_correct_cens_all.input,
 ]
 
 # Download T2T-CHM13 reference assembly if existing path not provided.
@@ -49,7 +51,7 @@ if config.get("nucflag"):
 
     include: "rules/nucflag.smk"
 
-    output.append(rules.nucflag_only.input)
+    output.append(rules.nucflag_all.input)
 
 
 # if config.get("plot_hor_stv"):

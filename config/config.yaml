@@ -95,6 +95,7 @@ plot_hor_stv:
   chm1_stv: "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
   chm13_stv: "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
   sat_annot_colors: "config/repeatmasker_sat_annot_colors.json"
+  stv_annot_colors: "config/stv_annot_colors.tsv"
 
 calculate_hor_length:
   chm1_hor_lengths: "data/annotations/chm1_hor_length.tsv"
