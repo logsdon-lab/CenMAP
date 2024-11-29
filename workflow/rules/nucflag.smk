@@ -104,40 +104,16 @@ rule format_stv_to_overlay_bed:
         """
 
 
-# Need region bed to have cen coords in name of ctg to match with other annotation files.
-rule make_region_bed_with_cen_coords:
-    input:
-        os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "bed",
-            "interm",
-            "{sm}_complete_cens.bed",
-        ),
-    output:
-        # (new_name_w_coords, st, end, is_partial, og_name)
-        temp(
-            os.path.join(
-                config["ident_cen_ctgs"]["output_dir"],
-                "bed",
-                "interm",
-                "{sm}_complete_cens_w_coords.bed",
-            )
-        ),
-    conda:
-        "../envs/tools.yaml"
-    log:
-        "logs/nucflag/make_region_bed_with_cen_coords_{sm}.log",
-    shell:
-        """
-        awk -v OFS="\\t" '{{ print $1":"$2"-"$3, $2, $3, $4, $1 }}' {input} > {output} 2> {log}
-        """
-
-
 # Create bedfile that only looks at live HOR and ignores everything else.
 # Also add ignore bed if provided.
 rule format_stv_nucflag_ignore_bed:
     input:
-        bed=rules.make_region_bed_with_cen_coords.output,
+        bed=os.path.join(
+            config["ident_cen_ctgs"]["output_dir"],
+            "bed",
+            "interm",
+            "{sm}_complete_cens_w_coords.bed",
+        ),
         stv=humas_sd_stv_sm_outputs,
         ignore_bed=(
             config["nucflag"]["ignore_regions"]
@@ -182,7 +158,12 @@ rule make_temp_asm_w_coords:
         fa=os.path.join(
             config["concat_asm"]["output_dir"], "{sm}_regions.renamed.reort.fa"
         ),
-        bed=rules.make_region_bed_with_cen_coords.output,
+        bed=os.path.join(
+            config["ident_cen_ctgs"]["output_dir"],
+            "bed",
+            "interm",
+            "{sm}_complete_cens_w_coords.bed",
+        ),
     output:
         temp(
             os.path.join(
@@ -223,7 +204,12 @@ NUCFLAG_CFG = {
                 }
             ),
             "config": config["nucflag"]["config_nucflag"],
-            "region_bed": rules.make_region_bed_with_cen_coords.output,
+            "region_bed": os.path.join(
+                config["ident_cen_ctgs"]["output_dir"],
+                "bed",
+                "interm",
+                "{sm}_complete_cens_w_coords.bed",
+            ),
             # # Ignore regions.
             "ignore_bed": str(rules.format_stv_nucflag_ignore_bed.output),
             "overlay_beds": [

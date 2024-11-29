@@ -1,5 +1,3 @@
-include: "nucflag.smk"
-
 
 rule get_complete_correct_cens_bed:
     input:
@@ -12,7 +10,12 @@ rule get_complete_correct_cens_bed:
         ),
         # (name_w_coords, st, end, status)
         nucflag_bed=(
-            rules.check_asm_nucflag.output.asm_status if config.get("nucflag") else []
+            os.path.join(
+                config["nucflag"]["output_dir"],
+                "{sm}_cen_status.bed",
+            )
+            if config.get("nucflag")
+            else []
         ),
     output:
         # (name_no_coords, st, end)

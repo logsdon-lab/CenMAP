@@ -170,6 +170,13 @@ rule make_complete_cens_bed:
             "interm",
             "{sm}_complete_cens.bed",
         ),
+        # (name:st-end, st, end, is_misassembled)
+        cen_bed_w_coords=os.path.join(
+            config["ident_cen_ctgs"]["output_dir"],
+            "bed",
+            "interm",
+            "{sm}_complete_cens_w_coords.bed",
+        ),
         # (old_name, new_name, ort, ctg_len)
         rm_rename_key=os.path.join(
             config["repeatmasker"]["output_dir"],
@@ -196,6 +203,7 @@ rule make_complete_cens_bed:
                 print old_name, new_name, $7, ctg_len >> "{output.rm_rename_key}"
             }}
             print new_name, cen_st, cen_end, is_partial
+            print new_name":"cen_st"-"cen_end, cen_st, cen_end, is_partial >> "{output.cen_bed_w_coords}"
         }}' ;}} > {output.cen_bed} 2> {log}
 
         if [ ! -s {output.rm_rename_key} ]; then
