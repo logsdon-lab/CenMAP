@@ -114,7 +114,7 @@ rule make_region_bed_with_cen_coords:
             "{sm}_complete_cens.bed",
         ),
     output:
-        # (new_name_w_coords, st, end, og_name)
+        # (new_name_w_coords, st, end, is_partial, og_name)
         temp(
             os.path.join(
                 config["ident_cen_ctgs"]["output_dir"],
@@ -129,7 +129,7 @@ rule make_region_bed_with_cen_coords:
         "logs/nucflag/make_region_bed_with_cen_coords_{sm}.log",
     shell:
         """
-        awk -v OFS="\\t" '{{ print $1":"$2"-"$3, $2, $3, $1 }}' {input} > {output} 2> {log}
+        awk -v OFS="\\t" '{{ print $1":"$2"-"$3, $2, $3, $4, $1 }}' {input} > {output} 2> {log}
         """
 
 
@@ -200,7 +200,7 @@ rule make_temp_asm_w_coords:
     shell:
         """
         seqkit replace -p {params.pattern} -r {params.replacement} \
-        -k <(awk -v OFS="\\t" '{{print $4, $1}}' {input.bed}) {input.fa} > {output} 2> {log}
+        -k <(awk -v OFS="\\t" '{{print $5, $1}}' {input.bed}) {input.fa} > {output} 2> {log}
         """
 
 

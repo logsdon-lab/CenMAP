@@ -90,11 +90,11 @@ if config.get("count_complete_cens"):
     output.append(rules.count_complete_cens_only.input)
 
 
-# if config.get("cdr_finder"):
+if config.get("cdr_finder"):
 
-#     include: "rules/cdr_finder.smk"
+    include: "rules/cdr_finder.smk"
 
-#     output.append(rules.cdr_finder_only.input)
+    output.append(rules.cdr_finder_only.input)
 
 
 rule all:

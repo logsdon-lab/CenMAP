@@ -3,16 +3,19 @@ include: "nucflag.smk"
 
 rule get_complete_correct_cens_bed:
     input:
+        # (name_w_coords, st, end, is_partial, name)
         interm_bed=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
             "interm",
-            "{sm}_complete_cens.bed",
+            "{sm}_complete_cens_w_coords.bed",
         ),
+        # (name_w_coords, st, end, status)
         nucflag_bed=(
             rules.check_asm_nucflag.output.asm_status if config.get("nucflag") else []
         ),
     output:
+        # (name_no_coords, st, end)
         bed=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
@@ -34,21 +37,24 @@ rule get_complete_correct_cens_bed:
         """
         {{ {params.infile_stream} | \
         awk -v OFS="\\t" '{{
-            status=(($7 == "good" || $7 == "") && ($4 == "false")) ? "good" : "misassembled";
+            status=(($8 == "good" || $8 == "") && ($4 == "false")) ? "good" : "misassembled";
             if (status != "good") {{
                 next;
             }};
-            print $1, $2, $3
+            split($1, arr, ":");
+            print arr[1], $2, $3
         }}' ;}} > {output} 2> {log}
         """
 
 
 use rule extract_and_index_fa as get_complete_correct_cens_fa with:
     input:
+        # fasta with no_coords
         fa=os.path.join(
             config["concat_asm"]["output_dir"],
             "{sm}_regions.renamed.reort.fa",
         ),
+        # (name_no_coords, st, end)
         bed=rules.get_complete_correct_cens_bed.output,
     output:
         seq=os.path.join(

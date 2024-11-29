@@ -135,10 +135,12 @@ rule align_methyl_bam_to_asm:
 
 rule get_original_coords:
     input:
+        # (sample_chr_ctg, st, end, is-misassembled)
         bed=os.path.join(
-            config["repeatmasker"]["output_dir"],
+            config["ident_cen_ctgs"]["output_dir"],
             "bed",
-            "{sm}_complete_correct_ALR_regions.bed",
+            "interm",
+            "{sm}_complete_cens.bed",
         ),
         asm_faidx=os.path.join(
             config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
