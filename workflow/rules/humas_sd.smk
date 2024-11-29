@@ -2,11 +2,13 @@
 include: "common.smk"
 
 
+HUMAS_CENS_SPLIT_DIR = os.path.join(config["humas_sd"]["output_dir"], "seq")
+
+
 use rule extract_and_index_fa as extract_cens_for_humas_sd with:
     input:
         fa=os.path.join(
-            config["humas_sd"]["output_dir"],
-            "{sm}",
+            config["concat_asm"]["output_dir"],
             "{sm}_regions.renamed.reort.fa",
         ),
         bed=os.path.join(
@@ -34,15 +36,15 @@ use rule extract_and_index_fa as extract_cens_for_humas_sd with:
         ),
     log:
         "logs/humas_sd/extract_cens_for_humas_sd_{sm}.log",
+    params:
+        # Seqtk outputs 1-based coords which causes name issues.
+        bed=lambda wc, input: f"""<(awk -v OFS="\\t" '{{print $1, $2-1, $3}}' {input.bed})""",
+        added_cmds="",
 
 
 checkpoint split_cens_for_humas_sd:
     input:
-        fa=os.path.join(
-            config["concat_asm"]["output_dir"],
-            "{sm}",
-            "{sm}_regions.renamed.reort.fa",
-        ),
+        fa=rules.extract_cens_for_humas_sd.output.seq,
     output:
         touch(
             os.path.join(
@@ -53,7 +55,7 @@ checkpoint split_cens_for_humas_sd:
     log:
         "logs/humas_sd/split_{sm}_cens_for_humas_sd.log",
     params:
-        split_dir=config["humas_sd"]["input_dir"],
+        split_dir=HUMAS_CENS_SPLIT_DIR,
     conda:
         "../envs/tools.yaml"
     shell:
@@ -73,7 +75,12 @@ module HumAS_SD:
     snakefile:
         "Snakemake-HumAS-SD/workflow/Snakefile"
     config:
-        config["humas_sd"]
+        {
+            **config["humas_sd"],
+            "input_dir": HUMAS_CENS_SPLIT_DIR,
+            "logs_dir": "logs/humas_sd",
+            "benchmarks_dir": "benchmarks/humas_sd",
+        }
 
 
 use rule * from HumAS_SD as cens_*
@@ -83,7 +90,7 @@ use rule * from HumAS_SD as cens_*
 def humas_sd_outputs(wc):
     _ = checkpoints.split_cens_for_humas_sd.get(**wc).output
     fnames, chrs = extract_fnames_and_chr(
-        os.path.join(config["humas_sd"]["input_dir"], "{fname}.fa"),
+        os.path.join(HUMAS_CENS_SPLIT_DIR, "{fname}.fa"),
         filter_chr=str(wc.chr),
     )
     return {
@@ -108,9 +115,9 @@ checkpoint run_humas_sd:
 
 # https://stackoverflow.com/a/63040288
 def humas_sd_stv_outputs(wc):
-    _ = checkpoints.run_humas_sd.get(**wc).output
+    _ = [checkpoints.run_humas_sd.get(sm=sm, chr=wc.chr).output for sm in SAMPLE_NAMES]
     fnames, chrs = extract_fnames_and_chr(
-        os.path.join(config["humas_sd"]["input_dir"], "{fname}.fa"),
+        os.path.join(HUMAS_CENS_SPLIT_DIR, "{fname}.fa"),
         filter_chr=str(wc.chr),
     )
     return {
@@ -139,9 +146,7 @@ def humas_sd_stv_sm_outputs(wc):
         checkpoints.run_humas_sd.get(**{"sm": wc.sm, "chr": chrom}).output
         for chrom in CHROMOSOMES
     ]
-    wcs = glob_wildcards(
-        os.path.join(config["humas_sd"]["input_dir"], "{sm}_{chr}_{ctg_name}.fa")
-    )
+    wcs = glob_wildcards(os.path.join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg_name}.fa"))
     outputs = []
     for sm, chrom, ctg_name in zip(wcs.sm, wcs.chr, wcs.ctg_name):
         if sm != wc.sm:

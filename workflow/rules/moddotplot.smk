@@ -11,7 +11,7 @@ if config.get("cdr_finder"):
 if config["moddotplot"].get("input_dir"):
     INPUT_FA_DIR = config["moddotplot"]["input_dir"]
 else:
-    INPUT_FA_DIR = config["humas_sd"]["input_dir"]
+    INPUT_FA_DIR = HUMAS_CENS_SPLIT_DIR
 
 OUTPUT_MODDOTPLOT_DIR = config["moddotplot"].get("output_dir", "results/moddotplot")
 
@@ -165,7 +165,7 @@ def moddotplot_outputs(wc):
         _ = checkpoints.aggregate_format_all_stv_row.get(**wc).output
 
         fnames, chrs = extract_fnames_and_chr(
-            os.path.join(config["humas_hmmer"]["input_dir"], "{fname}.fa"),
+            os.path.join(HUMAS_CENS_SPLIT_DIR, "{fname}.fa"),
             filter_chr=wc.chr,
         )
     else:

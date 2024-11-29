@@ -35,6 +35,7 @@ concat_asm:
 
 align_asm_to_ref:
   # Output dir set to results
+  output_dir: "results/align_asm_to_ref"
   reference: "data/reference/T2T-CHM13v2.fasta.gz"
   threads: 4
   mem: 60GB
@@ -42,10 +43,9 @@ align_asm_to_ref:
 extract_ref_hor_arrays:
   output_dir: "results/ref_hor_arrays"
   # Add bp to extend edges of HOR array for alignment. In addition to default 500kbp.
-  added_bases: 500_000
+  added_bases: 1_000_000
 
 ident_cen_ctgs:
-  comb_assemblies_dir: "data/assemblies/combined"
   output_dir: "results/cens"
   ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
   ref_cens_monomeric_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
@@ -83,8 +83,6 @@ repeatmasker:
   output_dir: "results/repeatmasker"
 
 humas_sd:
-  # Dir where split cens placed.
-  input_dir: "results/humas_sd/cens"
   output_dir: "results/humas_sd"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
   threads: 24

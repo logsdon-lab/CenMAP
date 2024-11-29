@@ -54,40 +54,40 @@ if config.get("nucflag"):
     output.append(rules.nucflag_all.input)
 
 
-# if config.get("plot_hor_stv"):
+if config.get("plot_hor_stv"):
 
-#     include: "rules/plot_hor_stv.smk"
-#     include: "rules/plot_repeatmasker_sat_annot.smk"
-#     include: "rules/plot_cens_structure.smk"
+    include: "rules/plot_hor_stv.smk"
+    include: "rules/plot_repeatmasker_sat_annot.smk"
+    include: "rules/plot_cens_structure.smk"
 
-#     output.extend(
-#         [
-#             rules.plot_hor_stv_only.input,
-#             rules.plot_repeatmasker_sat_only.input,
-#             rules.plot_cens_structure_only.input,
-#         ]
-#     )
-
-
-# if config.get("moddotplot") and config.get("plot_hor_stv"):
-
-#     include: "rules/moddotplot.smk"
-
-#     output.append(rules.moddotplot_only.input)
+    output.extend(
+        [
+            rules.plot_hor_stv_only.input,
+            rules.plot_repeatmasker_sat_only.input,
+            rules.plot_cens_structure_only.input,
+        ]
+    )
 
 
-# if config.get("calculate_hor_length"):
+if config.get("moddotplot") and config.get("plot_hor_stv"):
 
-#     include: "rules/calculate_hor_length.smk"
+    include: "rules/moddotplot.smk"
 
-#     output.append(rules.get_hor_length_only.input)
+    output.append(rules.moddotplot_only.input)
 
 
-# if config.get("count_complete_cens"):
+if config.get("calculate_hor_length"):
 
-#     include: "rules/count_complete_cens.smk"
+    include: "rules/calculate_hor_length.smk"
 
-#     output.append(rules.count_complete_cens_only.input)
+    output.append(rules.get_hor_length_only.input)
+
+
+if config.get("count_complete_cens"):
+
+    include: "rules/count_complete_cens.smk"
+
+    output.append(rules.count_complete_cens_only.input)
 
 
 # if config.get("cdr_finder"):

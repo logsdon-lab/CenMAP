@@ -215,12 +215,10 @@ rule rename_reort_asm:
     output:
         fa=os.path.join(
             config["concat_asm"]["output_dir"],
-            "{sm}",
             "{sm}_regions.renamed.reort.fa",
         ),
         idx=os.path.join(
             config["concat_asm"]["output_dir"],
-            "{sm}",
             "{sm}_regions.renamed.reort.fa.fai",
         ),
     params:
@@ -323,7 +321,7 @@ rule merge_fixed_rm_out:
         ),
     shell:
         """
-        grep -P "{wildcards.chr}[:_]" {input} > {output}
+        grep -h -P "{wildcards.chr}[:_]" {input} > {output}
         """
 
 

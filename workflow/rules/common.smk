@@ -95,8 +95,6 @@ def extract_fnames_and_chr(
 
             filtered_fnames.append(fname)
             chrs.append(chr_name)
-        else:
-            print(f"Cannot find chr name in {fname}. Skipping.", file=sys.stderr)
 
     assert len(filtered_fnames) == len(
         chrs

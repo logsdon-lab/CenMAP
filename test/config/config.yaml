@@ -3,18 +3,18 @@ samples:
 
 align_asm_to_ref:
   reference: "data/reference/T2T-CHM13.fa.gz"
+  output_dir: "results/align_asm_to_ref"
   threads: 4
 
 concat_asm:
   input_dir: "test/data/assemblies"
-  output_dir: "data/assemblies/combined"
+  output_dir: "results/assemblies/combined"
 
 extract_ref_hor_arrays:
   output_dir: "results/masked"
   added_bases: 0
 
 ident_cen_ctgs:
-  comb_assemblies_dir: "data/assemblies/combined"
   output_dir: "results/cens"
   ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
   ref_cens_monomeric_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
@@ -51,11 +51,10 @@ repeatmasker:
   config_censtats_status: "config/censtats.json"
 
 humas_sd:
-  input_dir: "data/chr_cens"
   output_dir: "output/"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
   threads: 30
-  hmm_profile: "data/models/AS-HORs-hmmer3.0-170921.hmm"
+  hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
 
 plot_hor_stv:
   output_dir: "test/results/hor_stv"

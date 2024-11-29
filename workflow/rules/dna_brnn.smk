@@ -15,7 +15,7 @@ checkpoint split_fa_dnabrnn:
             )
         ),
     log:
-        "logs/split_fa_{sm}.log",
+        "logs/dna_brnn/split_fa_{sm}.log",
     params:
         split_dir=lambda wc, output: output[0],
     shell:

@@ -47,7 +47,6 @@ use rule extract_and_index_fa as get_complete_correct_cens_fa with:
     input:
         fa=os.path.join(
             config["concat_asm"]["output_dir"],
-            "{sm}",
             "{sm}_regions.renamed.reort.fa",
         ),
         bed=rules.get_complete_correct_cens_bed.output,
@@ -66,6 +65,9 @@ use rule extract_and_index_fa as get_complete_correct_cens_fa with:
         ),
     log:
         "logs/get_complete_correct_cens/get_complete_correct_cens_fa_{sm}.log",
+    params:
+        added_cmds="",
+        bed=lambda wc, input: f"""<(awk -v OFS="\\t" '{{print $1, $2-1, $3}}' {input.bed})""",
 
 
 rule get_complete_correct_cens_all:

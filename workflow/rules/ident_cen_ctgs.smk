@@ -9,7 +9,12 @@ include: "common.smk"
 # Convert rustybam stats bedfile by adjusting start and end positions.
 rule format_hor_ref_aln_cen_contigs:
     input:
-        aln_bed=os.path.join("results", f"{REF_NAME}_cens", "bed", "{sm}.bed"),
+        aln_bed=os.path.join(
+            config["align_asm_to_ref"]["output_dir"],
+            f"{REF_NAME}_cens",
+            "bed",
+            "{sm}.bed",
+        ),
     output:
         cen_regions=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],

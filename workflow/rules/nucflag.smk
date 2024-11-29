@@ -2,6 +2,9 @@ include: "common.smk"
 include: "humas_sd.smk"
 
 
+# Simplify RepeatMasker annotations
+# Convert coords from relative to absolute coords.
+# Add color specific for alpha-satellite.
 rule format_repeatmasker_to_overlay_bed:
     input:
         rm=os.path.join(
@@ -27,10 +30,8 @@ rule format_repeatmasker_to_overlay_bed:
             name=$5; start=$6; end=$7; rType=$10; rClass=$11;
 
             # Find contig coordinates
-            match(name, "^(.+):", abbr_name);
             match(name, ":(.+)-", ctg_start);
             match(name, ".*-(.+)$", ctg_end);
-            new_name=abbr_name[1];
             new_start=start+ctg_start[1];
             new_end=end+ctg_start[1];
 
@@ -65,11 +66,12 @@ rule format_repeatmasker_to_overlay_bed:
             if (new_rClass == "ALR/Alpha") {{
                 action="plot:{params.color_alr_alpha}"
             }}
-            print new_name, new_start, new_end, new_rClass, action
+            print name, new_start, new_end, new_rClass, action
         }}' {input.rm} > {output} 2> {log}
         """
 
 
+# Convert stv_row bed to overlay bed with colors based on monomer len.
 rule format_stv_to_overlay_bed:
     input:
         stv=humas_sd_stv_sm_outputs,
@@ -102,15 +104,40 @@ rule format_stv_to_overlay_bed:
         """
 
 
+# Need region bed to have cen coords in name of ctg to match with other annotation files.
+rule make_region_bed_with_cen_coords:
+    input:
+        os.path.join(
+            config["ident_cen_ctgs"]["output_dir"],
+            "bed",
+            "interm",
+            "{sm}_complete_cens.bed",
+        ),
+    output:
+        # (new_name_w_coords, st, end, og_name)
+        temp(
+            os.path.join(
+                config["ident_cen_ctgs"]["output_dir"],
+                "bed",
+                "interm",
+                "{sm}_complete_cens_w_coords.bed",
+            )
+        ),
+    conda:
+        "../envs/tools.yaml"
+    log:
+        "logs/nucflag/make_region_bed_with_cen_coords_{sm}.log",
+    shell:
+        """
+        awk -v OFS="\\t" '{{ print $1":"$2"-"$3, $2, $3, $1 }}' {input} > {output} 2> {log}
+        """
+
+
 # Create bedfile that only looks at live HOR and ignores everything else.
 # Also add ignore bed if provided.
 rule format_stv_nucflag_ignore_bed:
     input:
-        fai=os.path.join(
-            config["concat_asm"]["output_dir"],
-            "{sm}",
-            "{sm}_regions.renamed.reort.fa.fai",
-        ),
+        bed=rules.make_region_bed_with_cen_coords.output,
         stv=humas_sd_stv_sm_outputs,
         ignore_bed=(
             config["nucflag"]["ignore_regions"]
@@ -137,8 +164,8 @@ rule format_stv_nucflag_ignore_bed:
         # Subtract all other regions from annotated HORs.
         # Include annotation gaps greater than {params.bp_annot_gap_thr} bp.
         {{ bedtools subtract \
-        -a <(awk -v OFS="\\t" '{{ print $1, "1", $2 }}' {input.fai}) \
-        -b {input.stv} | \
+        -a {input.bed} \
+        -b <(cat {input.stv}) | \
         awk -v OFS="\\t" '{{
             len=$3-$2;
             if (len > {params.bp_annot_gap_thr}) {{
@@ -148,13 +175,40 @@ rule format_stv_nucflag_ignore_bed:
         """
 
 
+# Need to make temporary assembly to align to that has cen coordinates.
+# TODO: Could be avoided by adding cen coords to assembly name.
+rule make_temp_asm_w_coords:
+    input:
+        fa=os.path.join(
+            config["concat_asm"]["output_dir"], "{sm}_regions.renamed.reort.fa"
+        ),
+        bed=rules.make_region_bed_with_cen_coords.output,
+    output:
+        temp(
+            os.path.join(
+                config["concat_asm"]["output_dir"],
+                "{sm}_regions.renamed.reort.cen_coords.fa",
+            )
+        ),
+    params:
+        pattern=r"'(\S+)'",
+        replacement=lambda wc: "'{kv}'",
+    conda:
+        "../envs/tools.yaml"
+    log:
+        "logs/nucflag/format_stv_nucflag_ignore_bed_{sm}.log",
+    shell:
+        """
+        seqkit replace -p {params.pattern} -r {params.replacement} \
+        -k <(awk -v OFS="\\t" '{{print $4, $1}}' {input.bed}) {input.fa} > {output} 2> {log}
+        """
+
+
 NUCFLAG_CFG = {
     "samples": [
         {
             "name": sm,
-            "asm_fa": os.path.join(
-                config["concat_asm"]["output_dir"], sm, f"{sm}_regions.renamed.reort.fa"
-            ),
+            "asm_fa": rules.make_temp_asm_w_coords.output,
             # Switch between fofn dir or read dir + ext.
             **(
                 {
@@ -169,12 +223,7 @@ NUCFLAG_CFG = {
                 }
             ),
             "config": config["nucflag"]["config_nucflag"],
-            "region_bed": os.path.join(
-                config["ident_cen_ctgs"]["output_dir"],
-                "bed",
-                "interm",
-                "{sm}_complete_cens.bed",
-            ),
+            "region_bed": rules.make_region_bed_with_cen_coords.output,
             # # Ignore regions.
             "ignore_bed": str(rules.format_stv_nucflag_ignore_bed.output),
             "overlay_beds": [
