@@ -54,13 +54,9 @@ dna_brnn:
   output_dir: "results/dna_brnn"
   # https://github.com/lh3/dna-nn/tree/master/models
   model: "data/models/attcc-alpha.knm"
-  # File with dna-brnn run on t2t-chm13 ref. Avoids running rule to generate.
-  # Optional.
-  ref_alr_file: "data/annotations/chm13_cens.trimmed.bed"
   threads: 12
   mem: 30GB
   thr_file: "config/dnabrnn_thresholds.json"
-  full_alr_thr_file: "config/dnabrnn_full_alr_region_thresholds.json"
 
 nucflag:
   hifi_reads_fofn_dir: "data/hifi"
@@ -85,7 +81,7 @@ repeatmasker:
 humas_sd:
   output_dir: "results/humas_sd"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
-  threads: 24
+  threads: 12
   mem: 60GB
   hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
 

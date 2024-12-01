@@ -23,12 +23,8 @@ dna_brnn:
   output_dir: "results/dna_brnn"
   # https://github.com/lh3/dna-nn/tree/master/models
   model: "data/models/attcc-alpha.knm"
-  # File with dna-brnn run on t2t-chm13 ref. Avoids running rule to generate.
-  # Optional.
-  ref_alr_file: "data/annotations/chm13_cens.trimmed.bed"
   threads: 12
   thr_file: "config/dnabrnn_thresholds.json"
-  full_alr_thr_file: "config/dnabrnn_full_alr_region_thresholds.json"
 
 nucflag:
   hifi_reads_dir: "test/data/raw_data"

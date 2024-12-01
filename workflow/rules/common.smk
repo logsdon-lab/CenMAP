@@ -13,19 +13,6 @@ include: "constants.smk"
 
 # TODO: Migrate to YAML and use Snakemake built-in config validators.
 try:
-    with open(config["dna_brnn"]["full_alr_thr_file"]) as fh:
-        DNA_BRNN_FULL_ALR_THRS = json.load(fh)
-        DNA_BRNN_DEF_FULL_ALR_THR = DNA_BRNN_FULL_ALR_THRS.get(
-            "default", DEF_DNA_BRNN_FULL_ALR_THR
-        )
-except (KeyError, FileNotFoundError):
-    DNA_BRNN_FULL_ALR_THRS = {c: DEF_DNA_BRNN_FULL_ALR_THR for c in CHROMOSOMES}
-except json.decoder.JSONDecodeError as json_err:
-    raise Exception(
-        f"Invalid JSON configuration for {config['dna_brnn']['full_alr_thr_file']}: {json_err}"
-    )
-
-try:
     with open(config["repeatmasker"]["config_censtats_status"]) as fh:
         CENSTATS_STATUS_CFG = json.load(fh)
         # Edge length to evaluate
@@ -51,10 +38,6 @@ except json.decoder.JSONDecodeError as json_err:
     raise Exception(
         f"Invalid JSON configuration for {config['dna_brnn']['config_censtats_status_status']}: {json_err}"
     )
-
-
-def dnabrnn_alr_region_threshold(wc) -> int:
-    return DNA_BRNN_FULL_ALR_THRS.get(str(wc.chr), DNA_BRNN_DEF_FULL_ALR_THR)
 
 
 def censtats_status_edge_len(wc) -> int:

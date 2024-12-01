@@ -123,7 +123,7 @@ rule map_collapse_cens:
 # Extract centromeric contigs.
 use rule extract_and_index_fa as extract_cens_regions with:
     input:
-        bed=rules.map_collapse_cens.output,
+        bed=rules.map_collapse_cens.output.cens_key,
         fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
     output:
         seq=temp(

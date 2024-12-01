@@ -25,10 +25,8 @@ ident_cen_ctgs:
 dna_brnn:
   output_dir: "results/dna_brnn"
   model: "data/models/attcc-alpha.knm"
-  ref_alr_file: "data/annotations/chm13_cens.trimmed.bed"
   threads: 4
   thr_file: "config/dnabrnn_thresholds.json"
-  full_alr_thr_file: "config/dnabrnn_full_alr_region_thresholds.json"
 
 new_cens:
   output_dir: "results/cens_new"

@@ -72,7 +72,9 @@ def cen_status(wc):
         if wc.sm != sm:
             continue
         outputs.extend(
-            expand(rules.check_cens_status.output, sm=sm, chr=chrom, ctg_name=ctg_name)
+            expand(
+                rules.check_cens_status.output, zip, sm=sm, chr=chrom, ctg_name=ctg_name
+            )
         )
     return outputs
 

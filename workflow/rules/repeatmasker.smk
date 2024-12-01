@@ -3,39 +3,24 @@ include: "common.smk"
 include: "utils.smk"
 
 
-wildcard_constraints:
-    chr="|".join(CHROMOSOMES),
-
-
 checkpoint split_cens_for_rm:
     input:
-        fa=lambda wc: expand(
-            os.path.join(
-                config["ident_cen_ctgs"]["output_dir"],
-                "seq",
-                "interm",
-                "{chr}_{sm}_contigs.ALR.fa",
-            ),
-            sm=wc.sm,
-            chr=CHROMOSOMES,
+        fa=os.path.join(
+            config["ident_cen_ctgs"]["output_dir"],
+            "seq",
+            "interm",
+            "{sm}_contigs.ALR.fa",
         ),
         # [old_name, new_name, coords, sm, chr, is_reversed]
-        rename_key=lambda wc: expand(
-            os.path.join(
-                config["ident_cen_ctgs"]["output_dir"],
-                "bed",
-                "interm",
-                "{sm}_renamed_cens.tsv",
-            ),
-            sm=wc.sm,
+        rename_key=os.path.join(
+            config["ident_cen_ctgs"]["output_dir"],
+            "bed",
+            "interm",
+            "{sm}_renamed_cens.tsv",
         ),
     output:
-        temp(
-            directory(
-                os.path.join(
-                    config["repeatmasker"]["output_dir"], "seq", "interm", "{sm}"
-                )
-            )
+        directory(
+            os.path.join(config["repeatmasker"]["output_dir"], "seq", "interm", "{sm}")
         ),
     log:
         "logs/humas_sd/split_{sm}_cens_for_humas_sd.log",
@@ -63,7 +48,7 @@ checkpoint split_cens_for_rm:
             }} else {{
                 print $0 > filename
             }}
-        }}' <(awk -v OFS="\\t" '$4=="{wildcards.sm}"' {input.rename_key}) <(cat {input.fa}) 2> {log}
+        }}' {input.rename_key} {input.fa} 2> {log}
         """
 
 
@@ -178,7 +163,7 @@ rule reformat_repeatmasker_output:
 def refmt_rm_output(wc):
     _ = checkpoints.split_cens_for_rm.get(**wc).output
     fa_glob_pattern = os.path.join(
-        config["repeatmasker"]["output_dir"], "seq", "interm", str(wc.sm), "{fname}.fa"
+        expand(rules.split_cens_for_rm.output, sm=wc.sm)[0], "{fname}.fa"
     )
     fnames, _ = extract_fnames_and_chr(fa_glob_pattern)
     assert (
@@ -189,7 +174,9 @@ def refmt_rm_output(wc):
 
 rule format_repeatmasker_output:
     input:
-        refmt_rm_output,
+        rm_out=refmt_rm_output,
+        # Force snakemake to not evaluate chkpt function until all dirs created.
+        rm_fa_dirs=expand(rules.split_cens_for_rm.output, sm=SAMPLE_NAMES),
     output:
         temp(
             os.path.join(
@@ -203,7 +190,7 @@ rule format_repeatmasker_output:
         "../envs/tools.yaml"
     shell:
         """
-        awk -v OFS="\\t" '{{$1=$1; print}}' {input} > {output}
+        awk -v OFS="\\t" '{{$1=$1; print}}' {input.rm_out} > {output}
         """
 
 

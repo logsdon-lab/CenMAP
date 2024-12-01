@@ -1,4 +1,7 @@
 {
+    "arr_len_thr": {
+        "default": 30000
+    },
     "repeat_len_thr": {
         "chr9": [[9000, 10000], [1000000, null]],
         "chr10": [[2000, null]]

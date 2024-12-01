@@ -12,6 +12,7 @@ CHRS = [*[f"chr{i}" for i in range(22, 0, -1)], "chrX", "chrY"]
 CHRS_ASAT_SEP = {"chr3", "chr4", "chr5"}
 CHRS_13_21 = {"chr13", "chr21"}
 ORTS = ["fwd", "rev"]
+DEF_ARR_LEN_THR = 30_000
 DEF_MERGE_REPEAT_DST_THR = 100_000
 DEF_REPEAT_LEN_THR = [1_000, None]
 DEF_REPEAT_TYPE = 2
@@ -102,6 +103,9 @@ def main():
 
     selected_chr = args.chr
     selected_repeat_type = args.repeat_type
+    arr_len_thresholds = thresholds.get("arr_len_thr", {})
+    def_arr_len_threshold = arr_len_thresholds.get("default", DEF_ARR_LEN_THR)
+
     repeat_len_thresholds = thresholds.get("repeat_len_thr", {})
     default_repeat_len_threshold = tuple(
         thresholds.get("default_repeat_len_thr", DEF_REPEAT_LEN_THR)
@@ -263,6 +267,32 @@ def main():
             df_ctg_compressed_repeats = df_ctg_compressed_repeats.filter(
                 pl.col("rlen") == pl.col("rlen").max()
             )
+        # Aggregate and bedminmax all.
+        # Select cols and calculate length.
+        # Add 500 kbp on both ends.
+        # Take only repeats greater than some value.
+        # Take abs value.
+        df_ctg_compressed_repeats = (
+            df_ctg_compressed_repeats.group_by(["ctg", "rtype"])
+            .agg(pl.col("start").min(), pl.col("end").max())
+            .sort(by="start")
+            .with_row_index()
+            .with_columns(
+                start=pl.when(pl.col("index") == 0)
+                .then(pl.col("start") - 500_000)
+                .otherwise(pl.col("start"))
+                .clip(0, pl.col("start").max()),
+                end=pl.when(pl.col("index") == df_ctg_compressed_repeats.shape[0])
+                .then(pl.col("end") + 500_000)
+                .otherwise(pl.col("end")),
+                rlen=pl.col("end") - pl.col("start"),
+            )
+            .filter(
+                pl.col("rlen")
+                > arr_len_thresholds.get(selected_chr, def_arr_len_threshold)
+            )
+            .select("ctg", "start", "end", "rtype", "rlen")
+        )
         dfs.append(df_ctg_compressed_repeats)
 
     if dfs:
