@@ -66,14 +66,14 @@ rule run_dna_brnn:
         model=config["dna_brnn"]["model"],
         seqs=os.path.join(
             rules.split_fa_dnabrnn.output[0],
-            "{sm}_{chr}_{fname}.fa",
+            "{fname}.fa",
         ),
     output:
         repeat_regions=os.path.join(
             config["dna_brnn"]["output_dir"],
             "bed",
-            "{chr}",
-            "{sm}_{chr}_{fname}_centromeric_regions.bed",
+            "{sm}",
+            "{fname}.bed",
         ),
     params:
         bin_dnabrnn=lambda wc, input: (
@@ -83,9 +83,9 @@ rule run_dna_brnn:
     resources:
         mem=config["dna_brnn"].get("mem", "4GB"),
     log:
-        "logs/dna_brnn/dna_brnn_{sm}_{chr}_{fname}.log",
+        "logs/dna_brnn/dna_brnn_{sm}_{fname}.log",
     benchmark:
-        "benchmarks/dna_brnn/dna_brnn_{sm}_{chr}_{fname}.tsv"
+        "benchmarks/dna_brnn/dna_brnn_{sm}_{fname}.tsv"
     singularity:
         "docker://logsdonlab/dna-nn:latest"
     shell:
@@ -114,14 +114,15 @@ rule filter_dnabrnn_sample_cens_regions:
             os.path.join(
                 config["dna_brnn"]["output_dir"],
                 "bed",
-                "{chr}",
-                "{sm}_{chr}_{fname}.ALR.bed",
+                "{sm}",
+                "{fname}_filtered.bed",
             )
         ),
     params:
+        chrom_name=lambda wc: get_chrom_name(wc.fname),
         repeat_type_filter=2,
     log:
-        "logs/dna_brnn/filter_dnabrnn_{sm}_{chr}_{fname}_cens_regions.log",
+        "logs/dna_brnn/filter_dnabrnn_{sm}_{fname}_cens_regions.log",
     conda:
         "../envs/py.yaml"
     shell:
@@ -130,26 +131,19 @@ rule filter_dnabrnn_sample_cens_regions:
         -i {input.repeats} \
         -o {output} \
         -t {input.thresholds} \
-        --chr {wildcards.chr} \
+        --chr {params.chrom_name} \
         --repeat_type {params.repeat_type_filter} 2> {log}
         """
 
 
 def dna_brnn_output(wc):
     outdir = checkpoints.split_fa_dnabrnn.get(sm=wc.sm).output[0]
-    sms_all, fnames_all, chrs_all = [], [], []
-    wcs = glob_wildcards(os.path.join(outdir, "{sm}_{chr}_{fname}.fa"))
-    for sm, chrom, fname in zip(wcs.sm, wcs.chr, wcs.fname):
-        sms_all.append(sm)
-        chrs_all.append(chrom)
-        fnames_all.append(fname)
+    fnames, _ = extract_fnames_and_chr(os.path.join(outdir, "{fname}.fa"))
 
     return expand(
         rules.filter_dnabrnn_sample_cens_regions.output,
-        zip,
-        sm=sms_all,
-        chr=chrs_all,
-        fname=fnames_all,
+        sm=wc.sm,
+        fname=fnames,
     )
 
 
@@ -166,7 +160,7 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         os.path.join(
             config["dna_brnn"]["output_dir"],
             "bed",
-            "{sm}_contigs.ALR.bed",
+            "{sm}_all.bed",
         ),
     log:
         "logs/dna_brnn/aggregate_dnabrnn_alr_regions_by_{sm}.log",
@@ -176,6 +170,31 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         """
         cat {input.sample_cens} > {output} 2> {log}
         """
+
+
+use rule extract_and_index_fa as extract_alr_region_sample_by_chr with:
+    input:
+        fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
+        bed=rules.aggregate_dnabrnn_alr_regions_by_chr.output,
+    output:
+        seq=temp(
+            os.path.join(
+                config["ident_cen_ctgs"]["output_dir"],
+                "seq",
+                "interm",
+                "{sm}_contigs.ALR.fa",
+            )
+        ),
+        idx=temp(
+            os.path.join(
+                config["ident_cen_ctgs"]["output_dir"],
+                "seq",
+                "interm",
+                "{sm}_contigs.ALR.fa.fai",
+            )
+        ),
+    log:
+        "logs/extract_new_cens_ctgs/extract_alr_region_{sm}.log",
 
 
 rule dna_brnn_all:

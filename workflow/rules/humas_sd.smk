@@ -9,7 +9,7 @@ use rule extract_and_index_fa as extract_cens_for_humas_sd with:
     input:
         fa=os.path.join(
             config["concat_asm"]["output_dir"],
-            "{sm}_regions.renamed.reort.fa",
+            "{sm}-asm-renamed-reort.fa",
         ),
         bed=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],

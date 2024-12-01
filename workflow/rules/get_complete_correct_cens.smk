@@ -55,7 +55,7 @@ use rule extract_and_index_fa as get_complete_correct_cens_fa with:
         # fasta with no_coords
         fa=os.path.join(
             config["concat_asm"]["output_dir"],
-            "{sm}_regions.renamed.reort.fa",
+            "{sm}-asm-renamed-reort.fa",
         ),
         # (name_no_coords, st, end)
         bed=rules.get_complete_correct_cens_bed.output,

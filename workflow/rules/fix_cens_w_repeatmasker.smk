@@ -11,7 +11,7 @@ rule check_cens_status:
             config["repeatmasker"]["output_dir"],
             "repeats",
             "{sm}",
-            "{sm}_{chr}_{ctg_name}_correct_ALR_regions.fa.reformatted.out",
+            "{fname}_correct_ALR_regions.fa.reformatted.out",
         ),
         rm_ref=os.path.join(
             config["repeatmasker"]["output_dir"],
@@ -25,18 +25,22 @@ rule check_cens_status:
                 config["repeatmasker"]["output_dir"],
                 "status",
                 "{sm}",
-                "{sm}_{chr}_{ctg_name}_cens_status.tsv",
+                "{fname}_cens_status.tsv",
             )
         ),
     params:
-        edge_len=censtats_status_edge_len,
-        edge_perc_alr_thr=censtats_status_edge_perc_alr_thr,
+        edge_len=lambda wc: censtats_status_edge_len(get_chrom_name(wc.fname)),
+        edge_perc_alr_thr=lambda wc: censtats_status_edge_perc_alr_thr(
+            get_chrom_name(wc.fname)
+        ),
         dst_perc_thr=0.3,
-        max_alr_len_thr=censtats_status_max_alr_len_thr,
+        max_alr_len_thr=lambda wc: censtats_status_max_alr_len_thr(
+            get_chrom_name(wc.fname)
+        ),
         # Only allow mapping changes to 13 and 21 if chr13 or chr21.
         restrict_13_21="--restrict_13_21",
     log:
-        "logs/fix_cens_w_repeatmasker/check_cens_status_{sm}_{chr}_{ctg_name}.log",
+        "logs/fix_cens_w_repeatmasker/check_cens_status_{sm}_{fname}.log",
     conda:
         "../envs/py.yaml"
     shell:
@@ -55,28 +59,20 @@ rule check_cens_status:
 
 def cen_status(wc):
     _ = checkpoints.split_cens_for_rm.get(**wc).output
-    fa_glob_pattern = os.path.join(
-        config["repeatmasker"]["output_dir"],
-        "seq",
-        "interm",
-        str(wc.sm),
-        "{sm}_{chr}_{ctg_name}.fa",
-    )
-    wcs = glob_wildcards(fa_glob_pattern)
-
-    assert (
-        len(wcs.sm) != 0
-    ), f"No fasta files found for repeatmasker in {fa_glob_pattern}"
-    outputs = []
-    for sm, chrom, ctg_name in zip(wcs.sm, wcs.chr, wcs.ctg_name):
-        if wc.sm != sm:
-            continue
-        outputs.extend(
-            expand(
-                rules.check_cens_status.output, zip, sm=sm, chr=chrom, ctg_name=ctg_name
-            )
+    fnames, _ = extract_fnames_and_chr(
+        os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "seq",
+            "interm",
+            str(wc.sm),
+            "{fname}.fa",
         )
-    return outputs
+    )
+    assert (
+        len(fnames) != 0
+    ), f"No fasta files found for repeatmasker in {fa_glob_pattern}"
+
+    return expand(rules.check_cens_status.output, sm=wc.sm, fname=fnames)
 
 
 # Generate a key for checking partial and reversed contigs.
@@ -225,11 +221,11 @@ rule rename_reort_asm:
     output:
         fa=os.path.join(
             config["concat_asm"]["output_dir"],
-            "{sm}_regions.renamed.reort.fa",
+            "{sm}-asm-renamed-reort.fa",
         ),
         idx=os.path.join(
             config["concat_asm"]["output_dir"],
-            "{sm}_regions.renamed.reort.fa.fai",
+            "{sm}-asm-renamed-reort.fa.fai",
         ),
     params:
         pattern=r"'(\S+)'",

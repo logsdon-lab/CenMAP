@@ -155,9 +155,7 @@ rule format_stv_nucflag_ignore_bed:
 # TODO: Could be avoided by adding cen coords to assembly name.
 rule make_temp_asm_w_coords:
     input:
-        fa=os.path.join(
-            config["concat_asm"]["output_dir"], "{sm}_regions.renamed.reort.fa"
-        ),
+        fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-renamed-reort.fa"),
         bed=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
@@ -181,7 +179,8 @@ rule make_temp_asm_w_coords:
     shell:
         """
         seqkit replace -p {params.pattern} -r {params.replacement} \
-        -k <(awk -v OFS="\\t" '{{print $5, $1}}' {input.bed}) {input.fa} > {output} 2> {log}
+        -k <(awk -v OFS="\\t" '{{split($1, split_name, ":"); print split_name[1], $1}}' {input.bed}) \
+        {input.fa} > {output} 2> {log}
         """
 
 

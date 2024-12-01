@@ -40,22 +40,27 @@ except json.decoder.JSONDecodeError as json_err:
     )
 
 
-def censtats_status_edge_len(wc) -> int:
+def censtats_status_edge_len(chrom: str) -> int:
     return CENSTATS_STATUS_FULL_EDGE_LEN_THR.get(
-        str(wc.chr), DEF_CENSTATS_STATUS_EDGE_LEN_THR
+        chrom, DEF_CENSTATS_STATUS_EDGE_LEN_THR
     )
 
 
-def censtats_status_edge_perc_alr_thr(wc) -> int:
+def censtats_status_edge_perc_alr_thr(chrom: str) -> int:
     return CENSTATS_STATUS_FULL_EDGE_PERC_ALR_THR.get(
-        str(wc.chr), DEF_CENSTATS_STATUS_EDGE_PERC_ALR_THR
+        chrom, DEF_CENSTATS_STATUS_EDGE_PERC_ALR_THR
     )
 
 
-def censtats_status_max_alr_len_thr(wc) -> int:
+def censtats_status_max_alr_len_thr(chrom: str) -> int:
     return CENSTATS_STATUS_FULL_MAX_ALR_LEN_THR.get(
-        str(wc.chr), DEF_CENSTATS_STATUS_MAX_ALR_LEN_THR
+        chrom, DEF_CENSTATS_STATUS_MAX_ALR_LEN_THR
     )
+
+
+def get_chrom_name(name: str) -> str | None:
+    if mtch_chr_name := re.search(RGX_CHR, name):
+        return mtch_chr_name.group()
 
 
 def extract_fnames_and_chr(
@@ -65,7 +70,7 @@ def extract_fnames_and_chr(
     filtered_fnames, chrs = [], []
     for fname in fnames:
         if mtch_chr_name := re.search(RGX_CHR, fname):
-            chr_name = mtch_chr_name.group().strip("_")
+            chr_name = mtch_chr_name.group()
 
             if not filter_chr:
                 filtered_fnames.append(fname)
