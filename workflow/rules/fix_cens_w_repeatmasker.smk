@@ -53,7 +53,10 @@ rule check_cens_status:
 
 
 def cen_status(wc):
-    _ = checkpoints.split_cens_for_rm.get(**wc).output
+    try:
+        _ = checkpoints.split_cens_for_rm.get(**wc).output
+    except AttributeError:
+        pass
     fnames, _ = extract_fnames_and_chr(
         os.path.join(
             config["repeatmasker"]["output_dir"],
@@ -76,7 +79,13 @@ rule join_cen_status_and_og_status:
     input:
         status=cen_status,
         rename_key=lambda wc: expand(
-            rules.map_collapse_cens.output.renamed_cens_key, sm=wc.sm
+            os.path.join(
+                config["ident_cen_ctgs"]["output_dir"],
+                "bed",
+                "interm",
+                "{sm}_renamed_cens.tsv",
+            ),
+            sm=wc.sm,
         ),
     output:
         all_statuses=temp(
@@ -107,12 +116,13 @@ rule join_cen_status_and_og_status:
         """
 
 
+# TODO: Collapse next two awk rules into python script. Too complicated.
 # Create a final rename key for assembly.
 rule get_final_rename_key:
     input:
         statuses=rules.join_cen_status_and_og_status.output,
     output:
-        # (original_name, new_name, ort, is_partial, st, end)
+        # (original_name, new_name, ort, is_partial, st, end, new_name_no_ort)
         temp(
             os.path.join(
                 config["repeatmasker"]["output_dir"],
@@ -127,6 +137,7 @@ rule get_final_rename_key:
     shell:
         """
         {{ awk -v OFS="\\t" '{{
+            new_ctg_name_no_ort=$1;
             new_ctg_name=$1;
             og_ctg_name=($6 == "") ? new_ctg_name : $6;
             is_partial=$2;
@@ -141,7 +152,7 @@ rule get_final_rename_key:
             if (cs_ort == "rev") {{
                 gsub("chr", "rc-chr", new_ctg_name)
             }}
-            print og_ctg_name,new_ctg_name,cs_ort,is_partial,st,end
+            print og_ctg_name,new_ctg_name,cs_ort,is_partial,st,end, new_ctg_name_no_ort
         }}' {input.statuses} | \
         sort -k1 ;}} > {output} 2> {log}
         """
@@ -190,12 +201,13 @@ rule make_complete_cens_bed:
             ctg_len=$2
             cen_st=$9
             cen_end=$10
+            new_name_no_ort=$11
             if ($7 == "rev") {{
-                new_cen_st=ctg_len-cen_end
-                new_cen_end=ctg_len-cen_st
+                new_cen_st=ctg_len-cen_end + 1
+                new_cen_end=ctg_len-cen_st + 1
                 cen_st=new_cen_st
                 cen_end=new_cen_end
-                print old_name, new_name, $7, ctg_len >> "{output.rm_rename_key}"
+                print new_name_no_ort, new_name, $7, ctg_len >> "{output.rm_rename_key}"
             }}
             print new_name, cen_st, cen_end, is_partial
             print new_name":"cen_st"-"cen_end, cen_st, cen_end, is_partial >> "{output.cen_bed_w_coords}"
