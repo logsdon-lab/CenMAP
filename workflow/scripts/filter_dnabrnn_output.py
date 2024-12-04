@@ -282,7 +282,7 @@ def main():
                 .then(pl.col("start") - 500_000)
                 .otherwise(pl.col("start"))
                 .clip(0, pl.col("start").max()),
-                end=pl.when(pl.col("index") == df_ctg_compressed_repeats.shape[0])
+                end=pl.when(pl.col("index") == pl.col("index").max())
                 .then(pl.col("end") + 500_000)
                 .otherwise(pl.col("end")),
                 rlen=pl.col("end") - pl.col("start"),
