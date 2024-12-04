@@ -70,6 +70,8 @@ nucflag:
   mem_nucflag: 50GB
   mem_aln: 50GB
   samtools_view_flag: 2308
+  # asat or live_asat
+  ignore_type: "asat"
 
 repeatmasker:
   ref_repeatmasker_chrY_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out

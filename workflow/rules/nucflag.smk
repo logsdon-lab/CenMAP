@@ -104,6 +104,37 @@ rule format_stv_to_overlay_bed:
         """
 
 
+# Create bedfile that only looks at regions annotated as ALR/Alpha and ignores everything else.
+# Also add ignore bed if provided.
+rule format_rm_nucflag_ignore_bed:
+    input:
+        script="workflow/scripts/simplify_rm_coords.py",
+        bed=rules.format_repeatmasker_to_overlay_bed.output,
+        ignore_bed=(
+            config["nucflag"]["ignore_regions"]
+            if config["nucflag"].get("ignore_regions")
+            else []
+        ),
+    output:
+        os.path.join(
+            config["nucflag"]["output_dir"],
+            "{sm}_correct_ALR_regions.rm.simple.bed",
+        ),
+    params:
+        # Concatenate ignore bed.
+        ignore_bed=lambda wc, input: f"| cat - {input.ignore_bed}"
+        if input.ignore_bed
+        else "",
+    conda:
+        "../envs/py.yaml"
+    log:
+        "logs/nucflag/simplify_rm_overlay_bed_{sm}.log",
+    shell:
+        """
+        python {input.script} -i {input.bed} {params.ignore_bed} > {output} 2> {log}
+        """
+
+
 # Create bedfile that only looks at live HOR and ignores everything else.
 # Also add ignore bed if provided.
 rule format_stv_nucflag_ignore_bed:
@@ -178,11 +209,28 @@ rule make_temp_asm_w_coords:
         "logs/nucflag/format_stv_nucflag_ignore_bed_{sm}.log",
     shell:
         """
-        seqkit replace -p {params.pattern} -r {params.replacement} \
+        seqkit replace -p {params.pattern} -r {params.replacement} --keep-key \
         -k <(awk -v OFS="\\t" '{{split($1, split_name, ":"); print split_name[1], $1}}' {input.bed}) \
         {input.fa} > {output} 2> {log}
         """
 
+
+IGNORE_TYPE = config["nucflag"].get("ignore_type")
+if IGNORE_TYPE == "asat":
+    ignore_regions = str(rules.format_rm_nucflag_ignore_bed.output)
+    overlay_beds = [str(rules.format_repeatmasker_to_overlay_bed.output)]
+elif IGNORE_TYPE == "live_asat":
+    ignore_regions = [
+        str(rules.format_stv_nucflag_ignore_bed.output),
+        str(rules.format_stv_to_overlay_bed.output),
+    ]
+else:
+    print(
+        "No ignore type provided. Restricting called misassemblies to asat.",
+        file=sys.stderr,
+    )
+    ignore_regions = str(rules.format_rm_nucflag_ignore_bed.output)
+    overlay_beds = [str(rules.format_repeatmasker_to_overlay_bed.output)]
 
 NUCFLAG_CFG = {
     "samples": [
@@ -209,13 +257,9 @@ NUCFLAG_CFG = {
                 "interm",
                 "{sm}_complete_cens_w_coords.bed",
             ),
-            # # Ignore regions.
-            "ignore_bed": str(rules.format_stv_nucflag_ignore_bed.output),
-            "overlay_beds": [
-                # Original repeatmasker options
-                str(rules.format_repeatmasker_to_overlay_bed.output),
-                str(rules.format_stv_to_overlay_bed.output),
-            ],
+            # Ignore regions.
+            "ignore_bed": ignore_regions,
+            "overlay_beds": overlay_beds,
         }
         for sm in SAMPLE_NAMES
     ],
@@ -225,7 +269,9 @@ NUCFLAG_CFG = {
 
 module NucFlag:
     snakefile:
-        github("logsdon-lab/Snakemake-NucFlag", path="workflow/Snakefile", tag="v0.2.2")
+        github(
+            "logsdon-lab/Snakemake-NucFlag", path="workflow/Snakefile", branch="main"
+        )
     config:
         NUCFLAG_CFG
 
