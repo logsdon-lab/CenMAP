@@ -90,7 +90,3 @@ wildcard_constraints:
     chr="|".join(CHROMOSOMES),
     sm="|".join(SAMPLE_NAMES),
     hap="|".join(HAPLOTYPE),
-
-
-# # No fnames with / in them which could result in recursive fnames.
-# fname=r"^[^/]+$"

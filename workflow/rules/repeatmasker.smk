@@ -63,18 +63,22 @@ rule rename_for_repeatmasker:
         original_fa_idx=temp(
             os.path.join(rules.split_cens_for_rm.output[0], "{fname}.fa.fai"),
         ),
+        # Use different dir to avoid greedy wildcard recursively running rule.
+        # TODO: rules.split_cens_for_rm.output[0]
         renamed_fa=temp(
             os.path.join(
-                rules.split_cens_for_rm.output[0],
-                "renamed",
-                "{fname}_correct_ALR_regions.renamed.fa",
+                config["repeatmasker"]["output_dir"],
+                "seq",
+                "{sm}_renamed",
+                "{fname}.fa",
             )
         ),
         renamed_fa_idx=temp(
             os.path.join(
-                rules.split_cens_for_rm.output[0],
-                "renamed",
-                "{fname}_correct_ALR_regions.renamed.fa.fai",
+                config["repeatmasker"]["output_dir"],
+                "seq",
+                "{sm}_renamed",
+                "{fname}.fa.fai",
             )
         ),
     params:
@@ -103,8 +107,8 @@ rule run_repeatmasker:
             os.path.join(
                 config["repeatmasker"]["output_dir"],
                 "repeats",
-                "{sm}",
-                "{fname}_correct_ALR_regions.renamed.fa.out",
+                "{sm}_renamed",
+                "{fname}.fa.out",
             )
         ),
     threads: config["repeatmasker"]["threads"]
@@ -147,7 +151,7 @@ rule reformat_repeatmasker_output:
             config["repeatmasker"]["output_dir"],
             "repeats",
             "{sm}",
-            "{fname}_correct_ALR_regions.fa.reformatted.out",
+            "{fname}.fa.out",
         ),
     log:
         "logs/repeatmasker/reformat_repeatmasker_output_{sm}_{fname}.log",

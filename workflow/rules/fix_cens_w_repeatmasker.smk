@@ -8,10 +8,7 @@ include: "utils.smk"
 rule check_cens_status:
     input:
         rm_out=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "{sm}",
-            "{fname}_correct_ALR_regions.fa.reformatted.out",
+            config["repeatmasker"]["output_dir"], "repeats", "{sm}", "{fname}.fa.out"
         ),
         rm_ref=os.path.join(
             config["repeatmasker"]["output_dir"],
@@ -20,13 +17,11 @@ rule check_cens_status:
             "ref_ALR_regions.fa.out",
         ),
     output:
-        cens_status=temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "status",
-                "{sm}",
-                "{fname}_cens_status.tsv",
-            )
+        cens_status=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "status",
+            "{sm}",
+            "{fname}_cens_status.tsv",
         ),
     params:
         edge_len=lambda wc: censtats_status_edge_len(get_chrom_name(wc.fname)),
@@ -103,7 +98,7 @@ rule join_cen_status_and_og_status:
         """
         join \
         -1 1 -2 1 \
-        -a 1 -a 2 \
+        -a 1 \
         -o {params.output_format} \
         <(awk -v OFS="\\t" '{{ split($1, split_name, ":"); print split_name[1],$3,$4,split_name[2]}}' {input.status} | \
             sort -k 1) \
@@ -144,7 +139,7 @@ rule get_final_rename_key:
             }}
             # Rename if reversed.
             if (cs_ort == "rev") {{
-                new_ctg_name=gsub("chr", "rc-chr", new_ctg_name)
+                gsub("chr", "rc-chr", new_ctg_name)
             }}
             print og_ctg_name,new_ctg_name,cs_ort,is_partial,st,end
         }}' {input.statuses} | \
@@ -189,15 +184,17 @@ rule make_complete_cens_bed:
         """
         {{ join -1 1 -2 1 <(sort -k1 {input.faidx}) {input.final_rename_key} | \
         awk -v OFS="\\t" '{{
+            old_name=$1
             new_name=$6
             is_partial=$8
             ctg_len=$2
             cen_st=$9
             cen_end=$10
             if ($7 == "rev") {{
-                cen_st=ctg_len-cen_end
-                cen_end=ctg_len-cen_st
-                old_name=gsub("rc-", "", new_name)
+                new_cen_st=ctg_len-cen_end
+                new_cen_end=ctg_len-cen_st
+                cen_st=new_cen_st
+                cen_end=new_cen_end
                 print old_name, new_name, $7, ctg_len >> "{output.rm_rename_key}"
             }}
             print new_name, cen_st, cen_end, is_partial

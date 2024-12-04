@@ -114,8 +114,8 @@ rule filter_dnabrnn_sample_cens_regions:
             os.path.join(
                 config["dna_brnn"]["output_dir"],
                 "bed",
-                "{sm}",
-                "{fname}_filtered.bed",
+                "{sm}_filtered",
+                "{fname}.bed",
             )
         ),
     params:
