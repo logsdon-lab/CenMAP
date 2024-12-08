@@ -3,6 +3,7 @@ software-deployment-method:
 executor: lsf
 default-resources:
   mem: 8
+  mem_mb: 8000
   # Specific for Logsdon Lab
   lsf_queue: epistasis_long
   lsf_project: default

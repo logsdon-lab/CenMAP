@@ -1,5 +1,6 @@
 
 include: "common.smk"
+include: "utils.smk"
 
 
 HUMAS_CENS_SPLIT_DIR = os.path.join(config["humas_sd"]["output_dir"], "seq")

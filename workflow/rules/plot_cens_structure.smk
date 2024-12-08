@@ -1,17 +1,15 @@
 
 include: "common.smk"
-include: "plot_hor_stv.smk"
-
-
-if config.get("cdr_finder"):
-
-    include: "cdr_finder.smk"
 
 
 rule filter_annotations_cens_structure:
     input:
         all_cdr_bed=lambda wc: (
-            rules.merge_cdr_beds.output.reorient_cdr_output
+            os.path.join(
+                config["cdr_finder"]["output_dir"],
+                "bed",
+                "all_cdrs.bed",
+            )
             if config.get("cdr_finder")
             else []
         ),

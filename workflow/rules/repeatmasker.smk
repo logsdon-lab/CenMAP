@@ -182,14 +182,12 @@ rule format_repeatmasker_output:
         # Force snakemake to not evaluate chkpt function until all dirs created.
         rm_fa_dirs=expand(rules.split_cens_for_rm.output, sm=SAMPLE_NAMES),
     output:
-        temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "repeats",
-                "all",
-                "{sm}_cens.fa.out",
-            )
-        ),
+        os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "repeats",
+            "all",
+            "{sm}_cens.fa.out",
+        )
     conda:
         "../envs/tools.yaml"
     shell:

@@ -1,11 +1,5 @@
 
 include: "common.smk"
-include: "plot_hor_stv.smk"
-
-
-if config.get("cdr_finder"):
-
-    include: "cdr_finder.smk"
 
 
 if config["moddotplot"].get("input_dir"):
@@ -54,20 +48,32 @@ rule run_moddotplot:
 
 rule filter_annotations_moddotplot:
     input:
-        chr_stv_row_bed=rules.aggregate_format_all_stv_row.output,
-        chr_stv_row_ort_bed=rules.get_stv_row_ort_bed.output,
+        chr_stv_row_bed=os.path.join(
+            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
+        ),
+        chr_stv_row_ort_bed=os.path.join(
+            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.ort.bed"
+        ),
         all_sat_annot_bed=os.path.join(
             config["plot_hor_stv"]["output_dir"],
             "bed",
             "all_cens.annotation.bed",
         ),
         all_cdr_bed=lambda wc: (
-            rules.merge_cdr_beds.output.reorient_cdr_output
+            os.path.join(
+                config["cdr_finder"]["output_dir"],
+                "bed",
+                "all_cdrs.bed",
+            )
             if config.get("cdr_finder")
             else []
         ),
         all_binned_methyl_bed=lambda wc: (
-            rules.merge_cdr_beds.output.reorient_methyl_cdr_output
+            os.path.join(
+                config["cdr_finder"]["output_dir"],
+                "bed",
+                "all_binned_freq.bed",
+            )
             if config.get("cdr_finder")
             else []
         ),
@@ -162,7 +168,10 @@ rule plot_cen_moddotplot:
 def moddotplot_outputs(wc):
     if config["moddotplot"].get("input_dir") is None:
         # Wait until done.
-        _ = checkpoints.aggregate_format_all_stv_row.get(**wc).output
+        try:
+            _ = checkpoints.aggregate_format_all_stv_row.get(**wc).output
+        except AttributeError:
+            pass
 
         fnames, chrs = extract_fnames_and_chr(
             os.path.join(HUMAS_CENS_SPLIT_DIR, "{fname}.fa"),
