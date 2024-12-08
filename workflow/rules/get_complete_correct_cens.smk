@@ -28,7 +28,7 @@ rule get_complete_correct_cens_bed:
     params:
         # Allow not running nucflag.
         infile_stream=lambda wc, input: (
-            f"join {input.interm_bed} {input.nucflag_bed}"
+            f"join <(sort -k1 {input.interm_bed}) <(sort -k1 {input.nucflag_bed})"
             if input.nucflag_bed
             else f"cat {input.interm_bed}"
         ),
