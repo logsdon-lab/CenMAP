@@ -14,6 +14,7 @@ rule format_repeatmasker_to_overlay_bed:
             "reoriented_{sm}_cens.fa.out",
         ),
     output:
+        # [ctg_name, st, end, desc, action]
         os.path.join(
             config["nucflag"]["output_dir"],
             "{sm}_plot_rm.bed",
@@ -30,6 +31,7 @@ rule format_repeatmasker_to_overlay_bed:
             name=$5; start=$6; end=$7; rType=$10; rClass=$11;
 
             # Find contig coordinates
+            match(name, "^(.+):", ctg_name);
             match(name, ":(.+)-", ctg_start);
             match(name, ".*-(.+)$", ctg_end);
             new_start=start+ctg_start[1];
@@ -66,7 +68,7 @@ rule format_repeatmasker_to_overlay_bed:
             if (new_rClass == "ALR/Alpha") {{
                 action="plot:{params.color_alr_alpha}"
             }}
-            print name, new_start, new_end, new_rClass, action
+            print ctg_name[1], new_start, new_end, new_rClass, action
         }}' {input.rm} > {output} 2> {log}
         """
 
@@ -93,13 +95,14 @@ rule format_stv_to_overlay_bed:
             # Load stv colors from first file.
             if (NR == FNR) {{ stv_colors[$1]=$2; next;}}
             name=$1;
+            match(name, "^(.+):", ctg_name);
             st=$2; end=$3;
             hor=$4;
             hor_len=$3-$2;
             num_mon=int(hor_len / {params.hor_mon_len})
             stv_color=stv_colors[num_mon]
             if (stv_color == "") {{ stv_color="gray"; }}
-            print name, st, end, num_mon, "plot:"stv_color
+            print ctg_name[1], st, end, num_mon, "plot:"stv_color
         }}' {input.annot_colors} {input.stv} > {output} 2> {log}
         """
 
@@ -182,39 +185,6 @@ rule format_stv_nucflag_ignore_bed:
         """
 
 
-# Need to make temporary assembly to align to that has cen coordinates.
-# TODO: Could be avoided by adding cen coords to assembly name.
-rule make_temp_asm_w_coords:
-    input:
-        fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-renamed-reort.fa"),
-        bed=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "bed",
-            "interm",
-            "{sm}_complete_cens_w_coords.bed",
-        ),
-    output:
-        temp(
-            os.path.join(
-                config["concat_asm"]["output_dir"],
-                "{sm}_regions.renamed.reort.cen_coords.fa",
-            )
-        ),
-    params:
-        pattern=r"'(\S+)'",
-        replacement=lambda wc: "'{kv}'",
-    conda:
-        "../envs/tools.yaml"
-    log:
-        "logs/nucflag/format_stv_nucflag_ignore_bed_{sm}.log",
-    shell:
-        """
-        seqkit replace -p {params.pattern} -r {params.replacement} --keep-key \
-        -k <(awk -v OFS="\\t" '{{split($1, split_name, ":"); print split_name[1], $1}}' {input.bed}) \
-        {input.fa} > {output} 2> {log}
-        """
-
-
 IGNORE_TYPE = config["nucflag"].get("ignore_type")
 if IGNORE_TYPE == "asat":
     ignore_regions = str(rules.format_rm_nucflag_ignore_bed.output)
@@ -236,7 +206,10 @@ NUCFLAG_CFG = {
     "samples": [
         {
             "name": sm,
-            "asm_fa": rules.make_temp_asm_w_coords.output,
+            "asm_fa": os.path.join(
+                config["concat_asm"]["output_dir"],
+                "{sm}-asm-renamed-reort.fa",
+            ),
             # Switch between fofn dir or read dir + ext.
             **(
                 {

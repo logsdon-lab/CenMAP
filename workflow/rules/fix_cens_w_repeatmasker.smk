@@ -74,148 +74,28 @@ def cen_status(wc):
 
 
 # Generate a key for checking partial and reversed contigs.
-# See params.output_format.
-rule join_cen_status_and_og_status:
-    input:
-        status=cen_status,
-        rename_key=lambda wc: expand(
-            os.path.join(
-                config["ident_cen_ctgs"]["output_dir"],
-                "bed",
-                "interm",
-                "{sm}_renamed_cens.tsv",
-            ),
-            sm=wc.sm,
-        ),
-    output:
-        all_statuses=temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "status",
-                "{sm}_cens_status_no_nucflag.tsv",
-            )
-        ),
-    params:
-        # cs - censtats, rn - rename, both
-        # (both:new_name_no_ort, cs:is_partial, cs:coords, cs:ort, rn:ort, rn:og_ctg_name)
-        output_format="1.1,1.3,1.4,1.2,2.2,2.3",
-    log:
-        "logs/fix_cens_w_repeatmasker/join_{sm}_cen_status_and_nucflag_status.log",
-    conda:
-        "../envs/tools.yaml"
-    shell:
-        """
-        join \
-        -1 1 -2 1 \
-        -a 1 \
-        -o {params.output_format} \
-        <(awk -v OFS="\\t" '{{ split($1, split_name, ":"); print split_name[1],$3,$4,split_name[2]}}' {input.status} | \
-            sort -k 1) \
-        <(awk -v OFS="\\t" '{{ print $2, ($6 == "false") ? "fwd" : "rev", $1 }}' {input.rename_key} | \
-            sort -k 1) > {output} 2> {log}
-        """
-
-
-# TODO: Collapse next two awk rules into python script. Too complicated.
-# Create a final rename key for assembly.
-rule get_final_rename_key:
-    input:
-        statuses=rules.join_cen_status_and_og_status.output,
-    output:
-        # (original_name, new_name, ort, is_partial, st, end, new_name_no_ort)
-        temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "status",
-                "{sm}_renamed_cens.tsv",
-            )
-        ),
-    conda:
-        "../envs/tools.yaml"
-    log:
-        "logs/fix_cens_w_repeatmasker/get_{sm}_final_rename_key.log",
-    shell:
-        """
-        {{ awk -v OFS="\\t" '{{
-            new_ctg_name_no_ort=$1;
-            new_ctg_name=$1;
-            og_ctg_name=($6 == "") ? new_ctg_name : $6;
-            is_partial=$2;
-            split($3, split_coords, "-")
-            st=split_coords[1]; end=split_coords[2];
-            cs_ort=$4;
-            rn_ort=$5;
-            if (cs_ort != rn_ort) {{
-                print "censtats ort ("cs_ort") and alignment ort ("rn_ort") different for "og_ctg_name >> "{log}"
-            }}
-            # Rename if reversed.
-            if (cs_ort == "rev") {{
-                gsub("chr", "rc-chr", new_ctg_name)
-            }}
-            print og_ctg_name,new_ctg_name,cs_ort,is_partial,st,end, new_ctg_name_no_ort
-        }}' {input.statuses} | \
-        sort -k1 ;}} > {output} 2> {log}
-        """
-
-
-# Generate a centromere BED4 file for all cens and mark misassembled cens.
-# Also output a repeatmasker reorient key.
 rule make_complete_cens_bed:
     input:
+        script="workflow/scripts/make_complete_cens_bed.py",
+        status=cen_status,
         faidx=os.path.join(
             config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
         ),
-        final_rename_key=rules.get_final_rename_key.output,
     output:
-        # (name, st, end, is_misassembled)
+        # (new_name, st, end, is_misassembled, ctg_name, ctg_len)
         cen_bed=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
             "interm",
             "{sm}_complete_cens.bed",
         ),
-        # (name:st-end, st, end, is_misassembled)
-        cen_bed_w_coords=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "bed",
-            "interm",
-            "{sm}_complete_cens_w_coords.bed",
-        ),
-        # (old_name, new_name, ort, ctg_len)
-        rm_rename_key=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "status",
-            "{sm}_rm_rename_key.tsv",
-        ),
-    conda:
-        "../envs/tools.yaml"
     log:
-        "logs/extract_new_cens_ctgs/fmt_{sm}_new_cens_bed_file.log",
+        "logs/fix_cens_w_repeatmasker/get_complete_cens_bed_{sm}.log",
+    conda:
+        "../envs/py.yaml"
     shell:
         """
-        {{ join -1 1 -2 1 <(sort -k1 {input.faidx}) {input.final_rename_key} | \
-        awk -v OFS="\\t" '{{
-            old_name=$1
-            new_name=$6
-            is_partial=$8
-            ctg_len=$2
-            cen_st=$9
-            cen_end=$10
-            new_name_no_ort=$11
-            if ($7 == "rev") {{
-                new_cen_st=ctg_len-cen_end + 1
-                new_cen_end=ctg_len-cen_st + 1
-                cen_st=new_cen_st
-                cen_end=new_cen_end
-                print new_name_no_ort, new_name, $7, ctg_len >> "{output.rm_rename_key}"
-            }}
-            print new_name, cen_st, cen_end, is_partial
-            print new_name":"cen_st"-"cen_end, cen_st, cen_end, is_partial >> "{output.cen_bed_w_coords}"
-        }}' ;}} > {output.cen_bed} 2> {log}
-
-        if [ ! -s {output.rm_rename_key} ]; then
-            touch {output.rm_rename_key}
-        fi
+        python {input.script} -i {input.status} -f {input.faidx} > {output} 2> {log}
         """
 
 
@@ -226,7 +106,7 @@ rule rename_reort_asm:
         idx=os.path.join(
             config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
         ),
-        rename_key=rules.get_final_rename_key.output,
+        cens_bed=rules.make_complete_cens_bed.output,
     output:
         fa=os.path.join(
             config["concat_asm"]["output_dir"],
@@ -249,13 +129,13 @@ rule rename_reort_asm:
         # Get all the non-reversed contigs.
         # Then replace the names.
         seqkit replace -p {params.pattern} -r {params.replacement} \
-        -k <(cut -f 1,2 {input.rename_key}) \
+        -k <(awk -v OFS="\\t" '{{ print $5, $1}}' {input.cens_bed}) \
         <(cat \
             <(seqtk subseq {input.fa} \
-                <(awk '$3 == "rev"' {input.rename_key} | cut -f1) | \
+                <(awk '$1 ~ "rc-chr"' {input.cens_bed} | cut -f1) | \
                 seqtk seq -r) \
             <(seqtk subseq {input.fa} \
-                <(grep -v -f <(awk '$3 == "rev"' {input.rename_key} | cut -f1) {input.idx} | cut -f 1)) \
+                <(grep -v -f <(awk '$1 ~ "rc-chr"' {input.cens_bed} | cut -f1) {input.idx} | cut -f 1)) \
         ) \
         --keep-key > {output.fa} 2> {log}
         samtools faidx {output.fa} 2>> {log}
@@ -264,7 +144,8 @@ rule rename_reort_asm:
 
 rule fix_cens_rm_out:
     input:
-        rm_rename_key=rules.make_complete_cens_bed.output.rm_rename_key,
+        script="workflow/scripts/rename_reorient_rm_out.py",
+        rm_rename_key=rules.make_complete_cens_bed.output,
         rm_out=os.path.join(
             config["repeatmasker"]["output_dir"],
             "repeats",
@@ -280,41 +161,11 @@ rule fix_cens_rm_out:
         ),
     log:
         "logs/fix_cens_w_repeatmasker/fix_cens_{sm}_rm_out.log",
+    conda:
+        "../envs/py.yaml"
     shell:
         """
-        # Write everything but the partials and reversed cens.
-        grep -v -f \
-            <(awk '$3=="rev"' {input.rm_rename_key} | cut -f 1) \
-            {input.rm_out} > {output} 2> {log}
-
-        while IFS='' read -r line; do
-            original=$(echo "${{line}}" | awk '{{ print $1}}')
-            new=$(echo "${{line}}" | awk '{{ print $2}}')
-            ctg_len=$(echo "${{line}}" | awk '{{ print $4}}')
-
-            echo "Replacing ${{original}} with ${{new}} and recalculating coordinates." >> {log}
-            # Then replace original name with new name and reverse the output.
-            # Also include contig len to account for reversal.
-            grep "${{original}}" {input.rm_out} | \
-                sed "s/${{original}}/${{new}}/g" | \
-                tac | \
-                awk -v CTG_LEN="${{ctg_len}}" -v OFS="\\t" '{{
-                    # Get start and end coordinates and adjust for reversing.
-                    match($5, "(.+):", ctgs);
-                    match($5, ":(.+)-", starts);
-                    match($5, ".*-(.+)$", ends);
-                    new_start=ends[1]-starts[1]-$7+1;
-                    new_end=ends[1]-starts[1]-$6+1;
-                    $6=new_start;
-                    $7=new_end;
-                    # Then rename ctg.
-                    new_ctg_start=CTG_LEN-ends[1]+1;
-                    new_ctg_end=CTG_LEN-starts[1]+1;
-                    new_ctg_name=ctgs[1]":"new_ctg_start"-"new_ctg_end;
-                    $5=new_ctg_name;
-                    print \
-                }}' >> {output} 2> {log}
-        done < <(awk -v OFS="\\t" '$3=="rev"' {input.rm_rename_key})
+        python {input.script} -i {input.rm_out} -k {input.rm_rename_key} > {output} 2> {log}
         """
 
 

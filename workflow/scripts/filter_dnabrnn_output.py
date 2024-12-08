@@ -7,8 +7,6 @@ from enum import Enum, auto
 from typing import Any
 
 
-# Reverse to not greedily match on chr2 instead of chr21
-CHRS = [*[f"chr{i}" for i in range(22, 0, -1)], "chrX", "chrY"]
 CHRS_ASAT_SEP = {"chr3", "chr4", "chr5"}
 CHRS_13_21 = {"chr13", "chr21"}
 ORTS = ["fwd", "rev"]
@@ -71,7 +69,7 @@ def main():
     ap.add_argument(
         "-c",
         "--chr",
-        choices=CHRS,
+        choices=[*[f"chr{i}" for i in range(1, 23)], "chrX", "chrY"],
         required=True,
         help="Chromosome of sequence for dna-brnn output.",
         metavar="{chr1|...|chr22|chrX|chrY}",
