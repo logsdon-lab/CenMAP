@@ -228,7 +228,7 @@ NUCFLAG_CFG = {
                 config["ident_cen_ctgs"]["output_dir"],
                 "bed",
                 "interm",
-                "{sm}_complete_cens_w_coords.bed",
+                "{sm}_complete_cens.bed",
             ),
             # Ignore regions.
             "ignore_bed": ignore_regions,

@@ -1,4 +1,6 @@
-default-resources: mem=8
+default-resources:
+  mem: 8GB
+  mem_mb: 8000
 software-deployment-method:
   - conda
 printshellcmds: True

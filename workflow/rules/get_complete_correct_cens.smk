@@ -1,14 +1,14 @@
 
 rule get_complete_correct_cens_bed:
     input:
-        # (name_w_coords, st, end, is_partial, name)
+        # (name, st, end, is_partial, ctg_name, ctg_len)
         interm_bed=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
             "interm",
-            "{sm}_complete_cens_w_coords.bed",
+            "{sm}_complete_cens.bed",
         ),
-        # (name_w_coords, st, end, status)
+        # (name, st, end, status)
         nucflag_bed=(
             os.path.join(
                 config["nucflag"]["output_dir"],
@@ -40,12 +40,11 @@ rule get_complete_correct_cens_bed:
         """
         {{ {params.infile_stream} | \
         awk -v OFS="\\t" '{{
-            status=(($8 == "good" || $8 == "") && ($4 == "false")) ? "good" : "misassembled";
+            status=(($9 == "good" || $9 == "") && ($4 == "false")) ? "good" : "misassembled";
             if (status != "good") {{
                 next;
             }};
-            split($1, arr, ":");
-            print arr[1], $2, $3
+            print $1, $2, $3
         }}' ;}} > {output} 2> {log}
         """
 
@@ -57,7 +56,7 @@ use rule extract_and_index_fa as get_complete_correct_cens_fa with:
             config["concat_asm"]["output_dir"],
             "{sm}-asm-renamed-reort.fa",
         ),
-        # (name_no_coords, st, end)
+        # (name, st, end)
         bed=rules.get_complete_correct_cens_bed.output,
     output:
         seq=os.path.join(

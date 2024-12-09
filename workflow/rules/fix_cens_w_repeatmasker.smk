@@ -132,10 +132,10 @@ rule rename_reort_asm:
         -k <(awk -v OFS="\\t" '{{ print $5, $1}}' {input.cens_bed}) \
         <(cat \
             <(seqtk subseq {input.fa} \
-                <(awk '$1 ~ "rc-chr"' {input.cens_bed} | cut -f1) | \
+                <(awk '$1 ~ "rc-chr"' {input.cens_bed} | cut -f5) | \
                 seqtk seq -r) \
             <(seqtk subseq {input.fa} \
-                <(grep -v -f <(awk '$1 ~ "rc-chr"' {input.cens_bed} | cut -f1) {input.idx} | cut -f 1)) \
+                <(grep -v -f <(awk '$1 ~ "rc-chr"' {input.cens_bed} | cut -f5) {input.idx} | cut -f 1)) \
         ) \
         --keep-key > {output.fa} 2> {log}
         samtools faidx {output.fa} 2>> {log}

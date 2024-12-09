@@ -183,6 +183,8 @@ rule get_original_coords:
 # Pass CDR config here.
 CDR_FINDER_CONFIG = {
     **config["cdr_finder"],
+    "log_dir": "logs/cdr_finder",
+    "benchmark_dir": "benchmarks/cdr_finder",
     "samples": {
         sm: {
             "fasta": os.path.join(
