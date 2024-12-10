@@ -45,11 +45,12 @@ rule merge_methyl_bam_to_fq:
     input:
         os.path.join(config["cdr_finder"]["input_bam_dir"], "{sm}"),
     output:
-        temp(os.path.join(config["cdr_finder"]["output_dir"], "aln", "{sm}_methyl.fq")),
+        pipe(os.path.join(config["cdr_finder"]["output_dir"], "aln", "{sm}_methyl.fq")),
     params:
         file_pattern=config["cdr_finder"]["file_pattern"],
     resources:
-        mem="16G",
+        # Need both aln rule and this rule to match.
+        mem=config["cdr_finder"]["aln_mem"],
     threads: config["cdr_finder"]["aln_threads"]
     log:
         "logs/cdr_finder/merge_methyl_bam_{sm}.log",
