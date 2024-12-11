@@ -129,13 +129,8 @@ def main():
                 df_ort_check["strand"] != "-"
             ).all()
 
-        if is_not_rc:
-            adj_ctg_start = ctg_start
-            adj_ctg_end = ctg_end
-        else:
-            # Adjust coordinates if contig map in reverse ort.
-            adj_ctg_start = df_ctg_grp["query_length"][0] - ctg_end
-            adj_ctg_end = df_ctg_grp["query_length"][0] - ctg_start
+        adj_ctg_start = ctg_start
+        adj_ctg_end = ctg_end
 
         rows_ctg_grps.append(
             (
