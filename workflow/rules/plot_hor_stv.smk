@@ -1,10 +1,10 @@
 include: "common.smk"
-include: "humas_hmmer.smk"
+include: "humas_sd.smk"
 
 
 checkpoint aggregate_format_all_stv_row:
     input:
-        unpack(humas_hmmer_stv_outputs),
+        unpack(humas_sd_stv_outputs),
     output:
         os.path.join(
             config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
@@ -29,7 +29,7 @@ checkpoint aggregate_format_all_stv_row:
             $8=$8+starts[1];
             print
         }}' {input} | \
-        grep -P "{wildcards.chr}[_:]" ;}} > {output} 2> {log}
+        grep -P "{wildcards.chr}[_:]" || true ;}} > {output} 2> {log}
         """
 
 
@@ -55,7 +55,8 @@ rule get_stv_row_ort_bed:
         "logs/plot_cen_moddotplot/get_hor_mon_ort_{chr}.log",
     shell:
         """
-        bedtools merge -i <(sort -k1,1 -k2,2n {input}) -s -d {params.dst_merge} -c 6 -o distinct > {output} 2> {log}
+        # Only get orientation of live HOR.
+        bedtools merge -i <(sort -k1,1 -k2,2n {input} | awk -v OFS="\\t" '$4 ~ "L"') -s -d {params.dst_merge} -c 6 -o distinct > {output} 2> {log}
         """
 
 

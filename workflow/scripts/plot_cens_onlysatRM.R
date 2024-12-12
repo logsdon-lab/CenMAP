@@ -64,7 +64,7 @@ ggplot(data = df[order(df$region), ]) +
   xlab("Position (kbp)")
 
 
-height <- length(unique(df$chr)) * 0.5
+height <- length(unique(df$chr)) * 0.5 + height
 
 if (!interactive()) pdf(NULL)
 ggsave(argv$output, width = 10, height = height)

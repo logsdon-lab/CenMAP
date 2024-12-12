@@ -45,16 +45,13 @@ rule merge_methyl_bam_to_fq:
     input:
         os.path.join(config["cdr_finder"]["input_bam_dir"], "{sm}"),
     output:
-        temp(
-            os.path.join(
-                config["cdr_finder"]["output_dir"], "aln", "{sm}_methyl.fq"
-            )
-        ),
+        pipe(os.path.join(config["cdr_finder"]["output_dir"], "aln", "{sm}_methyl.fq")),
     params:
         file_pattern=config["cdr_finder"]["file_pattern"],
     resources:
-        mem="16G",
-    threads: config["cdr_finder"]["aln_threads"]
+        # Need both aln rule and this rule to match.
+        mem=config["cdr_finder"]["aln_mem"],
+    threads: config["cdr_finder"]["aln_threads"] // 2
     log:
         "logs/cdr_finder/merge_methyl_bam_{sm}.log",
     benchmark:
@@ -110,10 +107,10 @@ rule align_methyl_bam_to_asm:
         aligner=ALIGNER,
         aligner_added_opts=ADDED_ALIGNER_OPTS,
         preset=ALIGNER_SETTINGS["preset"],
-        samtools_view_flag=2038,
+        samtools_view_flag=2308,
         min_peak_dp_aln_score=ALIGNER_SETTINGS["min_peak_dp_aln_score"],
         split_idx_num_base=ALIGNER_SETTINGS["split_idx_num_base"],
-    threads: config["cdr_finder"]["aln_threads"]
+    threads: config["cdr_finder"]["aln_threads"] // 2
     resources:
         mem=config["cdr_finder"]["aln_mem"],
     conda:
@@ -139,10 +136,12 @@ rule align_methyl_bam_to_asm:
 
 rule get_original_coords:
     input:
+        # (sample_chr_ctg, st, end, is-misassembled)
         bed=os.path.join(
-            config["repeatmasker"]["output_dir"],
+            config["ident_cen_ctgs"]["output_dir"],
             "bed",
-            "{sm}_complete_correct_ALR_regions.bed",
+            "interm",
+            "{sm}_complete_cens.bed",
         ),
         asm_faidx=os.path.join(
             config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
@@ -185,6 +184,8 @@ rule get_original_coords:
 # Pass CDR config here.
 CDR_FINDER_CONFIG = {
     **config["cdr_finder"],
+    "log_dir": "logs/cdr_finder",
+    "benchmark_dir": "benchmarks/cdr_finder",
     "samples": {
         sm: {
             "fasta": os.path.join(

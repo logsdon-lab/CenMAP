@@ -8,7 +8,7 @@ rule merge_complete_and_correct_rm_out:
                 config["repeatmasker"]["output_dir"],
                 "repeats",
                 "all",
-                "complete_correct_{chr}_cens.fa.out",
+                "reoriented_{chr}_cens.fa.out",
             ),
             chr=CHROMOSOMES,
         ),
@@ -17,7 +17,7 @@ rule merge_complete_and_correct_rm_out:
             config["repeatmasker"]["output_dir"],
             "repeats",
             "all",
-            "all_samples_and_ref_complete_correct_cens.fa.out",
+            "reoriented_all_samples_and_ref_cens.fa.out",
         ),
     shell:
         """
@@ -61,12 +61,7 @@ rule create_annotated_satellites:
 rule create_ct_track:
     input:
         ref_rm_out=config["repeatmasker"]["ref_repeatmasker_output"],
-        corrected_rm_out=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "all_samples_and_ref_complete_correct_cens.fa.out",
-        ),
+        corrected_rm_out=rules.merge_complete_and_correct_rm_out.output,
     output:
         os.path.join(config["plot_hor_stv"]["output_dir"], "bed", "all_cens.ct.bed"),
     params:
