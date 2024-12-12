@@ -18,7 +18,8 @@ rule get_complete_correct_cens_bed:
             else []
         ),
     output:
-        # (name_no_coords, st, end)
+        # BED9
+        # (name, st, end, adj_name, score, ort, adj_st, adj_end, rgb)
         bed=os.path.join(
             config["ident_cen_ctgs"]["output_dir"],
             "bed",
@@ -40,11 +41,21 @@ rule get_complete_correct_cens_bed:
         """
         {{ {params.infile_stream} | \
         awk -v OFS="\\t" '{{
+            adj_name=$1;
+            adj_st=$2; adj_end=$3;
+            ctg_name=$5;
+            ctg_len=$6;
+            ort=($1 ~ "rc-") ? "-" : "+";
+            ctg_st=$2; ctg_end=$3;
+            if (ort == "-") {{
+                new_ctg_st=ctg_len-ctg_end; new_ctg_end=ctg_len-ctg_st;
+                ctg_st=new_ctg_st; ctg_end=new_ctg_end;
+            }}
             status=(($9 == "good" || $9 == "") && ($4 == "false")) ? "good" : "misassembled";
             if (status != "good") {{
                 next;
             }};
-            print $1, $2, $3
+            print ctg_name, ctg_st, ctg_end, adj_name, 0, ort, adj_st, adj_end, "0,0,0"
         }}' ;}} > {output} 2> {log}
         """
 
@@ -75,7 +86,7 @@ use rule extract_and_index_fa as get_complete_correct_cens_fa with:
         "logs/get_complete_correct_cens/get_complete_correct_cens_fa_{sm}.log",
     params:
         added_cmds="",
-        bed=lambda wc, input: f"""<(awk -v OFS="\\t" '{{print $1, $2-1, $3}}' {input.bed})""",
+        bed=lambda wc, input: f"""<(awk -v OFS="\\t" '{{print $4, $7-1, $8}}' {input.bed})""",
 
 
 rule get_complete_correct_cens_all:

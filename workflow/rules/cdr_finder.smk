@@ -51,7 +51,7 @@ rule merge_methyl_bam_to_fq:
     resources:
         # Need both aln rule and this rule to match.
         mem=config["cdr_finder"]["aln_mem"],
-    threads: config["cdr_finder"]["aln_threads"]
+    threads: config["cdr_finder"]["aln_threads"] // 2
     log:
         "logs/cdr_finder/merge_methyl_bam_{sm}.log",
     benchmark:
@@ -110,7 +110,7 @@ rule align_methyl_bam_to_asm:
         samtools_view_flag=2308,
         min_peak_dp_aln_score=ALIGNER_SETTINGS["min_peak_dp_aln_score"],
         split_idx_num_base=ALIGNER_SETTINGS["split_idx_num_base"],
-    threads: config["cdr_finder"]["aln_threads"]
+    threads: config["cdr_finder"]["aln_threads"] // 2
     resources:
         mem=config["cdr_finder"]["aln_mem"],
     conda:

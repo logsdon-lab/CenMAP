@@ -120,6 +120,7 @@ cdr_finder:
   input_bam_dir: "data/ont"
   output_dir: "results/cdr_finder"
   aln_mem: 50GB
+  # Split in half between merge bam and alignment.
   aln_threads: 24
   file_pattern: ".*prom_pass\\.bam"
   window_size: 5000
