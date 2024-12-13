@@ -48,8 +48,10 @@ rule get_complete_correct_cens_bed:
             ort=($1 ~ "rc-") ? "-" : "+";
             ctg_st=$2; ctg_end=$3;
             if (ort == "-") {{
-                new_ctg_st=ctg_len-ctg_end; new_ctg_end=ctg_len-ctg_st;
-                ctg_st=new_ctg_st; ctg_end=new_ctg_end;
+                new_ctg_st=ctg_len-ctg_end + 1;
+                new_ctg_end=ctg_len-ctg_st + 1;
+                ctg_st=new_ctg_st;
+                ctg_end=new_ctg_end;
             }}
             status=(($9 == "good" || $9 == "") && ($4 == "false")) ? "good" : "misassembled";
             if (status != "good") {{
