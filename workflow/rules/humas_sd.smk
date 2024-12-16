@@ -92,7 +92,6 @@ def humas_sd_outputs(wc):
     _ = checkpoints.split_cens_for_humas_sd.get(**wc).output
     fnames, chrs = extract_fnames_and_chr(
         os.path.join(HUMAS_CENS_SPLIT_DIR, "{fname}.fa"),
-        filter_chr=str(wc.chr),
     )
     return {
         "hor_bed": expand(
@@ -109,17 +108,14 @@ checkpoint run_humas_sd:
         rules.cens_generate_monomers.output,
         unpack(humas_sd_outputs),
     output:
-        touch(
-            os.path.join(config["humas_sd"]["output_dir"], "humas_sd_{sm}_{chr}.done")
-        ),
+        touch(os.path.join(config["humas_sd"]["output_dir"], "humas_sd_{sm}.done")),
 
 
 # https://stackoverflow.com/a/63040288
 def humas_sd_stv_outputs(wc):
-    _ = [checkpoints.run_humas_sd.get(sm=sm, chr=wc.chr).output for sm in SAMPLE_NAMES]
+    _ = [checkpoints.run_humas_sd.get(sm=sm).output for sm in SAMPLE_NAMES]
     fnames, chrs = extract_fnames_and_chr(
         os.path.join(HUMAS_CENS_SPLIT_DIR, "{fname}.fa"),
-        filter_chr=str(wc.chr),
     )
     return {
         "stv": [
@@ -137,16 +133,13 @@ checkpoint create_humas_sd_stv:
         touch(
             os.path.join(
                 config["humas_sd"]["output_dir"],
-                "create_humas_sd_stv_{sm}_{chr}.done",
+                "create_humas_sd_stv_{sm}.done",
             )
         ),
 
 
 def humas_sd_stv_sm_outputs(wc):
-    _ = [
-        checkpoints.run_humas_sd.get(**{"sm": wc.sm, "chr": chrom}).output
-        for chrom in CHROMOSOMES
-    ]
+    _ = checkpoints.run_humas_sd.get(sm=wc.sm).output
     wcs = glob_wildcards(os.path.join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg_name}.fa"))
     outputs = []
     for sm, chrom, ctg_name in zip(wcs.sm, wcs.chr, wcs.ctg_name):
@@ -178,10 +171,10 @@ rule _force_humas_sd_env_inclusion:
 rule humas_sd_all:
     input:
         rules._force_humas_sd_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
-        expand(rules.run_humas_sd.output, sm=SAMPLE_NAMES, chr=CHROMOSOMES),
-        expand(rules.create_humas_sd_stv.output, sm=SAMPLE_NAMES, chr=CHROMOSOMES),
+        expand(rules.run_humas_sd.output, sm=SAMPLE_NAMES),
+        expand(rules.create_humas_sd_stv.output, sm=SAMPLE_NAMES),
 
 
 rule humas_sd_split_cens_only:
     input:
-        expand(rules.split_cens_for_humas_sd.output, sm=SAMPLE_NAMES, chr=CHROMOSOMES),
+        expand(rules.split_cens_for_humas_sd.output, sm=SAMPLE_NAMES),
