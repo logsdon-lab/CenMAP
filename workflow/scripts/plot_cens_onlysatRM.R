@@ -67,4 +67,4 @@ ggplot(data = df[order(df$region), ]) +
 height <- length(unique(df$chr)) * 0.5 + height
 
 if (!interactive()) pdf(NULL)
-ggsave(argv$output, width = 10, height = height)
+ggsave(argv$output, width = 10, height = height, limitsize = FALSE)
