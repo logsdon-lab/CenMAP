@@ -55,7 +55,7 @@ dna_brnn:
   # https://github.com/lh3/dna-nn/tree/master/models
   model: "data/models/attcc-alpha.knm"
   threads: 12
-  mem: 30GB
+  mem: 8GB
   thr_file: "config/dnabrnn_thresholds.json"
 
 nucflag:
@@ -68,7 +68,7 @@ nucflag:
   threads_aln: 24
   processes_nucflag: 12
   mem_nucflag: 50GB
-  mem_aln: 50GB
+  mem_aln: 100GB
   samtools_view_flag: 2308
   # asat or live_asat
   ignore_type: "asat"
@@ -84,7 +84,7 @@ humas_sd:
   output_dir: "results/humas_sd"
   # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
   threads: 12
-  mem: 60GB
+  mem: 30GB
   hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
 
 plot_hor_stv:

@@ -58,6 +58,7 @@ def main():
             new_columns=RM_FIELDS,
             separator="\t",
             truncate_ragged_lines=True,
+            schema_overrides={"right": pl.String},
         )
         .with_columns(
             pl.col("ctg")

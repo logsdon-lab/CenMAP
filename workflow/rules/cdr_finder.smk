@@ -41,30 +41,6 @@ wildcard_constraints:
     sm="|".join(SAMPLE_NAMES_INTERSECTION),
 
 
-rule merge_methyl_bam_to_fq:
-    input:
-        os.path.join(config["cdr_finder"]["input_bam_dir"], "{sm}"),
-    output:
-        pipe(os.path.join(config["cdr_finder"]["output_dir"], "aln", "{sm}_methyl.fq")),
-    params:
-        file_pattern=config["cdr_finder"]["file_pattern"],
-    resources:
-        # Need both aln rule and this rule to match.
-        mem=config["cdr_finder"]["aln_mem"],
-    threads: config["cdr_finder"]["aln_threads"] // 2
-    log:
-        "logs/cdr_finder/merge_methyl_bam_{sm}.log",
-    benchmark:
-        "benchmarks/cdr_finder/merge_methyl_bam_{sm}.tsv"
-    conda:
-        "../envs/tools.yaml"
-    shell:
-        """
-        {{ samtools merge -@ {threads} - $(find {input} -regex {params.file_pattern}) | \
-        samtools bam2fq -T "*" -@ {threads} - ;}} > {output} 2> {log}
-        """
-
-
 rule get_kmer_cnts:
     input:
         fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
@@ -94,10 +70,13 @@ rule get_kmer_cnts:
         """
 
 
+# Align methyl bam to original assembly.
+# Retain tags in coversion of bam to fastq with -T '*'
+# See https://stackoverflow.com/a/74078350 for why use same number of threads.
 rule align_methyl_bam_to_asm:
     input:
         ref=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
-        query=rules.merge_methyl_bam_to_fq.output,
+        query=os.path.join(config["cdr_finder"]["input_bam_dir"], "{sm}"),
         kmer_cnts=(
             rules.get_kmer_cnts.output.kmer_cnts_list if ALIGNER == "winnowmap" else []
         ),
@@ -110,7 +89,8 @@ rule align_methyl_bam_to_asm:
         samtools_view_flag=2308,
         min_peak_dp_aln_score=ALIGNER_SETTINGS["min_peak_dp_aln_score"],
         split_idx_num_base=ALIGNER_SETTINGS["split_idx_num_base"],
-    threads: config["cdr_finder"]["aln_threads"] // 2
+        file_pattern=config["cdr_finder"]["file_pattern"],
+    threads: config["cdr_finder"]["aln_threads"]
     resources:
         mem=config["cdr_finder"]["aln_mem"],
     conda:
@@ -128,9 +108,10 @@ rule align_methyl_bam_to_asm:
         {params.min_peak_dp_aln_score} \
         {params.split_idx_num_base} \
         {params.aligner_added_opts} \
-        {input.ref} {input.query} | \
+        {input.ref} \
+        <(samtools merge -@ {threads} - $(find {input.query} -regex {params.file_pattern}) | samtools bam2fq -T "*" -) | \
         samtools view -u -F {params.samtools_view_flag} - | \
-        samtools sort -o {output.bam} ;}} 2> {log}
+        samtools sort -T {input.query} -o {output.bam} ;}} 2> {log}
         """
 
 
