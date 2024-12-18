@@ -173,24 +173,21 @@ def moddotplot_outputs(wc):
         except AttributeError:
             pass
 
-        fnames, chrs = extract_fnames_and_chr(
-            os.path.join(HUMAS_CENS_SPLIT_DIR, "{fname}.fa"),
-            filter_chr=wc.chr,
+        wcs = glob_wildcards(
+            os.path.join(HUMAS_CENS_SPLIT_DIR, f"{sm}_{wc.chr}_{ctg}.fa"),
         )
     else:
-        fnames, chrs = extract_fnames_and_chr(
-            os.path.join(INPUT_FA_DIR, "{fname}.fa"),
-            filter_chr=wc.chr,
+        wcs = glob_wildcards(
+            os.path.join(INPUT_FA_DIR, f"{sm}_{wc.chr}_{ctg}.fa"),
         )
-
+    fnames = [f"{sm}_{wc.chr}_{ctg}" for sm, ctg in zip(wcs.sm, wcs.ctg)]
     return dict(
-        moddotplot=expand(rules.run_moddotplot.output, zip, chr=chrs, fname=fnames),
+        moddotplot=expand(rules.run_moddotplot.output, chr=wc.chr, fname=fnames),
         cen_moddoplot=expand(
             expand(
                 rules.plot_cen_moddotplot.output,
-                zip,
                 fname=fnames,
-                chr=chrs,
+                chr=wc.chr,
             ),
         ),
     )

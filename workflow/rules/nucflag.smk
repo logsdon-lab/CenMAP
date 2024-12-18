@@ -76,7 +76,7 @@ rule format_repeatmasker_to_overlay_bed:
 # Convert stv_row bed to overlay bed with colors based on monomer len.
 rule format_stv_to_overlay_bed:
     input:
-        stv=humas_sd_stv_sm_outputs,
+        stv=humas_sd_outputs,
         annot_colors=config["plot_hor_stv"]["stv_annot_colors"],
     output:
         os.path.join(
@@ -103,7 +103,7 @@ rule format_stv_to_overlay_bed:
             stv_color=stv_colors[num_mon]
             if (stv_color == "") {{ stv_color="gray"; }}
             print ctg_name[1], st, end, num_mon, "plot:"stv_color
-        }}' {input.annot_colors} {input.stv} > {output} 2> {log}
+        }}' {input.annot_colors} {input.stv.stv_row_bed} > {output} 2> {log}
         """
 
 
@@ -148,7 +148,7 @@ rule format_stv_nucflag_ignore_bed:
             "interm",
             "{sm}_complete_cens_w_coords.bed",
         ),
-        stv=humas_sd_stv_sm_outputs,
+        stv=humas_sd_outputs,
         ignore_bed=(
             config["nucflag"]["ignore_regions"]
             if config["nucflag"].get("ignore_regions")
@@ -175,7 +175,7 @@ rule format_stv_nucflag_ignore_bed:
         # Include annotation gaps greater than {params.bp_annot_gap_thr} bp.
         {{ bedtools subtract \
         -a {input.bed} \
-        -b <(cat {input.stv}) | \
+        -b <(cat {input.stv.stv_row_bed}) | \
         awk -v OFS="\\t" '{{
             len=$3-$2;
             if (len > {params.bp_annot_gap_thr}) {{

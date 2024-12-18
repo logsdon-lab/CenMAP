@@ -138,12 +138,12 @@ rule filter_dnabrnn_sample_cens_regions:
 
 def dna_brnn_output(wc):
     outdir = checkpoints.split_fa_dnabrnn.get(sm=wc.sm).output[0]
-    fnames, _ = extract_fnames_and_chr(os.path.join(outdir, "{fname}.fa"))
+    wcs = glob_wildcards(os.path.join(outdir, "{fname}.fa"))
 
     return expand(
         rules.filter_dnabrnn_sample_cens_regions.output,
         sm=wc.sm,
-        fname=fnames,
+        fname=wcs.fname,
     )
 
 

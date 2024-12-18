@@ -90,9 +90,12 @@ use rule * from HumAS_SD as cens_*
 # https://stackoverflow.com/a/63040288
 def humas_sd_outputs(wc):
     _ = checkpoints.split_cens_for_humas_sd.get(**wc).output
-    fnames, chrs = extract_fnames_and_chr(
-        os.path.join(HUMAS_CENS_SPLIT_DIR, "{fname}.fa"),
+    wcs = glob_wildcards(
+        os.path.join(HUMAS_CENS_SPLIT_DIR, f"{wc.sm}_{chrom}_{ctg}.fa"),
     )
+    fnames = [f"{wc.sm}_{chrom}_{ctg}" for chrom, ctg in zip(wcs.chrom, wcs.ctg)]
+    chrs = wcs.chrom
+
     return {
         "hor_bed": expand(
             rules.cens_convert_to_bed9.output, zip, fname=fnames, chr=chrs
@@ -114,47 +117,17 @@ checkpoint run_humas_sd:
 # https://stackoverflow.com/a/63040288
 def humas_sd_stv_outputs(wc):
     _ = [checkpoints.run_humas_sd.get(sm=sm).output for sm in SAMPLE_NAMES]
-    fnames, chrs = extract_fnames_and_chr(
-        os.path.join(HUMAS_CENS_SPLIT_DIR, "{fname}.fa"),
+    wcs = glob_wildcards(
+        os.path.join(HUMAS_CENS_SPLIT_DIR, f"{sm}_{wc.chr}_{ctg}.fa"),
     )
+    fnames = [f"{sm}_{wc.chr}_{ctg}" for sm, ctg in zip(wcs.sm, wcs.ctg)]
     return {
         "stv": [
             config["plot_hor_stv"]["chm1_stv"],
             config["plot_hor_stv"]["chm13_stv"],
-            *expand(rules.cens_generate_stv.output, zip, fname=fnames, chr=chrs),
+            *expand(rules.cens_generate_stv.output, fname=fnames, chr=wc.chr),
         ],
     }
-
-
-checkpoint create_humas_sd_stv:
-    input:
-        unpack(humas_sd_stv_outputs),
-    output:
-        touch(
-            os.path.join(
-                config["humas_sd"]["output_dir"],
-                "create_humas_sd_stv_{sm}.done",
-            )
-        ),
-
-
-def humas_sd_stv_sm_outputs(wc):
-    _ = checkpoints.run_humas_sd.get(sm=wc.sm).output
-    wcs = glob_wildcards(os.path.join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg_name}.fa"))
-    outputs = []
-    for sm, chrom, ctg_name in zip(wcs.sm, wcs.chr, wcs.ctg_name):
-        if sm != wc.sm:
-            continue
-
-        outputs.extend(
-            expand(
-                rules.cens_generate_stv.output,
-                zip,
-                fname=f"{sm}_{chrom}_{ctg_name}",
-                chr=[chrom],
-            )
-        )
-    return outputs
 
 
 # Force including conda so --containerize includes.
@@ -172,7 +145,6 @@ rule humas_sd_all:
     input:
         rules._force_humas_sd_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
         expand(rules.run_humas_sd.output, sm=SAMPLE_NAMES),
-        expand(rules.create_humas_sd_stv.output, sm=SAMPLE_NAMES),
 
 
 rule humas_sd_split_cens_only:

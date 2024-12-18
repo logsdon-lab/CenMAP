@@ -169,7 +169,8 @@ def refmt_rm_output(wc):
     fa_glob_pattern = os.path.join(
         expand(rules.split_cens_for_rm.output, sm=wc.sm)[0], "{fname}.fa"
     )
-    fnames, _ = extract_fnames_and_chr(fa_glob_pattern)
+    wcs = glob_wildcards(fa_glob_pattern)
+    fnames = wcs.fname
     assert (
         len(fnames) != 0
     ), f"No fasta files found for repeatmasker in {fa_glob_pattern}"
@@ -187,7 +188,7 @@ rule format_repeatmasker_output:
             "repeats",
             "all",
             "{sm}_cens.fa.out",
-        )
+        ),
     conda:
         "../envs/tools.yaml"
     shell:

@@ -57,7 +57,7 @@ def cen_status(wc):
         _ = checkpoints.split_cens_for_rm.get(**wc).output
     except AttributeError:
         pass
-    fnames, _ = extract_fnames_and_chr(
+    wcs = glob_wildcards(
         os.path.join(
             config["repeatmasker"]["output_dir"],
             "seq",
@@ -66,6 +66,7 @@ def cen_status(wc):
             "{fname}.fa",
         )
     )
+    fnames = wcs.fname
     assert (
         len(fnames) != 0
     ), f"No fasta files found for repeatmasker in {fa_glob_pattern}"
