@@ -91,7 +91,7 @@ use rule * from HumAS_SD as cens_*
 def humas_sd_outputs(wc):
     _ = checkpoints.split_cens_for_humas_sd.get(**wc).output
     wcs = glob_wildcards(
-        os.path.join(HUMAS_CENS_SPLIT_DIR, f"{wc.sm}_{chrom}_{ctg}.fa"),
+        os.path.join(HUMAS_CENS_SPLIT_DIR, wc.sm + "_{chrom}_{ctg}.fa"),
     )
     fnames = [f"{wc.sm}_{chrom}_{ctg}" for chrom, ctg in zip(wcs.chrom, wcs.ctg)]
     chrs = wcs.chrom
@@ -118,7 +118,7 @@ checkpoint run_humas_sd:
 def humas_sd_stv_outputs(wc):
     _ = [checkpoints.run_humas_sd.get(sm=sm).output for sm in SAMPLE_NAMES]
     wcs = glob_wildcards(
-        os.path.join(HUMAS_CENS_SPLIT_DIR, f"{sm}_{wc.chr}_{ctg}.fa"),
+        os.path.join(HUMAS_CENS_SPLIT_DIR, "{sm}_" + wc.chr + "_{ctg}.fa"),
     )
     fnames = [f"{sm}_{wc.chr}_{ctg}" for sm, ctg in zip(wcs.sm, wcs.ctg)]
     return {
