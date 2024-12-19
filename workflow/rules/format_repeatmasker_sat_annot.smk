@@ -1,5 +1,3 @@
-include: "common.smk"
-
 
 rule merge_complete_and_correct_rm_out:
     input:
@@ -119,28 +117,8 @@ rule split_rm_satellite_annotations:
         """
 
 
-rule plot_satellite_annotations:
+rule format_repeatmasker_sat_only:
     input:
-        script="workflow/scripts/plot_cens_onlysatRM.R",
-        chr_annot=rules.split_rm_satellite_annotations.output,
-    output:
-        chr_plot=os.path.join(
-            config["plot_hor_stv"]["output_dir"],
-            "plots",
-            "satellite",
-            "all_cens_{chr}.annotation.png",
-        ),
-    log:
-        "logs/plot_repeatmasker_sat_annot/plot_{chr}_satellite_annotations.log",
-    conda:
-        "../envs/r.yaml"
-    shell:
-        """
-        Rscript {input.script} {input.chr_annot} {output.chr_plot} 2> {log}
-        """
-
-
-rule plot_repeatmasker_sat_only:
-    input:
-        expand(rules.plot_satellite_annotations.output, chr=CHROMOSOMES),
+        rules.aggregate_rm_satellite_annotations.output,
+        expand(rules.split_rm_satellite_annotations.output, chr=CHROMOSOMES),
     default_target: True

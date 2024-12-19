@@ -55,14 +55,14 @@ if config.get("nucflag"):
 
 if config.get("plot_hor_stv"):
 
-    include: "rules/plot_hor_stv.smk"
-    include: "rules/plot_repeatmasker_sat_annot.smk"
+    include: "rules/format_hor_stv.smk"
+    include: "rules/format_repeatmasker_sat_annot.smk"
     include: "rules/plot_cens_structure.smk"
 
     output.extend(
         [
-            rules.plot_hor_stv_only.input,
-            rules.plot_repeatmasker_sat_only.input,
+            rules.format_hor_stv_only.input,
+            rules.format_repeatmasker_sat_only.input,
             rules.plot_cens_structure_only.input,
         ]
     )

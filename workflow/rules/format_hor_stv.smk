@@ -33,6 +33,32 @@ checkpoint aggregate_format_all_stv_row:
         """
 
 
+rule filter_complete_correct_stv_row:
+    input:
+        stv_row_bed=os.path.join(
+            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
+        ),
+        complete_cens_bed=expand(
+            os.path.join(
+                config["ident_cen_ctgs"]["output_dir"],
+                "bed",
+                "final",
+                "{sm}_complete_correct_cens.bed",
+            ),
+            sm=SAMPLE_NAMES,
+        ),
+    output:
+        os.path.join(
+            config["plot_hor_stv"]["output_dir"],
+            "bed",
+            "{chr}_AS-HOR_stv_row.complete.bed",
+        ),
+    shell:
+        """
+        ( grep -f <(cut -f 1 {input.complete_cens_bed}) {input.stv_row_bed} || true ) > {output}
+        """
+
+
 # Get HOR monomer ort and merge monomers enforcing strandness.
 # TODO: This should be doable in R but there are no correct interval libraries that meet all requirements:
 # * are equivalent to bedtools without outright just wrapping bedtools (bedr, bedtoolsr, ...)
@@ -60,41 +86,17 @@ rule get_stv_row_ort_bed:
         """
 
 
-# No ort added.
-rule plot_stv_with_order:
-    input:
-        script="workflow/scripts/plot_cens_stvHOR.R",
-        all_stv=rules.aggregate_format_all_stv_row.output,
-    output:
-        hor_array_plot=os.path.join(
-            config["plot_hor_stv"]["output_dir"],
-            "plots",
-            "hor",
-            "{chr}.png",
-        ),
-    params:
-        mer_order=lambda wc: MONOMER_ORDER[wc.chr],
-    log:
-        "logs/plot_hor_stv/plot_{chr}_stv.log",
-    conda:
-        "../envs/r.yaml"
-    shell:
-        """
-        if ! [ -s {input.all_stv} ]; then
-            touch {output.hor_array_plot}
-        else
-            Rscript {input.script} \
-            --input {input.all_stv} \
-            --output {output.hor_array_plot} \
-            --chr {wildcards.chr} \
-            --mer_order {params.mer_order} 2> {log}
-        fi
-        """
-
-
-rule plot_hor_stv_only:
+rule format_hor_stv_only:
     input:
         expand(
-            rules.plot_stv_with_order.output,
+            rules.aggregate_format_all_stv_row.output,
+            chr=CHROMOSOMES,
+        ),
+        expand(
+            rules.filter_complete_correct_stv_row.output,
+            chr=CHROMOSOMES,
+        ),
+        expand(
+            rules.get_stv_row_ort_bed.output,
             chr=CHROMOSOMES,
         ),
