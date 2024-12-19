@@ -1,11 +1,15 @@
 # Annotations
 
+### Identification
+* `chm13_v2.0_monomeric_p-qarm_only.bed`
+    * Monomeric alpha-satellite regions in the p and q-arm of CHM13's centromere that uniquely map to a chromosome.
+    * If replacing CHM13 as the reference, one should align CHM13 to their new reference and liftover these coordinates to the new ref.
 
 ### HumAS-HMMER
 * `AS-HOR-vs-chm1_cens_v21.stv_row.all.bed`
-    * HumAS-HMMER annotations on chm1 reference.
+    * HumAS-HMMER based stv annotations on chm1 reference.
 * `AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed`
-    * HumAS-HMMER annotations on chm13 reference.
+    * HumAS-HMMER based stv annotations on chm13 reference.
 
 ### RepeatMasker
 * `cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out`

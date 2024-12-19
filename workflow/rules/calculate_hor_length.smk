@@ -3,8 +3,10 @@ include: "common.smk"
 
 rule calculate_as_hor_length:
     input:
-        fmt_hmmer_output=os.path.join(
-            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
+        stv_row_bed=os.path.join(
+            config["plot_hor_stv"]["output_dir"],
+            "bed",
+            "{chr}_AS-HOR_stv_row.complete.bed",
         ),
     output:
         os.path.join(
@@ -20,13 +22,11 @@ rule calculate_as_hor_length:
         bp_jump_thr=100_000,
         arr_len_thr=30_000,
     shell:
-        # grep to remove chm13.
         """
         {{ censtats length \
-        --input {input.fmt_hmmer_output} \
+        --input {input.stv_row_bed} \
         --bp_jump_thr {params.bp_jump_thr} \
-        --arr_len_thr {params.arr_len_thr} | \
-        grep -v ^chr  || true ;}}  > {output} 2> {log}
+        --arr_len_thr {params.arr_len_thr} || true ;}} > {output} 2> {log}
         """
 
 

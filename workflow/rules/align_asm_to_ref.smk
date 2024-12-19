@@ -4,12 +4,13 @@ ALN_CFG = {
         sm: os.path.join(config["concat_asm"]["output_dir"], f"{sm}-asm-comb-dedup.fa")
         for sm in SAMPLE_NAMES
     },
-    "temp_dir": "temp",
-    "output_dir": "results",
-    "logs_dir": "logs",
-    "benchmarks_dir": "benchmarks",
+    "temp_dir": os.path.join(config["align_asm_to_ref"]["output_dir"], "temp"),
+    "output_dir": config["align_asm_to_ref"]["output_dir"],
+    "logs_dir": "logs/align_asm_to_ref",
+    "benchmarks_dir": "benchmarks/align_asm_to_ref",
     "aln_threads": config["align_asm_to_ref"]["threads"],
-    "mm2_opts": "-x asm20 --secondary=no -s 25000 -K 15G",
+    "aln_mem": config["align_asm_to_ref"]["mem"],
+    "mm2_opts": "-x asm20 --secondary=no -s 25000 -K 8G",
 }
 
 
