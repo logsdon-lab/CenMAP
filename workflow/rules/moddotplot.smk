@@ -174,11 +174,11 @@ def moddotplot_outputs(wc):
             pass
 
         wcs = glob_wildcards(
-            os.path.join(HUMAS_CENS_SPLIT_DIR, f"{sm}_{wc.chr}_{ctg}.fa"),
+            os.path.join(HUMAS_CENS_SPLIT_DIR, "{sm}_" + wc.chr + "_{ctg}.fa"),
         )
     else:
         wcs = glob_wildcards(
-            os.path.join(INPUT_FA_DIR, f"{sm}_{wc.chr}_{ctg}.fa"),
+            os.path.join(INPUT_FA_DIR, "{sm}_" + wc.chr + "_{ctg}.fa"),
         )
     fnames = [f"{sm}_{wc.chr}_{ctg}" for sm, ctg in zip(wcs.sm, wcs.ctg)]
     return dict(
