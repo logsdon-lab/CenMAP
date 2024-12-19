@@ -1,11 +1,54 @@
 include: "common.smk"
 
 
-rule calculate_as_hor_length:
+rule merge_complete_cens_bed:
     input:
-        fmt_hmmer_output=os.path.join(
+        expand(
+            os.path.join(
+                config["ident_cen_ctgs"]["output_dir"],
+                "bed",
+                "final",
+                "{sm}_complete_correct_cens.bed",
+            ),
+            sm=SAMPLE_NAMES,
+        ),
+    output:
+        temp(
+            os.path.join(
+                config["plot_hor_stv"]["output_dir"],
+                "bed",
+                "all_complete_correct_cens.bed",
+            )
+        ),
+    shell:
+        """
+        cat {input} > {output}
+        """
+
+
+rule split_complete_cens_by_chr:
+    input:
+        stv_row_bed=os.path.join(
             config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
         ),
+        complete_cens_bed=rules.merge_complete_cens_bed.output,
+    output:
+        temp(
+            os.path.join(
+                config["plot_hor_stv"]["output_dir"],
+                "bed",
+                "{chr}_AS-HOR_stv_row.complete.bed",
+            )
+        ),
+    shell:
+        """
+        ( grep -f <(cut -f 1 {input.complete_cens_bed}) {input.stv_row_bed} || true ) > {output}
+        """
+
+
+rule calculate_as_hor_length:
+    input:
+        stv_row_bed=rules.split_complete_cens_by_chr.output,
     output:
         os.path.join(
             config["calculate_hor_length"]["output_dir"],
@@ -23,10 +66,9 @@ rule calculate_as_hor_length:
         # grep to remove chm13.
         """
         {{ censtats length \
-        --input {input.fmt_hmmer_output} \
+        --input {input.stv_row_bed} \
         --bp_jump_thr {params.bp_jump_thr} \
-        --arr_len_thr {params.arr_len_thr} | \
-        grep -v ^chr  || true ;}}  > {output} 2> {log}
+        --arr_len_thr {params.arr_len_thr} || true ;}} > {output} 2> {log}
         """
 
 
