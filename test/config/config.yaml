@@ -5,6 +5,7 @@ align_asm_to_ref:
   reference: "data/reference/T2T-CHM13.fa.gz"
   output_dir: "results/align_asm_to_ref"
   threads: 4
+  mem: 60GB
 
 concat_asm:
   input_dir: "test/data/assemblies"
