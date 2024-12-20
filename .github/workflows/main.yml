@@ -5,6 +5,9 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
     # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
     - name: Delete huge unnecessary tools folder
@@ -16,17 +19,34 @@ jobs:
         submodules: 'true'
         lfs: 'true'
 
-    - name: Install Python.
-      uses: actions/setup-python@v5
+    - name: Setup Miniforge.
+      uses: conda-incubator/setup-miniconda@v3
       with:
-        python-version: '3.12'
+        miniforge-version: latest
+        activate-environment: dev
 
-    - name: Install Snakemake and testing dependencies.
-      run: |
-        pip install -r <(yq -r '.dependencies[] | select(type == "!!map") | to_entries[].value[]' env_dev.yaml)
+    - name: Get date.
+      id: get-date
+      run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
+      shell: bash
 
-    - name: Install Singularity.
-      uses: singularityhub/install-singularity@main
+    - name: Cache conda env.
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.CONDA }}/envs
+        key:
+          conda-${{ runner.os }}--${{ runner.arch }}--${{
+          steps.get-date.outputs.today }}-${{
+          hashFiles('test/env_dev.yaml') }}-${{ env.CACHE_NUMBER }}
+      env:
+        # Increase this value to reset cache if etc/example-environment.yml has not changed
+        CACHE_NUMBER: 0
+      id: cache
+
+    - name: Update environment.
+      run:
+        conda env update -n dev -f test/env_dev.yaml
+      if: steps.cache.outputs.cache-hit != 'true'
 
     - name: Test scripts.
       run: |
@@ -43,7 +63,7 @@ jobs:
         snakemake -c 4 -p \
         --workflow-profile none \
         --configfile test/config/config_HG00731.yaml \
-        --sdm apptainer conda \
+        --sdm conda \
         --show-failed-logs \
-        --apptainer-args "--bind $HOME:$HOME" \
-        --conda-cleanup-pkgs cache
+        --conda-cleanup-pkgs cache \
+        --conda-frontend conda
