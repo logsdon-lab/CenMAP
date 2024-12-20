@@ -93,6 +93,8 @@ rule align_methyl_bam_to_asm:
     threads: config["cdr_finder"]["aln_threads"]
     resources:
         mem=config["cdr_finder"]["aln_mem"],
+    shadow:
+        "minimal"
     conda:
         f"../envs/{ALIGNER}.yaml"
     log:
@@ -111,7 +113,7 @@ rule align_methyl_bam_to_asm:
         {input.ref} \
         <(samtools merge -@ {threads} - $(find {input.query} -regex {params.file_pattern}) | samtools bam2fq -T "*" -) | \
         samtools view -u -F {params.samtools_view_flag} - | \
-        samtools sort -T {input.query} -o {output.bam} ;}} 2> {log}
+        samtools sort -o {output.bam} ;}} 2> {log}
         """
 
 
