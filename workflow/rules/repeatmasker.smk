@@ -228,14 +228,12 @@ use rule merge_repeatmasker_output as merge_control_repeatmasker_output with:
     params:
         added_cmd="| awk -v OFS='\\t' '{{$1=$1; print}}' | cut -f 1-15",
     output:
-        temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "repeats",
-                "ref",
-                "ref_ALR_regions.fa.out",
-            )
-        ),
+        os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "repeats",
+            "ref",
+            "ref_ALR_regions.fa.out",
+        )
 
 
 rule format_add_control_repeatmasker_output:
