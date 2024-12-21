@@ -2,13 +2,14 @@ software-deployment-method:
   - conda
 executor: lsf
 default-resources:
-  mem: 8
+  mem: 8GB
+  mem_mb: 8000
   # Specific for Logsdon Lab
   lsf_queue: epistasis_long
   lsf_project: default
   # Hard memory limit that prevents out of memory for jobs.
   # LSF doesn't respect solely just rusage.
-  lsf_extra: "'-M 50GB'"
+  lsf_extra: "'-M 100GB'"
 printshellcmds: True
 rerun-incomplete: True
 show-failed-logs: True

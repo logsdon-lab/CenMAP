@@ -1,17 +1,11 @@
 
 include: "common.smk"
-include: "plot_hor_stv.smk"
-
-
-if config.get("cdr_finder"):
-
-    include: "cdr_finder.smk"
 
 
 if config["moddotplot"].get("input_dir"):
     INPUT_FA_DIR = config["moddotplot"]["input_dir"]
 else:
-    INPUT_FA_DIR = config["humas_hmmer"]["input_dir"]
+    INPUT_FA_DIR = HUMAS_CENS_SPLIT_DIR
 
 OUTPUT_MODDOTPLOT_DIR = config["moddotplot"].get("output_dir", "results/moddotplot")
 
@@ -54,20 +48,32 @@ rule run_moddotplot:
 
 rule filter_annotations_moddotplot:
     input:
-        chr_stv_row_bed=rules.aggregate_format_all_stv_row.output,
-        chr_stv_row_ort_bed=rules.get_stv_row_ort_bed.output,
+        chr_stv_row_bed=os.path.join(
+            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
+        ),
+        chr_stv_row_ort_bed=os.path.join(
+            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.ort.bed"
+        ),
         all_sat_annot_bed=os.path.join(
             config["plot_hor_stv"]["output_dir"],
             "bed",
             "all_cens.annotation.bed",
         ),
         all_cdr_bed=lambda wc: (
-            rules.merge_cdr_beds.output.reorient_cdr_output
+            os.path.join(
+                config["cdr_finder"]["output_dir"],
+                "bed",
+                "all_cdrs.bed",
+            )
             if config.get("cdr_finder")
             else []
         ),
         all_binned_methyl_bed=lambda wc: (
-            rules.merge_cdr_beds.output.reorient_methyl_cdr_output
+            os.path.join(
+                config["cdr_finder"]["output_dir"],
+                "bed",
+                "all_binned_freq.bed",
+            )
             if config.get("cdr_finder")
             else []
         ),
@@ -162,26 +168,26 @@ rule plot_cen_moddotplot:
 def moddotplot_outputs(wc):
     if config["moddotplot"].get("input_dir") is None:
         # Wait until done.
-        _ = checkpoints.aggregate_format_all_stv_row.get(**wc).output
+        try:
+            _ = checkpoints.aggregate_format_all_stv_row.get(**wc).output
+        except AttributeError:
+            pass
 
-        fnames, chrs = extract_fnames_and_chr(
-            os.path.join(config["humas_hmmer"]["input_dir"], "{fname}.fa"),
-            filter_chr=wc.chr,
+        wcs = glob_wildcards(
+            os.path.join(HUMAS_CENS_SPLIT_DIR, "{sm}_" + wc.chr + "_{ctg}.fa"),
         )
     else:
-        fnames, chrs = extract_fnames_and_chr(
-            os.path.join(INPUT_FA_DIR, "{fname}.fa"),
-            filter_chr=wc.chr,
+        wcs = glob_wildcards(
+            os.path.join(INPUT_FA_DIR, "{sm}_" + wc.chr + "_{ctg}.fa"),
         )
-
+    fnames = [f"{sm}_{wc.chr}_{ctg}" for sm, ctg in zip(wcs.sm, wcs.ctg)]
     return dict(
-        moddotplot=expand(rules.run_moddotplot.output, zip, chr=chrs, fname=fnames),
+        moddotplot=expand(rules.run_moddotplot.output, chr=wc.chr, fname=fnames),
         cen_moddoplot=expand(
             expand(
                 rules.plot_cen_moddotplot.output,
-                zip,
                 fname=fnames,
-                chr=chrs,
+                chr=wc.chr,
             ),
         ),
     )

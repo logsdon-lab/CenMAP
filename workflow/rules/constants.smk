@@ -32,7 +32,7 @@ CHROMOSOMES = config.get(
         "chrY",
     ),
 )
-RGX_CHR = re.compile("(chr[0-9XY]+)")
+RGX_CHR = re.compile(r"(chr[0-9XY]+)")
 MONOMER_ORDER = {
     "chr1": "large",
     "chr2": "small",

@@ -11,16 +11,17 @@ containerized: "docker://logsdonlab/cenmap:latest"
 # Constants loaded here.
 include: "rules/common.smk"
 include: "rules/utils.smk"
+# Main workflow.
 include: "rules/download_ref.smk"
 include: "rules/concat_asm.smk"
 include: "rules/extract_ref_hor_arrays.smk"
 include: "rules/align_asm_to_ref.smk"
 include: "rules/ident_cen_ctgs.smk"
 include: "rules/dna_brnn.smk"
-include: "rules/extract_new_cens_ctgs.smk"
 include: "rules/repeatmasker.smk"
 include: "rules/fix_cens_w_repeatmasker.smk"
-include: "rules/humas_hmmer.smk"
+include: "rules/humas_sd.smk"
+include: "rules/get_complete_correct_cens.smk"
 
 
 rule extract_cens_only:
@@ -34,10 +35,10 @@ output = [
     # Required output.
     rules.extract_cens_only.input,
     rules.dna_brnn_all.input,
-    rules.extract_new_cens_all.input,
-    rules.repeatmasker_only.input,
-    rules.fix_cens_w_repeatmasker_only.input,
-    rules.humas_hmmer_only.input,
+    rules.repeatmasker_all.input,
+    rules.fix_cens_w_repeatmasker_all.input,
+    rules.humas_sd_all.input,
+    rules.get_complete_correct_cens_all.input,
 ]
 
 # Download T2T-CHM13 reference assembly if existing path not provided.
@@ -49,19 +50,19 @@ if config.get("nucflag"):
 
     include: "rules/nucflag.smk"
 
-    output.append(rules.nucflag_only.input)
+    output.append(rules.nucflag_all.input)
 
 
 if config.get("plot_hor_stv"):
 
-    include: "rules/plot_hor_stv.smk"
-    include: "rules/plot_repeatmasker_sat_annot.smk"
+    include: "rules/format_hor_stv.smk"
+    include: "rules/format_repeatmasker_sat_annot.smk"
     include: "rules/plot_cens_structure.smk"
 
     output.extend(
         [
-            rules.plot_hor_stv_only.input,
-            rules.plot_repeatmasker_sat_only.input,
+            rules.format_hor_stv_only.input,
+            rules.format_repeatmasker_sat_only.input,
             rules.plot_cens_structure_only.input,
         ]
     )

@@ -20,7 +20,7 @@ rule count_complete_cens:
         "../envs/py.yaml"
     shell:
         """
-        python {input.script} -i {input.hor_arr_len} > {output} 2> {log}
+        python {input.script} -i {input.hor_arr_len} || true > {output} 2> {log}
         """
 
 
@@ -42,7 +42,11 @@ rule plot_complete_cen_counts:
         "../envs/r.yaml"
     shell:
         """
-        Rscript {input.script} --input {input.cmp_cnts} --output {output} 2> {log}
+        if [ -s {input.cmp_cnts} ]; then
+            Rscript {input.script} --input {input.cmp_cnts} --output {output} 2> {log}
+        else
+            touch {output}
+        fi
         """
 
 

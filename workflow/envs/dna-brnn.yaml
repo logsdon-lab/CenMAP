@@ -4,3 +4,4 @@ dependencies:
   - gcc
   - zlib
   - make
+  - git

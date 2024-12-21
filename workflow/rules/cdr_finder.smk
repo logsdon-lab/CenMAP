@@ -41,33 +41,6 @@ wildcard_constraints:
     sm="|".join(SAMPLE_NAMES_INTERSECTION),
 
 
-rule merge_methyl_bam_to_fq:
-    input:
-        os.path.join(config["cdr_finder"]["input_bam_dir"], "{sm}"),
-    output:
-        temp(
-            os.path.join(
-                config["cdr_finder"]["output_dir"], "aln", "{sm}_methyl.fq"
-            )
-        ),
-    params:
-        file_pattern=config["cdr_finder"]["file_pattern"],
-    resources:
-        mem="16G",
-    threads: config["cdr_finder"]["aln_threads"]
-    log:
-        "logs/cdr_finder/merge_methyl_bam_{sm}.log",
-    benchmark:
-        "benchmarks/cdr_finder/merge_methyl_bam_{sm}.tsv"
-    conda:
-        "../envs/tools.yaml"
-    shell:
-        """
-        {{ samtools merge -@ {threads} - $(find {input} -regex {params.file_pattern}) | \
-        samtools bam2fq -T "*" -@ {threads} - ;}} > {output} 2> {log}
-        """
-
-
 rule get_kmer_cnts:
     input:
         fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
@@ -97,10 +70,13 @@ rule get_kmer_cnts:
         """
 
 
+# Align methyl bam to original assembly.
+# Retain tags in coversion of bam to fastq with -T '*'
+# See https://stackoverflow.com/a/74078350 for why use same number of threads.
 rule align_methyl_bam_to_asm:
     input:
         ref=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
-        query=rules.merge_methyl_bam_to_fq.output,
+        query=os.path.join(config["cdr_finder"]["input_bam_dir"], "{sm}"),
         kmer_cnts=(
             rules.get_kmer_cnts.output.kmer_cnts_list if ALIGNER == "winnowmap" else []
         ),
@@ -110,12 +86,15 @@ rule align_methyl_bam_to_asm:
         aligner=ALIGNER,
         aligner_added_opts=ADDED_ALIGNER_OPTS,
         preset=ALIGNER_SETTINGS["preset"],
-        samtools_view_flag=2038,
+        samtools_view_flag=2308,
         min_peak_dp_aln_score=ALIGNER_SETTINGS["min_peak_dp_aln_score"],
         split_idx_num_base=ALIGNER_SETTINGS["split_idx_num_base"],
+        file_pattern=config["cdr_finder"]["file_pattern"],
     threads: config["cdr_finder"]["aln_threads"]
     resources:
         mem=config["cdr_finder"]["aln_mem"],
+    shadow:
+        "minimal"
     conda:
         f"../envs/{ALIGNER}.yaml"
     log:
@@ -131,7 +110,8 @@ rule align_methyl_bam_to_asm:
         {params.min_peak_dp_aln_score} \
         {params.split_idx_num_base} \
         {params.aligner_added_opts} \
-        {input.ref} {input.query} | \
+        {input.ref} \
+        <(samtools merge -@ {threads} - $(find {input.query} -regex {params.file_pattern}) | samtools bam2fq -T "*" -) | \
         samtools view -u -F {params.samtools_view_flag} - | \
         samtools sort -o {output.bam} ;}} 2> {log}
         """
@@ -139,10 +119,12 @@ rule align_methyl_bam_to_asm:
 
 rule get_original_coords:
     input:
+        # (sample_chr_ctg, st, end, is-misassembled)
         bed=os.path.join(
-            config["repeatmasker"]["output_dir"],
+            config["ident_cen_ctgs"]["output_dir"],
             "bed",
-            "{sm}_complete_correct_ALR_regions.bed",
+            "interm",
+            "{sm}_complete_cens.bed",
         ),
         asm_faidx=os.path.join(
             config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
@@ -185,6 +167,8 @@ rule get_original_coords:
 # Pass CDR config here.
 CDR_FINDER_CONFIG = {
     **config["cdr_finder"],
+    "log_dir": "logs/cdr_finder",
+    "benchmark_dir": "benchmarks/cdr_finder",
     "samples": {
         sm: {
             "fasta": os.path.join(
