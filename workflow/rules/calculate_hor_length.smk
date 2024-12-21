@@ -63,11 +63,15 @@ rule plot_as_hor_length:
         "../envs/r.yaml"
     shell:
         """
-        Rscript {input.script} \
-        --input {input.lengths} \
-        --input_chm1 {input.chm1_lengths} \
-        --input_chm13 {input.chm13_lengths} \
-        --output {output} 2> {log}
+        if [ -s {input.lengths} ]; then
+            Rscript {input.script} \
+            --input {input.lengths} \
+            --input_chm1 {input.chm1_lengths} \
+            --input_chm13 {input.chm13_lengths} \
+            --output {output} 2> {log}
+        else
+            touch {output}
+        fi
         """
 
 
