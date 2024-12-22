@@ -55,6 +55,7 @@ repeatmasker:
 humas_sd:
   output_dir: "results/humas_sd"
   hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
+  threads: 4
   identity_thr: 95.0
 
 plot_hor_stv:
