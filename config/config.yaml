@@ -109,18 +109,18 @@ moddotplot:
   window: 5000
 
 cdr_finder:
-  # Either minimap2 (-x lr:hqae) or winnowmap (-x map-ont)
+  # Either minimap2 or winnowmap
+  # Use aligner_opts to override defaults.
   aligner: minimap2
-  # Default: -s 4000 and -I 10G
-  aligner_added_opts: ""
+  # "minimap": "-a --eqx --cs -x lr:hqae -I8g -s 4000"
+  # "winnowmap": "-a --eqx --cs -x map-ont -I8g -s 4000"
   # Expects sample subdir in input_dir.
   # Uses find and file pattern to merge bam.
   input_bam_dir: "data/ont"
+  bam_rgx: ".*prom_pass.bam$"
   output_dir: "results/cdr_finder"
   aln_mem: 50GB
-  # Split in half between merge bam and alignment.
   aln_threads: 24
-  file_pattern: ".*prom_pass\\.bam"
   window_size: 5000
   alr_threshold: 100000
   bp_merge: 1
