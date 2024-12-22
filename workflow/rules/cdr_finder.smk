@@ -122,7 +122,9 @@ CDR_FINDER_CONFIG = {
                 config["concat_asm"]["output_dir"], f"{sm}-asm-comb-dedup.fa"
             ),
             "regions": expand(rules.get_original_coords.output.og_coords, sm=sm),
-            "bam": expand(rules.cdr_aln_merge_read_asm_alignments.output, sm=sm),
+            "bam": expand(
+                rules.cdr_aln_merge_read_asm_alignments.output.alignment, sm=sm
+            ),
         }
         for sm in SAMPLE_NAMES_INTERSECTION
     },
