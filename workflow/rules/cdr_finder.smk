@@ -49,6 +49,7 @@ CDR_ALIGN_CFG = {
     "benchmarks_dir": "benchmarks/cdr_finder",
     "logs_dir": "logs/cdr_finder",
     "output_dir": os.path.join(config["cdr_finder"]["output_dir"], "aln"),
+    "samtools_view_flag": 2308,
 }
 
 
