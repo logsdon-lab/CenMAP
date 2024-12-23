@@ -14,9 +14,9 @@ print(
 )
 ALIGNER = config["cdr_finder"].get("aligner", "minimap2")
 DEF_ALIGNER_OPTS = {
-    "minimap2": "-a --eqx --cs -x lr:hqae -I8g -s 4000",
+    "minimap2": "-y -a --eqx --cs -x lr:hqae -I8g -s 4000",
     # https://www.biorxiv.org/content/10.1101/2024.11.01.621587v1
-    "winnowmap": "-a --eqx --cs -x map-ont -I8g -s 4000",
+    "winnowmap": "-y -a --eqx --cs -x map-ont -I8g -s 4000",
 }
 try:
     ALIGNER_OPTS = config["cdr_finder"].get("aligner_opts", DEF_ALIGNER_OPTS[ALIGNER])
