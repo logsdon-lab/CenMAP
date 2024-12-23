@@ -220,7 +220,7 @@ NUCFLAG_CFG = {
                 if config["nucflag"].get("hifi_reads_fofn_dir")
                 else {
                     "read_dir": os.path.join(config["nucflag"]["hifi_reads_dir"], sm),
-                    "read_ext": config["nucflag"]["reads_ext"],
+                    "read_rgx": config["nucflag"]["reads_rgx"],
                 }
             ),
             "config": config["nucflag"]["config_nucflag"],

@@ -15,7 +15,7 @@ rule get_complete_correct_cens_bed:
         nucflag_bed=(
             os.path.join(
                 config["nucflag"]["output_dir"],
-                "{sm}_cen_status.bed",
+                "{sm}_status.bed",
             )
             if config.get("nucflag")
             else []

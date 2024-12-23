@@ -35,8 +35,7 @@ new_cens:
 nucflag:
   hifi_reads_dir: "test/data/raw_data"
   output_dir: "results/nucflag"
-  tmp_dir: "/tmp"
-  reads_ext: "fastq.gz"
+  reads_rgx: ".*\\.fastq.gz$"
   config_nucflag: "test/config/nucflag.toml"
   ignore_regions: "config/nucflag_ignore.bed"
   threads_aln: 4
