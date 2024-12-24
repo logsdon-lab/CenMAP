@@ -55,7 +55,7 @@ rule filter_complete_correct_stv_row:
         ),
     shell:
         """
-        ( grep -f <(cut -f 1 {input.complete_cens_bed}) {input.stv_row_bed} || true ) > {output}
+        ( grep -f <(cut -f 4 {input.complete_cens_bed}) {input.stv_row_bed} || true ) > {output}
         """
 
 

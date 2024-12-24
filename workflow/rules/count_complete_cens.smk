@@ -20,7 +20,7 @@ rule count_complete_cens:
         "../envs/py.yaml"
     shell:
         """
-        python {input.script} -i {input.hor_arr_len} || true > {output} 2> {log}
+        {{ python {input.script} -i {input.hor_arr_len} || true ;}} > {output} 2> {log}
         """
 
 
