@@ -85,6 +85,9 @@ DEF_CENSTATS_STATUS_EDGE_PERC_ALR_THR = 0.95
 DEF_CENSTATS_STATUS_MAX_ALR_LEN_THR = 250_000
 
 
+HUMAS_CENS_SPLIT_DIR = os.path.join(config["humas_sd"]["output_dir"], "seq")
+
+
 # Set shared constraints.
 wildcard_constraints:
     chr="|".join(CHROMOSOMES),

@@ -3,9 +3,6 @@ include: "common.smk"
 include: "utils.smk"
 
 
-HUMAS_CENS_SPLIT_DIR = os.path.join(config["humas_sd"]["output_dir"], "seq")
-
-
 use rule extract_and_index_fa as extract_cens_for_humas_sd with:
     input:
         fa=os.path.join(
