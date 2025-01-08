@@ -38,6 +38,10 @@ p <- add_argument(p, "--input_cdr",
   help = "Input CDR output.",
   type = "character", default = NA
 )
+p <- add_argument(p, "--input_stv_colors",
+  help = "Input HOR stv colors.",
+  type = "character", default = NA
+)
 p <- add_argument(p, "--chr",
   help = "Chromosome to plot. ex. chrX",
   type = "character"
@@ -76,6 +80,9 @@ df_humas_hmmer_stv_out <- read_multiple_humas_hmmer_input(
   filter(chr %in% df_rm_sat_out$chr)
 df_rm_sat_out <- df_rm_sat_out %>%
   filter(chr %in% df_humas_hmmer_stv_out$chr)
+
+hor_stv_colors <- read_hor_stv_colors(argv$input_stv_colors)
+print(hor_stv_colors)
 
 if (!is.na(argv$subset)) {
   chr_subset_order <- fread(
@@ -167,7 +174,8 @@ if (!is.na(argv$output_dir)) {
       df_rm_sat_out,
       df_humas_hmmer_stv_out,
       df_cdr,
-      df_stv_ort
+      df_stv_ort,
+      hor_stv_colors
     )
 
     ggsave(
@@ -181,7 +189,7 @@ if (!is.na(argv$output_dir)) {
 }
 
 # Generate full plot.
-plt <- plot_all_ctgs(df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_ort)
+plt <- plot_all_ctgs(df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_ort, hor_stv_colors)
 
 # Scale height to fit number contigs.
 height <- length(unique(df_humas_hmmer_stv_out$chr)) * 0.5

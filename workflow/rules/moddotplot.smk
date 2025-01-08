@@ -133,6 +133,7 @@ rule plot_cen_moddotplot:
         cdr_bed=rules.filter_annotations_moddotplot.output.cdr_bed,
         stv_row_ort_bed=rules.filter_annotations_moddotplot.output.stv_row_ort_bed,
         binned_methyl_bed=rules.filter_annotations_moddotplot.output.binned_methyl_bed,
+        hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],
     output:
         plots=expand(
             os.path.join(
@@ -160,6 +161,7 @@ rule plot_cen_moddotplot:
         --cdr {input.cdr_bed} \
         --methyl {input.binned_methyl_bed} \
         --mer_order {params.mer_order} \
+        --hor_colors {input.hor_stv_colors} \
         --outdir {params.output_dir} 2>> {log}
         """
 

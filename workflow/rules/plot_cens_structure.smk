@@ -52,6 +52,7 @@ rule plot_cens_structure:
             config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.ort.bed"
         ),
         cdrs=rules.filter_annotations_cens_structure.output.cdr_bed,
+        hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],
     output:
         plot=os.path.join(
             config["plot_hor_stv"]["output_dir"],
@@ -88,6 +89,7 @@ rule plot_cens_structure:
             --input_cdr {input.cdrs} \
             --chr {wildcards.chr} \
             --output {output.plot} \
+            --input_stv_colors {input.hor_stv_colors} \
             {params.plot_dir} \
             --hor_filter {params.hor_filter} \
             --mer_order {params.mer_order} 2> {log}
@@ -112,6 +114,7 @@ use rule plot_cens_structure as plot_complete_cens_structure with:
             config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.ort.bed"
         ),
         cdrs=rules.filter_annotations_cens_structure.output.cdr_bed,
+        hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],
     output:
         plot=os.path.join(
             config["plot_hor_stv"]["output_dir"],

@@ -58,6 +58,12 @@ parser <- add_argument(
 )
 parser <- add_argument(
   parser,
+  "--hor_colors",
+  help = "Input HOR stv colors.",
+  type = "character", default = NA
+)
+parser <- add_argument(
+  parser,
   "--hor_ort",
   help = "bedfile with hor ort. Can be derived from --hor but this stopgap is here because there are no good interval tree libraries in R.",
 )
@@ -116,6 +122,8 @@ if (!is.na(args$cdr)) {
   height_adj_methyl_binned <- 0
 }
 
+hor_colors <- read_hor_stv_colors(args$hor_colors)
+
 if (!is.na(args$methyl)) {
   df_methyl_binned <- read_one_methyl_bed_input(args$methyl)
   height_adj_methyl_binned <- 0.5
@@ -137,7 +145,8 @@ plot <- make_cen_plot(
   df_rm_sat_out,
   df_cdr,
   df_hor_ort,
-  df_methyl_binned
+  df_methyl_binned,
+  hor_colors
 )
 
 if (is.na(args$width)) {
