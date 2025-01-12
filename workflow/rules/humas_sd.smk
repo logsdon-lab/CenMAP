@@ -133,7 +133,7 @@ rule _force_humas_sd_env_inclusion:
     output:
         plots=touch("conda_humas_sd.done"),
     conda:
-        "workflow/rules/Snakemake-HumAS-SD/workflow/envs/env.yaml"
+        "Snakemake-HumAS-SD/workflow/envs/env.yaml"
     shell:
         "echo ''"
 

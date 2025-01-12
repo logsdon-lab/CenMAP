@@ -52,6 +52,10 @@ jobs:
       run: |
         pytest test/ -vvv
 
+    - name: Test can generate Dockerfile.
+      run: |
+        make dockerfile
+
     - name: Test dry-run workflow.
       run: |
         snakemake -c 1 -np \
