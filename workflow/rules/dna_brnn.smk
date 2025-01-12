@@ -1,6 +1,40 @@
 include: "common.smk"
 
 
+# Then split them into unique files per contig.
+checkpoint split_fa_dnabrnn:
+    input:
+        fa=rules.extract_cens_regions.output.seq,
+        rename_key=rules.map_collapse_cens.output.renamed_cens_key,
+    output:
+        directory(
+            os.path.join(config["dna_brnn"]["output_dir"], "seq", "interm", "{sm}")
+        ),
+    log:
+        "logs/dna_brnn/split_fa_{sm}.log",
+    params:
+        split_dir=lambda wc, output: output[0],
+    shell:
+        """
+        mkdir -p {params.split_dir}
+        awk '{{
+            # Read key values in first file.
+            if (FNR == NR) {{
+                # Add coords to name.
+                kv[$1":"$3]=$2":"$3;
+                next;
+            }}
+
+            if (substr($0, 1, 1)==">") {{
+                fname=substr($0,2)
+                repl_fname=kv[fname]
+                filename=("{params.split_dir}/" repl_fname ".fa")
+            }}
+            print $0 > filename
+        }}' {input.rename_key} {input.fa} 2> {log}
+        """
+
+
 rule compile_dna_brnn:
     output:
         os.path.join(config["dna_brnn"]["output_dir"], "dna-nn", "dna-brnn"),
@@ -31,15 +65,15 @@ rule run_dna_brnn:
         ),
         model=config["dna_brnn"]["model"],
         seqs=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "seq",
-            "{sm}_centromeric_regions.fa",
+            rules.split_fa_dnabrnn.output[0],
+            "{fname}.fa",
         ),
     output:
         repeat_regions=os.path.join(
             config["dna_brnn"]["output_dir"],
+            "bed",
             "{sm}",
-            "{sm}_centromeric_regions.renamed.bed",
+            "{fname}.bed",
         ),
     params:
         bin_dnabrnn=lambda wc, input: (
@@ -49,70 +83,14 @@ rule run_dna_brnn:
     resources:
         mem=config["dna_brnn"].get("mem", "4GB"),
     log:
-        "logs/dna_brnn/dna_brnn_{sm}.log",
+        "logs/dna_brnn/dna_brnn_{sm}_{fname}.log",
     benchmark:
-        "benchmarks/dna_brnn/dna_brnn_{sm}.tsv"
+        "benchmarks/dna_brnn/dna_brnn_{sm}_{fname}.tsv"
     singularity:
         "docker://logsdonlab/dna-nn:latest"
     shell:
         """
         {params.bin_dnabrnn} -t {threads} -Ai {input.model} {input.seqs} > {output} 2> {log}
-        """
-
-
-# Run dna-brnn only on the ref centromeres as baseline expectation of ALR repeats.
-# (Per chr)
-# /net/eichler/vol27/projects/hgsvc/nobackups/analysis/glennis/map_align_t2t_chm13/results/t2t_chm13_v2.0_cens/bed/centromeres/dna-brnn/chm13_cens.trimmed.bed
-# dna-brnn on f"chm13.hor_arrays_masked.500kbp.fa"?
-use rule run_dna_brnn as run_dna_brnn_ref_cens with:
-    input:
-        model=config["dna_brnn"]["model"],
-        seqs=os.path.join(
-            config["extract_ref_hor_arrays"]["output_dir"],
-            f"{REF_NAME}.hor_arrays.{REF_CENS_EDGE_LEN}kbp.bed",
-        ),
-    output:
-        cens=os.path.join(
-            config["dna_brnn"]["output_dir"], REF_NAME, f"{REF_NAME}_cens.trimmed.bed"
-        ),
-    log:
-        f"logs/dna_brnn/dna_brnn_{REF_NAME}_cens.log",
-    benchmark:
-        f"benchmarks/dna_brnn/dna_brnn_{REF_NAME}_cens.tsv"
-
-
-# grep "chr1:" chm13_cens.trimmed.bed | \
-# sed 's/:/\t/g' | sed 's/-/\t/g' | \
-# awk -v OFS="\t" '{print $1, $2+$4, $2+$5, $6, $5-$4}' | awk '$4==2' | awk '$5>1000' > chr1_tmp.fwd.bed
-rule filter_dnabrnn_ref_cens_regions:
-    input:
-        script="workflow/scripts/filter_dnabrnn_output.py",
-        repeats=(
-            rules.run_dna_brnn_ref_cens.output
-            if config["dna_brnn"].get("ref_alr_file") is None
-            else config["dna_brnn"]["ref_alr_file"]
-        ),
-        thresholds=config["dna_brnn"]["thr_file"],
-    output:
-        temp(
-            os.path.join(
-                config["dna_brnn"]["output_dir"], REF_NAME, "{chr}_tmp.fwd.bed"
-            )
-        ),
-    params:
-        repeat_type_filter=2,
-    log:
-        "logs/dna_brnn/filter_dnabrnn_ref_{chr}_cens_regions.log",
-    conda:
-        "../envs/py.yaml"
-    shell:
-        """
-        python {input.script} \
-        -i {input.repeats} \
-        -o {output} \
-        -t {input.thresholds} \
-        --chr {wildcards.chr} \
-        --repeat_type {params.repeat_type_filter} 2> {log}
         """
 
 
@@ -126,7 +104,7 @@ rule filter_dnabrnn_ref_cens_regions:
 # awk -v OFS="\t" '{print $1"-"$2, $3+$5, $3+$6, $7, $6-$5}' | \
 # awk '$4==2' | \
 # awk '$5>1000' >> chr2_tmp.fwd.bed
-use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions with:
+rule filter_dnabrnn_sample_cens_regions:
     input:
         script="workflow/scripts/filter_dnabrnn_output.py",
         repeats=rules.run_dna_brnn.output,
@@ -135,16 +113,38 @@ use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions w
         tmp_alr_ctgs=temp(
             os.path.join(
                 config["dna_brnn"]["output_dir"],
-                "{sm}",
-                "{chr}_{sm}_contigs.ALR.bed",
+                "bed",
+                "{sm}_filtered",
+                "{fname}.bed",
             )
         ),
     params:
+        chrom_name=lambda wc: get_chrom_name(wc.fname),
         repeat_type_filter=2,
     log:
-        "logs/dna_brnn/filter_dnabrnn_{sm}_{chr}_cens_regions.log",
+        "logs/dna_brnn/filter_dnabrnn_{sm}_{fname}_cens_regions.log",
     conda:
         "../envs/py.yaml"
+    shell:
+        """
+        python {input.script} \
+        -i {input.repeats} \
+        -o {output} \
+        -t {input.thresholds} \
+        --chr {params.chrom_name} \
+        --repeat_type {params.repeat_type_filter} 2> {log}
+        """
+
+
+def dna_brnn_output(wc):
+    outdir = checkpoints.split_fa_dnabrnn.get(sm=wc.sm).output[0]
+    wcs = glob_wildcards(os.path.join(outdir, "{fname}.fa"))
+
+    return expand(
+        rules.filter_dnabrnn_sample_cens_regions.output,
+        sm=wc.sm,
+        fname=wcs.fname,
+    )
 
 
 # /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py (modified bedminmax) \
@@ -155,59 +155,51 @@ use rule filter_dnabrnn_ref_cens_regions as filter_dnabrnn_sample_cens_regions w
 # awk -v OFS="\t" '$2<0 {$2=0}1' > chr2_contigs.fwd.repeat.bed
 rule aggregate_dnabrnn_alr_regions_by_chr:
     input:
-        added_ref_cens=rules.filter_dnabrnn_ref_cens_regions.output,
-        sample_cens=lambda wc: expand(
-            rules.filter_dnabrnn_sample_cens_regions.output,
-            sm=SAMPLE_NAMES,
-            chr=[wc.chr],
-        ),
+        sample_cens=dna_brnn_output,
     output:
         os.path.join(
             config["dna_brnn"]["output_dir"],
-            "{chr}_contigs.ALR.bed",
+            "bed",
+            "{sm}_all.bed",
         ),
-    params:
-        repeat_len_thr=dnabrnn_alr_region_threshold,
-        # "chr", "start", "end", "repeat_type", "repeat_len"
-        grp_cols="1,4",
-        # After grouping
-        # "chr", "repeat_type", "start", "end"
-        sort_cols="-k1 -k3n",
-        bp_edges=500_000,
-        # dna-brnn output may not contain repeats from a chr.
-        allow_empty="--allow_empty",
     log:
-        "logs/dna_brnn/aggregate_dnabrnn_alr_regions_by_{chr}.log",
+        "logs/dna_brnn/aggregate_dnabrnn_alr_regions_by_{sm}.log",
     conda:
         "../envs/tools.yaml"
-    # Aggregate and bedminmax all.
-    # Select cols and calculate length.
-    # Add 500 kbp on both ends.
-    # Take only repeats greater than some value.
-    # Take abs value.
     shell:
         """
-        {{ bedtools groupby \
-        -i <(cat {input.sample_cens} {input.added_ref_cens} | sort | uniq) \
-        -g {params.grp_cols} \
-        -c 2,3 \
-        -o min,max | \
-        sort {params.sort_cols} | \
-        awk -v BP_EDGES={params.bp_edges} -v OFS="\\t" '{{
-            len=$4-$3
-            if (len > {params.repeat_len_thr}) {{
-                new_start=$3-BP_EDGES
-                new_end=$4+BP_EDGES
-                new_start=((new_start < 0) ? 0 : new_start)
-                print $1, new_start, new_end, $4-$3
-            }}
-        }}';}} > {output} 2> {log}
+        cat {input.sample_cens} > {output} 2> {log}
         """
+
+
+use rule extract_and_index_fa as extract_alr_region_sample_by_chr with:
+    input:
+        fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
+        bed=rules.aggregate_dnabrnn_alr_regions_by_chr.output,
+    output:
+        seq=temp(
+            os.path.join(
+                config["ident_cen_ctgs"]["output_dir"],
+                "seq",
+                "interm",
+                "{sm}_contigs.ALR.fa",
+            )
+        ),
+        idx=temp(
+            os.path.join(
+                config["ident_cen_ctgs"]["output_dir"],
+                "seq",
+                "interm",
+                "{sm}_contigs.ALR.fa.fai",
+            )
+        ),
+    log:
+        "logs/extract_new_cens_ctgs/extract_alr_region_{sm}.log",
 
 
 rule dna_brnn_all:
     input:
         expand(
             rules.aggregate_dnabrnn_alr_regions_by_chr.output,
-            chr=CHROMOSOMES,
+            sm=SAMPLE_NAMES,
         ),

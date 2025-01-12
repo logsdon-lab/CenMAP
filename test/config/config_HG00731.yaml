@@ -6,18 +6,19 @@ samples:
 
 align_asm_to_ref:
   reference: "test/data/reference/T2T-CHM13v2_chrY.fasta.gz"
+  output_dir: "results/align_asm_to_ref"
   threads: 4
+  mem: 60GB
 
 concat_asm:
   input_dir: "test/data/assemblies"
-  output_dir: "data/assemblies/combined"
+  output_dir: "results/assemblies/combined"
 
 extract_ref_hor_arrays:
   output_dir: "results/masked"
   added_bases: 0
 
 ident_cen_ctgs:
-  comb_assemblies_dir: "data/assemblies/combined"
   output_dir: "results/cens"
   ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
   ref_cens_monomeric_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
@@ -25,26 +26,23 @@ ident_cen_ctgs:
 dna_brnn:
   output_dir: "results/dna_brnn"
   model: "data/models/attcc-alpha.knm"
-  ref_alr_file: "data/annotations/chm13_cens.trimmed.bed"
   threads: 4
   thr_file: "config/dnabrnn_thresholds.json"
-  full_alr_thr_file: "config/dnabrnn_full_alr_region_thresholds.json"
 
 new_cens:
   output_dir: "results/cens_new"
 
-# nucflag:
-#   hifi_reads_dir: "test/data/raw_data"
-#   output_dir: "results/dna_brnn/nucflag"
-#   tmp_dir: "/tmp"
-#   reads_ext: "fastq.gz"
-#   config_nucflag: "test/config/nucflag.toml"
-#   ignore_regions: "config/nucflag_ignore.bed"
-#   threads_aln: 1
-#   mem_nucflag: 4
-#   mem_aln: 4
-#   processes_nucflag: 2
-#   samtools_view_flag: 2308
+nucflag:
+  hifi_reads_dir: "test/data/raw_data"
+  output_dir: "results/nucflag"
+  reads_rgx: ".*\\.fastq.gz$"
+  config_nucflag: "test/config/nucflag.toml"
+  ignore_regions: "config/nucflag_ignore.bed"
+  threads_aln: 4
+  mem_nucflag: 4
+  mem_aln: 4
+  processes_nucflag: 2
+  samtools_view_flag: 2308
 
 repeatmasker:
   ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
@@ -53,17 +51,18 @@ repeatmasker:
   output_dir: "results/repeatmasker"
   config_censtats_status: "config/censtats.json"
 
-humas_hmmer:
-  input_dir: "results/humas_hmmer/cens"
-  output_dir: "results/humas_hmmer"
+humas_sd:
+  output_dir: "results/humas_sd"
+  hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
   threads: 4
-  model: "data/models/AS-HORs-hmmer3.0-170921.hmm"
+  identity_thr: 95.0
 
 plot_hor_stv:
   output_dir: "results/hor_stv"
   chm1_stv: "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
   chm13_stv: "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
   sat_annot_colors: "config/repeatmasker_sat_annot_colors.json"
+  stv_annot_colors: "config/stv_annot_colors.tsv"
 
 cluster_cens:
   output_dir: "results/cluster_cens"

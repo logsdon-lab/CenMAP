@@ -35,6 +35,7 @@ concat_asm:
 
 align_asm_to_ref:
   # Output dir set to results
+  output_dir: "results/align_asm_to_ref"
   reference: "data/reference/T2T-CHM13v2.fasta.gz"
   threads: 4
   mem: 60GB
@@ -42,10 +43,9 @@ align_asm_to_ref:
 extract_ref_hor_arrays:
   output_dir: "results/ref_hor_arrays"
   # Add bp to extend edges of HOR array for alignment. In addition to default 500kbp.
-  added_bases: 500_000
+  added_bases: 1_000_000
 
 ident_cen_ctgs:
-  comb_assemblies_dir: "data/assemblies/combined"
   output_dir: "results/cens"
   ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
   ref_cens_monomeric_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
@@ -54,29 +54,24 @@ dna_brnn:
   output_dir: "results/dna_brnn"
   # https://github.com/lh3/dna-nn/tree/master/models
   model: "data/models/attcc-alpha.knm"
-  # File with dna-brnn run on t2t-chm13 ref. Avoids running rule to generate.
-  # Optional.
-  ref_alr_file: "data/annotations/chm13_cens.trimmed.bed"
   threads: 12
-  mem: 30GB
+  mem: 8GB
   thr_file: "config/dnabrnn_thresholds.json"
-  full_alr_thr_file: "config/dnabrnn_full_alr_region_thresholds.json"
-
-new_cens:
-  output_dir: "results/cens_new"
 
 nucflag:
   hifi_reads_fofn_dir: "data/hifi"
  # hifi_reads_dir: "data/hifi"
- # reads_ext: "fastq.gz"
+ # reads_rgx: ".*\\.fastq.gz"
   output_dir: "results/nucflag"
   tmp_dir: "temp"
   config_nucflag: "config/nucflag.toml"
   threads_aln: 24
   processes_nucflag: 12
   mem_nucflag: 50GB
-  mem_aln: 50GB
+  mem_aln: 100GB
   samtools_view_flag: 2308
+  # asat or live_asat
+  ignore_type: "asat"
 
 repeatmasker:
   ref_repeatmasker_chrY_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
@@ -85,19 +80,18 @@ repeatmasker:
   threads: 12
   output_dir: "results/repeatmasker"
 
-humas_hmmer:
-  # Dir where split cens placed.
-  input_dir: "results/humas_hmmer/cens"
-  output_dir: "results/humas_hmmer"
-  # NOTE: If providing 150 cores and num_threads=30, a max of 5 are run concurrently.
-  threads: 24
-  model: "data/models/AS-HORs-hmmer3.0-170921.hmm"
+humas_sd:
+  output_dir: "results/humas_sd"
+  threads: 6
+  mem: 30GB
+  hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
 
 plot_hor_stv:
   output_dir: "results/hor_stv"
   chm1_stv: "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
   chm13_stv: "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
   sat_annot_colors: "config/repeatmasker_sat_annot_colors.json"
+  stv_annot_colors: "config/stv_annot_colors.tsv"
 
 calculate_hor_length:
   chm1_hor_lengths: "data/annotations/chm1_hor_length.tsv"
@@ -116,17 +110,18 @@ moddotplot:
   window: 5000
 
 cdr_finder:
-  # Either minimap2 (-x lr:hqae) or winnowmap (-x map-ont)
+  # Either minimap2 or winnowmap
+  # Use aligner_opts to override defaults.
   aligner: minimap2
-  # Default: -s 4000 and -I 10G
-  aligner_added_opts: ""
+  # aligner_opts: "-y -a --eqx --cs -x lr:hqae -I8g -s 4000" # minimap2
+  # aligner_opts: "-y -a --eqx --cs -x map-ont -I8g -s 4000" # winnowmap
   # Expects sample subdir in input_dir.
   # Uses find and file pattern to merge bam.
   input_bam_dir: "data/ont"
+  bam_rgx: ".*prom_pass.bam$"
   output_dir: "results/cdr_finder"
   aln_mem: 50GB
   aln_threads: 24
-  file_pattern: ".*prom_pass\\.bam"
   window_size: 5000
   alr_threshold: 100000
   bp_merge: 1

@@ -1,4 +1,4 @@
-get_humas_hmmer_stv_annot_colors <- function() {
+default_hor_stv_colors <- function() {
   myColors <- c(
     "#A8275C", "#9AC78A", "#CC8FC1", "#3997C6", "#8882C4", "#8ABDD6", "#096858", "#45B4CE", "#AFA7D8", "#A874B5", "#3F66A0",
     "#D66C54", "#BFDD97", "#AF5D87", "#E5E57A", "#ED975D", "#F9E193", "#93430C", "#E5D1A1", "#A1B5E5", "#9F68A5", "#81B25B",
@@ -10,6 +10,16 @@ get_humas_hmmer_stv_annot_colors <- function() {
     "4", "5", "6", "7", "8", "9"
   )))
   return(myColors)
+}
+
+read_hor_stv_colors <- function(fname) {
+  if (is.na(fname)) {
+    return(default_hor_stv_colors())
+  }
+  df <- fread(fname, col.names = c("hor", "color"), sep = "\t")
+  hor_color_list <- df %>% dplyr::pull(color, hor)
+
+  return(hor_color_list)
 }
 
 get_rm_sat_annot_colors <- function() {
@@ -72,7 +82,7 @@ add_stv_ort_to_plot <- function(plot, df_stv_ort) {
   return(plot)
 }
 
-plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_ort, height = 10) {
+plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_ort, hor_stv_colors, height = 10) {
   plot <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ] %>% filter(chr == ctg)) +
     geom_segment(
       aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region),
@@ -88,7 +98,7 @@ plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, 
       aes(x = start, xend = stop + 2000, y = chr, yend = chr, color = as.factor(mer)),
       size = height
     ) +
-    scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
+    scale_color_manual(values = hor_stv_colors) +
     theme_classic() +
     # Remove everything.
     theme(
@@ -119,7 +129,7 @@ plot_single_ctg <- function(ctg, df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, 
   return(plot)
 }
 
-plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_ort, height = 8) {
+plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_ort, hor_stv_colors, height = 8) {
   plot <- ggplot(data = df_rm_sat_out[order(df_rm_sat_out$region), ]) +
     geom_segment(
       aes(x = start2, y = chr, xend = stop2 + 1000, yend = chr, color = region),
@@ -134,7 +144,7 @@ plot_all_ctgs <- function(df_rm_sat_out, df_humas_hmmer_stv_out, df_cdr, df_stv_
       aes(x = start, xend = stop + 2000, y = chr, yend = chr, color = as.factor(mer)),
       size = height
     ) +
-    scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
+    scale_color_manual(values = hor_stv_colors) +
     theme_classic() +
     theme(
       legend.position = "bottom",
@@ -411,7 +421,7 @@ read_one_methyl_bed_input <- function(input_methyl) {
 }
 
 read_one_hor_mon_ort_input <- function(input_hor_ort) {
-   if (is.na(input_hor_ort)) {
+  if (is.na(input_hor_ort)) {
     return(NA)
   }
   cols <- c("chr", "start", "stop", "strand")

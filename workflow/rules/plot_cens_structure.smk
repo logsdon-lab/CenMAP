@@ -1,17 +1,15 @@
 
 include: "common.smk"
-include: "plot_hor_stv.smk"
-
-
-if config.get("cdr_finder"):
-
-    include: "cdr_finder.smk"
 
 
 rule filter_annotations_cens_structure:
     input:
         all_cdr_bed=lambda wc: (
-            rules.merge_cdr_beds.output.reorient_cdr_output
+            os.path.join(
+                config["cdr_finder"]["output_dir"],
+                "bed",
+                "all_cdrs.bed",
+            )
             if config.get("cdr_finder")
             else []
         ),
@@ -54,18 +52,17 @@ rule plot_cens_structure:
             config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.ort.bed"
         ),
         cdrs=rules.filter_annotations_cens_structure.output.cdr_bed,
+        hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],
     output:
         plot=os.path.join(
             config["plot_hor_stv"]["output_dir"],
             "plots",
-            "hor",
             "all_cens_{chr}.png",
         ),
-        cen_plot_dir=directory(
+        plot_dir=directory(
             os.path.join(
                 config["plot_hor_stv"]["output_dir"],
                 "plots",
-                "hor",
                 "{chr}",
             )
         ),
@@ -76,11 +73,14 @@ rule plot_cens_structure:
     params:
         hor_filter=0,
         mer_order=lambda wc: MONOMER_ORDER[wc.chr],
+        plot_dir=lambda wc, output: (
+            f"--output_dir {output.plot_dir}" if output.plot_dir else ""
+        ),
     shell:
         """
-        if ! [ -s  {input.hor_stv_out} ] || ! [ -s {input.rm_sat_out} ]; then
+        if ! [ -s {input.hor_stv_out} ] || ! [ -s {input.rm_sat_out} ]; then
             touch {output.plot}
-            mkdir -p {output.cen_plot_dir}
+            mkdir -p {output.plot_dir} || true
         else
             Rscript {input.script} \
             --input_rm_sat {input.rm_sat_out} \
@@ -89,17 +89,51 @@ rule plot_cens_structure:
             --input_cdr {input.cdrs} \
             --chr {wildcards.chr} \
             --output {output.plot} \
-            --output_dir {output.cen_plot_dir} \
+            --input_stv_colors {input.hor_stv_colors} \
+            {params.plot_dir} \
             --hor_filter {params.hor_filter} \
             --mer_order {params.mer_order} 2> {log}
         fi
         """
 
 
+use rule plot_cens_structure as plot_complete_cens_structure with:
+    input:
+        script="workflow/scripts/plot_cens_all_stv.R",
+        rm_sat_out=os.path.join(
+            config["plot_hor_stv"]["output_dir"],
+            "repeats",
+            "all_cens_{chr}.annotation.fa.out",
+        ),
+        hor_stv_out=os.path.join(
+            config["plot_hor_stv"]["output_dir"],
+            "bed",
+            "{chr}_AS-HOR_stv_row.complete.bed",
+        ),
+        hor_stv_ort=os.path.join(
+            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.ort.bed"
+        ),
+        cdrs=rules.filter_annotations_cens_structure.output.cdr_bed,
+        hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],
+    output:
+        plot=os.path.join(
+            config["plot_hor_stv"]["output_dir"],
+            "plots",
+            "all_complete_cens_{chr}.png",
+        ),
+        plot_dir=[],
+    log:
+        "logs/plot_cens_structure/plot_{chr}_cens_structure.log",
+
+
 rule plot_cens_structure_only:
     input:
         expand(
             rules.plot_cens_structure.output,
+            chr=CHROMOSOMES,
+        ),
+        expand(
+            rules.plot_complete_cens_structure.output,
             chr=CHROMOSOMES,
         ),
     default_target: True

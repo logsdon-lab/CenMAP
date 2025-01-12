@@ -32,7 +32,7 @@ CHROMOSOMES = config.get(
         "chrY",
     ),
 )
-RGX_CHR = re.compile("(chr[0-9XY]+)")
+RGX_CHR = re.compile(r"(chr[0-9XY]+)")
 MONOMER_ORDER = {
     "chr1": "large",
     "chr2": "small",
@@ -83,6 +83,9 @@ DEF_DNA_BRNN_FULL_ALR_THR = 30_000
 DEF_CENSTATS_STATUS_EDGE_LEN_THR = 500_000
 DEF_CENSTATS_STATUS_EDGE_PERC_ALR_THR = 0.95
 DEF_CENSTATS_STATUS_MAX_ALR_LEN_THR = 250_000
+
+
+HUMAS_CENS_SPLIT_DIR = os.path.join(config["humas_sd"]["output_dir"], "seq")
 
 
 # Set shared constraints.

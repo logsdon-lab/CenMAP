@@ -13,27 +13,16 @@ print(
     file=sys.stderr,
 )
 ALIGNER = config["cdr_finder"].get("aligner", "minimap2")
-ADDED_ALIGNER_OPTS = config["cdr_finder"].get("aligner_added_opts", "")
-ALL_ALIGNER_SETTINGS = {
-    "minimap2": {
-        "preset": "lr:hqae",
-        "split_idx_num_base": "-I 10G",
-        "min_peak_dp_aln_score": "-s 4000",
-        "additional": ADDED_ALIGNER_OPTS,
-    },
+DEF_ALIGNER_OPTS = {
+    "minimap2": "-y -a --eqx --cs -x lr:hqae -I8g -s 4000",
     # https://www.biorxiv.org/content/10.1101/2024.11.01.621587v1
-    "winnowmap": {
-        "preset": "map-ont",
-        "split_idx_num_base": "-I 10G",
-        "min_peak_dp_aln_score": "-s 4000",
-        "additional": "-W {input.kmer_cnts} " + ADDED_ALIGNER_OPTS,
-    },
+    "winnowmap": "-y -a --eqx --cs -x map-ont -I8g -s 4000",
 }
 try:
-    ALIGNER_SETTINGS = ALL_ALIGNER_SETTINGS[ALIGNER]
+    ALIGNER_OPTS = config["cdr_finder"].get("aligner_opts", DEF_ALIGNER_OPTS[ALIGNER])
 except KeyError:
     raise ValueError(
-        f"Invalid aligner option ({ALIGNER}) for CDR-Finder. Choose: {tuple(ALL_ALIGNER_SETTINGS.keys())} "
+        f"Invalid aligner option ({ALIGNER}) for CDR-Finder. Choose: {tuple(DEF_ALIGNER_OPTS.keys())} "
     )
 
 
@@ -41,108 +30,49 @@ wildcard_constraints:
     sm="|".join(SAMPLE_NAMES_INTERSECTION),
 
 
-rule merge_methyl_bam_to_fq:
-    input:
-        os.path.join(config["cdr_finder"]["input_bam_dir"], "{sm}"),
-    output:
-        temp(
-            os.path.join(
-                config["cdr_finder"]["output_dir"], "aln", "{sm}_methyl.fq"
-            )
-        ),
-    params:
-        file_pattern=config["cdr_finder"]["file_pattern"],
-    resources:
-        mem="16G",
-    threads: config["cdr_finder"]["aln_threads"]
-    log:
-        "logs/cdr_finder/merge_methyl_bam_{sm}.log",
-    benchmark:
-        "benchmarks/cdr_finder/merge_methyl_bam_{sm}.tsv"
-    conda:
-        "../envs/tools.yaml"
-    shell:
-        """
-        {{ samtools merge -@ {threads} - $(find {input} -regex {params.file_pattern}) | \
-        samtools bam2fq -T "*" -@ {threads} - ;}} > {output} 2> {log}
-        """
+CDR_ALIGN_CFG = {
+    "samples": [
+        {
+            "name": sm,
+            "asm_fa": os.path.join(
+                config["concat_asm"]["output_dir"], f"{sm}-asm-comb-dedup.fa"
+            ),
+            "read_dir": os.path.join(config["cdr_finder"]["input_bam_dir"], f"{sm}"),
+            "read_rgx": config["cdr_finder"]["bam_rgx"],
+        }
+        for sm in SAMPLE_NAMES_INTERSECTION
+    ],
+    "aligner": ALIGNER,
+    "aligner_opts": ALIGNER_OPTS,
+    "mem_aln": config["cdr_finder"]["aln_mem"],
+    "threads_aln": config["cdr_finder"]["aln_threads"],
+    "benchmarks_dir": "benchmarks/cdr_finder",
+    "logs_dir": "logs/cdr_finder",
+    "output_dir": os.path.join(config["cdr_finder"]["output_dir"], "aln"),
+    "samtools_view_flag": 2308,
+}
 
 
-rule get_kmer_cnts:
-    input:
-        fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
-    output:
-        kmer_cnts=directory(
-            os.path.join(config["cdr_finder"]["output_dir"], "aln", "{sm}")
-        ),
-        kmer_cnts_list=os.path.join(
-            config["cdr_finder"]["output_dir"], "aln", "{sm}_repetitive.txt"
-        ),
-    params:
-        kmer_size=15,
-        gt_perc_thr=0.9998,
-    threads: config["cdr_finder"]["aln_threads"]
-    resources:
-        mem="16G",
-    log:
-        "logs/cdr_finder/get_kmer_cnts_{sm}.log",
-    benchmark:
-        "benchmarks/cdr_finder/get_kmer_cnts_{sm}.tsv"
-    conda:
-        "../envs/winnowmap.yaml"
-    shell:
-        """
-        meryl count threads={threads} k={params.kmer_size} output {output.kmer_cnts} {input.fa} 2> {log}
-        meryl print greater-than distinct={params.gt_perc_thr} {output.kmer_cnts} > {output.kmer_cnts_list} 2>> {log}
-        """
+module CDR_Align:
+    snakefile:
+        github(
+            "logsdon-lab/Snakemake-Aligner", path="workflow/Snakefile", branch="main"
+        )
+    config:
+        CDR_ALIGN_CFG
 
 
-rule align_methyl_bam_to_asm:
-    input:
-        ref=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
-        query=rules.merge_methyl_bam_to_fq.output,
-        kmer_cnts=(
-            rules.get_kmer_cnts.output.kmer_cnts_list if ALIGNER == "winnowmap" else []
-        ),
-    output:
-        bam=os.path.join(config["cdr_finder"]["output_dir"], "aln", "{sm}.bam"),
-    params:
-        aligner=ALIGNER,
-        aligner_added_opts=ADDED_ALIGNER_OPTS,
-        preset=ALIGNER_SETTINGS["preset"],
-        samtools_view_flag=2038,
-        min_peak_dp_aln_score=ALIGNER_SETTINGS["min_peak_dp_aln_score"],
-        split_idx_num_base=ALIGNER_SETTINGS["split_idx_num_base"],
-    threads: config["cdr_finder"]["aln_threads"]
-    resources:
-        mem=config["cdr_finder"]["aln_mem"],
-    conda:
-        f"../envs/{ALIGNER}.yaml"
-    log:
-        "logs/cdr_finder/align_methyl_bam_to_asm_{sm}.log",
-    benchmark:
-        "benchmarks/cdr_finder/align_methyl_bam_to_asm_{sm}.tsv"
-    shell:
-        """
-        {{ {params.aligner} \
-        -y --eqx \
-        -ax {params.preset} \
-        -t {threads} \
-        {params.min_peak_dp_aln_score} \
-        {params.split_idx_num_base} \
-        {params.aligner_added_opts} \
-        {input.ref} {input.query} | \
-        samtools view -u -F {params.samtools_view_flag} - | \
-        samtools sort -o {output.bam} ;}} 2> {log}
-        """
+use rule * from CDR_Align as cdr_aln_*
 
 
 rule get_original_coords:
     input:
+        # (sample_chr_ctg, st, end, is-misassembled)
         bed=os.path.join(
-            config["repeatmasker"]["output_dir"],
+            config["ident_cen_ctgs"]["output_dir"],
             "bed",
-            "{sm}_complete_correct_ALR_regions.bed",
+            "interm",
+            "{sm}_complete_cens.bed",
         ),
         asm_faidx=os.path.join(
             config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
@@ -185,13 +115,18 @@ rule get_original_coords:
 # Pass CDR config here.
 CDR_FINDER_CONFIG = {
     **config["cdr_finder"],
+    "log_dir": "logs/cdr_finder",
+    "benchmark_dir": "benchmarks/cdr_finder",
+    "restrict_alr": True,
     "samples": {
         sm: {
             "fasta": os.path.join(
                 config["concat_asm"]["output_dir"], f"{sm}-asm-comb-dedup.fa"
             ),
             "regions": expand(rules.get_original_coords.output.og_coords, sm=sm),
-            "bam": expand(rules.align_methyl_bam_to_asm.output, sm=sm),
+            "bam": expand(
+                rules.cdr_aln_merge_read_asm_alignments.output.alignment, sm=sm
+            ),
         }
         for sm in SAMPLE_NAMES_INTERSECTION
     },

@@ -167,7 +167,7 @@ make_dot <- function(sdf, rname = "") {
   return(plt)
 }
 
-make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out, df_cdr, df_hor_ort, df_methyl_binned) {
+make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat_out, df_cdr, df_hor_ort, df_methyl_binned, hor_colors) {
   df_rname_seq_ident <- df_seq_ident %>% filter(q == rname & r == rname)
 
   # make the tri sequence identity plots
@@ -314,7 +314,7 @@ make_cen_plot <- function(rname, df_seq_ident, df_humas_hmmer_stv_out, df_rm_sat
     guides(
       color = guide_legend(nrow = 5, override.aes = list(linewidth=0.5)),
     ) +
-    scale_color_manual(values = get_humas_hmmer_stv_annot_colors()) +
+    scale_color_manual(values = hor_colors) +
     labs(color="Alpha-satellite HOR monomers")
 
   # New colorscale for stainedglass.
