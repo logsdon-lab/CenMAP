@@ -124,7 +124,6 @@ cdr_finder:
   aln_threads: 24
   window_size: 5000
   alr_threshold: 100000
-  bp_merge: 1
   bp_alr_merge: 1000
   bp_edge: 500_000
   height_perc_valley_threshold: 0.34
