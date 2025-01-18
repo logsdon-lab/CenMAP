@@ -118,7 +118,7 @@ rule rename_reort_asm:
             "{sm}-asm-renamed-reort.fa.fai",
         ),
     params:
-        pattern=r"'(\S+)'",
+        pattern=r"'^(\S+)\s*'",
         replacement=lambda wc: "'{kv}'",
     conda:
         "../envs/tools.yaml"
