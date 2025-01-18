@@ -28,22 +28,24 @@ def main():
     args = ap.parse_args()
 
     # join_cen_status_and_og_status
-    df_statuses = (
-        pl.concat(
-            pl.read_csv(
-                file,
-                separator="\t",
-                new_columns=["old_name", "new_name", "ort", "is_partial"],
-                has_header=False,
-            )
-            for file in args.statuses
+    df_all_statuses = pl.concat(
+        pl.read_csv(
+            file,
+            separator="\t",
+            new_columns=["old_name", "new_name", "ort", "is_partial"],
+            has_header=False,
         )
+        for file in args.statuses
+    )
+
+    df_statuses = (
+        df_all_statuses
+        # No underscores or |. These are reserved characters for naming.
+        # We expect these fields are splitting.
         .with_columns(
             name_elems=pl.col("old_name")
-            # No underscores or |. These are reserved characters for naming.
-            .str.extract_all(r"([^_|:]+)")
-            # We expect these fields are splitting.
-            .list.to_struct(fields=["sample", "chrom", "ctg_name", "coords"]),
+            .str.extract_groups(r"(.*?)_(chr[0-9XY]+)_(.*?):(.*?)$")
+            .struct.rename_fields(["sample", "chrom", "ctg_name", "coords"]),
         )
         .unnest("name_elems")
         .with_columns(
