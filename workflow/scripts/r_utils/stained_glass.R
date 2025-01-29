@@ -67,19 +67,19 @@ read_bedpe <- function(all.files) {
   return(df)
 }
 
-discrete_color_ranges <- c(
-  "#4b3991", # 1-10
-  "#2974af", # 11-20
-  "#4a9da8", # 21
-  "#57b894", # 22
-  "#9dd893", # 23
-  "#e1f686", # 24
-  "#ffffb2", # 25
-  "#fdda79", # 26
-  "#fb9e4f", # 27
-  "#ee5634", # 28
-  "#c9273e", # 29
-  "#8a0033" # 30
+discrete_color_ranges <-c(
+  "1-10" = "#4b3991",
+  "11-20" = "#2974af",
+  "21" = "#4a9da8",
+  "22" = "#57b894",
+  "23" = "#9dd893",
+  "24" = "#e1f686",
+  "25" = "#ffffb2",
+  "26" = "#fdda79",
+  "27" = "#fb9e4f",
+  "28" = "#ee5634",
+  "29" = "#c9273e",
+  "30" = "#8a0033"
 )
 
 # get the lowest 0.1% of the data so we can not plot it

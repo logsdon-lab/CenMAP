@@ -20,8 +20,8 @@ rule concat_asm:
     shell:
         """
         {{ cat \
-        <(find {input.sm_dir} -regextype posix-egrep -regex "{params.assembly_fname_pattern_gz}" -size +0 -exec zcat {{}} + ) \
-        <(find {input.sm_dir} -regextype posix-egrep -regex "{params.assembly_fname_pattern}" -size +0 -exec cat {{}} + ) | \
+        <(find {input.sm_dir}/ -regextype posix-egrep -regex "{params.assembly_fname_pattern_gz}" -size +0 -exec zcat {{}} + ) \
+        <(find {input.sm_dir}/ -regextype posix-egrep -regex "{params.assembly_fname_pattern}" -size +0 -exec cat {{}} + ) | \
         seqkit rmdup;}} > {output.fa} 2> {log}
         samtools faidx {output.fa} 2>> {log}
         """
