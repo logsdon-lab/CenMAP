@@ -170,44 +170,60 @@ rule fix_cens_rm_out:
         """
 
 
-rule merge_fixed_rm_out:
+use rule create_rm_bed as create_fixed_rm_bed with:
     input:
-        expand(rules.fix_cens_rm_out.output, sm=SAMPLE_NAMES),
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "ref",
-            "ref_ALR_regions.fa.out",
-        ),
+        script="workflow/scripts/create_rm_bed.py",
+        # Absolute coordinates
+        rm_out=[
+            expand(rules.fix_cens_rm_out.output, sm=SAMPLE_NAMES),
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "repeats",
+                "ref",
+                "ref_ALR_regions.fa.abs.out",
+            ),
+        ],
     output:
-        os.path.join(
+        rm_bed=os.path.join(
             config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "reoriented_{chr}_cens.fa.out",
+            "bed",
+            "{chr}",
+            "rm.bed",
         ),
-    shell:
-        """
-        grep -h -P "{wildcards.chr}[:_]" {input} > {output}
-        """
+    params:
+        chr_rgx="{chr}[:_]",
+        color_mapping=config["repeatmasker"]["repeat_colors"],
+    log:
+        "logs/fix_cens_w_repeatmasker/create_fixed_rm_bed_{chr}.log",
 
 
-use rule plot_rm_out as plot_cens_from_rm_by_chr with:
+use rule plot_rm_bed as plot_fixed_rm_bed_by_chr with:
     input:
-        script="workflow/scripts/plot_cens_onlyRM.R",
-        rm_out=rules.merge_fixed_rm_out.output,
+        rm_bed=rules.create_fixed_rm_bed.output,
     output:
-        repeat_plot=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "plot",
-            "{chr}_cens.pdf",
+        plots=multiext(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "plot",
+                "{chr}_cens",
+            ),
+            ".pdf",
+            ".png",
+        ),
+        plot_dir=directory(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "plot",
+                "{chr}_cens",
+            )
         ),
     log:
-        "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_rm.log",
+        "logs/fix_cens_w_repeatmasker/plot_fixed_rm_bed_{chr}.log",
 
 
 rule fix_cens_w_repeatmasker_all:
     input:
         expand(rules.make_complete_cens_bed.output, sm=SAMPLE_NAMES),
         expand(rules.rename_reort_asm.output, sm=SAMPLE_NAMES),
-        expand(rules.plot_cens_from_rm_by_chr.output, chr=CHROMOSOMES),
+        expand(rules.plot_fixed_rm_bed_by_chr.output, chr=CHROMOSOMES),
+    default_target: True

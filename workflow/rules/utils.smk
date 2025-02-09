@@ -24,19 +24,51 @@ rule extract_and_index_fa:
         """
 
 
-rule plot_rm_out:
+rule create_rm_bed:
     input:
-        script="workflow/scripts/plot_cens_onlyRM.R",
+        script="workflow/scripts/create_rm_bed.py",
         rm_out="",
     output:
-        repeat_plot="",
+        rm_bed="",
+    params:
+        chr_rgx="",
+        color_mapping="",
+    log:
+        "logs/create_rm_bed.log",
+    conda:
+        "../envs/py.yaml"
+    shell:
+        """
+        python {input.script} -i <(cat {input.rm_out}) -c {params.chr_rgx} -m {params.color_mapping} > {output.rm_bed} 2> {log}
+        """
+
+
+rule plot_rm_bed:
+    input:
+        rm_bed="",
+    output:
+        plots="",
+        plot_dir="",
+    params:
+        indir=lambda wc, input: os.path.dirname(str(input.rm_bed)).replace("/", "\\/"),
+        script="workflow/scripts/plot_repeatmasker.py",
+        plot_layout="workflow/scripts/repeatmasker_plot.toml",
+        tmp_plot_layout=lambda wc: f"/tmp/repeatmasker_plot_{wc.chr}.toml",
+    threads: 4
     log:
         "logs/plot_rm_out.log",
     conda:
-        "../envs/r.yaml"
+        "../envs/py.yaml"
     shell:
         """
-        Rscript {input.script} {input.rm_out} {output.repeat_plot} 2> {log}
+        sed 's/{{indir}}/{params.indir}/g' {params.plot_layout} > {params.tmp_plot_layout}
+        python {params.script} \
+        -t {params.tmp_plot_layout} \
+        -d {output.plot_dir} \
+        --share_xlim \
+        -p {threads} \
+        -c <(cut -f 1 {input.rm_bed} | uniq) 2> {log}
+        rm {params.tmp_plot_layout}
         """
 
 

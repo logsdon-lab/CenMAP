@@ -49,6 +49,7 @@ repeatmasker:
   ref_repeatmasker_chrY_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   threads: 4
   output_dir: "results/repeatmasker"
+  repeat_colors: "config/repeatmasker_colors.json"
   config_censtats_status: "config/censtats.json"
 
 humas_sd:

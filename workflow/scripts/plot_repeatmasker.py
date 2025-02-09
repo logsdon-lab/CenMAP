@@ -1,0 +1,183 @@
+import os
+import sys
+import copy
+import argparse
+import multiprocessing
+
+import numpy as np
+import polars as pl
+
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from typing import Iterable, TextIO
+from concurrent.futures import ProcessPoolExecutor
+
+from cenplot import (
+    PlotSettings,
+    plot_one_cen,
+    merge_plots,
+    read_one_cen_tracks,
+    Track,
+)
+
+
+# def create_position(plots: list[tuple[Figure, np.ndarray, str]]):
+#     pos_fig, pos_axes, pos_outfile = copy.deepcopy(plots[-1])
+#     pos_fig.set_figheight(pos_fig.get_figheight() / 1.8)
+#     pos_outfile = os.path.join(os.path.dirname(pos_outfile), "position.png")
+#     pos_ax: Axes = pos_axes[0, 0]
+#     # Clear copied axis.
+#     pos_fig.suptitle(None)
+#     pos_ax.clear()
+#     pos_ax.set_yticks([], [])
+#     pos_ax.set_xlabel("Position (Mbp)")
+#     pos_ax.axes.spines['bottom'].set_position('center')
+#     pos_ax.axes.spines["bottom"].set_visible(True)
+#     pos_fig.savefig(pos_outfile, dpi=600, transparent=True)
+#     return pos_fig, pos_axes, pos_outfile
+
+
+def create_legend(plots: list[tuple[Figure, np.ndarray, str]]):
+    legend_fig, legend_axes, legend_outfile = copy.deepcopy(plots[-1])
+    # Save figure.
+    legend_outfile = os.path.join(os.path.dirname(legend_outfile), "legend.png")
+    # Cut size by half.
+    legend_fig.set_figheight(legend_fig.get_figheight() / 1.8)
+    legend_ax: Axes = legend_axes[0, 0]
+    # Legend
+    legend_handles, legend_labels = legend_ax.get_legend_handles_labels()
+    legend_elems = dict(zip(legend_labels, legend_handles))
+    # Clear copied axis.
+    legend_fig.suptitle(None)
+    legend_ax.clear()
+    legend_ax.set_yticks([], [])
+    legend_ax.set_xticks([], [])
+    legend_ax.axes.spines["bottom"].set_visible(False)
+    legend = legend_ax.legend(
+        legend_elems.values(),
+        legend_elems.keys(),
+        handlelength=1.0,
+        handleheight=1.0,
+        ncols=10,
+        frameon=False,
+        loc="center",
+        alignment="center",
+    )
+    # Set patches edge color manually.
+    # Turns out get_legend_handles_labels will get all rect patches and setting linewidth will cause all patches to be black.
+    for ptch in legend.get_patches():
+        ptch.set_linewidth(1.0)
+        ptch.set_edgecolor("black")
+    legend_fig.tight_layout()
+    legend_fig.savefig(legend_outfile, dpi=600, transparent=True)
+
+    return (legend_fig, legend_axes, legend_outfile)
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        description="Draw centromere tracks.",
+    )
+    ap.add_argument(
+        "-t",
+        "--input_tracks",
+        required=True,
+        type=str,
+        help=(
+            "TOML file with headerless BED files to plot. "
+            "Specify under tracks the following fields: {name, position, type, proportion, path, or options}."
+        ),
+    )
+    ap.add_argument(
+        "-c",
+        "--chroms",
+        type=argparse.FileType("rt"),
+        help="Names to plot in this order. Corresponds to 1st col in BED files.",
+        required=True,
+    )
+    ap.add_argument(
+        "-d",
+        "--outdir",
+        help="Output dir to plot multiple separate figures.",
+        type=str,
+        default=".",
+    )
+    ap.add_argument("--share_xlim", help="Share x-axis limits.", action="store_true")
+    ap.add_argument("-p", "--processes", type=int, default=4, help="Processes to run.")
+    args = ap.parse_args()
+
+    input_tracks: str = args.input_tracks
+    chroms: TextIO = args.chroms
+    outdir: str = args.outdir
+    share_xlim: bool = args.share_xlim
+    processes: int = args.processes
+    all_chroms: Iterable[str] = [line.strip() for line in chroms.readlines()]
+
+    inputs: list[tuple[Track, str, str, PlotSettings]] = []
+    tracks_settings = [
+        (chrom, *read_one_cen_tracks(input_tracks, chrom=chrom)) for chrom in all_chroms
+    ]
+    xmin_all, xmax_all = sys.maxsize, 0
+    if share_xlim:
+        for *_, settings in tracks_settings:
+            if settings.xlim:
+                xmin, xmax = settings.xlim
+                xmin_all = min(xmin_all, xmin)
+                xmax_all = max(xmax_all, xmax)
+    # Add position and legend track at end.
+    for chrom, tracks_summary, plot_settings in tracks_settings:
+        if share_xlim:
+            plot_settings.xlim = (xmin_all, xmax_all)
+
+        tracks = [
+            Track(
+                trk.title,
+                trk.pos,
+                trk.opt,
+                trk.prop,
+                trk.data.filter(pl.col("chrom") == chrom)
+                if isinstance(trk.data, pl.DataFrame)
+                else None,
+                trk.options,
+            )
+            for trk in tracks_summary.tracks
+        ]
+        inputs.append(
+            (
+                tracks,
+                outdir,
+                chrom,
+                plot_settings,
+            )
+        )
+
+    os.makedirs(outdir, exist_ok=True)
+    if processes == 1:
+        plots = [plot_one_cen(*draw_arg) for draw_arg in inputs]
+    else:
+        with ProcessPoolExecutor(
+            max_workers=processes, mp_context=multiprocessing.get_context("spawn")
+        ) as pool:
+            futures = [
+                (draw_arg[2], pool.submit(plot_one_cen, *draw_arg))
+                for draw_arg in inputs
+            ]  # type: ignore[assignment]
+            plots = []
+            for chrom, future in futures:
+                if future.exception():
+                    print(f"Failed to plot {chrom} ({future.exception()})")
+                    continue
+                plots.append(future.result())
+
+    # pos_plot = create_position(plots)
+    # plots.append(pos_plot)
+
+    legend_plot = create_legend(plots)
+    plots.append(legend_plot)
+
+    merge_plots(plots, f"{outdir}.pdf")
+    merge_plots(plots, f"{outdir}.png")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

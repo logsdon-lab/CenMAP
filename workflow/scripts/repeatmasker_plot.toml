@@ -1,0 +1,14 @@
+[settings]
+title = "{chrom}"
+format = "png"
+transparent = true
+dim = [20.0, 1.75]
+dpi = 600
+layout = "tight"
+
+[[tracks]]
+position = "relative"
+proportion = 0.5
+type = "label"
+path = "{indir}/rm.bed"
+options = { legend = false, hide_x = false, border = true }
