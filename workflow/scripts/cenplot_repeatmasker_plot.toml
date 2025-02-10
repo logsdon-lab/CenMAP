@@ -11,4 +11,10 @@ position = "relative"
 proportion = 0.5
 type = "label"
 path = "{indir}/rm.bed"
-options = { legend = false, hide_x = false, border = true }
+options = { legend = false, hide_x = true, border = true }
+
+[[tracks]]
+position = "relative"
+proportion = 0.05
+type = "position"
+options = { legend = false }

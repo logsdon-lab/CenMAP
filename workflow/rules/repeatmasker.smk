@@ -302,14 +302,43 @@ use rule create_rm_bed as create_og_rm_bed with:
         "logs/repeatmasker/create_og_rm_bed_{chr}.log",
 
 
-use rule plot_rm_bed as plot_og_rm_bed_by_chr with:
+rule modify_rm_cenplot_tracks:
     input:
-        rm_bed=rules.create_og_rm_bed.output,
+        plot_layout="workflow/scripts/cenplot_repeatmasker_plot.toml",
+        infile=rules.create_og_rm_bed.output,
+    output:
+        plot_layout=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "plots",
+            "{chr}_cens_{typ}.yaml",
+        ),
+    params:
+        indir=lambda wc, input: os.path.dirname(str(input.infile)),
+    run:
+        import tomllib, yaml
+
+        with (
+            open(input.plot_layout, "rb") as fh,
+            open(output.plot_layout, "wt") as out_fh,
+        ):
+            settings = tomllib.load(fh)
+            for trk in settings["tracks"]:
+                if not "path" in trk:
+                    continue
+                trk["path"] = trk["path"].format(indir=params.indir)
+            out_fh.write(yaml.dump(settings))
+
+
+use rule plot_multiple_cen as plot_og_rm_bed_by_chr with:
+    input:
+        bed_files=[rules.create_og_rm_bed.output],
+        script="workflow/scripts/plot_multiple_cen.py",
+        plot_layout=expand(rules.modify_rm_cenplot_tracks.output, chr="{chr}", typ="og"),
     output:
         plots=multiext(
             os.path.join(
                 config["repeatmasker"]["output_dir"],
-                "plot",
+                "plots",
                 "{chr}_cens_og",
             ),
             ".pdf",
@@ -318,7 +347,7 @@ use rule plot_rm_bed as plot_og_rm_bed_by_chr with:
         plot_dir=directory(
             os.path.join(
                 config["repeatmasker"]["output_dir"],
-                "plot",
+                "plots",
                 "{chr}_cens_og",
             )
         ),

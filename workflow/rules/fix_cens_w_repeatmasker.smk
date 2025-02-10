@@ -197,14 +197,25 @@ use rule create_rm_bed as create_fixed_rm_bed with:
         "logs/fix_cens_w_repeatmasker/create_fixed_rm_bed_{chr}.log",
 
 
-use rule plot_rm_bed as plot_fixed_rm_bed_by_chr with:
+use rule plot_multiple_cen as plot_fixed_rm_bed_by_chr with:
     input:
-        rm_bed=rules.create_fixed_rm_bed.output,
+        bed_files=[rules.create_fixed_rm_bed.output],
+        script="workflow/scripts/plot_multiple_cen.py",
+        # Fixed tracks. No differnce between this and og.
+        plot_layout=expand(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "plots",
+                "{chr}_cens_{typ}.yaml",
+            ),
+            chr="{chr}",
+            typ="fixed",
+        ),
     output:
         plots=multiext(
             os.path.join(
                 config["repeatmasker"]["output_dir"],
-                "plot",
+                "plots",
                 "{chr}_cens",
             ),
             ".pdf",
@@ -213,7 +224,7 @@ use rule plot_rm_bed as plot_fixed_rm_bed_by_chr with:
         plot_dir=directory(
             os.path.join(
                 config["repeatmasker"]["output_dir"],
-                "plot",
+                "plots",
                 "{chr}_cens",
             )
         ),

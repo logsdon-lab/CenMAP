@@ -43,32 +43,28 @@ rule create_rm_bed:
         """
 
 
-rule plot_rm_bed:
+rule plot_multiple_cen:
     input:
-        rm_bed="",
+        bed_files=[],
+        script="workflow/scripts/plot_multiple_cen.py",
+        plot_layout="",
     output:
         plots="",
         plot_dir="",
-    params:
-        indir=lambda wc, input: os.path.dirname(str(input.rm_bed)).replace("/", "\\/"),
-        script="workflow/scripts/plot_repeatmasker.py",
-        plot_layout="workflow/scripts/repeatmasker_plot.toml",
-        tmp_plot_layout=lambda wc: f"/tmp/repeatmasker_plot_{wc.chr}.toml",
     threads: 4
     log:
-        "logs/plot_rm_out.log",
+        "logs/plot_multiple_cen.log",
     conda:
         "../envs/py.yaml"
     shell:
         """
-        sed 's/{{indir}}/{params.indir}/g' {params.plot_layout} > {params.tmp_plot_layout}
-        python {params.script} \
-        -t {params.tmp_plot_layout} \
+        # Then use custom script and cenplot.
+        python {input.script} \
+        -t {input.plot_layout} \
         -d {output.plot_dir} \
         --share_xlim \
         -p {threads} \
-        -c <(cut -f 1 {input.rm_bed} | uniq) 2> {log}
-        rm {params.tmp_plot_layout}
+        -c <(cut -f 1 {input.bed_files[0]} | sort | uniq) 2> {log}
         """
 
 

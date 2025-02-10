@@ -106,8 +106,9 @@ rule split_rm_satellite_annotations:
     output:
         chr_annot=os.path.join(
             config["plot_hor_stv"]["output_dir"],
-            "repeats",
-            "all_cens_{chr}.annotation.fa.out",
+            "bed",
+            "{chr}",
+            "sat_annot.bed",
         ),
     params:
         chr_pattern=lambda wc: str(wc.chr).replace("chr", r"(chr|cen)") + r"[_:\-\\tv]",

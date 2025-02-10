@@ -1,0 +1,40 @@
+[settings]
+title = "{chrom}"
+format = "png"
+transparent = true
+dim = [20.0, 2.5]
+dpi = 600
+layout = "tight"
+
+[[tracks]]
+position = "relative"
+proportion = 0.05
+type = "label"
+path = "{indir}/cdr.bed"
+options = { legend = false, hide_x = true }
+
+[[tracks]]
+position = "relative"
+proportion = 0.4
+type = "label"
+path = "{indir}/sat_annot.bed"
+options = { legend = false, hide_x = true, border = true }
+
+[[tracks]]
+position = "overlap"
+type = "hor"
+path = "{indir}/stv_{typ}.bed"
+options = { legend = false, hide_x = true, border = true }
+
+[[tracks]]
+position = "relative"
+proportion = 0.1
+type = "horort"
+path = "{indir}/stv_{typ}.bed"
+options = { legend = false, hide_x = true, scale = 25 }
+
+[[tracks]]
+position = "relative"
+proportion = 0.1
+type = "position"
+options = { legend = false, hide_x = false }

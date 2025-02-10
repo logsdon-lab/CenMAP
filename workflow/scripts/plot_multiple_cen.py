@@ -6,39 +6,23 @@ import multiprocessing
 
 import numpy as np
 import polars as pl
+import matplotlib.pyplot as plt
 
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from typing import Iterable, TextIO
+from typing import Iterable, TextIO, BinaryIO
 from concurrent.futures import ProcessPoolExecutor
 
 from cenplot import (
     PlotSettings,
     plot_one_cen,
-    merge_plots,
     read_one_cen_tracks,
     Track,
 )
 
 
-# def create_position(plots: list[tuple[Figure, np.ndarray, str]]):
-#     pos_fig, pos_axes, pos_outfile = copy.deepcopy(plots[-1])
-#     pos_fig.set_figheight(pos_fig.get_figheight() / 1.8)
-#     pos_outfile = os.path.join(os.path.dirname(pos_outfile), "position.png")
-#     pos_ax: Axes = pos_axes[0, 0]
-#     # Clear copied axis.
-#     pos_fig.suptitle(None)
-#     pos_ax.clear()
-#     pos_ax.set_yticks([], [])
-#     pos_ax.set_xlabel("Position (Mbp)")
-#     pos_ax.axes.spines['bottom'].set_position('center')
-#     pos_ax.axes.spines["bottom"].set_visible(True)
-#     pos_fig.savefig(pos_outfile, dpi=600, transparent=True)
-#     return pos_fig, pos_axes, pos_outfile
-
-
-def create_legend(plots: list[tuple[Figure, np.ndarray, str]]):
-    legend_fig, legend_axes, legend_outfile = copy.deepcopy(plots[-1])
+def create_legend(plots: list[tuple[Figure, np.ndarray, str]], reference_ax_idx: int):
+    legend_fig, legend_axes, legend_outfile = copy.deepcopy(plots[reference_ax_idx])
     # Save figure.
     legend_outfile = os.path.join(os.path.dirname(legend_outfile), "legend.png")
     # Cut size by half.
@@ -49,10 +33,17 @@ def create_legend(plots: list[tuple[Figure, np.ndarray, str]]):
     legend_elems = dict(zip(legend_labels, legend_handles))
     # Clear copied axis.
     legend_fig.suptitle(None)
-    legend_ax.clear()
-    legend_ax.set_yticks([], [])
-    legend_ax.set_xticks([], [])
-    legend_ax.axes.spines["bottom"].set_visible(False)
+    for ax in legend_fig.axes:
+        ax.clear()
+        # Remove all patches.
+        for ptch in ax.patches:
+            # ptch.remove()
+            ptch.set_visible(False)
+        # Remove all ticks and bottom spine.
+        ax.set_yticks([], [])
+        ax.set_xticks([], [])
+        ax.axes.spines["bottom"].set_visible(False)
+
     legend = legend_ax.legend(
         legend_elems.values(),
         legend_elems.keys(),
@@ -82,7 +73,7 @@ def main():
         "-t",
         "--input_tracks",
         required=True,
-        type=str,
+        type=argparse.FileType("rb"),
         help=(
             "TOML file with headerless BED files to plot. "
             "Specify under tracks the following fields: {name, position, type, proportion, path, or options}."
@@ -103,10 +94,16 @@ def main():
         default=".",
     )
     ap.add_argument("--share_xlim", help="Share x-axis limits.", action="store_true")
+    ap.add_argument(
+        "--ref_ax_idx",
+        help="Index of reference plot to add legend.",
+        default=-1,
+        type=int,
+    )
     ap.add_argument("-p", "--processes", type=int, default=4, help="Processes to run.")
     args = ap.parse_args()
 
-    input_tracks: str = args.input_tracks
+    input_tracks: BinaryIO = args.input_tracks
     chroms: TextIO = args.chroms
     outdir: str = args.outdir
     share_xlim: bool = args.share_xlim
@@ -114,9 +111,15 @@ def main():
     all_chroms: Iterable[str] = [line.strip() for line in chroms.readlines()]
 
     inputs: list[tuple[Track, str, str, PlotSettings]] = []
-    tracks_settings = [
-        (chrom, *read_one_cen_tracks(input_tracks, chrom=chrom)) for chrom in all_chroms
-    ]
+    tracks_settings = []
+    for chrom in all_chroms:
+        try:
+            tracks_settings.append(
+                (chrom, *read_one_cen_tracks(input_tracks, chrom=chrom))
+            )
+        except Exception:
+            pass
+
     xmin_all, xmax_all = sys.maxsize, 0
     if share_xlim:
         for *_, settings in tracks_settings:
@@ -169,14 +172,12 @@ def main():
                     continue
                 plots.append(future.result())
 
-    # pos_plot = create_position(plots)
-    # plots.append(pos_plot)
-
-    legend_plot = create_legend(plots)
+    legend_plot = create_legend(plots, args.ref_ax_idx)
     plots.append(legend_plot)
 
-    merge_plots(plots, f"{outdir}.pdf")
-    merge_plots(plots, f"{outdir}.png")
+    merged_images = np.concatenate([plt.imread(file) for _, _, file in plots])
+    plt.imsave(f"{outdir}.png", merged_images)
+    plt.imsave(f"{outdir}.pdf", merged_images)
 
 
 if __name__ == "__main__":

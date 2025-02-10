@@ -125,9 +125,9 @@ rule format_rm_nucflag_ignore_bed:
         ),
     params:
         # Concatenate ignore bed.
-        ignore_bed=lambda wc, input: f"| cat - {input.ignore_bed}"
-        if input.ignore_bed
-        else "",
+        ignore_bed=lambda wc, input: (
+            f"| cat - {input.ignore_bed}" if input.ignore_bed else ""
+        ),
     conda:
         "../envs/py.yaml"
     log:
@@ -162,9 +162,9 @@ rule format_stv_nucflag_ignore_bed:
     params:
         bp_annot_gap_thr=1,
         # Concatenate ignore bed.
-        ignore_bed=lambda wc, input: f"| cat - {input.ignore_bed}"
-        if input.ignore_bed
-        else "",
+        ignore_bed=lambda wc, input: (
+            f"| cat - {input.ignore_bed}" if input.ignore_bed else ""
+        ),
     conda:
         "../envs/tools.yaml"
     log:
