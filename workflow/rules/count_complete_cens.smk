@@ -26,24 +26,21 @@ rule count_complete_cens:
 
 rule plot_complete_cen_counts:
     input:
-        script="workflow/scripts/plot_complete_cen_counts.R",
+        script="workflow/scripts/plot_complete_cen_counts.py",
         cmp_cnts=rules.count_complete_cens.output,
     output:
         os.path.join(
             config["count_complete_cens"]["output_dir"],
             "complete_cen_counts.png",
         ),
-    params:
-        label=config["count_complete_cens"]["plot_lbl"],
-        color=config["count_complete_cens"]["plot_color"],
     log:
         "logs/count_cens/plot_complete_cen_counts.log",
     conda:
-        "../envs/r.yaml"
+        "../envs/py.yaml"
     shell:
         """
         if [ -s {input.cmp_cnts} ]; then
-            Rscript {input.script} --input {input.cmp_cnts} --output {output} 2> {log}
+            python {input.script} -i {input.cmp_cnts} -o {output} 2> {log}
         else
             touch {output}
         fi

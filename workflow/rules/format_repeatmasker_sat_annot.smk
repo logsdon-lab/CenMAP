@@ -118,7 +118,7 @@ rule split_rm_satellite_annotations:
         """
 
 
-rule format_repeatmasker_sat_only:
+rule format_repeatmasker_sat_all:
     input:
         rules.aggregate_rm_satellite_annotations.output,
         expand(rules.split_rm_satellite_annotations.output, chr=CHROMOSOMES),

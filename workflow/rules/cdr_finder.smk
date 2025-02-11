@@ -218,7 +218,8 @@ rule merge_cdr_beds:
         """
 
 
-rule cdr_finder_only:
+rule cdr_finder_all:
     input:
         expand(rules.get_original_coords.output, sm=SAMPLE_NAMES_INTERSECTION),
         rules.merge_cdr_beds.output,
+    default_target: True

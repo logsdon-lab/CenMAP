@@ -171,7 +171,6 @@ rule plot_cen_moddotplot:
     input:
         plot_layout=rules.modify_moddotplot_cenplot_tracks.output,
         bedfiles=rules.filter_annotations_moddotplot.output,
-        # hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],
     output:
         plots=multiext(
             os.path.join(
@@ -224,7 +223,7 @@ def moddotplot_outputs(wc):
     )
 
 
-rule moddotplot_all:
+rule moddotplot_chr:
     input:
         unpack(moddotplot_outputs),
     output:
@@ -241,8 +240,8 @@ rule _force_moddotplot_env_inclusion:
         "echo ''"
 
 
-rule moddotplot_only:
+rule moddotplot_all:
     input:
-        expand(rules.moddotplot_all.output, chr=CHROMOSOMES),
+        expand(rules.moddotplot_chr.output, chr=CHROMOSOMES),
         rules._force_moddotplot_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
     default_target: True

@@ -47,9 +47,10 @@ rule aggregate_as_hor_length:
 
 rule plot_as_hor_length:
     input:
-        script="workflow/scripts/plot_HOR_length.R",
-        chm1_lengths=config["calculate_hor_length"]["chm1_hor_lengths"],
-        chm13_lengths=config["calculate_hor_length"]["chm13_hor_lengths"],
+        script="workflow/scripts/plot_hor_length.py",
+        comparison_hor_lengths=config["calculate_hor_length"].get(
+            "comparison_hor_lengths", []
+        ),
         lengths=rules.aggregate_as_hor_length.output,
     output:
         os.path.join(
@@ -57,25 +58,28 @@ rule plot_as_hor_length:
             "plots",
             "all_AS-HOR_lengths.png",
         ),
+    params:
+        args_added_lengths=lambda wc, input: "-a "
+        + " ".join(input.comparison_hor_lengths)
+        if input.comparison_hor_lengths
+        else "",
     log:
         "logs/calculate_hor_length/plot_all_as_hor_length.log",
     conda:
-        "../envs/r.yaml"
+        "../envs/py.yaml"
     shell:
         """
         if [ -s {input.lengths} ]; then
-            Rscript {input.script} \
-            --input {input.lengths} \
-            --input_chm1 {input.chm1_lengths} \
-            --input_chm13 {input.chm13_lengths} \
-            --output {output} 2> {log}
+            python {input.script} \
+            -i {input.lengths} \
+            -o {output} {params.comparison_hor_lengths} 2> {log}
         else
             touch {output}
         fi
         """
 
 
-rule get_hor_length_only:
+rule calculate_as_hor_length_all:
     input:
         rules.aggregate_as_hor_length.output,
         rules.plot_as_hor_length.output,

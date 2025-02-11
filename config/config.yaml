@@ -95,14 +95,13 @@ plot_hor_stv:
   stv_annot_colors: "config/stv_annot_colors.tsv"
 
 calculate_hor_length:
-  chm1_hor_lengths: "data/annotations/chm1_hor_length.tsv"
-  chm13_hor_lengths: "data/annotations/chm13_hor_length.tsv"
+  comparison_hor_lengths:
+  - "data/annotations/chm1_hor_length.tsv"
+  - "data/annotations/chm13_hor_length.tsv"
   output_dir: "results/calculate_hor_length"
 
 count_complete_cens:
   output_dir: "results/count_complete_cens"
-  plot_lbl: null
-  plot_color: "#DA8B26"
 
 moddotplot:
   input_dir: null
