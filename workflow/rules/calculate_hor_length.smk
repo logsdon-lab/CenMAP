@@ -6,7 +6,8 @@ rule calculate_as_hor_length:
         stv_row_bed=os.path.join(
             config["plot_hor_stv"]["output_dir"],
             "bed",
-            "{chr}_AS-HOR_stv_row.complete.bed",
+            "{chr}",
+            "stv_complete.bed",
         ),
     output:
         stv_row_live_bed=os.path.join(

@@ -6,9 +6,9 @@ rule merge_complete_and_correct_rm_out:
                 config["repeatmasker"]["output_dir"],
                 "repeats",
                 "all",
-                "reoriented_{chr}_cens.fa.out",
+                "reoriented_{sm}_cens.fa.out",
             ),
-            chr=CHROMOSOMES,
+            sm=SAMPLE_NAMES,
         ),
     output:
         os.path.join(

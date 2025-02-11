@@ -51,7 +51,7 @@ rule run_moddotplot:
 rule filter_annotations_moddotplot:
     input:
         chr_stv_row_bed=os.path.join(
-            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
+            config["plot_hor_stv"]["output_dir"], "bed", "{chr}", "stv_all.bed"
         ),
         all_sat_annot_bed=os.path.join(
             config["plot_hor_stv"]["output_dir"],
