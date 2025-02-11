@@ -54,10 +54,10 @@ rule format_repeatmasker_to_overlay_bed:
                     new_rClass="HSat2";
                     break;
                 case "(CATTC)n":
-                    new_rClass="HSat2";
+                    new_rClass="HSat3";
                     break;
                 case "(GAATG)n":
-                    new_rClass="HSat2";
+                    new_rClass="HSat3";
                     break;
                 default:
                     break;

@@ -59,7 +59,7 @@ def main():
         ax.spines[spine].set_visible(False)
 
     fig.set_size_inches(20, 8)
-    plt.savefig(args.plot, bbox_inches="tight")
+    plt.savefig(args.output, bbox_inches="tight")
 
 
 if __name__ == "__main__":

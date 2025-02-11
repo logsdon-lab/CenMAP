@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 import polars as pl
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -56,7 +57,7 @@ def main():
         "--added_inputs",
         help="Additional centromere HOR array lengths.",
         nargs="*",
-        metavar="{lbl}={color}={path}",
+        metavar="{lbl}={path}={color}",
         type=str,
     )
     ap.add_argument(
@@ -82,9 +83,17 @@ def main():
     added_palettes = OrderedDict()
     dfs_added_lengths = []
     if args.added_inputs:
-        for lbl, color, file in (lbl_path.split("=") for lbl_path in args.added_inputs):
+        for elems in (lbl_path.split("=") for lbl_path in args.added_inputs):
+            # Allow color to be optional.
+            try:
+                lbl, path, color = elems
+            except ValueError:
+                lbl, path = elems
+                # Generate random color.
+                color = np.random.rand(3)
+
             df = pl.read_csv(
-                file,
+                path,
                 has_header=False,
                 separator="\t",
                 columns=[0, 1, 2, 3],

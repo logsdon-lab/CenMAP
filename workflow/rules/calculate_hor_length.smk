@@ -48,9 +48,9 @@ rule aggregate_as_hor_length:
 rule plot_as_hor_length:
     input:
         script="workflow/scripts/plot_hor_length.py",
-        comparison_hor_lengths=config["calculate_hor_length"].get(
-            "comparison_hor_lengths", []
-        ),
+        ref_hor_lengths=config["calculate_hor_length"]
+        .get("ref_hor_lengths", {})
+        .values(),
         lengths=rules.aggregate_as_hor_length.output,
     output:
         os.path.join(
@@ -60,8 +60,11 @@ rule plot_as_hor_length:
         ),
     params:
         args_added_lengths=lambda wc, input: "-a "
-        + " ".join(input.comparison_hor_lengths)
-        if input.comparison_hor_lengths
+        + " ".join(
+            f"{lbl}={path}"
+            for lbl, path in config["calculate_hor_length"]["ref_hor_lengths"].items()
+        )
+        if input.ref_hor_lengths
         else "",
     log:
         "logs/calculate_hor_length/plot_all_as_hor_length.log",
@@ -72,7 +75,7 @@ rule plot_as_hor_length:
         if [ -s {input.lengths} ]; then
             python {input.script} \
             -i {input.lengths} \
-            -o {output} {params.comparison_hor_lengths} 2> {log}
+            -o {output} {params.args_added_lengths} 2> {log}
         else
             touch {output}
         fi

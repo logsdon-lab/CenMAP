@@ -47,7 +47,7 @@ rule plot_complete_cen_counts:
         """
 
 
-rule count_complete_cens_only:
+rule count_complete_cens_all:
     input:
         rules.count_complete_cens.output,
         rules.plot_complete_cen_counts.output,

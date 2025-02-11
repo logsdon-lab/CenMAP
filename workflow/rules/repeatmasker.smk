@@ -220,11 +220,9 @@ rule merge_repeatmasker_output:
 
 
 # Format repeatmasker reference output.
-# TODO: This should be merged.
 use rule merge_repeatmasker_output as merge_control_repeatmasker_output with:
     input:
         # Contains header. Should be first.
-        config["repeatmasker"]["ref_repeatmasker_chrY_output"],
         config["repeatmasker"]["ref_repeatmasker_output"],
     params:
         added_cmd="| awk -v OFS='\\t' '{{$1=$1; print}}' | cut -f 1-15",

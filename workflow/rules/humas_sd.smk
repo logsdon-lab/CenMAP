@@ -124,8 +124,7 @@ def humas_sd_stv_outputs(wc):
     ]
     return {
         "stv": [
-            config["plot_hor_stv"]["chm1_stv"],
-            config["plot_hor_stv"]["chm13_stv"],
+            *config["plot_hor_stv"].get("ref_stv", []),
             *expand(rules.cens_generate_stv.output, fname=fnames, chr=wc.chr),
         ],
     }
