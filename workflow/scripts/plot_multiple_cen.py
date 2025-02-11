@@ -22,9 +22,9 @@ from cenplot import (
 
 
 def create_legend(plots: list[tuple[Figure, np.ndarray, str]], reference_ax_idx: int):
-    legend_fig, legend_axes, legend_outfile = copy.deepcopy(plots[reference_ax_idx])
+    legend_fig, legend_axes, legend_outfiles = copy.deepcopy(plots[reference_ax_idx])
     # Save figure.
-    legend_outfile = os.path.join(os.path.dirname(legend_outfile), "legend.png")
+    legend_outfile = os.path.join(os.path.dirname(legend_outfiles[0]), "legend.png")
     # Cut size by half.
     legend_fig.set_figheight(legend_fig.get_figheight() / 1.8)
     legend_ax: Axes = legend_axes[0, 0]
@@ -62,7 +62,7 @@ def create_legend(plots: list[tuple[Figure, np.ndarray, str]], reference_ax_idx:
     legend_fig.tight_layout()
     legend_fig.savefig(legend_outfile, dpi=600, transparent=True)
 
-    return (legend_fig, legend_axes, legend_outfile)
+    return (legend_fig, legend_axes, [legend_outfile])
 
 
 def main():
@@ -167,14 +167,17 @@ def main():
             plots = []
             for chrom, future in futures:
                 if future.exception():
-                    print(f"Failed to plot {chrom} ({future.exception()})")
+                    print(
+                        f"Failed to plot {chrom} ({future.exception()})",
+                        file=sys.stderr,
+                    )
                     continue
                 plots.append(future.result())
 
     legend_plot = create_legend(plots, args.ref_ax_idx)
     plots.append(legend_plot)
 
-    merged_images = np.concatenate([plt.imread(file) for _, _, file in plots])
+    merged_images = np.concatenate([plt.imread(files[0]) for _, _, files in plots])
     plt.imsave(f"{outdir}.png", merged_images)
     plt.imsave(f"{outdir}.pdf", merged_images)
 
