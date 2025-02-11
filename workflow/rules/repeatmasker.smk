@@ -313,7 +313,7 @@ rule modify_rm_cenplot_tracks:
             "{chr}_cens_{typ}.yaml",
         ),
     params:
-        indir=lambda wc, input: os.path.dirname(str(input.infile)),
+        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infile))),
     run:
         import tomllib, yaml
 

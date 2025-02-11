@@ -1,0 +1,49 @@
+[settings]
+title = "{chrom}"
+format = ["png", "pdf"]
+transparent = false
+dim = [16.0, 9.0]
+axis_h_pad = 0.05
+dpi = 600
+
+[[tracks]]
+position = "relative"
+type = "label"
+proportion = 0.005
+path = "{indir}/cdrs.bed"
+options = { color = "black", legend = false, hide_x = true }
+
+[[tracks]]
+title = "Mean CpG\nmethylation\n(%)"
+position = "relative"
+type = "bar"
+proportion = 0.1
+path = "{indir}/methyl.bed"
+options = { hide_x = true, ymax = 100.0 }
+
+[[tracks]]
+position = "relative"
+proportion = 0.05
+type = "label"
+path = "{indir}/sat_annot.bed"
+options = { legend = true, legend_title = "Centromere structure", legend_ncols = 3, hide_x = true }
+
+[[tracks]]
+position = "overlap"
+type = "hor"
+path = "{indir}/stv.bed"
+options = { legend = true, legend_title = "Centromere structure", sort_order = "descending", hide_x = true, border = true, hor_filter = 1 }
+
+[[tracks]]
+position = "relative"
+proportion = 0.005
+type = "horort"
+path = "{indir}/stv.bed"
+options = { hide_x = true, scale = 34 }
+
+[[tracks]]
+position = "relative"
+type = "selfident"
+proportion = 0.6
+path = "{indir}/ident.bed"
+options = { legend = true, hide_x = false, invert = true, legend_asp_ratio = 1.0 }

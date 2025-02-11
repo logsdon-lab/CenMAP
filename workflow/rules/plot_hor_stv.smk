@@ -47,7 +47,7 @@ rule modify_hor_stv_cenplot_tracks:
             "{typ}_cens_{chr}.yaml",
         ),
     params:
-        indir=lambda wc, input: os.path.dirname(str(input.infile)),
+        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infile))),
     run:
         import tomllib, yaml, os
 

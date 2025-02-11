@@ -131,7 +131,6 @@ def main():
     for chrom, tracks_summary, plot_settings in tracks_settings:
         if share_xlim:
             plot_settings.xlim = (xmin_all, xmax_all)
-
         tracks = [
             Track(
                 trk.title,

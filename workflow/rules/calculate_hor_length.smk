@@ -23,16 +23,10 @@ rule calculate_as_hor_length:
         "../envs/py.yaml"
     log:
         "logs/calculate_hor_length/calculate_{chr}_as_hor_length.log",
-    params:
-        bp_jump_thr=100_000,
-        arr_len_thr=30_000,
     shell:
         """
         awk -v OFS="\\t" '$4 ~ "L"' {input.stv_row_bed} > {output.stv_row_live_bed}
-        {{ censtats length \
-        --input {output.stv_row_live_bed} \
-        --bp_jump_thr {params.bp_jump_thr} \
-        --arr_len_thr {params.arr_len_thr} || true ;}} > {output.arr_lens_bed} 2> {log}
+        {{ censtats length -i {output.stv_row_live_bed} || true ;}} > {output.arr_lens_bed} 2> {log}
         """
 
 
