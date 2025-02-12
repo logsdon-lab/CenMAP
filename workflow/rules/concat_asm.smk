@@ -7,7 +7,8 @@ rule concat_asm:
         idx=os.path.join(
             config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
         ),
-    # https://bioinf.shenwei.me/seqkit/usage/#rmdup
+    # Remove duplicate contigs. https://bioinf.shenwei.me/seqkit/usage/#rmdup
+    # Remove descriptions. https://bioinf.shenwei.me/seqkit/usage/#replace
     params:
         assembly_fname_pattern=r".*\\.(fa|fasta)",
         assembly_fname_pattern_gz=r".*\\.(fa|fasta)\\.gz",
@@ -22,7 +23,8 @@ rule concat_asm:
         {{ cat \
         <(find {input.sm_dir}/ -regextype posix-egrep -regex "{params.assembly_fname_pattern_gz}" -size +0 -exec zcat {{}} + ) \
         <(find {input.sm_dir}/ -regextype posix-egrep -regex "{params.assembly_fname_pattern}" -size +0 -exec cat {{}} + ) | \
-        seqkit rmdup;}} > {output.fa} 2> {log}
+        seqkit rmdup | \
+        seqkit replace -p "\\s.+" ;}} > {output.fa} 2> {log}
         samtools faidx {output.fa} 2>> {log}
         """
 
