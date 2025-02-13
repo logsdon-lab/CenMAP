@@ -39,7 +39,11 @@ rule filter_annotations_hor_stv:
 use rule modify_cenplot_tracks as modify_hor_stv_cenplot_tracks with:
     input:
         plot_layout="workflow/scripts/cenplot_hor_stv_plot.toml",
-        infiles=rules.filter_annotations_hor_stv.output,
+        infiles=[
+            os.path.join(
+                config["plot_hor_stv"]["output_dir"], "bed", "{chr}", "stv_all.bed"
+            )
+        ],
     output:
         plot_layout=os.path.join(
             config["plot_hor_stv"]["output_dir"],
