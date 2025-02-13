@@ -235,31 +235,9 @@ use rule merge_repeatmasker_output as merge_control_repeatmasker_output with:
         ),
 
 
-# Convert reference relative coordinates to absolute.
-rule convert_coords_control_repeatmasker_output:
-    input:
-        rules.merge_control_repeatmasker_output.output,
-    output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "ref",
-            "ref_ALR_regions.fa.abs.out",
-        ),
-    shell:
-        """
-        awk -v OFS="\\t" '{{
-            match($5, ":(.+)-", starts);
-            $6=$6+starts[1];
-            $7=$7+starts[1];
-            print
-        }}' {input} > {output}
-        """
-
-
 rule format_add_control_repeatmasker_output:
     input:
-        ref_rm_output=rules.convert_coords_control_repeatmasker_output.output,
+        ref_rm_output=rules.merge_control_repeatmasker_output.output,
         sample_rm_output=rules.merge_repeatmasker_output.output,
     output:
         temp(
@@ -300,10 +278,10 @@ use rule create_rm_bed as create_og_rm_bed with:
         "logs/repeatmasker/create_og_rm_bed_{chr}.log",
 
 
-rule modify_rm_cenplot_tracks:
+use rule modify_cenplot_tracks as modify_rm_cenplot_tracks with:
     input:
         plot_layout="workflow/scripts/cenplot_repeatmasker_plot.toml",
-        infile=rules.create_og_rm_bed.output,
+        infiles=rules.create_og_rm_bed.output,
     output:
         plot_layout=os.path.join(
             config["repeatmasker"]["output_dir"],
@@ -311,20 +289,7 @@ rule modify_rm_cenplot_tracks:
             "{chr}_cens_{typ}.yaml",
         ),
     params:
-        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infile))),
-    run:
-        import tomllib, yaml
-
-        with (
-            open(input.plot_layout, "rb") as fh,
-            open(output.plot_layout, "wt") as out_fh,
-        ):
-            settings = tomllib.load(fh)
-            for trk in settings["tracks"]:
-                if not "path" in trk:
-                    continue
-                trk["path"] = trk["path"].format(indir=params.indir)
-            out_fh.write(yaml.dump(settings))
+        typ="{typ}",
 
 
 use rule plot_multiple_cen as plot_og_rm_bed_by_chr with:

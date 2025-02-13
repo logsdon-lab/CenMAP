@@ -43,6 +43,51 @@ rule create_rm_bed:
         """
 
 
+rule modify_cenplot_tracks:
+    input:
+        plot_layout="",
+        infiles="",
+    output:
+        plot_layout="",
+    run:
+        import os, sys, tomllib, yaml
+
+        # infile indicates where all other bedfiles are.
+        indir = os.path.abspath(os.path.dirname(str(input.infiles[0])))
+        with (
+            open(input.plot_layout, "rb") as fh,
+            open(output.plot_layout, "wt") as out_fh,
+        ):
+            settings = tomllib.load(fh)
+            new_settings = {"settings": settings["settings"], "tracks": []}
+
+            for trk in settings["tracks"]:
+                path = trk.get("path")
+                # Some tracks don't have paths.
+                if not path:
+                    new_settings["tracks"].append(trk)
+                    continue
+                try:
+                    new_path = path.format(indir=indir, **dict(params.items()))
+                except KeyError:
+                    print(
+                        f"Invalid format key in path {path} from cenplot track file, {input.plot_layout}.",
+                        file=sys.stderr,
+                    )
+                    continue
+
+                    # Skip if empty.
+                if os.stat(new_path).st_size == 0:
+                    continue
+
+                new_trk = trk.copy()
+                # Pass params from snakemake
+                new_trk["path"] = path.format(indir=indir, **dict(params.items()))
+                new_settings["tracks"].append(new_trk)
+
+            out_fh.write(yaml.dump(new_settings))
+
+
 rule plot_multiple_cen:
     input:
         bed_files=[],
