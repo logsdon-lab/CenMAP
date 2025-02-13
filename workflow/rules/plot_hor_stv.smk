@@ -36,13 +36,20 @@ rule filter_annotations_hor_stv:
         """
 
 
+# Require both to exist before beginning plotting.
 use rule modify_cenplot_tracks as modify_hor_stv_cenplot_tracks with:
     input:
         plot_layout="workflow/scripts/cenplot_hor_stv_plot.toml",
         infiles=[
             os.path.join(
                 config["plot_hor_stv"]["output_dir"], "bed", "{chr}", "stv_all.bed"
-            )
+            ),
+            os.path.join(
+                config["plot_hor_stv"]["output_dir"],
+                "bed",
+                "{chr}",
+                "stv_complete.bed",
+            ),
         ],
     output:
         plot_layout=os.path.join(
