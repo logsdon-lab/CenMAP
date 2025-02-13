@@ -173,14 +173,13 @@ rule fix_cens_rm_out:
 use rule create_rm_bed as create_fixed_rm_bed with:
     input:
         script="workflow/scripts/create_rm_bed.py",
-        # Absolute coordinates
         rm_out=[
             expand(rules.fix_cens_rm_out.output, sm=SAMPLE_NAMES),
             os.path.join(
                 config["repeatmasker"]["output_dir"],
                 "repeats",
                 "ref",
-                "ref_ALR_regions.fa.abs.out",
+                "ref_ALR_regions.fa.out",
             ),
         ],
     output:
@@ -197,20 +196,23 @@ use rule create_rm_bed as create_fixed_rm_bed with:
         "logs/fix_cens_w_repeatmasker/create_fixed_rm_bed_{chr}.log",
 
 
+use rule modify_cenplot_tracks as modify_rm_cenplot_tracks with:
+    input:
+        plot_layout="workflow/scripts/cenplot_repeatmasker_plot.toml",
+        infiles=rules.create_fixed_rm_bed.output,
+    output:
+        plot_layout=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "plots",
+            "{chr}_cens_fixed.yaml",
+        ),
+
+
 use rule plot_multiple_cen as plot_fixed_rm_bed_by_chr with:
     input:
         bed_files=[rules.create_fixed_rm_bed.output],
         script="workflow/scripts/plot_multiple_cen.py",
-        # Fixed tracks. No differnce between this and og.
-        plot_layout=expand(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "plots",
-                "{chr}_cens_{typ}.yaml",
-            ),
-            chr="{chr}",
-            typ="fixed",
-        ),
+        plot_layout=rules.modify_rm_cenplot_tracks.output,
     output:
         plots=multiext(
             os.path.join(

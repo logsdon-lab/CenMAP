@@ -278,7 +278,7 @@ use rule create_rm_bed as create_og_rm_bed with:
         "logs/repeatmasker/create_og_rm_bed_{chr}.log",
 
 
-use rule modify_cenplot_tracks as modify_rm_cenplot_tracks with:
+use rule modify_cenplot_tracks as modify_og_rm_cenplot_tracks with:
     input:
         plot_layout="workflow/scripts/cenplot_repeatmasker_plot.toml",
         infiles=rules.create_og_rm_bed.output,
@@ -286,17 +286,15 @@ use rule modify_cenplot_tracks as modify_rm_cenplot_tracks with:
         plot_layout=os.path.join(
             config["repeatmasker"]["output_dir"],
             "plots",
-            "{chr}_cens_{typ}.yaml",
+            "{chr}_cens_og.yaml",
         ),
-    params:
-        typ="{typ}",
 
 
 use rule plot_multiple_cen as plot_og_rm_bed_by_chr with:
     input:
         bed_files=[rules.create_og_rm_bed.output],
         script="workflow/scripts/plot_multiple_cen.py",
-        plot_layout=expand(rules.modify_rm_cenplot_tracks.output, chr="{chr}", typ="og"),
+        plot_layout=rules.modify_og_rm_cenplot_tracks.output,
     output:
         plots=multiext(
             os.path.join(
