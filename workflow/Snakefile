@@ -24,7 +24,7 @@ include: "rules/humas_sd.smk"
 include: "rules/get_complete_correct_cens.smk"
 
 
-rule extract_cens_only:
+rule extract_cens_all:
     input:
         rules.extract_ref_hor_arrays_all.input,
         rules.align_asm_ref_all.input,
@@ -33,7 +33,7 @@ rule extract_cens_only:
 
 output = [
     # Required output.
-    rules.extract_cens_only.input,
+    rules.extract_cens_all.input,
     rules.dna_brnn_all.input,
     rules.repeatmasker_all.input,
     rules.fix_cens_w_repeatmasker_all.input,
@@ -57,13 +57,13 @@ if config.get("plot_hor_stv"):
 
     include: "rules/format_hor_stv.smk"
     include: "rules/format_repeatmasker_sat_annot.smk"
-    include: "rules/plot_cens_structure.smk"
+    include: "rules/plot_hor_stv.smk"
 
     output.extend(
         [
             rules.format_hor_stv_only.input,
-            rules.format_repeatmasker_sat_only.input,
-            rules.plot_cens_structure_only.input,
+            rules.format_repeatmasker_sat_all.input,
+            rules.plot_hor_stv_all.input,
         ]
     )
 
@@ -72,28 +72,28 @@ if config.get("moddotplot") and config.get("plot_hor_stv"):
 
     include: "rules/moddotplot.smk"
 
-    output.append(rules.moddotplot_only.input)
+    output.append(rules.moddotplot_all.input)
 
 
 if config.get("calculate_hor_length"):
 
     include: "rules/calculate_hor_length.smk"
 
-    output.append(rules.get_hor_length_only.input)
+    output.append(rules.calculate_as_hor_length_all.input)
 
 
 if config.get("count_complete_cens"):
 
     include: "rules/count_complete_cens.smk"
 
-    output.append(rules.count_complete_cens_only.input)
+    output.append(rules.count_complete_cens_all.input)
 
 
 if config.get("cdr_finder"):
 
     include: "rules/cdr_finder.smk"
 
-    output.append(rules.cdr_finder_only.input)
+    output.append(rules.cdr_finder_all.input)
 
 
 rule all:

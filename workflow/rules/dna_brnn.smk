@@ -136,6 +136,19 @@ rule filter_dnabrnn_sample_cens_regions:
         """
 
 
+# TODO: Trim N's that are not directly adjacent to alpha-sat and update coordinates.
+# seqkit locate -i results/dna_brnn/seq/interm/HG00171/HG00171_chrX_haplotype2-0000138\:54987333-61097711.fa -r -G -M -p "N+" | tail -n+2 | cut -f 1,5,6 | uniq
+"""
+# Find N's
+seqkit locate -i {input.fa} -r -G -M -p "N+" | tail -n+2 | cut -f 1,5,6 | uniq > N_coords.bed
+# relative coords to absolute coords
+awk '{split($1, ctg_coords, ":"); split(ctg_coords[2], coords, "-"); print $1, coords[1] + $2, coords[1] + $3 }
+# Check no intersect.
+bedtools intersect
+# Then if empty, adjust region start
+"""
+
+
 def dna_brnn_output(wc):
     outdir = checkpoints.split_fa_dnabrnn.get(sm=wc.sm).output[0]
     wcs = glob_wildcards(os.path.join(outdir, "{fname}.fa"))

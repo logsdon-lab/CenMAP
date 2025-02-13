@@ -115,13 +115,16 @@ checkpoint run_humas_sd:
 def humas_sd_stv_outputs(wc):
     _ = [checkpoints.run_humas_sd.get(sm=sm).output for sm in SAMPLE_NAMES]
     wcs = glob_wildcards(
-        os.path.join(HUMAS_CENS_SPLIT_DIR, "{sm}_" + wc.chr + "_{ctg}.fa"),
+        os.path.join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg}.fa"),
     )
-    fnames = [f"{sm}_{wc.chr}_{ctg}" for sm, ctg in zip(wcs.sm, wcs.ctg)]
+    fnames = [
+        f"{sm}_{chrom}_{ctg}"
+        for sm, chrom, ctg in zip(wcs.sm, wcs.chr, wcs.ctg)
+        if chrom == wc.chr or chrom == f"rc-{wc.chr}"
+    ]
     return {
         "stv": [
-            config["plot_hor_stv"]["chm1_stv"],
-            config["plot_hor_stv"]["chm13_stv"],
+            *config["plot_hor_stv"].get("ref_stv", []),
             *expand(rules.cens_generate_stv.output, fname=fnames, chr=wc.chr),
         ],
     }

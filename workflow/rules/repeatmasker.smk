@@ -223,7 +223,6 @@ rule merge_repeatmasker_output:
 use rule merge_repeatmasker_output as merge_control_repeatmasker_output with:
     input:
         # Contains header. Should be first.
-        config["repeatmasker"]["ref_repeatmasker_chrY_output"],
         config["repeatmasker"]["ref_repeatmasker_output"],
     params:
         added_cmd="| awk -v OFS='\\t' '{{$1=$1; print}}' | cut -f 1-15",
@@ -233,12 +232,34 @@ use rule merge_repeatmasker_output as merge_control_repeatmasker_output with:
             "repeats",
             "ref",
             "ref_ALR_regions.fa.out",
-        )
+        ),
+
+
+# Convert reference relative coordinates to absolute.
+rule convert_coords_control_repeatmasker_output:
+    input:
+        rules.merge_control_repeatmasker_output.output,
+    output:
+        os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "repeats",
+            "ref",
+            "ref_ALR_regions.fa.abs.out",
+        ),
+    shell:
+        """
+        awk -v OFS="\\t" '{{
+            match($5, ":(.+)-", starts);
+            $6=$6+starts[1];
+            $7=$7+starts[1];
+            print
+        }}' {input} > {output}
+        """
 
 
 rule format_add_control_repeatmasker_output:
     input:
-        ref_rm_output=rules.merge_control_repeatmasker_output.output,
+        ref_rm_output=rules.convert_coords_control_repeatmasker_output.output,
         sample_rm_output=rules.merge_repeatmasker_output.output,
     output:
         temp(
@@ -261,43 +282,79 @@ rule format_add_control_repeatmasker_output:
         """
 
 
-rule extract_rm_out_by_chr:
+use rule create_rm_bed as create_og_rm_bed with:
     input:
+        script="workflow/scripts/create_rm_bed.py",
         rm_out=rules.format_add_control_repeatmasker_output.output,
     output:
-        rm_out_by_chr=temp(
+        rm_bed=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "bed",
+            "{chr}_og",
+            "rm.bed",
+        ),
+    params:
+        chr_rgx="{chr}[:_]",
+        color_mapping=config["repeatmasker"]["repeat_colors"],
+    log:
+        "logs/repeatmasker/create_og_rm_bed_{chr}.log",
+
+
+rule modify_rm_cenplot_tracks:
+    input:
+        plot_layout="workflow/scripts/cenplot_repeatmasker_plot.toml",
+        infile=rules.create_og_rm_bed.output,
+    output:
+        plot_layout=os.path.join(
+            config["repeatmasker"]["output_dir"],
+            "plots",
+            "{chr}_cens_{typ}.yaml",
+        ),
+    params:
+        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infile))),
+    run:
+        import tomllib, yaml
+
+        with (
+            open(input.plot_layout, "rb") as fh,
+            open(output.plot_layout, "wt") as out_fh,
+        ):
+            settings = tomllib.load(fh)
+            for trk in settings["tracks"]:
+                if not "path" in trk:
+                    continue
+                trk["path"] = trk["path"].format(indir=params.indir)
+            out_fh.write(yaml.dump(settings))
+
+
+use rule plot_multiple_cen as plot_og_rm_bed_by_chr with:
+    input:
+        bed_files=[rules.create_og_rm_bed.output],
+        script="workflow/scripts/plot_multiple_cen.py",
+        plot_layout=expand(rules.modify_rm_cenplot_tracks.output, chr="{chr}", typ="og"),
+    output:
+        plots=multiext(
             os.path.join(
                 config["repeatmasker"]["output_dir"],
-                "repeats",
-                "all",
-                "{chr}_cens.fa.out",
+                "plots",
+                "{chr}_cens_og",
+            ),
+            ".pdf",
+            ".png",
+        ),
+        plot_dir=directory(
+            os.path.join(
+                config["repeatmasker"]["output_dir"],
+                "plots",
+                "{chr}_cens_og",
             )
         ),
     log:
-        "logs/repeatmasker/extract_{chr}_cens_from_rm.log",
-    conda:
-        "../envs/tools.yaml"
-    shell:
-        """
-        ( grep "{wildcards.chr}[_:]" {input.rm_out} || true) | cut -f 1-15 > {output.rm_out_by_chr} 2> {log}
-        """
-
-
-use rule plot_rm_out as plot_cens_from_original_rm_by_chr with:
-    input:
-        script="workflow/scripts/plot_cens_onlyRM.R",
-        rm_out=rules.extract_rm_out_by_chr.output,
-    output:
-        repeat_plot=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "plot",
-            "{chr}_cens_original.pdf",
-        ),
-    log:
-        "logs/fix_cens_w_repeatmasker/plot_{chr}_cens_from_original_rm.log",
+        "logs/repeatmasker/plot_og_rm_bed_{chr}.log",
 
 
 rule repeatmasker_all:
     input:
         expand(rules.format_repeatmasker_output.output, sm=SAMPLE_NAMES),
-        expand(rules.plot_cens_from_original_rm_by_chr.output, chr=CHROMOSOMES),
+        expand(rules.plot_og_rm_bed_by_chr.output, chr=CHROMOSOMES),
+    default_target: True

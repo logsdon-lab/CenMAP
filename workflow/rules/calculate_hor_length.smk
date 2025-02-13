@@ -6,7 +6,8 @@ rule calculate_as_hor_length:
         stv_row_bed=os.path.join(
             config["plot_hor_stv"]["output_dir"],
             "bed",
-            "{chr}_AS-HOR_stv_row.complete.bed",
+            "{chr}",
+            "stv_complete.bed",
         ),
     output:
         stv_row_live_bed=os.path.join(
@@ -23,16 +24,10 @@ rule calculate_as_hor_length:
         "../envs/py.yaml"
     log:
         "logs/calculate_hor_length/calculate_{chr}_as_hor_length.log",
-    params:
-        bp_jump_thr=100_000,
-        arr_len_thr=30_000,
     shell:
         """
         awk -v OFS="\\t" '$4 ~ "L"' {input.stv_row_bed} > {output.stv_row_live_bed}
-        {{ censtats length \
-        --input {output.stv_row_live_bed} \
-        --bp_jump_thr {params.bp_jump_thr} \
-        --arr_len_thr {params.arr_len_thr} || true ;}} > {output.arr_lens_bed} 2> {log}
+        {{ censtats length -i {output.stv_row_live_bed} || true ;}} > {output.arr_lens_bed} 2> {log}
         """
 
 
@@ -53,9 +48,10 @@ rule aggregate_as_hor_length:
 
 rule plot_as_hor_length:
     input:
-        script="workflow/scripts/plot_HOR_length.R",
-        chm1_lengths=config["calculate_hor_length"]["chm1_hor_lengths"],
-        chm13_lengths=config["calculate_hor_length"]["chm13_hor_lengths"],
+        script="workflow/scripts/plot_hor_length.py",
+        ref_hor_lengths=config["calculate_hor_length"]
+        .get("ref_hor_lengths", {})
+        .values(),
         lengths=rules.aggregate_as_hor_length.output,
     output:
         os.path.join(
@@ -63,25 +59,31 @@ rule plot_as_hor_length:
             "plots",
             "all_AS-HOR_lengths.png",
         ),
+    params:
+        args_added_lengths=lambda wc, input: "-a "
+        + " ".join(
+            f"{lbl}={path}"
+            for lbl, path in config["calculate_hor_length"]["ref_hor_lengths"].items()
+        )
+        if input.ref_hor_lengths
+        else "",
     log:
         "logs/calculate_hor_length/plot_all_as_hor_length.log",
     conda:
-        "../envs/r.yaml"
+        "../envs/py.yaml"
     shell:
         """
         if [ -s {input.lengths} ]; then
-            Rscript {input.script} \
-            --input {input.lengths} \
-            --input_chm1 {input.chm1_lengths} \
-            --input_chm13 {input.chm13_lengths} \
-            --output {output} 2> {log}
+            python {input.script} \
+            -i {input.lengths} \
+            -o {output} {params.args_added_lengths} 2> {log}
         else
             touch {output}
         fi
         """
 
 
-rule get_hor_length_only:
+rule calculate_as_hor_length_all:
     input:
         rules.aggregate_as_hor_length.output,
         rules.plot_as_hor_length.output,

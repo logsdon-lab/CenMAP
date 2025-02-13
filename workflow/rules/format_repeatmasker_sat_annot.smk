@@ -6,9 +6,9 @@ rule merge_complete_and_correct_rm_out:
                 config["repeatmasker"]["output_dir"],
                 "repeats",
                 "all",
-                "reoriented_{chr}_cens.fa.out",
+                "reoriented_{sm}_cens.fa.out",
             ),
-            chr=CHROMOSOMES,
+            sm=SAMPLE_NAMES,
         ),
     output:
         os.path.join(
@@ -106,8 +106,9 @@ rule split_rm_satellite_annotations:
     output:
         chr_annot=os.path.join(
             config["plot_hor_stv"]["output_dir"],
-            "repeats",
-            "all_cens_{chr}.annotation.fa.out",
+            "bed",
+            "{chr}",
+            "sat_annot.bed",
         ),
     params:
         chr_pattern=lambda wc: str(wc.chr).replace("chr", r"(chr|cen)") + r"[_:\-\\tv]",
@@ -117,7 +118,7 @@ rule split_rm_satellite_annotations:
         """
 
 
-rule format_repeatmasker_sat_only:
+rule format_repeatmasker_sat_all:
     input:
         rules.aggregate_rm_satellite_annotations.output,
         expand(rules.split_rm_satellite_annotations.output, chr=CHROMOSOMES),

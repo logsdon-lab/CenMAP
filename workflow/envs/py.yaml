@@ -10,5 +10,6 @@ dependencies:
     - polars
     - editdistance
     - scipy
-    - censtats==0.0.7
+    - censtats==0.0.10
+    - cenplot==0.0.9
     - git+https://github.com/marbl/ModDotPlot.git@v0.8.4

@@ -24,19 +24,50 @@ rule extract_and_index_fa:
         """
 
 
-rule plot_rm_out:
+rule create_rm_bed:
     input:
-        script="workflow/scripts/plot_cens_onlyRM.R",
+        script="workflow/scripts/create_rm_bed.py",
         rm_out="",
     output:
-        repeat_plot="",
+        rm_bed="",
+    params:
+        chr_rgx="",
+        color_mapping="",
     log:
-        "logs/plot_rm_out.log",
+        "logs/create_rm_bed.log",
     conda:
-        "../envs/r.yaml"
+        "../envs/py.yaml"
     shell:
         """
-        Rscript {input.script} {input.rm_out} {output.repeat_plot} 2> {log}
+        python {input.script} -i <(cat {input.rm_out}) -c {params.chr_rgx} -m {params.color_mapping} > {output.rm_bed} 2> {log}
+        """
+
+
+rule plot_multiple_cen:
+    input:
+        bed_files=[],
+        script="workflow/scripts/plot_multiple_cen.py",
+        plot_layout="",
+    output:
+        plots="",
+        plot_dir="",
+    threads: 4
+    log:
+        "logs/plot_multiple_cen.log",
+    conda:
+        "../envs/py.yaml"
+    shell:
+        """
+        # Then use custom script and cenplot.
+        {{ python {input.script} \
+        -t {input.plot_layout} \
+        -d {output.plot_dir} \
+        --share_xlim \
+        -p {threads} \
+        -c <(cut -f 1 {input.bed_files[0]} | sort | uniq) || true ;}} 2> {log}
+        # Allow failure. Possible to have no correct cens.
+        touch {output.plots}
+        mkdir -p {output.plot_dir}
         """
 
 

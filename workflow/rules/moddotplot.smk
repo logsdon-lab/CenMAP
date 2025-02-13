@@ -8,6 +8,8 @@ else:
     INPUT_FA_DIR = HUMAS_CENS_SPLIT_DIR
 
 OUTPUT_MODDOTPLOT_DIR = config["moddotplot"].get("output_dir", "results/moddotplot")
+OUTPUT_MODDOTPLOT_DATA_DIR = os.path.join(OUTPUT_MODDOTPLOT_DIR, "combined", "bed")
+OUTPUT_MODDOTPLOT_PLOTS_DIR = os.path.join(OUTPUT_MODDOTPLOT_DIR, "combined", "plots")
 
 
 rule run_moddotplot:
@@ -49,10 +51,7 @@ rule run_moddotplot:
 rule filter_annotations_moddotplot:
     input:
         chr_stv_row_bed=os.path.join(
-            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.all.bed"
-        ),
-        chr_stv_row_ort_bed=os.path.join(
-            config["plot_hor_stv"]["output_dir"], "bed", "{chr}_AS-HOR_stv_row.ort.bed"
+            config["plot_hor_stv"]["output_dir"], "bed", "{chr}", "stv_all.bed"
         ),
         all_sat_annot_bed=os.path.join(
             config["plot_hor_stv"]["output_dir"],
@@ -77,33 +76,31 @@ rule filter_annotations_moddotplot:
             if config.get("cdr_finder")
             else []
         ),
+        ident_bed=rules.run_moddotplot.output.bed,
     output:
-        sat_annot_bed=temp(
-            os.path.join(OUTPUT_MODDOTPLOT_DIR, "{chr}_{fname}_sat_annot.bed")
+        sat_annot_bed=os.path.join(
+            OUTPUT_MODDOTPLOT_DATA_DIR, "{chr}", "{fname}", "sat_annot.bed"
         ),
-        stv_row_bed=temp(
-            os.path.join(
-                OUTPUT_MODDOTPLOT_DIR,
-                "{chr}_{fname}_stv_row.bed",
-            )
+        ident_bed=os.path.join(
+            OUTPUT_MODDOTPLOT_DATA_DIR, "{chr}", "{fname}", "ident.bed"
         ),
-        stv_row_ort_bed=temp(
-            os.path.join(
-                OUTPUT_MODDOTPLOT_DIR,
-                "{chr}_{fname}_stv_row_ort.bed",
-            )
+        stv_row_bed=os.path.join(
+            OUTPUT_MODDOTPLOT_DATA_DIR,
+            "{chr}",
+            "{fname}",
+            "stv.bed",
         ),
-        cdr_bed=temp(
-            os.path.join(
-                OUTPUT_MODDOTPLOT_DIR,
-                "{chr}_{fname}_cdrs.bed",
-            )
+        cdr_bed=os.path.join(
+            OUTPUT_MODDOTPLOT_DATA_DIR,
+            "{chr}",
+            "{fname}",
+            "cdrs.bed",
         ),
-        binned_methyl_bed=temp(
-            os.path.join(
-                OUTPUT_MODDOTPLOT_DIR,
-                "{chr}_{fname}_methyl.bed",
-            )
+        binned_methyl_bed=os.path.join(
+            OUTPUT_MODDOTPLOT_DATA_DIR,
+            "{chr}",
+            "{fname}",
+            "methyl.bed",
         ),
     params:
         cdr_output=bool(config.get("cdr_finder", False)),
@@ -113,7 +110,8 @@ rule filter_annotations_moddotplot:
         """
         ( grep '{params.fname_base}' {input.all_sat_annot_bed} || true ) > {output.sat_annot_bed}
         ( grep '{params.fname_base}' {input.chr_stv_row_bed} || true ) > {output.stv_row_bed}
-        ( grep '{params.fname_base}' {input.chr_stv_row_ort_bed} || true) > {output.stv_row_ort_bed}
+        # Remove header.
+        tail -n+2 {input.ident_bed} > {output.ident_bed}
         if [ "{params.cdr_output}" != "False" ]; then
             ( grep '{params.fname_base}' {input.all_cdr_bed} || true ) > {output.cdr_bed}
             ( grep '{params.fname_base}' {input.all_binned_methyl_bed} || true ) > {output.binned_methyl_bed}
@@ -124,45 +122,75 @@ rule filter_annotations_moddotplot:
         """
 
 
-rule plot_cen_moddotplot:
+rule modify_moddotplot_cenplot_tracks:
     input:
-        script="workflow/scripts/plot_cens_moddotplot.R",
-        seq_ident_bed=rules.run_moddotplot.output.bed,
-        sat_annot_bed=rules.filter_annotations_moddotplot.output.sat_annot_bed,
-        stv_row_bed=rules.filter_annotations_moddotplot.output.stv_row_bed,
+        plot_layout="workflow/scripts/cenplot_moddotplot.toml",
         cdr_bed=rules.filter_annotations_moddotplot.output.cdr_bed,
-        stv_row_ort_bed=rules.filter_annotations_moddotplot.output.stv_row_ort_bed,
-        binned_methyl_bed=rules.filter_annotations_moddotplot.output.binned_methyl_bed,
-        hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],
     output:
-        plots=expand(
-            os.path.join(
-                OUTPUT_MODDOTPLOT_DIR,
-                "combined",
-                "{{chr}}",
-                "{{fname}}.tri.{ext}",
-            ),
-            ext=["png", "pdf"],
+        plot_layout=os.path.join(
+            OUTPUT_MODDOTPLOT_PLOTS_DIR,
+            "{chr}",
+            "{fname}.yaml",
         ),
     params:
-        mer_order=lambda wc: MONOMER_ORDER[wc.chr],
+        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.cdr_bed))),
+    run:
+        import tomllib, yaml, os
+
+        with (
+            open(input.plot_layout, "rb") as fh,
+            open(output.plot_layout, "wt") as out_fh,
+        ):
+            settings = tomllib.load(fh)
+            is_empty_cdr_bed = os.stat(input.cdr_bed).st_size == 0
+            if is_empty_cdr_bed:
+                settings["settings"]["dim"] = [16.0, 8.0]
+            new_settings = {"settings": settings["settings"]}
+            new_tracks = []
+
+            for trk in settings["tracks"]:
+                if not "path" in trk:
+                    new_tracks.append(trk)
+                    continue
+                new_trk = trk.copy()
+
+                # Check if CDR bed is empty. If is, skip CDR-related tracks.
+                if (
+                    "cdr" in trk["path"] or "methyl" in trk["path"]
+                ) and is_empty_cdr_bed:
+                    continue
+                else:
+                    new_trk["path"] = trk["path"].format(indir=params.indir)
+
+                new_tracks.append(new_trk)
+            new_settings["tracks"] = new_tracks
+            out_fh.write(yaml.dump(new_settings))
+
+
+rule plot_cen_moddotplot:
+    input:
+        plot_layout=rules.modify_moddotplot_cenplot_tracks.output,
+        bedfiles=rules.filter_annotations_moddotplot.output,
+    output:
+        plots=multiext(
+            os.path.join(
+                OUTPUT_MODDOTPLOT_PLOTS_DIR,
+                "{chr}",
+                "{fname}",
+            ),
+            ".pdf",
+            ".png",
+        ),
+    threads: 1
+    params:
         output_dir=lambda wc, output: os.path.dirname(output.plots[0]),
     conda:
-        "../envs/r.yaml"
+        "../envs/py.yaml"
     log:
-        "logs/plot_cen_moddotplot/plot_cen_moddotplot_{chr}_{fname}.log",
+        "logs/moddotplot/plot_moddotplot_{chr}_{fname}.log",
     shell:
         """
-        Rscript {input.script} \
-        --bed {input.seq_ident_bed} \
-        --hor {input.stv_row_bed} \
-        --hor_ort {input.stv_row_ort_bed} \
-        --sat {input.sat_annot_bed} \
-        --cdr {input.cdr_bed} \
-        --methyl {input.binned_methyl_bed} \
-        --mer_order {params.mer_order} \
-        --hor_colors {input.hor_stv_colors} \
-        --outdir {params.output_dir} 2>> {log}
+        cenplot draw -t {input.plot_layout} -d {params.output_dir} -c <(echo {wildcards.fname}) -p {threads} 2> {log}
         """
 
 
@@ -195,7 +223,7 @@ def moddotplot_outputs(wc):
     )
 
 
-rule moddotplot_all:
+rule moddotplot_chr:
     input:
         unpack(moddotplot_outputs),
     output:
@@ -212,8 +240,8 @@ rule _force_moddotplot_env_inclusion:
         "echo ''"
 
 
-rule moddotplot_only:
+rule moddotplot_all:
     input:
-        expand(rules.moddotplot_all.output, chr=CHROMOSOMES),
+        expand(rules.moddotplot_chr.output, chr=CHROMOSOMES),
         rules._force_moddotplot_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
     default_target: True

@@ -40,10 +40,12 @@ nucflag:
   samtools_view_flag: 2308
 
 repeatmasker:
-  ref_repeatmasker_output: data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
-  ref_repeatmasker_chrY_output: data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
+  ref_repeatmasker_output:
+  - data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
+  - data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   threads: 40
   output_dir: "results/repeatmasker"
+  repeat_colors: "config/repeatmasker_colors.json"
   config_censtats_status: "config/censtats.json"
 
 humas_sd:
@@ -53,8 +55,9 @@ humas_sd:
 
 plot_hor_stv:
   output_dir: "test/results/hor_stv"
-  chm1_stv: "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
-  chm13_stv: "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
+  ref_stv:
+  - "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
+  - "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
   sat_annot_colors: "config/repeatmasker_sat_annot_colors.json"
   stv_annot_colors: "config/stv_annot_colors.tsv"
 
@@ -62,14 +65,13 @@ cluster_cens:
   output_dir: "results/cluster_cens"
 
 calculate_hor_length:
-  chm1_hor_lengths: "data/annotations/chm1_hor_length.tsv"
-  chm13_hor_lengths: "data/annotations/chm13_hor_length.tsv"
+  ref_hor_lengths:
+    CHM1: "data/annotations/chm1_hor_length.tsv"
+    CHM13: "data/annotations/chm13_hor_length.tsv"
   output_dir: "results/calculate_hor_length"
 
 count_complete_cens:
   output_dir: "results/count_complete_cens"
-  plot_lbl: null
-  plot_color: "#DA8B26"
 
 moddotplot:
   input_dir: null
