@@ -21,23 +21,30 @@ from cenplot import (
 )
 
 
-def create_legend(plots: list[tuple[Figure, np.ndarray, str]], reference_ax_idx: int):
-    legend_fig, legend_axes, legend_outfiles = copy.deepcopy(plots[reference_ax_idx])
-    # Save figure.
-    legend_outfile = os.path.join(os.path.dirname(legend_outfiles[0]), "legend.png")
-    # Cut size by half.
-    legend_fig.set_figheight(legend_fig.get_figheight() / 1.8)
+def create_shared_legend(
+    plots: list[tuple[Figure, np.ndarray, str]],
+    outdir: str,
+    reference_ax_idx: int,
+    dpi: int | None = None,
+    transparent: bool = True,
+):
+    legend_fig, legend_axes, _ = copy.deepcopy(plots[reference_ax_idx])
     legend_ax: Axes = legend_axes[0, 0]
-    # Legend
-    legend_handles, legend_labels = legend_ax.get_legend_handles_labels()
-    legend_elems = dict(zip(legend_labels, legend_handles))
+
+    all_legend_elems = {}
+    for _, axes, _ in plots:
+        ax: Axes = axes[0, 0]
+        # Legend items.
+        legend_handles, legend_labels = ax.get_legend_handles_labels()
+        legend_elems = dict(zip(legend_labels, legend_handles))
+        all_legend_elems.update(legend_elems)
+
     # Clear copied axis.
     legend_fig.suptitle(None)
     for ax in legend_fig.axes:
         ax.clear()
         # Remove all patches.
         for ptch in ax.patches:
-            # ptch.remove()
             ptch.set_visible(False)
         # Remove all ticks and bottom spine.
         ax.set_yticks([], [])
@@ -59,8 +66,10 @@ def create_legend(plots: list[tuple[Figure, np.ndarray, str]], reference_ax_idx:
     for ptch in legend.get_patches():
         ptch.set_linewidth(1.0)
         ptch.set_edgecolor("black")
+
+    legend_outfile = os.path.join(outdir, "legend.png")
     legend_fig.tight_layout()
-    legend_fig.savefig(legend_outfile, dpi=600, transparent=True)
+    legend_fig.savefig(legend_outfile, dpi=dpi, transparent=transparent)
 
     return (legend_fig, legend_axes, [legend_outfile])
 
@@ -120,6 +129,8 @@ def main():
         except Exception:
             pass
 
+    dpi = None
+    transparent = True
     xmin_all, xmax_all = sys.maxsize, 0
     if share_xlim:
         for *_, settings in tracks_settings:
@@ -127,6 +138,11 @@ def main():
                 xmin, xmax = settings.xlim
                 xmin_all = min(xmin_all, xmin)
                 xmax_all = max(xmax_all, xmax)
+            if settings.dpi:
+                dpi = settings.dpi
+            if settings.transparent:
+                transparent = settings.transparent
+
     # Add position and legend track at end.
     for chrom, tracks_summary, plot_settings in tracks_settings:
         if share_xlim:
@@ -174,7 +190,9 @@ def main():
                     continue
                 plots.append(future.result())
 
-    legend_plot = create_legend(plots, args.ref_ax_idx)
+    legend_plot = create_shared_legend(
+        plots, outdir, args.ref_ax_idx, dpi=dpi, transparent=transparent
+    )
     plots.append(legend_plot)
 
     merged_images = np.concatenate([plt.imread(files[0]) for _, _, files in plots])

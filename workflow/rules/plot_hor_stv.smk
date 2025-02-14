@@ -50,6 +50,12 @@ use rule modify_cenplot_tracks as modify_hor_stv_cenplot_tracks with:
                 "{chr}",
                 "stv_complete.bed",
             ),
+            os.path.join(
+                config["plot_hor_stv"]["output_dir"],
+                "bed",
+                "{chr}",
+                "sat_annot.bed",
+            ),
         ],
     output:
         plot_layout=os.path.join(

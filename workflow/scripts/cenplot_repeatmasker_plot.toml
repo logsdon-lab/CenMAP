@@ -1,17 +1,19 @@
 [settings]
-title = "{chrom}"
 format = "png"
 transparent = true
-dim = [20.0, 1.75]
-dpi = 600
+dim = [20.0, 1.25]
+axis_h_pad = 0.05
+dpi = 300
 layout = "tight"
+legend_prop = 0.4
+legend_pos = "right"
 
 [[tracks]]
 position = "relative"
 proportion = 0.5
 type = "label"
 path = "{indir}/rm.bed"
-options = { legend = false, hide_x = true, border = true }
+options = { legend = true, legend_title = "{chrom}", legend_title_only = true, hide_x = true }
 
 [[tracks]]
 position = "relative"

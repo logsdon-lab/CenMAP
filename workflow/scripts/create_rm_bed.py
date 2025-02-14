@@ -113,15 +113,14 @@ def main():
         .with_columns(
             chrom_st=pl.col("chrom_st") + pl.col("ctg_st"),
             chrom_end=pl.col("chrom_end") + pl.col("ctg_st"),
-            new_rclass=pl.when(
-                (pl.col("rclass") == "Satellite/centr")
-                | (pl.col("rclass") == "Satellite")
-            )
+            new_rclass=pl.when(pl.col("rclass").str.contains("Satellite"))
             .then(pl.col("rtype"))
             .otherwise(pl.col("rclass")),
         )
         .with_columns(
-            new_rclass=pl.col("new_rclass").str.replace_many(REPLACE_PATTERNS),
+            new_rclass=pl.col("new_rclass")
+            .str.extract(r"(.*?)/")
+            .fill_null(pl.col("new_rclass")),
             thick_st=pl.col("chrom_st"),
             thick_end=pl.col("chrom_end"),
         )
