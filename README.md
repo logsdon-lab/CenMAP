@@ -7,19 +7,28 @@ A centromere mapping and annotation pipeline for T2T human genome assemblies imp
 <table>
   <tr>
     <td>
-      <figure float="center">
-        <img align="middle" src="docs/HG02106_chr1_haplotype1-0000039:121376246-127617695.png" width="100%">
-        <figcaption>Chr1 α-satellite higher-order repeat structure, centromere dip regions, and self-identity plot</figcaption>
-      </figure>
-            <figure float="left">
-        <img align="middle" src="docs/hprc_subset_as_hor_array_length.png" width="100%">
-        <figcaption>Cumulative α-satellite HOR array lengths</figcaption>
+      <figure>
+        <img src="docs/HG02106_chr1_haplotype1-0000039:121376246-127617695.png" width="100%">
+        <br>
+        <figcaption>
+          Chr1 α-satellite higher-order repeat structure, centromere dip regions, and self-identity plot
+        </figcaption>
       </figure>
     </td>
-    <td>
-      <figure float="left">
-        <img align="middle" src="docs/hprc_subset_chr12.png" width="50%">
+    <td rowspan="2">
+      <figure>
+        <img src="docs/hprc_subset_chr12.png" width="50%">
+        <br>
         <figcaption>Chr12 α-satellite HOR arrays</figcaption>
+      </figure>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <figure>
+          <img src="docs/hprc_subset_as_hor_array_length.png" width="100%">
+          <br>
+          <figcaption>Cumulative α-satellite HOR array lengths</figcaption>
       </figure>
     </td>
   </tr>
