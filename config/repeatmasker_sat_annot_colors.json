@@ -1,7 +1,7 @@
 {
     "asat": {
         "pattern": "ALR",
-        "color": "#58245B"
+        "color": "#522758"
     },
     "bsat":{
         "pattern": "BSR",
@@ -29,6 +29,6 @@
     },
     "ct": {
         "pattern": null,
-        "color": "#3A3A3A"
+        "color": "#d1d3d4"
     }
 }

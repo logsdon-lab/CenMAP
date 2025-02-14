@@ -3,7 +3,7 @@ title = "{chrom}"
 format = ["png", "pdf"]
 transparent = false
 dim = [16.0, 9.0]
-axis_h_pad = 0.05
+axis_h_pad = 0.01
 dpi = 600
 
 [[tracks]]

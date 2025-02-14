@@ -8,18 +8,18 @@ A centromere mapping and annotation pipeline for T2T human genome assemblies imp
   <tr>
     <td>
       <figure float="center">
-        <img align="middle" src="docs/HG02106_rc-chr1_haplotype2-0000103:121087497-126026281_large.tri.png" width="100%">
-        <figcaption>HGSVC3 chr1 centromere HOR structure, centromere dip regions, and self-identity plot.</figcaption>
+        <img align="middle" src="docs/HG02106_chr1_haplotype1-0000039:121376246-127617695.png" width="100%">
+        <figcaption>Chr1 α-satellite higher-order repeat structure, centromere dip regions, and self-identity plot</figcaption>
+      </figure>
+            <figure float="left">
+        <img align="middle" src="docs/hprc_subset_as_hor_array_length.png" width="100%">
+        <figcaption>Cumulative α-satellite HOR array lengths</figcaption>
       </figure>
     </td>
     <td>
       <figure float="left">
-        <img align="middle" src="docs/all_cens_chr12_small.png" width="100%">
-        <figcaption>HGSVC3 chr12 centromere HOR structure.</figcaption>
-      </figure>
-      <figure float="left">
-        <img align="middle" src="docs/all_AS-HOR_lengths.png" width="100%">
-        <figcaption>HGSVC3 Cumulative alpha-satellite HOR array lengths by chromosome.</figcaption>
+        <img align="middle" src="docs/hprc_subset_chr12.png" width="50%">
+        <figcaption>Chr12 α-satellite HOR arrays</figcaption>
       </figure>
     </td>
   </tr>
@@ -32,11 +32,11 @@ A centromere mapping and annotation pipeline for T2T human genome assemblies imp
 * (Optional) Unaligned BAM files with 5mC modifications at CpG sites.
 
 ### [Output](https://github.com/logsdon-lab/CenMAP/wiki/5.-Output)
-* Complete and correctly assembled centromere sequences and their regions.
-* Centromere alpha-satellite higher order repeat (HOR) array lengths.
-* [`RepeatMasker`](https://www.repeatmasker.org/) and [`HumAS-HMMER`](https://github.com/enigene/HumAS-HMMER) alpha-satellite HOR monomer annotations and plots.
+* Complete and correctly assembled centromere sequences and their regions validated by [`NucFlag`](https://github.com/logsdon-lab/NucFlag).
+* Centromere alpha-satellite higher order repeat (HOR) array lengths via [`censtats`](https://github.com/logsdon-lab/CenStats).
+* [`RepeatMasker`](https://www.repeatmasker.org/) and [`HumAS-SD`](https://github.com/logsdon-lab/Snakemake-HumAS-SD) alpha-satellite HOR monomer annotations and plots.
 * [`ModDotPlot`](https://github.com/marbl/ModDotPlot) sequence identity plots.
-* Combined sequence identity and HOR array structure plots.
+* Combined sequence identity and HOR array structure plots via [`cenplot`](https://github.com/logsdon-lab/cenplot).
 * (Optional) Centromere dip region (CDRs) with [`CDR-Finder`](https://github.com/koisland/CDR-Finder)
 
 ### [Documentation](https://github.com/logsdon-lab/CenMAP/wiki)

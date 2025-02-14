@@ -1,5 +1,6 @@
 
 include: "common.smk"
+include: "utils.smk"
 
 
 if config["moddotplot"].get("input_dir"):
@@ -122,49 +123,16 @@ rule filter_annotations_moddotplot:
         """
 
 
-rule modify_moddotplot_cenplot_tracks:
+use rule modify_cenplot_tracks as modify_moddotplot_cenplot_tracks with:
     input:
         plot_layout="workflow/scripts/cenplot_moddotplot.toml",
-        cdr_bed=rules.filter_annotations_moddotplot.output.cdr_bed,
+        infiles=[rules.filter_annotations_moddotplot.output.cdr_bed],
     output:
         plot_layout=os.path.join(
             OUTPUT_MODDOTPLOT_PLOTS_DIR,
             "{chr}",
             "{fname}.yaml",
         ),
-    params:
-        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.cdr_bed))),
-    run:
-        import tomllib, yaml, os
-
-        with (
-            open(input.plot_layout, "rb") as fh,
-            open(output.plot_layout, "wt") as out_fh,
-        ):
-            settings = tomllib.load(fh)
-            is_empty_cdr_bed = os.stat(input.cdr_bed).st_size == 0
-            if is_empty_cdr_bed:
-                settings["settings"]["dim"] = [16.0, 8.0]
-            new_settings = {"settings": settings["settings"]}
-            new_tracks = []
-
-            for trk in settings["tracks"]:
-                if not "path" in trk:
-                    new_tracks.append(trk)
-                    continue
-                new_trk = trk.copy()
-
-                # Check if CDR bed is empty. If is, skip CDR-related tracks.
-                if (
-                    "cdr" in trk["path"] or "methyl" in trk["path"]
-                ) and is_empty_cdr_bed:
-                    continue
-                else:
-                    new_trk["path"] = trk["path"].format(indir=params.indir)
-
-                new_tracks.append(new_trk)
-            new_settings["tracks"] = new_tracks
-            out_fh.write(yaml.dump(new_settings))
 
 
 rule plot_cen_moddotplot:

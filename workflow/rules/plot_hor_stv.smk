@@ -36,10 +36,27 @@ rule filter_annotations_hor_stv:
         """
 
 
-rule modify_hor_stv_cenplot_tracks:
+# Require both to exist before beginning plotting.
+use rule modify_cenplot_tracks as modify_hor_stv_cenplot_tracks with:
     input:
         plot_layout="workflow/scripts/cenplot_hor_stv_plot.toml",
-        infile=rules.filter_annotations_hor_stv.output.cdr_bed,
+        infiles=[
+            os.path.join(
+                config["plot_hor_stv"]["output_dir"], "bed", "{chr}", "stv_all.bed"
+            ),
+            os.path.join(
+                config["plot_hor_stv"]["output_dir"],
+                "bed",
+                "{chr}",
+                "stv_complete.bed",
+            ),
+            os.path.join(
+                config["plot_hor_stv"]["output_dir"],
+                "bed",
+                "{chr}",
+                "sat_annot.bed",
+            ),
+        ],
     output:
         plot_layout=os.path.join(
             config["plot_hor_stv"]["output_dir"],
@@ -47,33 +64,7 @@ rule modify_hor_stv_cenplot_tracks:
             "{typ}_cens_{chr}.yaml",
         ),
     params:
-        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infile))),
-    run:
-        import tomllib, yaml, os
-
-        with (
-            open(input.plot_layout, "rb") as fh,
-            open(output.plot_layout, "wt") as out_fh,
-        ):
-            settings = tomllib.load(fh)
-            is_empty_cdr_bed = os.stat(input.infile).st_size == 0
-            new_settings = {"settings": settings["settings"]}
-            new_tracks = []
-
-            for trk in settings["tracks"]:
-                if not "path" in trk:
-                    new_tracks.append(trk)
-                    continue
-                    # Check if CDR bed is empty. If is, skip track.
-                if "cdr" in trk["path"] and is_empty_cdr_bed:
-                    continue
-                new_trk = trk.copy()
-                new_trk["path"] = trk["path"].format(
-                    indir=params.indir, typ=wildcards.typ
-                )
-                new_tracks.append(new_trk)
-            new_settings["tracks"] = new_tracks
-            out_fh.write(yaml.dump(new_settings))
+        typ="{typ}",
 
 
 use rule plot_multiple_cen as plot_hor_stv with:
