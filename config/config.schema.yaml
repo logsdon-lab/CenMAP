@@ -133,7 +133,7 @@ properties:
         type: string
         description: >-
           Regular expression to find hifi reads if input_hifi_reads_dir is provided.
-        default: ".*\\.fastq.gz"
+        default: ".*\\.fastq.gz$"
       config_nucflag:
         type: string
         description: Path to nucflag config file.

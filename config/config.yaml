@@ -58,7 +58,7 @@ dna_brnn:
 nucflag:
   input_hifi_reads_fofn_dir: "data/hifi"
   # input_hifi_reads_dir: "data/hifi"
-  # reads_rgx: ".*\\.fastq.gz"
+  # reads_rgx: ".*\\.fastq.gz$"
   config_nucflag: "config/nucflag.toml"
   threads_aln: 24
   processes_nucflag: 12
