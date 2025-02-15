@@ -31,6 +31,8 @@ rule extract_cens_for_humas_sd:
                 "{sm}_cens.fa.fai",
             )
         ),
+    conda:
+        "../envs/tools.yaml"
     log:
         join(HUMAS_SD_LOGDIR, "extract_cens_for_humas_sd_{sm}.log"),
     params:
