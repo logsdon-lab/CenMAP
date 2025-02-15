@@ -54,19 +54,9 @@ rule check_cens_status:
 
 
 def cen_status(wc):
-    try:
-        _ = checkpoints.split_cens_for_rm.get(**wc).output
-    except AttributeError:
-        pass
-    wcs = glob_wildcards(
-        join(
-            FIX_RM_OUTDIR,
-            "seq",
-            "interm",
-            str(wc.sm),
-            "{fname}.fa",
-        )
-    )
+    outdir = checkpoints.split_cens_for_rm.get(**wc).output[0]
+    fa_glob_pattern = join(outdir, "{fname}.fa")
+    wcs = glob_wildcards(fa_glob_pattern)
     fnames = wcs.fname
     assert (
         len(fnames) != 0

@@ -94,7 +94,7 @@ def format_toml_path(
                 new_settings["tracks"].append(trk)
                 continue
             try:
-                new_path = path.format(indir=indir, **params)
+                new_path = path.format(indir=indir, **kwargs)
             except KeyError:
                 print(
                     f"Invalid format key in path {path} from cenplot track file, {input.plot_layout}.",

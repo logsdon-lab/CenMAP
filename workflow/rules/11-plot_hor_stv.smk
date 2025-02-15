@@ -23,7 +23,28 @@ rule filter_annotations_hor_stv:
             if config.get("cdr_finder")
             else []
         ),
+        all_stv_bed=rules.aggregate_format_all_stv_row.output,
+        complete_stv_bed=rules.filter_complete_correct_stv_row.output,
+        all_rm_sat_bed=rules.aggregate_rm_satellite_annotations.output,
     output:
+        all_stv_bed=join(
+            PLT_HOR_STV_OUTDIR,
+            "bed",
+            "{chr}",
+            "stv_all.bed",
+        ),
+        complete_stv_bed=join(
+            PLT_HOR_STV_OUTDIR,
+            "bed",
+            "{chr}",
+            "stv_complete.bed",
+        ),
+        rm_bed=join(
+            PLT_HOR_STV_OUTDIR,
+            "bed",
+            "{chr}",
+            "sat_annot.bed",
+        ),
         cdr_bed=join(
             PLT_HOR_STV_OUTDIR,
             "bed",
@@ -31,6 +52,7 @@ rule filter_annotations_hor_stv:
             "cdr.bed",
         ),
     params:
+        rgx_chr=lambda wc: f"{wc.chr}[_:]",
         cdr_output=bool(config.get("cdr_finder", False)),
     log:
         join(PLT_HOR_STV_LOGDIR, "filter_annotations_{chr}_hor_stv.log"),
@@ -38,11 +60,13 @@ rule filter_annotations_hor_stv:
         "../envs/tools.yaml"
     shell:
         """
-        if [ "{params.cdr_output}" == "False" ]; then
-            touch {output.cdr_bed}
-        else
-            ( grep '{wildcards.chr}_' {input.all_cdr_bed} || true ) > {output.cdr_bed}
+        if [ ! "{params.cdr_output}" == "False" ]; then
+            {{ grep '{params.rgx_chr}' {input.all_cdr_bed} || true ;}} > {output.cdr_bed}
         fi
+        {{ grep '{params.rgx_chr}' {input.all_stv_bed} || true ;}} > {output.all_stv_bed}
+        {{ grep '{params.rgx_chr}' {input.complete_stv_bed} || true ;}} > {output.complete_stv_bed}
+        {{ grep '{params.rgx_chr}' {input.all_rm_sat_bed} || true ;}} > {output.rm_bed}
+        touch {output}
         """
 
 
@@ -50,11 +74,7 @@ rule filter_annotations_hor_stv:
 rule modify_hor_stv_cenplot_tracks:
     input:
         plot_layout=workflow.source_path("../scripts/cenplot_hor_stv_plot.toml"),
-        infiles=[
-            rules.aggregate_format_all_stv_row.output,
-            rules.filter_complete_correct_stv_row.output,
-            rules.split_rm_satellite_annotations.output,
-        ],
+        infiles=rules.filter_annotations_hor_stv.output,
     output:
         plot_layout=join(
             PLT_HOR_STV_OUTDIR,
@@ -74,11 +94,7 @@ rule modify_hor_stv_cenplot_tracks:
 
 rule plot_hor_stv:
     input:
-        bed_files=[
-            rules.split_rm_satellite_annotations.output,
-            rules.aggregate_format_all_stv_row.output,
-            rules.filter_annotations_hor_stv.output.cdr_bed,
-        ],
+        bed_files=rules.filter_annotations_hor_stv.output,
         script=workflow.source_path("../scripts/plot_multiple_cen.py"),
         plot_layout=expand(
             rules.modify_hor_stv_cenplot_tracks.output, chr="{chr}", typ="all"
@@ -112,11 +128,7 @@ rule plot_hor_stv:
 
 rule plot_hor_stv_complete:
     input:
-        bed_files=[
-            rules.split_rm_satellite_annotations.output,
-            rules.filter_complete_correct_stv_row.output,
-            rules.filter_annotations_hor_stv.output.cdr_bed,
-        ],
+        bed_files=rules.filter_annotations_hor_stv.output,
         script=workflow.source_path("../scripts/plot_multiple_cen.py"),
         plot_layout=expand(
             rules.modify_hor_stv_cenplot_tracks.output, chr="{chr}", typ="complete"

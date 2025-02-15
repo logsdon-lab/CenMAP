@@ -103,26 +103,7 @@ rule aggregate_rm_satellite_annotations:
         """
 
 
-rule split_rm_satellite_annotations:
-    input:
-        all_annotations=rules.aggregate_rm_satellite_annotations.output,
-    output:
-        chr_annot=join(
-            FMT_RM_SAT_OUTDIR,
-            "bed",
-            "{chr}",
-            "sat_annot.bed",
-        ),
-    params:
-        chr_pattern=lambda wc: str(wc.chr).replace("chr", r"(chr|cen)") + r"[_:\-\\tv]",
-    shell:
-        """
-        grep -P "{params.chr_pattern}" {input.all_annotations} > {output.chr_annot}
-        """
-
-
 rule format_repeatmasker_sat_all:
     input:
         rules.aggregate_rm_satellite_annotations.output,
-        expand(rules.split_rm_satellite_annotations.output, chr=CHROMOSOMES),
     default_target: True
