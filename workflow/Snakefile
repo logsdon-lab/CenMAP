@@ -206,6 +206,7 @@ output = [
     rules.fix_cens_w_repeatmasker_all.input,
     rules.humas_sd_all.input,
     rules.get_complete_correct_cens_all.input,
+    rules.count_complete_cens_all.input,
 ]
 
 # Download T2T-CHM13 reference assembly if existing path not provided.
@@ -233,10 +234,6 @@ if config.get("moddotplot"):
 
 if config.get("calculate_hor_length"):
     output.append(rules.calculate_as_hor_length_all.input)
-
-
-if config.get("count_complete_cens"):
-    output.append(rules.count_complete_cens_all.input)
 
 
 if config.get("cdr_finder"):
