@@ -76,6 +76,8 @@ rule get_complete_correct_cens_fa:
             "seq",
             "{sm}_cens.fa.fai",
         ),
+    conda:
+        "../envs/tools.yaml"
     log:
         join(COMPLETE_CORRECT_CENS_LOGDIR, "get_complete_correct_cens_fa_{sm}.log"),
     params:

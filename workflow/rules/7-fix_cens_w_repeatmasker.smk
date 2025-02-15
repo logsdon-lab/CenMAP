@@ -74,7 +74,7 @@ rule make_complete_cens_bed:
     output:
         # (new_name, st, end, is_misassembled, ctg_name, ctg_len)
         cen_bed=join(
-            IDENT_CEN_CTGS_OUTDIR,
+            FIX_RM_OUTDIR,
             "bed",
             "interm",
             "{sm}_complete_cens.bed",

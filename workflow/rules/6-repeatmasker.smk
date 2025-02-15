@@ -278,7 +278,7 @@ rule create_og_rm_bed:
 
 rule modify_og_rm_cenplot_tracks:
     input:
-        plot_layout="workflow/scripts/cenplot_repeatmasker_plot.toml",
+        plot_layout=workflow.source_path("../scripts/cenplot_repeatmasker_plot.toml"),
         infiles=rules.create_og_rm_bed.output,
     output:
         plot_layout=join(
