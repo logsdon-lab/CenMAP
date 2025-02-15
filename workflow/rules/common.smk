@@ -9,6 +9,11 @@ from os.path import join
 from collections import defaultdict
 from typing import Any
 from snakemake.settings.types import DeploymentMethod
+from snakemake.utils import validate
+
+
+# Validate and fill defaults.
+validate(config, "../config/config.schema.yaml")
 
 
 # Include contants so can run individual smk files without main Snakefile.

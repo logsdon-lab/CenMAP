@@ -47,12 +47,30 @@ rule aggregate_as_hor_length:
         """
 
 
+def args_ref_hor_lengths(wc, input) -> str:
+    """
+    Construct args for plotting ref hor length.
+    """
+    if not input.ref_hor_lengths:
+        return ""
+    args = []
+    for ref in config["calculate_hor_length"]["ref_hor_lengths"]:
+        lbl = ref["name"]
+        path = ref["path"]
+        color = ref["color"]
+        # label, path, and color of violin plot dot.
+        arg = f"{lbl}={path}={color}" if color else f"{lbl}={path}"
+        args.append(arg)
+    return f'-a {" ".join(args)}'
+
+
 rule plot_as_hor_length:
     input:
         script=workflow.source_path("../scripts/plot_hor_length.py"),
-        ref_hor_lengths=config["calculate_hor_length"]
-        .get("ref_hor_lengths", {})
-        .values(),
+        ref_hor_lengths=[
+            ref["path"]
+            for ref in config["calculate_hor_length"].get("ref_hor_lengths", [])
+        ],
         lengths=rules.aggregate_as_hor_length.output,
     output:
         join(
@@ -63,17 +81,7 @@ rule plot_as_hor_length:
     params:
         # Random colors given for each ref.
         # Run separately to get desired colors.
-        args_added_lengths=lambda wc, input: (
-            "-a "
-            + " ".join(
-                f"{lbl}={path}"
-                for lbl, path in config["calculate_hor_length"][
-                    "ref_hor_lengths"
-                ].items()
-            )
-            if input.ref_hor_lengths
-            else ""
-        ),
+        args_added_lengths=args_ref_hor_lengths,
     log:
         join(HOR_ARR_LEN_LOGDIR, "plot_all_as_hor_length.log"),
     conda:

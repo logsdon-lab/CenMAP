@@ -1,0 +1,331 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+properties:
+  chromosomes:
+    type: array
+    items:
+      type: string
+      enum: [
+        "chr1",
+        "chr2",
+        "chr3",
+        "chr4",
+        "chr5",
+        "chr6",
+        "chr7",
+        "chr8",
+        "chr9",
+        "chr10",
+        "chr11",
+        "chr12",
+        "chr13",
+        "chr14",
+        "chr15",
+        "chr16",
+        "chr17",
+        "chr18",
+        "chr19",
+        "chr20",
+        "chr21",
+        "chr22",
+        "chrX",
+        "chrY",
+      ]
+    description: Chromosomes to evaluate.
+  samples:
+    type: array
+    items:
+      type: string
+    description: Sample names.
+  container:
+    type: string
+    description: Container for workflow if using singularity.
+    default: "docker://logsdonlab/cenmap:latest"
+  # Rules
+  concat_asm:
+    type: object
+    additionalProperties: false
+    properties:
+      input_dir:
+        type: string
+      mem:
+        type: string
+        pattern: "\\d+GB"
+        default: 20GB
+    required:
+      - input_dir
+  align_asm_to_ref:
+    type: object
+    additionalProperties: false
+    properties:
+      reference:
+        type: string
+        description: >-
+          Path to reference assembly.
+          Will download CHM13v2.0 if not specified.
+          Only applicable if user has CHM13v2.0 on cluster and wants to avoid redownloading the assembly.
+        default: null
+      threads:
+        type: integer
+        default: 4
+      mem:
+        type: string
+        pattern: "\\d+GB"
+        default: 30GB
+  extract_ref_hor_arrays:
+    type: object
+    additionalProperties: false
+    properties:
+      added_bases:
+        type: integer
+        description: Add bp to extend edges of HOR array for alignment. In addition to default 500kbp.
+        default: 1000000
+  ident_cen_ctgs:
+    type: object
+    additionalProperties: false
+    properties:
+      ref_cens_regions:
+        type: string
+        description: Path to BED file with reference centromere regions.
+        default: data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed
+      ref_cens_unique_regions:
+        type: string
+        description: >-
+          Path to BED file with reference centromere regions that are used for contig mapping.
+          These must be unique (not in SDs, include TEs) regions.
+          Currently, only CHM13 is supported.
+        default: data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed
+  dna_brnn:
+    type: object
+    additionalProperties: false
+    properties:
+      model:
+        type: string
+        description: Path to model used to train dna-brnn.
+        default: data/models/attcc-alpha.knm
+      threads:
+        type: integer
+        default: 12
+      mem:
+        type: string
+        pattern: "\\d+GB"
+        default: 8GB
+      thr_file:
+        type: string
+        description: >-
+          Path to file of chromosome specific thresholds
+          for filtering and trimming dna-brnn output.
+        default: config/dnabrnn_thresholds.json
+  nucflag:
+    type: object
+    additionalProperties: false
+    properties:
+      input_hifi_reads_fofn_dir:
+        type: string
+        description: >-
+          Directory of hifi read fofn files.
+          Each file in this directory is named "{sample}.fofn".
+      input_hifi_reads_dir:
+        type: string
+        description: >-
+          Directory of hifi reads.
+          Searched recursively for files in "{dir}/{sample}/" matching reads_rgx.
+      reads_rgx:
+        type: string
+        description: >-
+          Regular expression to find hifi reads if input_hifi_reads_dir is provided.
+        default: ".*\\.fastq.gz"
+      config_nucflag:
+        type: string
+        description: Path to nucflag config file.
+        default: "config/nucflag.toml"
+      ignore_regions:
+        type: string
+        description: Path to BED file with regions to ignore in the assembly.
+        default: null
+      threads_aln:
+        type: integer
+        default: 8
+      processes_nucflag:
+        type: integer
+        default: 12
+      mem_nucflag:
+        type: string
+        pattern: "\\d+GB"
+        default: 30GB
+      mem_aln:
+        type: string
+        pattern: "\\d+GB"
+        default: 60GB
+      samtools_view_flag:
+        type: integer
+        description: Filter flag to use when filtering reads from alignment.
+        default: 2308
+      ignore_type:
+        type: string
+        description: Restrict nucflag check to asat or live asat.
+        enum: [asat, live_asat]
+        default: asat
+  repeatmasker:
+    type: object
+    additionalProperties: false
+    properties:
+      ref_repeatmasker_output:
+        type: array
+        items:
+          type: string
+        description: >-
+          Path of repeatmasker outputs from reference assemblies.
+          Expected to be trimmed within 0.5-1 Mbp of bounds of alpha-satellite HOR array
+          and oriented from p arm to q arm.
+          Currently, only CHM13 is supported.
+        default: [
+          data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out,
+          data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
+        ]
+      config_censtats_status:
+        type: string
+        description: Path to JSON configuration for censtats status.
+        default: config/censtats.json
+      repeat_colors:
+        type: string
+        description: Path to JSON file of repeat colors.
+        default: config/repeatmasker_colors.json
+      threads:
+        type: integer
+        default: 12
+
+    required:
+      - config_censtats_status
+  humas_sd:
+    type: object
+    additionalProperties: false
+    properties:
+      threads:
+        type: integer
+        default: 6
+      mem:
+        type: string
+        pattern: "\\d+GB"
+        default: 30GB
+      hmm_profile:
+        type: string
+        default: data/models/AS-HORs-hmmer3.4-071024.hmm
+        description: Path to hidden markov model profile used with HumAS-HMMER to use as HOR variant database.
+  plot_hor_stv:
+    type: object
+    additionalProperties: false
+    properties:
+      ref_stv:
+        type: array
+        items:
+          type: string
+        description: Path to reference HOR stv annotations to plot.
+        default: [
+          data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed,
+          data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed
+        ]
+      sat_annot_colors:
+        type: string
+        description: Path to mapping file of satellite annotations to colors.
+        default: config/repeatmasker_sat_annot_colors.json
+      stv_annot_colors:
+        type: string
+        description: Path to mapping file of HOR stv monomer numbers to colors.
+        default: config/stv_annot_colors.tsv
+
+  calculate_hor_length:
+    type: object
+    additionalProperties: false
+    properties:
+      ref_hor_lengths:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Name of assembly.
+            color:
+              type: ["string", "null"]
+              default: null
+              description: Color of dot in violin plot. If null, random color.
+            path:
+              type: string
+              description: Path to BED file of reference HOR array lengths.
+          required:
+            - name
+            - path
+  moddotplot:
+    type: object
+    additionalProperties: false
+    properties:
+      mem:
+        type: string
+        pattern: "\\d+GB"
+        default: 10GB
+      ident_thr:
+        type: number
+        default: 70.0
+        description: Sequence identity threshold for ModDotPlot
+      window:
+        type: integer
+        default: 5000
+        description: Window size passed to ModDotPlot
+  cdr_finder:
+    type: object
+    additionalProperties: false
+    properties:
+      aligner:
+        type: string
+        enum: ["minimap2", "winnowmap"]
+      input_bam_dir:
+        type: string
+        description: Path to directory with methyl BAM files. Searches recursively for files matching bam_rgx.
+      bam_rgx:
+        type: string
+        description: Regular expression to search input_bam_dir for methyl BAM files.
+      aln_mem:
+        type: string
+        pattern: "\\d+GB"
+        default: 50GB
+      aln_threads:
+        type: integer
+        default: 12
+      window_size:
+        type: integer
+        description: Window size to average methylation percent.
+        default: 5000
+      alr_threshold:
+        type: integer
+        description: Number of bp required for merged intervals of alpha-satellite repeat annotations.
+        default: 100000
+      bp_merge:
+        type: integer
+        description: Merge distance for CDRs.
+        default: 1
+      bp_alr_merge:
+        type: integer
+        description: Merge distance of alpha-satellite repeats.
+        default: 1000
+      bp_edge:
+        type: integer
+        description: Number of base pairs at edges adjacent to CDR to estimate height.
+        default: 500_000
+      height_perc_valley_threshold:
+        type: number
+        description: Required CDR height threshold.
+        default: 0.34
+      prom_perc_valley_threshold:
+        type: number
+        description: Required CDR prominence threshold.
+        default: 0.3
+      extend_edges_std:
+        type: integer
+        description: Extend CDRs along edges as long as height is less than mean + set standard deviation value.
+        default: -1
+    required:
+      - input_bam_dir
+      - bam_rgx
+required:
+  - samples
+  - chromosomes

@@ -65,7 +65,7 @@ rule format_hor_ref_aln_cen_contigs:
 rule intersect_with_pq_arm:
     input:
         aln_cens_bed=rules.format_hor_ref_aln_cen_contigs.output,
-        ref_monomeric_bed=config["ident_cen_ctgs"]["ref_cens_monomeric_regions"],
+        ref_unique_bed=config["ident_cen_ctgs"]["ref_cens_unique_regions"],
     output:
         qarms_cen_regions=join(
             IDENT_CEN_CTGS_OUTDIR,
@@ -79,7 +79,7 @@ rule intersect_with_pq_arm:
         join(IDENT_CEN_CTGS_LOGDIR, "intersect_ref_cen_pqarm_{sm}.log"),
     shell:
         """
-        bedtools intersect -loj -a {input.aln_cens_bed} -b  {input.ref_monomeric_bed} > {output.qarms_cen_regions} 2> {log}
+        bedtools intersect -loj -a {input.aln_cens_bed} -b  {input.ref_unique_bed} > {output.qarms_cen_regions} 2> {log}
         """
 
 

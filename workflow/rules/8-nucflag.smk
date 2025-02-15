@@ -190,10 +190,6 @@ elif IGNORE_TYPE == "live_asat":
     ignore_regions = [str(rules.format_stv_nucflag_ignore_bed.output)]
     overlay_beds = [str(rules.format_stv_to_overlay_bed.output)]
 else:
-    print(
-        "No ignore type provided. Restricting called misassemblies to asat.",
-        file=sys.stderr,
-    )
     ignore_regions = str(rules.format_rm_nucflag_ignore_bed.output)
     overlay_beds = [str(rules.format_repeatmasker_to_overlay_bed.output)]
 
@@ -206,12 +202,12 @@ NUCFLAG_CFG = {
             **(
                 {
                     "read_fofn": join(
-                        config["nucflag"]["hifi_reads_fofn_dir"], f"{sm}.fofn"
+                        config["nucflag"]["input_hifi_reads_fofn_dir"], f"{sm}.fofn"
                     ),
                 }
-                if config["nucflag"].get("hifi_reads_fofn_dir")
+                if config["nucflag"].get("input_hifi_reads_fofn_dir")
                 else {
-                    "read_dir": join(config["nucflag"]["hifi_reads_dir"], sm),
+                    "read_dir": join(config["nucflag"]["input_hifi_reads_dir"], sm),
                     "read_rgx": config["nucflag"]["reads_rgx"],
                 }
             ),

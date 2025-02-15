@@ -1,2 +1,3 @@
 *.yaml
 !config.yaml
+!config.schema.yaml

@@ -84,6 +84,13 @@ module nucflag:
         config
 
 
+module cdr_finder:
+    snakefile:
+        "rules/8-cdr_finder.smk"
+    config:
+        config
+
+
 module format_repeatmasker_sat_annot:
     snakefile:
         "rules/8-format_repeatmasker_sat_annot.smk"
@@ -234,8 +241,7 @@ if config.get("count_complete_cens"):
 
 if config.get("cdr_finder"):
 
-    # Need to include CDR-Finder because uses rule inheritance.
-    include: "rules/8-cdr_finder.smk"
+    use rule * from cdr_finder
 
     output.append(rules.cdr_finder_all.input)
 

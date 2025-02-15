@@ -46,7 +46,7 @@ extract_ref_hor_arrays:
 
 ident_cen_ctgs:
   ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
-  ref_cens_monomeric_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
+  ref_cens_unique_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
 
 dna_brnn:
   # https://github.com/lh3/dna-nn/tree/master/models
@@ -56,8 +56,8 @@ dna_brnn:
   thr_file: "config/dnabrnn_thresholds.json"
 
 nucflag:
-  hifi_reads_fofn_dir: "data/hifi"
-  # hifi_reads_dir: "data/hifi"
+  input_hifi_reads_fofn_dir: "data/hifi"
+  # input_hifi_reads_dir: "data/hifi"
   # reads_rgx: ".*\\.fastq.gz"
   config_nucflag: "config/nucflag.toml"
   threads_aln: 24
@@ -90,8 +90,12 @@ plot_hor_stv:
 
 calculate_hor_length:
   ref_hor_lengths:
-    CHM1: "data/annotations/chm1_hor_length.tsv"
-    CHM13: "data/annotations/chm13_hor_length.tsv"
+    - name: "CHM1"
+      color: "red"
+      path: "data/annotations/chm1_hor_length.tsv"
+    - name: CHM13
+      color: "black"
+      path: "data/annotations/chm13_hor_length.tsv"
 
 moddotplot:
   mem: 10GB

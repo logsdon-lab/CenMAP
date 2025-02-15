@@ -1,7 +1,7 @@
 
 include: "common.smk"
 include: "utils.smk"
-include: "8-cdr_finder.smk"
+# include: "8-cdr_finder.smk"
 include: "8-format_repeatmasker_sat_annot.smk"
 include: "10-format_hor_stv.smk"
 
@@ -14,7 +14,12 @@ PLT_HOR_STV_BMKDIR = join(BMK_DIR, "11-plot_hor_stv")
 rule filter_annotations_hor_stv:
     input:
         all_cdr_bed=(
-            rules.merge_cdr_beds.output.reorient_cdr_output
+            join(
+                OUTPUT_DIR,
+                "8-cdr_finder",
+                "bed",
+                "all_cdrs.bed",
+            )
             if config.get("cdr_finder")
             else []
         ),

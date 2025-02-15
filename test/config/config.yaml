@@ -1,6 +1,9 @@
 samples:
 - test_1
 
+chromosomes:
+  - "chr1"
+
 align_asm_to_ref:
   reference: "data/reference/T2T-CHM13.fa.gz"
   threads: 4
@@ -14,7 +17,7 @@ extract_ref_hor_arrays:
 
 ident_cen_ctgs:
   ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
-  ref_cens_monomeric_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
+  ref_cens_unique_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
 
 dna_brnn:
   # https://github.com/lh3/dna-nn/tree/master/models
@@ -23,13 +26,13 @@ dna_brnn:
   thr_file: "config/dnabrnn_thresholds.json"
 
 nucflag:
-  hifi_reads_dir: "test/data/raw_data"
+  input_hifi_reads_dir: "test/data/raw_data"
   reads_rgx: ".*\\.bam$"
   config_nucflag: "config/nucflag.toml"
   ignore_regions: "config/nucflag_ignore.bed"
   threads_aln: 4
-  mem_nucflag: 50
-  mem_aln: 120
+  mem_nucflag: 50GB
+  mem_aln: 120GB
   processes_nucflag: 12
   samtools_view_flag: 2308
   ignore_type: live_asat
@@ -55,8 +58,10 @@ plot_hor_stv:
 
 calculate_hor_length:
   ref_hor_lengths:
-    CHM1: "data/annotations/chm1_hor_length.tsv"
-    CHM13: "data/annotations/chm13_hor_length.tsv"
+    - name: CHM1
+      path: "data/annotations/chm1_hor_length.tsv"
+    - name: CHM13
+      path: "data/annotations/chm13_hor_length.tsv"
 
 moddotplot:
   mem: 10GB
