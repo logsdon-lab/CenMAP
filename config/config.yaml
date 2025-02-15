@@ -27,31 +27,28 @@ chromosomes:
 samples:
   - HG00171
 
+# Specify container to run workflow if using singularity.
+# Optional
+container: "docker://logsdonlab/cenmap:latest"
+
 concat_asm:
-  # Expects {input_dir}/{sm}/*.gz
   input_dir: "data/assemblies"
-  output_dir: "results/assemblies/combined"
   mem: 20GB
 
 align_asm_to_ref:
-  # Output dir set to results
-  output_dir: "results/align_asm_to_ref"
-  reference: "data/reference/T2T-CHM13v2.fasta.gz"
+  # reference: "data/reference/T2T-CHM13v2.fasta.gz"
   threads: 4
   mem: 60GB
 
 extract_ref_hor_arrays:
-  output_dir: "results/ref_hor_arrays"
   # Add bp to extend edges of HOR array for alignment. In addition to default 500kbp.
   added_bases: 1_000_000
 
 ident_cen_ctgs:
-  output_dir: "results/cens"
   ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
   ref_cens_monomeric_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
 
 dna_brnn:
-  output_dir: "results/dna_brnn"
   # https://github.com/lh3/dna-nn/tree/master/models
   model: "data/models/attcc-alpha.knm"
   threads: 12
@@ -60,10 +57,8 @@ dna_brnn:
 
 nucflag:
   hifi_reads_fofn_dir: "data/hifi"
- # hifi_reads_dir: "data/hifi"
- # reads_rgx: ".*\\.fastq.gz"
-  output_dir: "results/nucflag"
-  tmp_dir: "temp"
+  # hifi_reads_dir: "data/hifi"
+  # reads_rgx: ".*\\.fastq.gz"
   config_nucflag: "config/nucflag.toml"
   threads_aln: 24
   processes_nucflag: 12
@@ -80,16 +75,13 @@ repeatmasker:
   config_censtats_status: "config/censtats.json"
   repeat_colors: "config/repeatmasker_colors.json"
   threads: 12
-  output_dir: "results/repeatmasker"
 
 humas_sd:
-  output_dir: "results/humas_sd"
   threads: 6
   mem: 30GB
   hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
 
 plot_hor_stv:
-  output_dir: "results/hor_stv"
   ref_stv:
   - "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
   - "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
@@ -100,15 +92,10 @@ calculate_hor_length:
   ref_hor_lengths:
     CHM1: "data/annotations/chm1_hor_length.tsv"
     CHM13: "data/annotations/chm13_hor_length.tsv"
-  output_dir: "results/calculate_hor_length"
-
-count_complete_cens:
-  output_dir: "results/count_complete_cens"
 
 moddotplot:
-  input_dir: null
-  output_dir: "results/moddotplot"
   mem: 10GB
+  ident_thr: 70.0
   window: 5000
 
 cdr_finder:
@@ -121,7 +108,6 @@ cdr_finder:
   # Uses find and file pattern to merge bam.
   input_bam_dir: "data/ont"
   bam_rgx: ".*prom_pass.bam$"
-  output_dir: "results/cdr_finder"
   aln_mem: 50GB
   aln_threads: 24
   window_size: 5000

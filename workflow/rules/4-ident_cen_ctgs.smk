@@ -4,20 +4,24 @@
 
 include: "utils.smk"
 include: "common.smk"
+include: "1-concat_asm.smk"
+include: "3-align_asm_to_ref.smk"
+
+
+IDENT_CEN_CTGS_OUTDIR = join(OUTPUT_DIR, "4-ident_cen_ctgs")
+IDENT_CEN_CTGS_LOGDIR = join(LOG_DIR, "4-ident_cen_ctgs")
+IDENT_CEN_CTGS_BMKDIR = join(BMK_DIR, "4-ident_cen_ctgs")
 
 
 # Convert rustybam stats bedfile by adjusting start and end positions.
 rule format_hor_ref_aln_cen_contigs:
     input:
-        aln_bed=os.path.join(
-            config["align_asm_to_ref"]["output_dir"],
-            f"{REF_NAME}_cens",
-            "bed",
-            "{sm}.bed",
+        aln_bed=expand(
+            rules.asm_ref_aln_to_bed.output, ref=f"{REF_NAME}_cens", sm="{sm}"
         ),
     output:
-        cen_regions=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
+        cen_regions=join(
+            IDENT_CEN_CTGS_OUTDIR,
             "bed",
             "interm",
             "{sm}_cens.bed",
@@ -25,7 +29,7 @@ rule format_hor_ref_aln_cen_contigs:
     conda:
         "../envs/tools.yaml"
     log:
-        "logs/ident_cen_ctgs/format_hor_ref_aln_cen_contigs_{sm}.log",
+        join(IDENT_CEN_CTGS_LOGDIR, "format_hor_ref_aln_cen_contigs_{sm}.log"),
     shell:
         # 1. chr2:91797392-95576642
         # 2. 3054999
@@ -63,8 +67,8 @@ rule intersect_with_pq_arm:
         aln_cens_bed=rules.format_hor_ref_aln_cen_contigs.output,
         ref_monomeric_bed=config["ident_cen_ctgs"]["ref_cens_monomeric_regions"],
     output:
-        qarms_cen_regions=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
+        qarms_cen_regions=join(
+            IDENT_CEN_CTGS_OUTDIR,
             "bed",
             "interm",
             "{sm}_pqarm_cens.bed",
@@ -72,7 +76,7 @@ rule intersect_with_pq_arm:
     conda:
         "../envs/tools.yaml"
     log:
-        "logs/ident_cen_ctgs/intersect_ref_cen_pqarm_{sm}.log",
+        join(IDENT_CEN_CTGS_LOGDIR, "intersect_ref_cen_pqarm_{sm}.log"),
     shell:
         """
         bedtools intersect -loj -a {input.aln_cens_bed} -b  {input.ref_monomeric_bed} > {output.qarms_cen_regions} 2> {log}
@@ -84,18 +88,18 @@ rule intersect_with_pq_arm:
 # No length threshold at this point.
 rule map_collapse_cens:
     input:
-        script="workflow/scripts/map_cens.py",
+        script=workflow.source_path("../scripts/map_cens.py"),
         regions=rules.intersect_with_pq_arm.output,
     output:
-        cens_key=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
+        cens_key=join(
+            IDENT_CEN_CTGS_OUTDIR,
             "bed",
             "interm",
             "{sm}_mapped_cens.bed",
         ),
         # old_name, new_name, coords, sample, chrom, is_reverse
-        renamed_cens_key=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
+        renamed_cens_key=join(
+            IDENT_CEN_CTGS_OUTDIR,
             "bed",
             "interm",
             "{sm}_renamed_cens.tsv",
@@ -105,7 +109,7 @@ rule map_collapse_cens:
     conda:
         "../envs/py.yaml"
     log:
-        "logs/ident_cen_ctgs/map_collapse_cens_{sm}.log",
+        join(IDENT_CEN_CTGS_LOGDIR, "map_collapse_cens_{sm}.log"),
     shell:
         """
         python {input.script} -i {input.regions} -t {params.thr_ctg_len} > {output.cens_key} 2> {log}
@@ -121,31 +125,35 @@ rule map_collapse_cens:
 
 
 # Extract centromeric contigs.
-use rule extract_and_index_fa as extract_cens_regions with:
+rule extract_cens_regions:
     input:
         bed=rules.map_collapse_cens.output.cens_key,
-        fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
+        fa=rules.concat_asm.output.fa,
     output:
         seq=temp(
-            os.path.join(
-                config["ident_cen_ctgs"]["output_dir"],
+            join(
+                IDENT_CEN_CTGS_OUTDIR,
                 "seq",
                 "interm",
                 "{sm}_centromeric_regions.fa",
             )
         ),
         idx=temp(
-            os.path.join(
-                config["ident_cen_ctgs"]["output_dir"],
+            join(
+                IDENT_CEN_CTGS_OUTDIR,
                 "seq",
                 "interm",
                 "{sm}_centromeric_regions.fa.fai",
             )
         ),
+    params:
+        **params_shell_extract_and_index_fa,
     log:
-        "logs/ident_cen_ctgs/extract_regions_{sm}.log",
+        join(IDENT_CEN_CTGS_LOGDIR, "extract_regions_{sm}.log"),
     conda:
         "../envs/tools.yaml"
+    shell:
+        shell_extract_and_index_fa
 
 
 rule ident_cen_ctgs_all:
@@ -154,3 +162,4 @@ rule ident_cen_ctgs_all:
             rules.map_collapse_cens.output,
             sm=SAMPLE_NAMES,
         ),
+    default_target: True

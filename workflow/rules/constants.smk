@@ -1,8 +1,18 @@
 # Globals shared throughout workflow.
+
+if not config:
+    raise ValueError("Empty config file provided.")
+
 REF_NAME = "T2T-CHM13"
+REF_URL = "https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/analysis_set/chm13v2.0.fa.gz"
 REF_FA = f"data/reference/{REF_NAME}.fa.gz"
+
+
+CONTAINER = config.get("container", "docker://logsdonlab/cenmap:latest")
+OUTPUT_DIR = "results"
+LOG_DIR = "logs"
+BMK_DIR = "benchmarks"
 SAMPLE_NAMES = config["samples"]
-HAPLOTYPE = ("haplotype1", "haplotype2")
 CHROMOSOMES = config.get(
     "chromosomes",
     (
@@ -85,11 +95,11 @@ DEF_CENSTATS_STATUS_EDGE_PERC_ALR_THR = 0.95
 DEF_CENSTATS_STATUS_MAX_ALR_LEN_THR = 250_000
 
 
-HUMAS_CENS_SPLIT_DIR = os.path.join(config["humas_sd"]["output_dir"], "seq")
+HUMAS_CENS_SPLIT_DIR = join(OUTPUT_DIR, "8-humas_sd", "seq")
+FINAL_OUTPUT_DIR = join(OUTPUT_DIR, "final")
 
 
 # Set shared constraints.
 wildcard_constraints:
     chr="|".join(CHROMOSOMES),
     sm="|".join(SAMPLE_NAMES),
-    hap="|".join(HAPLOTYPE),

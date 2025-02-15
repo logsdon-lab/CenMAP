@@ -3,25 +3,20 @@ samples:
 
 align_asm_to_ref:
   reference: "data/reference/T2T-CHM13.fa.gz"
-  output_dir: "results/align_asm_to_ref"
   threads: 4
   mem: 60GB
 
 concat_asm:
   input_dir: "test/data/assemblies"
-  output_dir: "results/assemblies/combined"
 
 extract_ref_hor_arrays:
-  output_dir: "results/masked"
   added_bases: 0
 
 ident_cen_ctgs:
-  output_dir: "results/cens"
   ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
   ref_cens_monomeric_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
 
 dna_brnn:
-  output_dir: "results/dna_brnn"
   # https://github.com/lh3/dna-nn/tree/master/models
   model: "data/models/attcc-alpha.knm"
   threads: 12
@@ -29,7 +24,6 @@ dna_brnn:
 
 nucflag:
   hifi_reads_dir: "test/data/raw_data"
-  output_dir: "results/dna_brnn/nucflag"
   reads_rgx: ".*\\.bam$"
   config_nucflag: "config/nucflag.toml"
   ignore_regions: "config/nucflag_ignore.bed"
@@ -38,45 +32,35 @@ nucflag:
   mem_aln: 120
   processes_nucflag: 12
   samtools_view_flag: 2308
+  ignore_type: live_asat
 
 repeatmasker:
   ref_repeatmasker_output:
   - data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
   - data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   threads: 40
-  output_dir: "results/repeatmasker"
   repeat_colors: "config/repeatmasker_colors.json"
   config_censtats_status: "config/censtats.json"
 
 humas_sd:
-  output_dir: "output/"
   threads: 4
   hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
 
 plot_hor_stv:
-  output_dir: "test/results/hor_stv"
   ref_stv:
   - "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
   - "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
   sat_annot_colors: "config/repeatmasker_sat_annot_colors.json"
   stv_annot_colors: "config/stv_annot_colors.tsv"
 
-cluster_cens:
-  output_dir: "results/cluster_cens"
-
 calculate_hor_length:
   ref_hor_lengths:
     CHM1: "data/annotations/chm1_hor_length.tsv"
     CHM13: "data/annotations/chm13_hor_length.tsv"
-  output_dir: "results/calculate_hor_length"
-
-count_complete_cens:
-  output_dir: "results/count_complete_cens"
 
 moddotplot:
-  input_dir: null
-  output_dir: "results/moddotplot"
-  mem: 10
+  mem: 10GB
+  ident_thr: 70.0
   window: 5000
 
 cdr_finder:
@@ -85,7 +69,6 @@ cdr_finder:
   # Uses find and file pattern to merge bam.
   input_bam_dir: "test/data/raw_data"
   bam_rgx: ".*\\.bam$"
-  output_dir: "results/cdr_finder"
   aln_mem: 50GB
   aln_threads: 24
   window_size: 5000

@@ -1,4 +1,11 @@
 include: "common.smk"
+include: "1-concat_asm.smk"
+include: "4-ident_cen_ctgs.smk"
+
+
+DNA_BRNN_OUTDIR = join(OUTPUT_DIR, "5-dna_brnn")
+DNA_BRNN_LOGDIR = join(LOG_DIR, "5-dna_brnn")
+DNA_BRNN_BMKDIR = join(BMK_DIR, "5-dna_brnn")
 
 
 # Then split them into unique files per contig.
@@ -7,11 +14,9 @@ checkpoint split_fa_dnabrnn:
         fa=rules.extract_cens_regions.output.seq,
         rename_key=rules.map_collapse_cens.output.renamed_cens_key,
     output:
-        directory(
-            os.path.join(config["dna_brnn"]["output_dir"], "seq", "interm", "{sm}")
-        ),
+        directory(join(DNA_BRNN_OUTDIR, "seq", "interm", "{sm}")),
     log:
-        "logs/dna_brnn/split_fa_{sm}.log",
+        join(DNA_BRNN_LOGDIR, "split_fa_{sm}.log"),
     params:
         split_dir=lambda wc, output: output[0],
     shell:
@@ -37,11 +42,11 @@ checkpoint split_fa_dnabrnn:
 
 rule compile_dna_brnn:
     output:
-        os.path.join(config["dna_brnn"]["output_dir"], "dna-nn", "dna-brnn"),
+        join(DNA_BRNN_OUTDIR, "dna-nn", "dna-brnn"),
     conda:
         "../envs/dna-brnn.yaml"
     log:
-        "logs/dna_brnn/compile_dna_brnn.log",
+        join(DNA_BRNN_LOGDIR, "compile_dna_brnn.log"),
     params:
         url="https://github.com/lh3/dna-nn",
         tmp_log="compile_dna_brnn.log",
@@ -64,13 +69,13 @@ rule run_dna_brnn:
             rules.compile_dna_brnn.output if IS_CONDA and not IS_SINGULARITY else []
         ),
         model=config["dna_brnn"]["model"],
-        seqs=os.path.join(
+        seqs=join(
             rules.split_fa_dnabrnn.output[0],
             "{fname}.fa",
         ),
     output:
-        repeat_regions=os.path.join(
-            config["dna_brnn"]["output_dir"],
+        repeat_regions=join(
+            DNA_BRNN_OUTDIR,
             "bed",
             "{sm}",
             "{fname}.bed",
@@ -83,9 +88,9 @@ rule run_dna_brnn:
     resources:
         mem=config["dna_brnn"].get("mem", "4GB"),
     log:
-        "logs/dna_brnn/dna_brnn_{sm}_{fname}.log",
+        join(DNA_BRNN_LOGDIR, "dna_brnn_{sm}_{fname}.log"),
     benchmark:
-        "benchmarks/dna_brnn/dna_brnn_{sm}_{fname}.tsv"
+        join(DNA_BRNN_BMKDIR, "dna_brnn_{sm}_{fname}.tsv")
     singularity:
         "docker://logsdonlab/dna-nn:latest"
     shell:
@@ -94,25 +99,17 @@ rule run_dna_brnn:
         """
 
 
-# ex. >HG00171_chr19_h1tg000004l#1-58112442
-# ex. >HG00171_chr16_haplotype1-0000003:4-8430174
-# HG00171_chr16_haplotype1|0000003|4|8430174|start|end|type
-# (Per chr + sample)
-# grep "chr2_" ${sample}.renamed.fwd.bed | \
-# sed 's/:/\t/g' | \
-# sed 's/-/\t/g' | \
-# awk -v OFS="\t" '{print $1"-"$2, $3+$5, $3+$6, $7, $6-$5}' | \
-# awk '$4==2' | \
-# awk '$5>1000' >> chr2_tmp.fwd.bed
+# Filter dna-brnn output to alpha-satellite repeats only.
+# Also trim to major asat HOR arrays.
 rule filter_dnabrnn_sample_cens_regions:
     input:
-        script="workflow/scripts/filter_dnabrnn_output.py",
+        script=workflow.source_path("../scripts/filter_dnabrnn_output.py"),
         repeats=rules.run_dna_brnn.output,
         thresholds=config["dna_brnn"]["thr_file"],
     output:
         tmp_alr_ctgs=temp(
-            os.path.join(
-                config["dna_brnn"]["output_dir"],
+            join(
+                DNA_BRNN_OUTDIR,
                 "bed",
                 "{sm}_filtered",
                 "{fname}.bed",
@@ -122,7 +119,7 @@ rule filter_dnabrnn_sample_cens_regions:
         chrom_name=lambda wc: get_chrom_name(wc.fname),
         repeat_type_filter=2,
     log:
-        "logs/dna_brnn/filter_dnabrnn_{sm}_{fname}_cens_regions.log",
+        join(DNA_BRNN_LOGDIR, "filter_dnabrnn_{sm}_{fname}_cens_regions.log"),
     conda:
         "../envs/py.yaml"
     shell:
@@ -151,7 +148,7 @@ bedtools intersect
 
 def dna_brnn_output(wc):
     outdir = checkpoints.split_fa_dnabrnn.get(sm=wc.sm).output[0]
-    wcs = glob_wildcards(os.path.join(outdir, "{fname}.fa"))
+    wcs = glob_wildcards(join(outdir, "{fname}.fa"))
 
     return expand(
         rules.filter_dnabrnn_sample_cens_regions.output,
@@ -160,23 +157,17 @@ def dna_brnn_output(wc):
     )
 
 
-# /net/eichler/vol28/home/glogsdon/utilities/bedminmax.py (modified bedminmax) \
-# -i chr2_tmp.fwd.bed | \
-# awk -v OFS="\t" '{print $1, $2, $3, $3-$2}' | \
-# awk -v OFS="\t" '{print $1, $2-467987, $3+522450, $3-$2}' | \
-# awk '$4>1000000' | \
-# awk -v OFS="\t" '$2<0 {$2=0}1' > chr2_contigs.fwd.repeat.bed
 rule aggregate_dnabrnn_alr_regions_by_chr:
     input:
         sample_cens=dna_brnn_output,
     output:
-        os.path.join(
-            config["dna_brnn"]["output_dir"],
+        join(
+            DNA_BRNN_OUTDIR,
             "bed",
             "{sm}_all.bed",
         ),
     log:
-        "logs/dna_brnn/aggregate_dnabrnn_alr_regions_by_{sm}.log",
+        join(DNA_BRNN_LOGDIR, "aggregate_dnabrnn_alr_regions_by_{sm}.log"),
     conda:
         "../envs/tools.yaml"
     shell:
@@ -185,29 +176,33 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         """
 
 
-use rule extract_and_index_fa as extract_alr_region_sample_by_chr with:
+rule extract_alr_region_sample_by_chr:
     input:
-        fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
+        fa=rules.concat_asm.output.fa,
         bed=rules.aggregate_dnabrnn_alr_regions_by_chr.output,
     output:
         seq=temp(
-            os.path.join(
-                config["ident_cen_ctgs"]["output_dir"],
+            join(
+                DNA_BRNN_OUTDIR,
                 "seq",
                 "interm",
                 "{sm}_contigs.ALR.fa",
             )
         ),
         idx=temp(
-            os.path.join(
-                config["ident_cen_ctgs"]["output_dir"],
+            join(
+                DNA_BRNN_OUTDIR,
                 "seq",
                 "interm",
                 "{sm}_contigs.ALR.fa.fai",
             )
         ),
+    params:
+        **params_shell_extract_and_index_fa,
     log:
-        "logs/extract_new_cens_ctgs/extract_alr_region_{sm}.log",
+        join(DNA_BRNN_LOGDIR, "extract_alr_region_{sm}.log"),
+    shell:
+        shell_extract_and_index_fa
 
 
 rule dna_brnn_all:
@@ -216,3 +211,4 @@ rule dna_brnn_all:
             rules.aggregate_dnabrnn_alr_regions_by_chr.output,
             sm=SAMPLE_NAMES,
         ),
+    default_target: True

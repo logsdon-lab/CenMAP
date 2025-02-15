@@ -1,10 +1,12 @@
 include: "common.smk"
 include: "utils.smk"
+include: "1-concat_asm.smk"
+include: "7-fix_cens_w_repeatmasker.smk"
 
 
 # Get sample names with subdirs in cdr_finder.input_bam_dir
 SAMPLE_NAMES_BAM = set(
-    glob_wildcards(os.path.join(config["cdr_finder"]["input_bam_dir"], "{sm}")).sm
+    glob_wildcards(join(config["cdr_finder"]["input_bam_dir"], "{sm}")).sm
 )
 SAMPLE_NAMES_INTERSECTION = SAMPLE_NAMES_BAM.intersection(set(SAMPLE_NAMES))
 print(
@@ -26,6 +28,11 @@ except KeyError:
     )
 
 
+CDR_FINDER_OUTDIR = join(OUTPUT_DIR, "8-cdr_finder")
+CDR_FINDER_LOGDIR = join(LOG_DIR, "8-cdr_finder")
+CDR_FINDER_BMKDIR = join(BMK_DIR, "8-cdr_finder")
+
+
 wildcard_constraints:
     sm="|".join(SAMPLE_NAMES_INTERSECTION),
 
@@ -34,10 +41,8 @@ CDR_ALIGN_CFG = {
     "samples": [
         {
             "name": sm,
-            "asm_fa": os.path.join(
-                config["concat_asm"]["output_dir"], f"{sm}-asm-comb-dedup.fa"
-            ),
-            "read_dir": os.path.join(config["cdr_finder"]["input_bam_dir"], f"{sm}"),
+            "asm_fa": expand(rules.concat_asm.output.fa, sm=sm),
+            "read_dir": join(config["cdr_finder"]["input_bam_dir"], sm),
             "read_rgx": config["cdr_finder"]["bam_rgx"],
         }
         for sm in SAMPLE_NAMES_INTERSECTION
@@ -46,9 +51,9 @@ CDR_ALIGN_CFG = {
     "aligner_opts": ALIGNER_OPTS,
     "mem_aln": config["cdr_finder"]["aln_mem"],
     "threads_aln": config["cdr_finder"]["aln_threads"],
-    "benchmarks_dir": "benchmarks/cdr_finder",
-    "logs_dir": "logs/cdr_finder",
-    "output_dir": os.path.join(config["cdr_finder"]["output_dir"], "aln"),
+    "benchmarks_dir": CDR_FINDER_BMKDIR,
+    "logs_dir": CDR_FINDER_LOGDIR,
+    "output_dir": join(CDR_FINDER_OUTDIR, "aln"),
     "samtools_view_flag": 2308,
 }
 
@@ -68,28 +73,21 @@ use rule * from CDR_Align as cdr_aln_*
 rule get_original_coords:
     input:
         # (sample_chr_ctg, st, end, is-misassembled)
-        bed=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "bed",
-            "interm",
-            "{sm}_complete_cens.bed",
-        ),
-        asm_faidx=os.path.join(
-            config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
-        ),
+        bed=rules.make_complete_cens_bed.output,
+        asm_faidx=rules.concat_asm.output.idx,
     output:
-        og_coords=os.path.join(
-            config["cdr_finder"]["output_dir"],
+        og_coords=join(
+            CDR_FINDER_OUTDIR,
             "bed",
             "{sm}_complete_correct_ALR_regions.og_coords.bed",
         ),
-        og_coords_key=os.path.join(
-            config["cdr_finder"]["output_dir"],
+        og_coords_key=join(
+            CDR_FINDER_OUTDIR,
             "bed",
             "{sm}_complete_correct_ALR_regions.og_coords.key.bed",
         ),
     log:
-        "logs/cdr_finder/get_original_coords_{sm}.log",
+        join(CDR_FINDER_LOGDIR, "get_original_coords_{sm}.log"),
     conda:
         "../envs/tools.yaml"
     shell:
@@ -115,14 +113,12 @@ rule get_original_coords:
 # Pass CDR config here.
 CDR_FINDER_CONFIG = {
     **config["cdr_finder"],
-    "log_dir": "logs/cdr_finder",
-    "benchmark_dir": "benchmarks/cdr_finder",
+    "log_dir": CDR_FINDER_LOGDIR,
+    "benchmark_dir": CDR_FINDER_BMKDIR,
     "restrict_alr": True,
     "samples": {
         sm: {
-            "fasta": os.path.join(
-                config["concat_asm"]["output_dir"], f"{sm}-asm-comb-dedup.fa"
-            ),
+            "fasta": expand(rules.concat_asm.output.fa, sm=sm),
             "regions": expand(rules.get_original_coords.output.og_coords, sm=sm),
             "bam": expand(
                 rules.cdr_aln_merge_read_asm_alignments.output.alignment, sm=sm
@@ -155,13 +151,13 @@ use rule reorient_bed as reorient_cdr_bed with:
         bed=lambda wc: expand(rules.cdr_call_cdrs.output, sample=wc.sm),
         og_coords_key=rules.get_original_coords.output.og_coords_key,
     output:
-        os.path.join(
-            config["cdr_finder"]["output_dir"],
+        join(
+            CDR_FINDER_OUTDIR,
             "bed",
             "{sm}_cdr_final.bed",
         ),
     log:
-        "logs/cdr_finder/reorient_cdr_bed_{sm}.log",
+        join(CDR_FINDER_LOGDIR, "reorient_cdr_bed_{sm}.log"),
     params:
         legend_col_chrom_og="$1",
         legend_col_chrom_new='$4":"$5"-"$6',
@@ -177,14 +173,14 @@ use rule reorient_bed as reorient_binned_methyl_bed with:
         og_coords_key=rules.get_original_coords.output.og_coords_key,
     output:
         temp(
-            os.path.join(
-                config["cdr_finder"]["output_dir"],
+            join(
+                CDR_FINDER_OUTDIR,
                 "bed",
                 "{sm}_binned_freq_adj_final.bed",
             )
         ),
     log:
-        "logs/cdr_finder/reorient_binned_methyl_bed_{sm}.log",
+        join(CDR_FINDER_LOGDIR, "reorient_binned_methyl_bed_{sm}.log"),
     params:
         legend_col_chrom_og="$1",
         legend_col_chrom_new='$4":"$5"-"$6',
@@ -201,13 +197,13 @@ rule merge_cdr_beds:
             rules.reorient_binned_methyl_bed.output, sm=SAMPLE_NAMES_INTERSECTION
         ),
     output:
-        reorient_cdr_output=os.path.join(
-            config["cdr_finder"]["output_dir"],
+        reorient_cdr_output=join(
+            CDR_FINDER_OUTDIR,
             "bed",
             "all_cdrs.bed",
         ),
-        reorient_methyl_cdr_output=os.path.join(
-            config["cdr_finder"]["output_dir"],
+        reorient_methyl_cdr_output=join(
+            CDR_FINDER_OUTDIR,
             "bed",
             "all_binned_freq.bed",
         ),

@@ -1,12 +1,17 @@
 include: "common.smk"
 
 
+EXT_REF_HOR_ARR_OUTDIR = join(OUTPUT_DIR, "2-extract_ref_hor_arrays")
+EXT_REF_HOR_ARR_LOGDIR = join(LOG_DIR, "2-extract_ref_hor_arrays")
+EXT_REF_HOR_ARR_BMKDIR = join(BMK_DIR, "2-extract_ref_hor_arrays")
+
+
 rule adjust_ref_hor_arrays:
     input:
         config["ident_cen_ctgs"]["ref_cens_regions"],
     output:
-        os.path.join(
-            config["extract_ref_hor_arrays"]["output_dir"],
+        join(
+            EXT_REF_HOR_ARR_OUTDIR,
             f"{REF_NAME}.hor_arrays.{REF_CENS_EDGE_LEN}kbp.bed",
         ),
     conda:
@@ -29,16 +34,16 @@ rule extract_ref_hor_arrays:
         ),
         cens_regions=rules.adjust_ref_hor_arrays.output,
     output:
-        seq=os.path.join(
-            config["extract_ref_hor_arrays"]["output_dir"],
+        seq=join(
+            EXT_REF_HOR_ARR_OUTDIR,
             f"{REF_NAME}.hor_arrays.{REF_CENS_EDGE_LEN}kbp.fa",
         ),
-        idx=os.path.join(
-            config["extract_ref_hor_arrays"]["output_dir"],
+        idx=join(
+            EXT_REF_HOR_ARR_OUTDIR,
             f"{REF_NAME}.hor_arrays.{REF_CENS_EDGE_LEN}kbp.fa.fai",
         ),
     log:
-        "logs/extract_ref_hor_arrays/extract_ref_hor_arrays.log",
+        join(EXT_REF_HOR_ARR_LOGDIR, "extract_ref_hor_arrays.log"),
     conda:
         "../envs/tools.yaml"
     shell:
@@ -51,3 +56,4 @@ rule extract_ref_hor_arrays:
 rule extract_ref_hor_arrays_all:
     input:
         rules.extract_ref_hor_arrays.output,
+    default_target: True

@@ -1,9 +1,13 @@
-import os
 import re
 import sys
 import json
 import glob
+import tomllib
+import yaml
+
+from os.path import join
 from collections import defaultdict
+from typing import Any
 from snakemake.settings.types import DeploymentMethod
 
 
@@ -61,3 +65,45 @@ def censtats_status_max_alr_len_thr(chrom: str) -> int:
 def get_chrom_name(name: str) -> str | None:
     if mtch_chr_name := re.search(RGX_CHR, name):
         return mtch_chr_name.group()
+
+
+def format_toml_path(
+    input_plot_layout: str, output_plot_layout: str, indir: str, **kwargs: Any
+):
+    """
+    Format the plot layout filling in {indir} and any kwargs in the path.
+    Also checks if path is empty.
+    """
+    # infile indicates where all other bedfiles are.
+    with (
+        open(input_plot_layout, "rb") as fh,
+        open(output_plot_layout, "wt") as out_fh,
+    ):
+        settings = tomllib.load(fh)
+        new_settings = {"settings": settings["settings"], "tracks": []}
+
+        for trk in settings["tracks"]:
+            path = trk.get("path")
+            # Some tracks don't have paths.
+            if not path:
+                new_settings["tracks"].append(trk)
+                continue
+            try:
+                new_path = path.format(indir=indir, **params)
+            except KeyError:
+                print(
+                    f"Invalid format key in path {path} from cenplot track file, {input.plot_layout}.",
+                    file=sys.stderr,
+                )
+                continue
+
+            # Skip if empty.
+            if os.stat(new_path).st_size == 0:
+                continue
+
+            new_trk = trk.copy()
+            # Pass params from snakemake
+            new_trk["path"] = new_path
+            new_settings["tracks"].append(new_trk)
+
+        out_fh.write(yaml.dump(new_settings))

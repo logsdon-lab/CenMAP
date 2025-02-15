@@ -1,12 +1,19 @@
+include: "common.smk"
+include: "utils.smk"
+
+
+CONCAT_ASM_OUTDIR = join(OUTPUT_DIR, "1-concat_asm")
+CONCAT_ASM_LOGDIR = join(LOG_DIR, "1-concat_asm")
+CONCAT_ASM_BMKDIR = join(BMK_DIR, "1-concat_asm")
+
+
 rule concat_asm:
     input:
         # Input directory per sample.
-        sm_dir=os.path.join(config["concat_asm"]["input_dir"], "{sm}"),
+        sm_dir=join(config["concat_asm"]["input_dir"], "{sm}"),
     output:
-        fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
-        idx=os.path.join(
-            config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
-        ),
+        fa=join(CONCAT_ASM_OUTDIR, "{sm}-asm-comb-dedup.fa"),
+        idx=join(CONCAT_ASM_OUTDIR, "{sm}-asm-comb-dedup.fa.fai"),
     # Remove duplicate contigs. https://bioinf.shenwei.me/seqkit/usage/#rmdup
     # Remove descriptions. https://bioinf.shenwei.me/seqkit/usage/#replace
     params:
@@ -15,7 +22,7 @@ rule concat_asm:
     resources:
         mem=config["concat_asm"].get("mem", "4GB"),
     log:
-        "logs/concat_asm/concat_asm_{sm}.log",
+        join(CONCAT_ASM_BMKDIR, "concat_asm_{sm}.log"),
     conda:
         "../envs/tools.yaml"
     shell:
@@ -32,3 +39,4 @@ rule concat_asm:
 rule concat_asm_all:
     input:
         expand(rules.concat_asm.output, sm=SAMPLE_NAMES),
+    default_target: True

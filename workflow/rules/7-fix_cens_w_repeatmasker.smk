@@ -1,5 +1,13 @@
 include: "common.smk"
 include: "utils.smk"
+include: "1-concat_asm.smk"
+include: "4-ident_cen_ctgs.smk"
+include: "6-repeatmasker.smk"
+
+
+FIX_RM_OUTDIR = join(OUTPUT_DIR, "7-fix_cens_w_repeatmasker")
+FIX_RM_LOGDIR = join(LOG_DIR, "7-fix_cens_w_repeatmasker")
+FIX_RM_BMKDIR = join(BMK_DIR, "7-fix_cens_w_repeatmasker")
 
 
 # Check cen status based on repeatmasker annotations of cen and reference.
@@ -7,18 +15,11 @@ include: "utils.smk"
 # * [original_name, new_name, orientation, is_partial]
 rule check_cens_status:
     input:
-        rm_out=os.path.join(
-            config["repeatmasker"]["output_dir"], "repeats", "{sm}", "{fname}.fa.out"
-        ),
-        rm_ref=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "ref",
-            "ref_ALR_regions.fa.out",
-        ),
+        rm_out=rules.reformat_repeatmasker_output.output,
+        rm_ref=rules.merge_control_repeatmasker_output.output,
     output:
-        cens_status=os.path.join(
-            config["repeatmasker"]["output_dir"],
+        cens_status=join(
+            FIX_RM_OUTDIR,
             "status",
             "{sm}",
             "{fname}_cens_status.tsv",
@@ -35,7 +36,7 @@ rule check_cens_status:
         # Only allow mapping changes to 13 and 21 if chr13 or chr21.
         restrict_13_21="--restrict_13_21",
     log:
-        "logs/fix_cens_w_repeatmasker/check_cens_status_{sm}_{fname}.log",
+        join(FIX_RM_LOGDIR, "check_cens_status_{sm}_{fname}.log"),
     conda:
         "../envs/py.yaml"
     shell:
@@ -58,8 +59,8 @@ def cen_status(wc):
     except AttributeError:
         pass
     wcs = glob_wildcards(
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
+        join(
+            FIX_RM_OUTDIR,
             "seq",
             "interm",
             str(wc.sm),
@@ -77,21 +78,19 @@ def cen_status(wc):
 # Generate a key for checking partial and reversed contigs.
 rule make_complete_cens_bed:
     input:
-        script="workflow/scripts/make_complete_cens_bed.py",
+        script=workflow.source_path("../scripts/make_complete_cens_bed.py"),
         status=cen_status,
-        faidx=os.path.join(
-            config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
-        ),
+        faidx=rules.concat_asm.output.idx,
     output:
         # (new_name, st, end, is_misassembled, ctg_name, ctg_len)
-        cen_bed=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
+        cen_bed=join(
+            IDENT_CEN_CTGS_OUTDIR,
             "bed",
             "interm",
             "{sm}_complete_cens.bed",
         ),
     log:
-        "logs/fix_cens_w_repeatmasker/get_complete_cens_bed_{sm}.log",
+        join(FIX_RM_LOGDIR, "get_complete_cens_bed_{sm}.log"),
     conda:
         "../envs/py.yaml"
     shell:
@@ -103,18 +102,16 @@ rule make_complete_cens_bed:
 # Generate the original assembly with complete centromeric contigs correctly oriented.
 rule rename_reort_asm:
     input:
-        fa=os.path.join(config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa"),
-        idx=os.path.join(
-            config["concat_asm"]["output_dir"], "{sm}-asm-comb-dedup.fa.fai"
-        ),
+        fa=rules.concat_asm.output.fa,
+        idx=rules.concat_asm.output.idx,
         cens_bed=rules.make_complete_cens_bed.output,
     output:
-        fa=os.path.join(
-            config["concat_asm"]["output_dir"],
+        fa=join(
+            CONCAT_ASM_OUTDIR,
             "{sm}-asm-renamed-reort.fa",
         ),
-        idx=os.path.join(
-            config["concat_asm"]["output_dir"],
+        idx=join(
+            CONCAT_ASM_OUTDIR,
             "{sm}-asm-renamed-reort.fa.fai",
         ),
     params:
@@ -123,7 +120,7 @@ rule rename_reort_asm:
     conda:
         "../envs/tools.yaml"
     log:
-        "logs/fix_cens_w_repeatmasker/fix_{sm}_asm_orientation.log",
+        join(FIX_RM_LOGDIR, "fix_{sm}_asm_orientation.log"),
     shell:
         """
         # Get the reverse cens and reverse them.
@@ -143,25 +140,21 @@ rule rename_reort_asm:
         """
 
 
+# Rename and reorient original RM annotations with changes.
 rule fix_cens_rm_out:
     input:
-        script="workflow/scripts/rename_reorient_rm_out.py",
+        script=workflow.source_path("../scripts/rename_reorient_rm_out.py"),
         rm_rename_key=rules.make_complete_cens_bed.output,
-        rm_out=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "{sm}_cens.fa.out",
-        ),
+        rm_out=rules.format_repeatmasker_output.output,
     output:
-        corrected_rm_out=os.path.join(
-            config["repeatmasker"]["output_dir"],
+        corrected_rm_out=join(
+            FIX_RM_OUTDIR,
             "repeats",
             "all",
             "reoriented_{sm}_cens.fa.out",
         ),
     log:
-        "logs/fix_cens_w_repeatmasker/fix_cens_{sm}_rm_out.log",
+        join(FIX_RM_LOGDIR, "fix_cens_{sm}_rm_out.log"),
     conda:
         "../envs/py.yaml"
     shell:
@@ -170,21 +163,16 @@ rule fix_cens_rm_out:
         """
 
 
-use rule create_rm_bed as create_fixed_rm_bed with:
+rule create_fixed_rm_bed:
     input:
-        script="workflow/scripts/create_rm_bed.py",
+        script=workflow.source_path("../scripts/create_rm_bed.py"),
         rm_out=[
             expand(rules.fix_cens_rm_out.output, sm=SAMPLE_NAMES),
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "repeats",
-                "ref",
-                "ref_ALR_regions.fa.out",
-            ),
+            rules.merge_control_repeatmasker_output.output,
         ],
     output:
-        rm_bed=os.path.join(
-            config["repeatmasker"]["output_dir"],
+        rm_bed=join(
+            FIX_RM_OUTDIR,
             "bed",
             "{chr}",
             "rm.bed",
@@ -193,30 +181,41 @@ use rule create_rm_bed as create_fixed_rm_bed with:
         chr_rgx="{chr}[:_]",
         color_mapping=config["repeatmasker"]["repeat_colors"],
     log:
-        "logs/fix_cens_w_repeatmasker/create_fixed_rm_bed_{chr}.log",
+        join(FIX_RM_LOGDIR, "create_fixed_rm_bed_{chr}.log"),
+    conda:
+        "../envs/py.yaml"
+    shell:
+        shell_create_rm_bed
 
 
-use rule modify_cenplot_tracks as modify_rm_cenplot_tracks with:
+rule modify_rm_cenplot_tracks:
     input:
-        plot_layout="workflow/scripts/cenplot_repeatmasker_plot.toml",
+        plot_layout=workflow.source_path("../scripts/cenplot_repeatmasker_plot.toml"),
         infiles=rules.create_fixed_rm_bed.output,
     output:
-        plot_layout=os.path.join(
-            config["repeatmasker"]["output_dir"],
+        plot_layout=join(
+            FIX_RM_OUTDIR,
             "plots",
             "{chr}_cens_fixed.yaml",
         ),
+    run:
+        format_toml_path(
+            input_plot_layout=input.plot_layout,
+            output_plot_layout=output.plot_layout,
+            indir=os.path.abspath(os.path.dirname(str(input.infiles[0]))),
+            **dict(params.items()),
+        )
 
 
-use rule plot_multiple_cen as plot_fixed_rm_bed_by_chr with:
+rule plot_fixed_rm_bed_by_chr:
     input:
         bed_files=[rules.create_fixed_rm_bed.output],
-        script="workflow/scripts/plot_multiple_cen.py",
+        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
         plot_layout=rules.modify_rm_cenplot_tracks.output,
     output:
         plots=multiext(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
+            join(
+                FIX_RM_OUTDIR,
                 "plots",
                 "{chr}_cens",
             ),
@@ -224,14 +223,19 @@ use rule plot_multiple_cen as plot_fixed_rm_bed_by_chr with:
             ".png",
         ),
         plot_dir=directory(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
+            join(
+                FIX_RM_OUTDIR,
                 "plots",
                 "{chr}_cens",
             )
         ),
+    threads: 4
     log:
-        "logs/fix_cens_w_repeatmasker/plot_fixed_rm_bed_{chr}.log",
+        join(FIX_RM_LOGDIR, "plot_fixed_rm_bed_{chr}.log"),
+    conda:
+        "../envs/py.yaml"
+    shell:
+        shell_plot_multiple_cen
 
 
 rule fix_cens_w_repeatmasker_all:

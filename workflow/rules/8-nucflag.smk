@@ -1,5 +1,12 @@
 include: "common.smk"
-include: "humas_sd.smk"
+include: "1-concat_asm.smk"
+include: "7-fix_cens_w_repeatmasker.smk"
+include: "8-humas_sd.smk"
+
+
+NUCFLAG_OUTDIR = join(OUTPUT_DIR, "8-nucflag")
+NUCFLAG_LOGDIR = join(LOG_DIR, "8-nucflag")
+NUCFLAG_BMKDIR = join(BMK_DIR, "8-nucflag")
 
 
 # Simplify RepeatMasker annotations
@@ -7,20 +14,15 @@ include: "humas_sd.smk"
 # Add color specific for alpha-satellite.
 rule format_repeatmasker_to_overlay_bed:
     input:
-        rm=os.path.join(
-            config["repeatmasker"]["output_dir"],
-            "repeats",
-            "all",
-            "reoriented_{sm}_cens.fa.out",
-        ),
+        rm=rules.fix_cens_rm_out.output,
     output:
         # [ctg_name, st, end, desc, action]
-        os.path.join(
-            config["nucflag"]["output_dir"],
+        join(
+            NUCFLAG_OUTDIR,
             "{sm}_plot_rm.bed",
         ),
     log:
-        "logs/nucflag/format_repeatmasker_to_overlay_bed_{sm}.log",
+        join(NUCFLAG_LOGDIR, "format_repeatmasker_to_overlay_bed_{sm}.log"),
     params:
         color_alr_alpha="#8B008B",
     conda:
@@ -76,15 +78,15 @@ rule format_repeatmasker_to_overlay_bed:
 # Convert stv_row bed to overlay bed with colors based on monomer len.
 rule format_stv_to_overlay_bed:
     input:
-        stv=humas_sd_outputs,
+        stv=humas_sd_sm_outputs,
         annot_colors=config["plot_hor_stv"]["stv_annot_colors"],
     output:
-        os.path.join(
-            config["nucflag"]["output_dir"],
+        join(
+            NUCFLAG_OUTDIR,
             "{sm}_plot_stv_row.bed",
         ),
     log:
-        "logs/nucflag/format_stv_to_overlay_bed_{sm}.log",
+        join(NUCFLAG_LOGDIR, "format_stv_to_overlay_bed_{sm}.log"),
     params:
         hor_mon_len=170,
     conda:
@@ -103,7 +105,7 @@ rule format_stv_to_overlay_bed:
             stv_color=stv_colors[num_mon]
             if (stv_color == "") {{ stv_color="gray"; }}
             print ctg_name[1], st, end, num_mon, "plot:"stv_color
-        }}' {input.annot_colors} {input.stv.stv_row_bed} > {output} 2> {log}
+        }}' {input.annot_colors} {input.stv} > {output} 2> {log}
         """
 
 
@@ -111,7 +113,7 @@ rule format_stv_to_overlay_bed:
 # Also add ignore bed if provided.
 rule format_rm_nucflag_ignore_bed:
     input:
-        script="workflow/scripts/simplify_rm_coords.py",
+        script=workflow.source_path("../scripts/simplify_rm_coords.py"),
         bed=rules.format_repeatmasker_to_overlay_bed.output,
         ignore_bed=(
             config["nucflag"]["ignore_regions"]
@@ -119,8 +121,8 @@ rule format_rm_nucflag_ignore_bed:
             else []
         ),
     output:
-        os.path.join(
-            config["nucflag"]["output_dir"],
+        join(
+            NUCFLAG_OUTDIR,
             "{sm}_correct_ALR_regions.rm.simple.bed",
         ),
     params:
@@ -131,7 +133,7 @@ rule format_rm_nucflag_ignore_bed:
     conda:
         "../envs/py.yaml"
     log:
-        "logs/nucflag/simplify_rm_overlay_bed_{sm}.log",
+        join(NUCFLAG_LOGDIR, "simplify_rm_overlay_bed_{sm}.log"),
     shell:
         """
         python {input.script} -i {input.bed} {params.ignore_bed} > {output} 2> {log}
@@ -142,21 +144,16 @@ rule format_rm_nucflag_ignore_bed:
 # Also add ignore bed if provided.
 rule format_stv_nucflag_ignore_bed:
     input:
-        bed=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "bed",
-            "interm",
-            "{sm}_complete_cens_w_coords.bed",
-        ),
-        stv=humas_sd_outputs,
+        stv=humas_sd_sm_outputs,
+        bed=rules.make_complete_cens_bed.output,
         ignore_bed=(
             config["nucflag"]["ignore_regions"]
             if config["nucflag"].get("ignore_regions")
             else []
         ),
     output:
-        os.path.join(
-            config["nucflag"]["output_dir"],
+        join(
+            NUCFLAG_OUTDIR,
             "{sm}_ignore_stv_row.bed",
         ),
     params:
@@ -168,14 +165,14 @@ rule format_stv_nucflag_ignore_bed:
     conda:
         "../envs/tools.yaml"
     log:
-        "logs/nucflag/format_stv_nucflag_ignore_bed_{sm}.log",
+        join(NUCFLAG_LOGDIR, "format_stv_nucflag_ignore_bed_{sm}.log"),
     shell:
         """
         # Subtract all other regions from annotated HORs.
         # Include annotation gaps greater than {params.bp_annot_gap_thr} bp.
         {{ bedtools subtract \
         -a {input.bed} \
-        -b <(cat {input.stv.stv_row_bed}) | \
+        -b <(cat {input.stv}) | \
         awk -v OFS="\\t" '{{
             len=$3-$2;
             if (len > {params.bp_annot_gap_thr}) {{
@@ -190,10 +187,8 @@ if IGNORE_TYPE == "asat":
     ignore_regions = str(rules.format_rm_nucflag_ignore_bed.output)
     overlay_beds = [str(rules.format_repeatmasker_to_overlay_bed.output)]
 elif IGNORE_TYPE == "live_asat":
-    ignore_regions = [
-        str(rules.format_stv_nucflag_ignore_bed.output),
-        str(rules.format_stv_to_overlay_bed.output),
-    ]
+    ignore_regions = [str(rules.format_stv_nucflag_ignore_bed.output)]
+    overlay_beds = [str(rules.format_stv_to_overlay_bed.output)]
 else:
     print(
         "No ignore type provided. Restricting called misassemblies to asat.",
@@ -206,36 +201,31 @@ NUCFLAG_CFG = {
     "samples": [
         {
             "name": sm,
-            "asm_fa": os.path.join(
-                config["concat_asm"]["output_dir"],
-                "{sm}-asm-renamed-reort.fa",
-            ),
+            "asm_fa": rules.rename_reort_asm.output.fa,
             # Switch between fofn dir or read dir + ext.
             **(
                 {
-                    "read_fofn": os.path.join(
+                    "read_fofn": join(
                         config["nucflag"]["hifi_reads_fofn_dir"], f"{sm}.fofn"
                     ),
                 }
                 if config["nucflag"].get("hifi_reads_fofn_dir")
                 else {
-                    "read_dir": os.path.join(config["nucflag"]["hifi_reads_dir"], sm),
+                    "read_dir": join(config["nucflag"]["hifi_reads_dir"], sm),
                     "read_rgx": config["nucflag"]["reads_rgx"],
                 }
             ),
             "config": config["nucflag"]["config_nucflag"],
-            "region_bed": os.path.join(
-                config["ident_cen_ctgs"]["output_dir"],
-                "bed",
-                "interm",
-                "{sm}_complete_cens.bed",
-            ),
+            "region_bed": rules.make_complete_cens_bed.output,
             # Ignore regions.
             "ignore_bed": ignore_regions,
             "overlay_beds": overlay_beds,
         }
         for sm in SAMPLE_NAMES
     ],
+    "output_dir": NUCFLAG_OUTDIR,
+    "logs_dir": NUCFLAG_LOGDIR,
+    "benchmarks_dir": NUCFLAG_BMKDIR,
     **config["nucflag"],
 }
 

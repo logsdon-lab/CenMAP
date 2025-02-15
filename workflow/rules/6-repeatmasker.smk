@@ -1,29 +1,23 @@
 
 include: "common.smk"
 include: "utils.smk"
+include: "4-ident_cen_ctgs.smk"
+
+
+RM_OUTDIR = join(OUTPUT_DIR, "6-repeatmasker")
+RM_LOGDIR = join(LOG_DIR, "6-repeatmasker")
+RM_BMKDIR = join(BMK_DIR, "6-repeatmasker")
 
 
 checkpoint split_cens_for_rm:
     input:
-        fa=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "seq",
-            "interm",
-            "{sm}_contigs.ALR.fa",
-        ),
+        fa=rules.extract_cens_regions.output.seq,
         # [old_name, new_name, coords, sm, chr, is_reversed]
-        rename_key=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "bed",
-            "interm",
-            "{sm}_renamed_cens.tsv",
-        ),
+        rename_key=rules.map_collapse_cens.output.renamed_cens_key,
     output:
-        directory(
-            os.path.join(config["repeatmasker"]["output_dir"], "seq", "interm", "{sm}")
-        ),
+        directory(join(RM_OUTDIR, "seq", "interm", "{sm}")),
     log:
-        "logs/humas_sd/split_{sm}_cens_for_humas_sd.log",
+        join(RM_LOGDIR, "split_{sm}_cens_for_humas_sd.log"),
     params:
         split_dir=lambda wc, output: output[0],
     conda:
@@ -58,24 +52,24 @@ checkpoint split_cens_for_rm:
 # So I downgraded the repeatmasker70 image to v4.1.0.
 rule rename_for_repeatmasker:
     input:
-        fa=os.path.join(rules.split_cens_for_rm.output[0], "{fname}.fa"),
+        fa=join(rules.split_cens_for_rm.output[0], "{fname}.fa"),
     output:
         original_fa_idx=temp(
-            os.path.join(rules.split_cens_for_rm.output[0], "{fname}.fa.fai"),
+            join(rules.split_cens_for_rm.output[0], "{fname}.fa.fai"),
         ),
         # Use different dir to avoid greedy wildcard recursively running rule.
         # TODO: rules.split_cens_for_rm.output[0]
         renamed_fa=temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
+            join(
+                RM_OUTDIR,
                 "seq",
                 "{sm}_renamed",
                 "{fname}.fa",
             )
         ),
         renamed_fa_idx=temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
+            join(
+                RM_OUTDIR,
                 "seq",
                 "{sm}_renamed",
                 "{fname}.fa.fai",
@@ -86,7 +80,7 @@ rule rename_for_repeatmasker:
     conda:
         "../envs/tools.yaml"
     log:
-        "logs/repeatmasker/rename_for_repeatmasker_{sm}_{fname}.log",
+        join(RM_LOGDIR, "rename_for_repeatmasker_{sm}_{fname}.log"),
     shell:
         """
         samtools faidx {input.fa} 2> {log}
@@ -104,8 +98,8 @@ rule run_repeatmasker:
         seq=rules.rename_for_repeatmasker.output.renamed_fa,
     output:
         temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
+            join(
+                RM_OUTDIR,
                 "repeats",
                 "{sm}_renamed",
                 "{fname}.fa.out",
@@ -119,11 +113,11 @@ rule run_repeatmasker:
     conda:
         "../envs/tools.yaml"
     log:
-        "logs/repeatmasker/repeatmasker_{sm}_{fname}.log",
+        join(RM_LOGDIR, "repeatmasker_{sm}_{fname}.log"),
     # Retry in case of .RepeatMaskerCache failure.
     retries: 2
     benchmark:
-        "benchmarks/repeatmasker/repeatmasker_{sm}_{fname}.tsv"
+        join(RM_BMKDIR, "repeatmasker_{sm}_{fname}.tsv")
     shell:
         """
         if [ -s {input.seq} ]; then
@@ -142,19 +136,19 @@ rule run_repeatmasker:
 # Rename repeatmasker output to match the original sequence names.
 rule reformat_repeatmasker_output:
     input:
-        script="workflow/scripts/reformat_rm.py",
+        script=workflow.source_path("../scripts/reformat_rm.py"),
         rm_out=rules.run_repeatmasker.output,
         original_fai=rules.rename_for_repeatmasker.output.original_fa_idx,
         renamed_fai=rules.rename_for_repeatmasker.output.renamed_fa_idx,
     output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
+        join(
+            RM_OUTDIR,
             "repeats",
             "{sm}",
             "{fname}.fa.out",
         ),
     log:
-        "logs/repeatmasker/reformat_repeatmasker_output_{sm}_{fname}.log",
+        join(RM_LOGDIR, "reformat_repeatmasker_output_{sm}_{fname}.log"),
     conda:
         "../envs/py.yaml"
     shell:
@@ -166,7 +160,7 @@ rule reformat_repeatmasker_output:
 # Gather all RM output
 def refmt_rm_output(wc):
     _ = checkpoints.split_cens_for_rm.get(**wc).output
-    fa_glob_pattern = os.path.join(
+    fa_glob_pattern = join(
         expand(rules.split_cens_for_rm.output, sm=wc.sm)[0], "{fname}.fa"
     )
     wcs = glob_wildcards(fa_glob_pattern)
@@ -183,8 +177,8 @@ rule format_repeatmasker_output:
         # Force snakemake to not evaluate chkpt function until all dirs created.
         rm_fa_dirs=expand(rules.split_cens_for_rm.output, sm=SAMPLE_NAMES),
     output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
+        join(
+            RM_OUTDIR,
             "repeats",
             "all",
             "{sm}_cens.fa.out",
@@ -204,35 +198,35 @@ rule merge_repeatmasker_output:
         expand(rules.format_repeatmasker_output.output, sm=SAMPLE_NAMES),
     output:
         temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
+            join(
+                RM_OUTDIR,
                 "repeats",
                 "all",
                 "all_samples_cens.fa.out",
             )
         ),
-    params:
-        added_cmd="",
     shell:
         """
-        cat {input} {params.added_cmd} > {output}
+        cat {input} > {output}
         """
 
 
 # Format repeatmasker reference output.
-use rule merge_repeatmasker_output as merge_control_repeatmasker_output with:
+rule merge_control_repeatmasker_output:
     input:
         # Contains header. Should be first.
         config["repeatmasker"]["ref_repeatmasker_output"],
-    params:
-        added_cmd="| awk -v OFS='\\t' '{{$1=$1; print}}' | cut -f 1-15",
     output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
+        join(
+            RM_OUTDIR,
             "repeats",
             "ref",
             "ref_ALR_regions.fa.out",
         ),
+    shell:
+        """
+        cat {input} | awk -v OFS='\\t' '{{$1=$1; print}}' | cut -f 1-15 > {output}
+        """
 
 
 rule format_add_control_repeatmasker_output:
@@ -241,15 +235,15 @@ rule format_add_control_repeatmasker_output:
         sample_rm_output=rules.merge_repeatmasker_output.output,
     output:
         temp(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
+            join(
+                RM_OUTDIR,
                 "repeats",
                 "all",
                 "all_samples_and_ref_cens.fa.out",
             )
         ),
     log:
-        "logs/repeatmasker/format_add_control_repeatmasker_output.log",
+        join(RM_LOGDIR, "format_add_control_repeatmasker_output.log"),
     conda:
         "../envs/tools.yaml"
     shell:
@@ -260,13 +254,13 @@ rule format_add_control_repeatmasker_output:
         """
 
 
-use rule create_rm_bed as create_og_rm_bed with:
+rule create_og_rm_bed:
     input:
-        script="workflow/scripts/create_rm_bed.py",
+        script=workflow.source_path("../scripts/create_rm_bed.py"),
         rm_out=rules.format_add_control_repeatmasker_output.output,
     output:
-        rm_bed=os.path.join(
-            config["repeatmasker"]["output_dir"],
+        rm_bed=join(
+            RM_OUTDIR,
             "bed",
             "{chr}_og",
             "rm.bed",
@@ -275,30 +269,41 @@ use rule create_rm_bed as create_og_rm_bed with:
         chr_rgx="{chr}[:_]",
         color_mapping=config["repeatmasker"]["repeat_colors"],
     log:
-        "logs/repeatmasker/create_og_rm_bed_{chr}.log",
+        join(RM_LOGDIR, "create_og_rm_bed_{chr}.log"),
+    conda:
+        "../envs/py.yaml"
+    shell:
+        shell_create_rm_bed
 
 
-use rule modify_cenplot_tracks as modify_og_rm_cenplot_tracks with:
+rule modify_og_rm_cenplot_tracks:
     input:
         plot_layout="workflow/scripts/cenplot_repeatmasker_plot.toml",
         infiles=rules.create_og_rm_bed.output,
     output:
-        plot_layout=os.path.join(
-            config["repeatmasker"]["output_dir"],
+        plot_layout=join(
+            RM_OUTDIR,
             "plots",
             "{chr}_cens_og.yaml",
         ),
+    run:
+        format_toml_path(
+            input_plot_layout=input.plot_layout,
+            output_plot_layout=output.plot_layout,
+            indir=os.path.abspath(os.path.dirname(str(input.infiles[0]))),
+            **dict(params.items()),
+        )
 
 
-use rule plot_multiple_cen as plot_og_rm_bed_by_chr with:
+rule plot_og_rm_bed_by_chr:
     input:
         bed_files=[rules.create_og_rm_bed.output],
-        script="workflow/scripts/plot_multiple_cen.py",
+        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
         plot_layout=rules.modify_og_rm_cenplot_tracks.output,
     output:
         plots=multiext(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
+            join(
+                RM_OUTDIR,
                 "plots",
                 "{chr}_cens_og",
             ),
@@ -306,14 +311,19 @@ use rule plot_multiple_cen as plot_og_rm_bed_by_chr with:
             ".png",
         ),
         plot_dir=directory(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
+            join(
+                RM_OUTDIR,
                 "plots",
                 "{chr}_cens_og",
             )
         ),
+    threads: 4
     log:
-        "logs/repeatmasker/plot_og_rm_bed_{chr}.log",
+        join(RM_LOGDIR, "plot_og_rm_bed_{chr}.log"),
+    conda:
+        "../envs/py.yaml"
+    shell:
+        shell_plot_multiple_cen
 
 
 rule repeatmasker_all:

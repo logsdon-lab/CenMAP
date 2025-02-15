@@ -5,23 +5,183 @@ min_version("6.0")
 shell.prefix("set -euo pipefail;")
 
 
-containerized: "docker://logsdonlab/cenmap:latest"
-
-
 # Constants loaded here.
 include: "rules/common.smk"
 include: "rules/utils.smk"
+
+
+containerized: CONTAINER
+
+
 # Main workflow.
-include: "rules/download_ref.smk"
-include: "rules/concat_asm.smk"
-include: "rules/extract_ref_hor_arrays.smk"
-include: "rules/align_asm_to_ref.smk"
-include: "rules/ident_cen_ctgs.smk"
-include: "rules/dna_brnn.smk"
-include: "rules/repeatmasker.smk"
-include: "rules/fix_cens_w_repeatmasker.smk"
-include: "rules/humas_sd.smk"
-include: "rules/get_complete_correct_cens.smk"
+module download_ref:
+    snakefile:
+        "rules/0-download_ref.smk"
+    config:
+        config
+
+
+module concat_asm:
+    snakefile:
+        "rules/1-concat_asm.smk"
+    config:
+        config
+
+
+module extract_ref_hor_arrays:
+    snakefile:
+        "rules/2-extract_ref_hor_arrays.smk"
+    config:
+        config
+
+
+module align_asm_to_ref:
+    snakefile:
+        "rules/3-align_asm_to_ref.smk"
+    config:
+        config
+
+
+module ident_cen_ctgs:
+    snakefile:
+        "rules/4-ident_cen_ctgs.smk"
+    config:
+        config
+
+
+module dna_brnn:
+    snakefile:
+        "rules/5-dna_brnn.smk"
+    config:
+        config
+
+
+module repeatmasker:
+    snakefile:
+        "rules/6-repeatmasker.smk"
+    config:
+        config
+
+
+module fix_cens_w_repeatmasker:
+    snakefile:
+        "rules/7-fix_cens_w_repeatmasker.smk"
+    config:
+        config
+
+
+module humas_sd:
+    snakefile:
+        "rules/8-humas_sd.smk"
+    config:
+        config
+
+
+module nucflag:
+    snakefile:
+        "rules/8-nucflag.smk"
+    config:
+        config
+
+
+module format_repeatmasker_sat_annot:
+    snakefile:
+        "rules/8-format_repeatmasker_sat_annot.smk"
+    config:
+        config
+
+
+module get_complete_correct_cens:
+    snakefile:
+        "rules/9-get_complete_correct_cens.smk"
+    config:
+        config
+
+
+module format_hor_stv:
+    snakefile:
+        "rules/10-format_hor_stv.smk"
+    config:
+        config
+
+
+module plot_hor_stv:
+    snakefile:
+        "rules/11-plot_hor_stv.smk"
+    config:
+        config
+
+
+module moddotplot:
+    snakefile:
+        "rules/11-moddotplot.smk"
+    config:
+        config
+
+
+module calculate_hor_length:
+    snakefile:
+        "rules/11-calculate_hor_length.smk"
+    config:
+        config
+
+
+module count_complete_cens:
+    snakefile:
+        "rules/12-count_complete_cens.smk"
+    config:
+        config
+
+
+use rule * from download_ref
+
+
+use rule * from concat_asm
+
+
+use rule * from extract_ref_hor_arrays
+
+
+use rule * from align_asm_to_ref
+
+
+use rule * from ident_cen_ctgs
+
+
+use rule * from dna_brnn
+
+
+use rule * from repeatmasker
+
+
+use rule * from fix_cens_w_repeatmasker
+
+
+use rule * from humas_sd
+
+
+use rule * from nucflag
+
+
+use rule * from format_repeatmasker_sat_annot
+
+
+use rule * from format_hor_stv
+
+
+use rule * from get_complete_correct_cens
+
+
+use rule * from plot_hor_stv
+
+
+use rule * from moddotplot
+
+
+use rule * from calculate_hor_length
+
+
+use rule * from count_complete_cens
 
 
 rule extract_cens_all:
@@ -47,51 +207,35 @@ if not config["align_asm_to_ref"].get("reference"):
 
 # Omit assembly check. Primarily used for debugging faster.
 if config.get("nucflag"):
-
-    include: "rules/nucflag.smk"
-
     output.append(rules.nucflag_all.input)
 
 
 if config.get("plot_hor_stv"):
-
-    include: "rules/format_hor_stv.smk"
-    include: "rules/format_repeatmasker_sat_annot.smk"
-    include: "rules/plot_hor_stv.smk"
-
     output.extend(
         [
-            rules.format_hor_stv_only.input,
+            rules.format_hor_stv_all.input,
             rules.format_repeatmasker_sat_all.input,
             rules.plot_hor_stv_all.input,
         ]
     )
 
 
-if config.get("moddotplot") and config.get("plot_hor_stv"):
-
-    include: "rules/moddotplot.smk"
-
+if config.get("moddotplot"):
     output.append(rules.moddotplot_all.input)
 
 
 if config.get("calculate_hor_length"):
-
-    include: "rules/calculate_hor_length.smk"
-
     output.append(rules.calculate_as_hor_length_all.input)
 
 
 if config.get("count_complete_cens"):
-
-    include: "rules/count_complete_cens.smk"
-
     output.append(rules.count_complete_cens_all.input)
 
 
 if config.get("cdr_finder"):
 
-    include: "rules/cdr_finder.smk"
+    # Need to include CDR-Finder because uses rule inheritance.
+    include: "rules/8-cdr_finder.smk"
 
     output.append(rules.cdr_finder_all.input)
 

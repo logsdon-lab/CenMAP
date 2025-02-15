@@ -1,43 +1,44 @@
 
 include: "common.smk"
 include: "utils.smk"
+include: "1-concat_asm.smk"
+include: "7-fix_cens_w_repeatmasker.smk"
 
 
-use rule extract_and_index_fa as extract_cens_for_humas_sd with:
+HUMAS_SD_OUTDIR = join(OUTPUT_DIR, "8-humas_sd")
+HUMAS_SD_LOGDIR = join(LOG_DIR, "8-humas_sd")
+HUMAS_SD_BMKDIR = join(BMK_DIR, "8-humas_sd")
+
+
+rule extract_cens_for_humas_sd:
     input:
-        fa=os.path.join(
-            config["concat_asm"]["output_dir"],
-            "{sm}-asm-renamed-reort.fa",
-        ),
-        bed=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "bed",
-            "interm",
-            "{sm}_complete_cens.bed",
-        ),
+        fa=rules.rename_reort_asm.output.fa,
+        bed=rules.make_complete_cens_bed.output,
     output:
         seq=temp(
-            os.path.join(
-                config["humas_sd"]["output_dir"],
+            join(
+                HUMAS_SD_OUTDIR,
                 "seq",
                 "interm",
                 "{sm}_cens.fa",
             )
         ),
         idx=temp(
-            os.path.join(
-                config["humas_sd"]["output_dir"],
+            join(
+                HUMAS_SD_OUTDIR,
                 "seq",
                 "interm",
                 "{sm}_cens.fa.fai",
             )
         ),
     log:
-        "logs/humas_sd/extract_cens_for_humas_sd_{sm}.log",
+        join(HUMAS_SD_LOGDIR, "extract_cens_for_humas_sd_{sm}.log"),
     params:
         # Seqtk outputs 1-based coords which causes name issues.
         bed=lambda wc, input: f"""<(awk -v OFS="\\t" '{{print $1, $2-1, $3}}' {input.bed})""",
         added_cmds="",
+    shell:
+        shell_extract_and_index_fa
 
 
 checkpoint split_cens_for_humas_sd:
@@ -45,13 +46,13 @@ checkpoint split_cens_for_humas_sd:
         fa=rules.extract_cens_for_humas_sd.output.seq,
     output:
         touch(
-            os.path.join(
-                config["humas_sd"]["output_dir"],
+            join(
+                HUMAS_SD_OUTDIR,
                 "split_cens_for_humas_sd_{sm}.done",
             )
         ),
     log:
-        "logs/humas_sd/split_{sm}_cens_for_humas_sd.log",
+        join(HUMAS_SD_LOGDIR, "split_{sm}_cens_for_humas_sd.log"),
     params:
         split_dir=HUMAS_CENS_SPLIT_DIR,
     conda:
@@ -76,8 +77,9 @@ module HumAS_SD:
         {
             **config["humas_sd"],
             "input_dir": HUMAS_CENS_SPLIT_DIR,
-            "logs_dir": "logs/humas_sd",
-            "benchmarks_dir": "benchmarks/humas_sd",
+            "output_dir": HUMAS_SD_OUTDIR,
+            "logs_dir": HUMAS_SD_LOGDIR,
+            "benchmarks_dir": HUMAS_SD_BMKDIR,
         }
 
 
@@ -85,37 +87,32 @@ use rule * from HumAS_SD as cens_*
 
 
 # https://stackoverflow.com/a/63040288
-def humas_sd_outputs(wc):
+def humas_sd_sm_outputs(wc):
     _ = checkpoints.split_cens_for_humas_sd.get(**wc).output
     wcs = glob_wildcards(
-        os.path.join(HUMAS_CENS_SPLIT_DIR, wc.sm + "_{chrom}_{ctg}.fa"),
+        join(HUMAS_CENS_SPLIT_DIR, wc.sm + "_{chrom}_{ctg}.fa"),
     )
     fnames = [f"{wc.sm}_{chrom}_{ctg}" for chrom, ctg in zip(wcs.chrom, wcs.ctg)]
     chrs = wcs.chrom
 
     return {
-        "hor_bed": expand(
-            rules.cens_convert_to_bed9.output, zip, fname=fnames, chr=chrs
-        ),
-        "stv_row_bed": expand(
-            rules.cens_generate_stv.output, zip, fname=fnames, chr=chrs
-        ),
+        "stv": expand(rules.cens_generate_stv.output, zip, fname=fnames, chr=chrs),
     }
 
 
 checkpoint run_humas_sd:
     input:
         rules.cens_generate_monomers.output,
-        unpack(humas_sd_outputs),
+        unpack(humas_sd_sm_outputs),
     output:
-        touch(os.path.join(config["humas_sd"]["output_dir"], "humas_sd_{sm}.done")),
+        touch(join(HUMAS_SD_OUTDIR, "humas_sd_{sm}.done")),
 
 
 # https://stackoverflow.com/a/63040288
-def humas_sd_stv_outputs(wc):
+def humas_sd_chr_outputs(wc):
     _ = [checkpoints.run_humas_sd.get(sm=sm).output for sm in SAMPLE_NAMES]
     wcs = glob_wildcards(
-        os.path.join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg}.fa"),
+        join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg}.fa"),
     )
     fnames = [
         f"{sm}_{chrom}_{ctg}"
