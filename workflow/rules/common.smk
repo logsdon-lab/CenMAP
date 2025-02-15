@@ -13,7 +13,7 @@ from snakemake.utils import validate
 
 
 # Validate and fill defaults.
-validate(config, "../config/config.schema.yaml")
+validate(config, "../../config/config.schema.yaml")
 
 
 # Include contants so can run individual smk files without main Snakefile.
