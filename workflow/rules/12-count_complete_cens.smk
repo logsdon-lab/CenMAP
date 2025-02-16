@@ -1,21 +1,23 @@
 include: "common.smk"
+include: "11-calculate_hor_length.smk"
+
+
+CNT_CENS_OUTDIR = join(OUTPUT_DIR, "12-count_complete_cens")
+CNT_CENS_LOGDIR = join(LOG_DIR, "12-count_complete_cens")
+CNT_CENS_BMKDIR = join(BMK_DIR, "12-count_complete_cens")
 
 
 rule count_complete_cens:
     input:
-        script="workflow/scripts/count_complete_cens.py",
-        hor_arr_len=os.path.join(
-            config["calculate_hor_length"]["output_dir"],
-            "lengths",
-            "all_AS-HOR_lengths.tsv",
-        ),
+        script=workflow.source_path("../scripts/count_complete_cens.py"),
+        hor_arr_len=rules.aggregate_as_hor_length.output,
     output:
-        cmp_cnts=os.path.join(
-            config["count_complete_cens"]["output_dir"],
+        cmp_cnts=join(
+            CNT_CENS_OUTDIR,
             "complete_cen_counts.tsv",
         ),
     log:
-        "logs/count_cens/count_complete_cens.log",
+        join(CNT_CENS_LOGDIR, "count_complete_cens.log"),
     conda:
         "../envs/py.yaml"
     shell:
@@ -26,15 +28,15 @@ rule count_complete_cens:
 
 rule plot_complete_cen_counts:
     input:
-        script="workflow/scripts/plot_complete_cen_counts.py",
+        script=workflow.source_path("../scripts/plot_complete_cen_counts.py"),
         cmp_cnts=rules.count_complete_cens.output,
     output:
-        os.path.join(
-            config["count_complete_cens"]["output_dir"],
+        join(
+            CNT_CENS_OUTDIR,
             "complete_cen_counts.png",
         ),
     log:
-        "logs/count_cens/plot_complete_cen_counts.log",
+        join(CNT_CENS_LOGDIR, "plot_complete_cen_counts.log"),
     conda:
         "../envs/py.yaml"
     shell:
@@ -51,3 +53,4 @@ rule count_complete_cens_all:
     input:
         rules.count_complete_cens.output,
         rules.plot_complete_cen_counts.output,
+    default_target: True

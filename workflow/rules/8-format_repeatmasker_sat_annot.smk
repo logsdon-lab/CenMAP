@@ -1,18 +1,21 @@
+include: "common.smk"
+include: "7-fix_cens_w_repeatmasker.smk"
+
+
+FMT_RM_SAT_OUTDIR = join(OUTPUT_DIR, "8-format_repeatmasker_sat_annot")
+FMT_RM_SAT_LOGDIR = join(LOG_DIR, "8-format_repeatmasker_sat_annot")
+FMT_RM_SAT_BMKDIR = join(BMK_DIR, "8-format_repeatmasker_sat_annot")
+
 
 rule merge_complete_and_correct_rm_out:
     input:
         expand(
-            os.path.join(
-                config["repeatmasker"]["output_dir"],
-                "repeats",
-                "all",
-                "reoriented_{sm}_cens.fa.out",
-            ),
+            rules.fix_cens_rm_out.output,
             sm=SAMPLE_NAMES,
         ),
     output:
-        os.path.join(
-            config["repeatmasker"]["output_dir"],
+        join(
+            FMT_RM_SAT_OUTDIR,
             "repeats",
             "all",
             "reoriented_all_samples_and_ref_cens.fa.out",
@@ -28,8 +31,8 @@ rule create_annotated_satellites:
         ref_rm_out=config["repeatmasker"]["ref_repeatmasker_output"],
         corrected_rm_out=rules.merge_complete_and_correct_rm_out.output,
     output:
-        os.path.join(
-            config["plot_hor_stv"]["output_dir"],
+        join(
+            FMT_RM_SAT_OUTDIR,
             "bed",
             "all_cens_{repeat}.satellites.bed",
         ),
@@ -39,7 +42,7 @@ rule create_annotated_satellites:
         pattern=lambda wc: ANNOTATE_SAT_REPEATS[str(wc.repeat)]["pattern"],
         color=lambda wc: ANNOTATE_SAT_REPEATS[str(wc.repeat)]["color"],
     log:
-        "logs/plot_repeatmasker_sat_annot/create_{repeat}_annotated_satellites.log",
+        join(FMT_RM_SAT_LOGDIR, "create_{repeat}_annotated_satellites.log"),
     shell:
         """
         {{ cat {input} | \
@@ -61,11 +64,11 @@ rule create_ct_track:
         ref_rm_out=config["repeatmasker"]["ref_repeatmasker_output"],
         corrected_rm_out=rules.merge_complete_and_correct_rm_out.output,
     output:
-        os.path.join(config["plot_hor_stv"]["output_dir"], "bed", "all_cens.ct.bed"),
+        join(FMT_RM_SAT_OUTDIR, "bed", "all_cens.ct.bed"),
     params:
         color=ANNOTATE_SAT_REPEATS["ct"]["color"],
     log:
-        "logs/plot_repeatmasker_sat_annot/create_ct_track.log",
+        join(FMT_RM_SAT_LOGDIR, "create_ct_track.log"),
     conda:
         "../envs/tools.yaml"
     shell:
@@ -89,8 +92,8 @@ rule aggregate_rm_satellite_annotations:
         ),
         ct_track=rules.create_ct_track.output,
     output:
-        os.path.join(
-            config["plot_hor_stv"]["output_dir"],
+        join(
+            FMT_RM_SAT_OUTDIR,
             "bed",
             "all_cens.annotation.bed",
         ),
@@ -100,26 +103,7 @@ rule aggregate_rm_satellite_annotations:
         """
 
 
-rule split_rm_satellite_annotations:
-    input:
-        all_annotations=rules.aggregate_rm_satellite_annotations.output,
-    output:
-        chr_annot=os.path.join(
-            config["plot_hor_stv"]["output_dir"],
-            "bed",
-            "{chr}",
-            "sat_annot.bed",
-        ),
-    params:
-        chr_pattern=lambda wc: str(wc.chr).replace("chr", r"(chr|cen)") + r"[_:\-\\tv]",
-    shell:
-        """
-        grep -P "{params.chr_pattern}" {input.all_annotations} > {output.chr_annot}
-        """
-
-
 rule format_repeatmasker_sat_all:
     input:
         rules.aggregate_rm_satellite_annotations.output,
-        expand(rules.split_rm_satellite_annotations.output, chr=CHROMOSOMES),
     default_target: True

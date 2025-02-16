@@ -1,119 +1,40 @@
-rule extract_and_index_fa:
-    input:
-        fa="",
-        bed="",
-    output:
-        seq="",
-        idx="",
-    log:
-        "logs/extract_and_index_fa.log",
-    params:
-        bed=lambda wc, input: input.bed,
-        added_cmds="",
-    conda:
-        "../envs/tools.yaml"
-    shell:
-        """
-        seqtk subseq {input.fa} {params.bed} {params.added_cmds} > {output.seq} 2> {log}
-        # Check if empty before attempting to index. Always create index file.
-        if [ -s {output.seq} ]; then
-            samtools faidx {output.seq} &> {log}
-        else
-            touch {output.idx}
-        fi
-        """
+# Rule inheritance breaks in modules
+# https://github.com/snakemake/snakemake/issues/1757
+
+params_shell_extract_and_index_fa = {
+    "bed": lambda wc, input: input.bed,
+    "added_cmds": "",
+}
 
 
-rule create_rm_bed:
-    input:
-        script="workflow/scripts/create_rm_bed.py",
-        rm_out="",
-    output:
-        rm_bed="",
-    params:
-        chr_rgx="",
-        color_mapping="",
-    log:
-        "logs/create_rm_bed.log",
-    conda:
-        "../envs/py.yaml"
-    shell:
-        """
-        python {input.script} -i <(cat {input.rm_out}) -c {params.chr_rgx} -m {params.color_mapping} > {output.rm_bed} 2> {log}
-        """
+shell_extract_and_index_fa = """
+    seqtk subseq {input.fa} {params.bed} {params.added_cmds} > {output.seq} 2> {log}
+    # Check if empty before attempting to index. Always create index file.
+    if [ -s {output.seq} ]; then
+        samtools faidx {output.seq} &> {log}
+    else
+        touch {output.idx}
+    fi
+"""
 
 
-rule modify_cenplot_tracks:
-    input:
-        plot_layout="",
-        infiles="",
-    output:
-        plot_layout="",
-    run:
-        import os, sys, tomllib, yaml
-
-        # infile indicates where all other bedfiles are.
-        indir = os.path.abspath(os.path.dirname(str(input.infiles[0])))
-        with (
-            open(input.plot_layout, "rb") as fh,
-            open(output.plot_layout, "wt") as out_fh,
-        ):
-            settings = tomllib.load(fh)
-            new_settings = {"settings": settings["settings"], "tracks": []}
-
-            for trk in settings["tracks"]:
-                path = trk.get("path")
-                # Some tracks don't have paths.
-                if not path:
-                    new_settings["tracks"].append(trk)
-                    continue
-                try:
-                    new_path = path.format(indir=indir, **dict(params.items()))
-                except KeyError:
-                    print(
-                        f"Invalid format key in path {path} from cenplot track file, {input.plot_layout}.",
-                        file=sys.stderr,
-                    )
-                    continue
-
-                    # Skip if empty.
-                if os.stat(new_path).st_size == 0:
-                    continue
-
-                new_trk = trk.copy()
-                # Pass params from snakemake
-                new_trk["path"] = path.format(indir=indir, **dict(params.items()))
-                new_settings["tracks"].append(new_trk)
-
-            out_fh.write(yaml.dump(new_settings))
+shell_create_rm_bed = """
+    python {input.script} -i <(cat {input.rm_out}) -c {params.chr_rgx} -m {params.color_mapping} > {output.rm_bed} 2> {log}
+"""
 
 
-rule plot_multiple_cen:
-    input:
-        bed_files=[],
-        script="workflow/scripts/plot_multiple_cen.py",
-        plot_layout="",
-    output:
-        plots="",
-        plot_dir="",
-    threads: 4
-    log:
-        "logs/plot_multiple_cen.log",
-    conda:
-        "../envs/py.yaml"
-    shell:
-        """
-        # Then use custom script and cenplot.
-        {{ python {input.script} \
-        -t {input.plot_layout} \
-        -d {output.plot_dir} \
-        --share_xlim \
-        -p {threads} \
-        -c <(cut -f 1 {input.bed_files[0]} | sort | uniq) || true ;}} 2> {log}
-        # Allow failure. Possible to have no correct cens.
-        touch {output.plots}
-        mkdir -p {output.plot_dir}
-        """
+shell_plot_multiple_cen = """
+    # Then use custom script and cenplot.
+    {{ python {input.script} \
+    -t {input.plot_layout} \
+    -d {output.plot_dir} \
+    --share_xlim \
+    -p {threads} \
+    -c <(cut -f 1 {input.bed_files[0]} | sort | uniq) || true ;}} 2> {log}
+    # Allow failure. Possible to have no correct cens.
+    touch {output.plots}
+    mkdir -p {output.plot_dir}
+"""
 
 
 rule wget:

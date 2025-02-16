@@ -1,13 +1,20 @@
+include: "utils.smk"
+include: "common.smk"
+include: "1-concat_asm.smk"
+include: "2-extract_ref_hor_arrays.smk"
+
+
+ASM_REF_OUTDIR = join(OUTPUT_DIR, "3-align_asm_to_ref")
+ASM_REF_LOGDIR = join(LOG_DIR, "3-align_asm_to_ref")
+ASM_REF_BMKDIR = join(BMK_DIR, "3-align_asm_to_ref")
+
 ALN_CFG = {
     "ref": {f"{REF_NAME}_cens": rules.extract_ref_hor_arrays.output.seq},
-    "sm": {
-        sm: os.path.join(config["concat_asm"]["output_dir"], f"{sm}-asm-comb-dedup.fa")
-        for sm in SAMPLE_NAMES
-    },
-    "temp_dir": os.path.join(config["align_asm_to_ref"]["output_dir"], "temp"),
-    "output_dir": config["align_asm_to_ref"]["output_dir"],
-    "logs_dir": "logs/align_asm_to_ref",
-    "benchmarks_dir": "benchmarks/align_asm_to_ref",
+    "sm": {sm: expand(rules.concat_asm.output.fa, sm=sm) for sm in SAMPLE_NAMES},
+    "temp_dir": join(ASM_REF_OUTDIR, "temp"),
+    "output_dir": ASM_REF_OUTDIR,
+    "logs_dir": ASM_REF_LOGDIR,
+    "benchmarks_dir": ASM_REF_BMKDIR,
     "aln_threads": config["align_asm_to_ref"]["threads"],
     "aln_mem": config["align_asm_to_ref"]["mem"],
     "mm2_opts": "-x asm20 --secondary=no -s 25000 -K 8G",

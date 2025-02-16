@@ -1,32 +1,26 @@
 include: "common.smk"
 include: "utils.smk"
+include: "7-fix_cens_w_repeatmasker.smk"
+include: "8-nucflag.smk"
+
+
+COMPLETE_CORRECT_CENS_LOGDIR = join(LOG_DIR, "9-get_complete_correct_cens")
 
 
 rule get_complete_correct_cens_bed:
     input:
         # (name, st, end, is_partial, ctg_name, ctg_len)
-        interm_bed=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
-            "bed",
-            "interm",
-            "{sm}_complete_cens.bed",
-        ),
+        interm_bed=rules.make_complete_cens_bed.output,
         # (name, st, end, status)
         nucflag_bed=(
-            os.path.join(
-                config["nucflag"]["output_dir"],
-                "{sm}_status.bed",
-            )
-            if config.get("nucflag")
-            else []
+            rules.check_asm_nucflag.output.asm_status if config.get("nucflag") else []
         ),
     output:
         # BED9
         # (name, st, end, adj_name, score, ort, adj_st, adj_end, rgb)
-        bed=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
+        bed=join(
+            FINAL_OUTPUT_DIR,
             "bed",
-            "final",
             "{sm}_complete_correct_cens.bed",
         ),
     params:
@@ -37,7 +31,7 @@ rule get_complete_correct_cens_bed:
             else f"cat {input.interm_bed}"
         ),
     log:
-        "logs/get_complete_correct_cens/get_complete_correct_bed_{sm}.log",
+        join(COMPLETE_CORRECT_CENS_LOGDIR, "get_complete_correct_bed_{sm}.log"),
     conda:
         "../envs/tools.yaml"
     shell:
@@ -65,36 +59,36 @@ rule get_complete_correct_cens_bed:
         """
 
 
-use rule extract_and_index_fa as get_complete_correct_cens_fa with:
+rule get_complete_correct_cens_fa:
     input:
-        # fasta with no_coords
-        fa=os.path.join(
-            config["concat_asm"]["output_dir"],
-            "{sm}-asm-renamed-reort.fa",
-        ),
+        # assembly reoriented fasta
+        fa=rules.rename_reort_asm.output.fa,
         # (name, st, end)
         bed=rules.get_complete_correct_cens_bed.output,
     output:
-        seq=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
+        seq=join(
+            FINAL_OUTPUT_DIR,
             "seq",
-            "final",
             "{sm}_cens.fa",
         ),
-        idx=os.path.join(
-            config["ident_cen_ctgs"]["output_dir"],
+        idx=join(
+            FINAL_OUTPUT_DIR,
             "seq",
-            "final",
             "{sm}_cens.fa.fai",
         ),
+    conda:
+        "../envs/tools.yaml"
     log:
-        "logs/get_complete_correct_cens/get_complete_correct_cens_fa_{sm}.log",
+        join(COMPLETE_CORRECT_CENS_LOGDIR, "get_complete_correct_cens_fa_{sm}.log"),
     params:
         added_cmds="",
         bed=lambda wc, input: f"""<(awk -v OFS="\\t" '{{print $4, $7-1, $8}}' {input.bed})""",
+    shell:
+        shell_extract_and_index_fa
 
 
 rule get_complete_correct_cens_all:
     input:
         expand(rules.get_complete_correct_cens_bed.output, sm=SAMPLE_NAMES),
         expand(rules.get_complete_correct_cens_fa.output, sm=SAMPLE_NAMES),
+    default_target: True

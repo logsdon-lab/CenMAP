@@ -1,16 +1,19 @@
 include: "common.smk"
-include: "humas_sd.smk"
+include: "8-humas_sd.smk"
+include: "9-get_complete_correct_cens.smk"
+
+
+FMT_HOR_STV_OUTDIR = join(OUTPUT_DIR, "10-format_hor_stv")
+FMT_HOR_STV_LOGDIR = join(LOG_DIR, "10-format_hor_stv")
 
 
 checkpoint aggregate_format_all_stv_row:
     input:
-        unpack(humas_sd_stv_outputs),
+        unpack(humas_sd_chr_outputs),
     output:
-        os.path.join(
-            config["plot_hor_stv"]["output_dir"], "bed", "{chr}", "stv_all.bed"
-        ),
+        join(FMT_HOR_STV_OUTDIR, "bed", "{chr}", "stv_all.bed"),
     log:
-        "logs/plot_hor_stv/get_stv_row_from_{chr}_humas_hmmer_out.log",
+        join(FMT_HOR_STV_LOGDIR, "aggregate_format_all_stv_row_{chr}.log"),
     conda:
         "../envs/tools.yaml"
     shell:
@@ -37,17 +40,12 @@ rule filter_complete_correct_stv_row:
     input:
         stv_row_bed=rules.aggregate_format_all_stv_row.output,
         complete_cens_bed=expand(
-            os.path.join(
-                config["ident_cen_ctgs"]["output_dir"],
-                "bed",
-                "final",
-                "{sm}_complete_correct_cens.bed",
-            ),
+            rules.get_complete_correct_cens_bed.output,
             sm=SAMPLE_NAMES,
         ),
     output:
-        os.path.join(
-            config["plot_hor_stv"]["output_dir"],
+        join(
+            FMT_HOR_STV_OUTDIR,
             "bed",
             "{chr}",
             "stv_complete.bed",
@@ -58,7 +56,7 @@ rule filter_complete_correct_stv_row:
         """
 
 
-rule format_hor_stv_only:
+rule format_hor_stv_all:
     input:
         expand(
             rules.aggregate_format_all_stv_row.output,
