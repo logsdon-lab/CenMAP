@@ -58,7 +58,7 @@ properties:
     additionalProperties: false
     properties:
       reference:
-        type: string
+        type: ["string", "null"]
         description: >-
           Path to reference assembly.
           Will download CHM13v2.0 if not specified.
@@ -139,7 +139,7 @@ properties:
         description: Path to nucflag config file.
         default: "config/nucflag.toml"
       ignore_regions:
-        type: string
+        type: ["string", "null"]
         description: Path to BED file with regions to ignore in the assembly.
         default: null
       threads_aln:
@@ -232,7 +232,6 @@ properties:
         type: string
         description: Path to mapping file of HOR stv monomer numbers to colors.
         default: config/stv_annot_colors.tsv
-
   calculate_hor_length:
     type: object
     additionalProperties: false
@@ -329,3 +328,10 @@ properties:
 required:
   - samples
   - chromosomes
+  - concat_asm
+  - align_asm_to_ref
+  - extract_ref_hor_arrays
+  - ident_cen_ctgs
+  - dna_brnn
+  - repeatmasker
+  - humas_sd

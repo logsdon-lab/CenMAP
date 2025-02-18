@@ -1,10 +1,14 @@
 include: "common.smk"
 include: "utils.smk"
 include: "7-fix_cens_w_repeatmasker.smk"
-include: "8-nucflag.smk"
 
 
 COMPLETE_CORRECT_CENS_LOGDIR = join(LOG_DIR, "9-get_complete_correct_cens")
+
+
+if config.get("nucflag"):
+
+    include: "8-nucflag.smk"
 
 
 rule get_complete_correct_cens_bed:
