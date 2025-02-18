@@ -167,9 +167,6 @@ use rule * from fix_cens_w_repeatmasker
 use rule * from humas_sd
 
 
-use rule * from nucflag
-
-
 use rule * from format_repeatmasker_sat_annot
 
 
@@ -177,18 +174,6 @@ use rule * from format_hor_stv
 
 
 use rule * from get_complete_correct_cens
-
-
-use rule * from plot_hor_stv
-
-
-use rule * from moddotplot
-
-
-use rule * from calculate_hor_length
-
-
-use rule * from count_complete_cens
 
 
 rule extract_cens_all:
@@ -206,7 +191,6 @@ output = [
     rules.fix_cens_w_repeatmasker_all.input,
     rules.humas_sd_all.input,
     rules.get_complete_correct_cens_all.input,
-    rules.count_complete_cens_all.input,
 ]
 
 # Download T2T-CHM13 reference assembly if existing path not provided.
@@ -215,10 +199,16 @@ if not config["align_asm_to_ref"].get("reference"):
 
 # Omit assembly check. Primarily used for debugging faster.
 if config.get("nucflag"):
+
+    use rule * from nucflag
+
     output.append(rules.nucflag_all.input)
 
 
 if config.get("plot_hor_stv"):
+
+    use rule * from plot_hor_stv
+
     output.extend(
         [
             rules.format_hor_stv_all.input,
@@ -228,12 +218,25 @@ if config.get("plot_hor_stv"):
     )
 
 
-if config.get("moddotplot"):
+if config.get("moddotplot") and config.get("plot_hor_stv"):
+
+    use rule * from moddotplot
+
     output.append(rules.moddotplot_all.input)
 
 
 if config.get("calculate_hor_length"):
-    output.append(rules.calculate_as_hor_length_all.input)
+
+    use rule * from calculate_hor_length
+
+    use rule * from count_complete_cens
+
+    output.extend(
+        [
+            rules.calculate_as_hor_length_all.input,
+            rules.count_complete_cens_all.input,
+        ]
+    )
 
 
 if config.get("cdr_finder"):

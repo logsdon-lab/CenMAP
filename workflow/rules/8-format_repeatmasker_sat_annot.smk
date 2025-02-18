@@ -39,8 +39,8 @@ rule create_annotated_satellites:
     conda:
         "../envs/tools.yaml"
     params:
-        pattern=lambda wc: ANNOTATE_SAT_REPEATS[str(wc.repeat)]["pattern"],
-        color=lambda wc: ANNOTATE_SAT_REPEATS[str(wc.repeat)]["color"],
+        pattern=lambda wc: ANNOTATE_SAT_REPEATS.get(str(wc.repeat), {}).get("pattern"),
+        color=lambda wc: ANNOTATE_SAT_REPEATS.get(str(wc.repeat), {}).get("color"),
     log:
         join(FMT_RM_SAT_LOGDIR, "create_{repeat}_annotated_satellites.log"),
     shell:
@@ -66,7 +66,7 @@ rule create_ct_track:
     output:
         join(FMT_RM_SAT_OUTDIR, "bed", "all_cens.ct.bed"),
     params:
-        color=ANNOTATE_SAT_REPEATS["ct"]["color"],
+        color=ANNOTATE_SAT_REPEATS.get("ct", {}).get("color"),
     log:
         join(FMT_RM_SAT_LOGDIR, "create_ct_track.log"),
     conda:

@@ -92,6 +92,7 @@ rule modify_hor_stv_cenplot_tracks:
         )
 
 
+# hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],
 rule plot_hor_stv:
     input:
         bed_files=rules.filter_annotations_hor_stv.output,
@@ -99,7 +100,6 @@ rule plot_hor_stv:
         plot_layout=expand(
             rules.modify_hor_stv_cenplot_tracks.output, chr="{chr}", typ="all"
         ),
-        # hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],
     output:
         plots=multiext(
             join(

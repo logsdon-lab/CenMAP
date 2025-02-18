@@ -79,7 +79,11 @@ rule format_repeatmasker_to_overlay_bed:
 rule format_stv_to_overlay_bed:
     input:
         stv=humas_sd_sm_outputs,
-        annot_colors=config["plot_hor_stv"]["stv_annot_colors"],
+        annot_colors=(
+            config["plot_hor_stv"]["stv_annot_colors"]
+            if config.get("plot_hor_stv")
+            else "config/stv_annot_colors.tsv"
+        ),
     output:
         join(
             NUCFLAG_OUTDIR,
