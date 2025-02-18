@@ -6,14 +6,9 @@ include: "7-fix_cens_w_repeatmasker.smk"
 COMPLETE_CORRECT_CENS_LOGDIR = join(LOG_DIR, "9-get_complete_correct_cens")
 
 
-def nucflag_bed(wc):
-    if not config.get("nucflag"):
-        return []
+if config.get("nucflag"):
 
-    # Include only if nucflag added.
     include: "8-nucflag.smk"
-
-    return rules.check_asm_nucflag.output.asm_status
 
 
 rule get_complete_correct_cens_bed:
@@ -21,7 +16,9 @@ rule get_complete_correct_cens_bed:
         # (name, st, end, is_partial, ctg_name, ctg_len)
         interm_bed=rules.make_complete_cens_bed.output,
         # (name, st, end, status)
-        nucflag_bed=nucflag_bed,
+        nucflag_bed=(
+            rules.check_asm_nucflag.output.asm_status if config.get("nucflag") else []
+        ),
     output:
         # BED9
         # (name, st, end, adj_name, score, ort, adj_st, adj_end, rgb)
