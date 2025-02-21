@@ -58,10 +58,6 @@ def cen_status(wc):
     fa_glob_pattern = join(outdir, "{fname}.fa")
     wcs = glob_wildcards(fa_glob_pattern)
     fnames = wcs.fname
-    assert (
-        len(fnames) != 0
-    ), f"No fasta files found for repeatmasker in {fa_glob_pattern}"
-
     return expand(rules.check_cens_status.output, sm=wc.sm, fname=fnames)
 
 
