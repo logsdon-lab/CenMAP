@@ -12,7 +12,7 @@ RM_BMKDIR = join(BMK_DIR, "6-repeatmasker")
 
 checkpoint split_cens_for_rm:
     input:
-        fa=rules.extract_alr_region_sample_by_chr.output.seq,
+        fa=rules.extract_alr_regions_by_sample.output.seq,
         # [old_name, new_name, coords, sm, chr, is_reversed]
         rename_key=rules.map_collapse_cens.output.renamed_cens_key,
     output:

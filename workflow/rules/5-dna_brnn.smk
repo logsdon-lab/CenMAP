@@ -157,7 +157,7 @@ def dna_brnn_output(wc):
     )
 
 
-rule aggregate_dnabrnn_alr_regions_by_chr:
+rule aggregate_dnabrnn_alr_regions_by_sample:
     input:
         sample_cens=dna_brnn_output,
     output:
@@ -176,10 +176,10 @@ rule aggregate_dnabrnn_alr_regions_by_chr:
         """
 
 
-rule extract_alr_region_sample_by_chr:
+rule extract_alr_regions_by_sample:
     input:
         fa=rules.concat_asm.output.fa,
-        bed=rules.aggregate_dnabrnn_alr_regions_by_chr.output,
+        bed=rules.aggregate_dnabrnn_alr_regions_by_sample.output,
     output:
         seq=temp(
             join(
@@ -201,6 +201,8 @@ rule extract_alr_region_sample_by_chr:
         **params_shell_extract_and_index_fa,
     log:
         join(DNA_BRNN_LOGDIR, "extract_alr_region_{sm}.log"),
+    conda:
+        "../envs/tools.yaml"
     shell:
         shell_extract_and_index_fa
 
@@ -208,7 +210,7 @@ rule extract_alr_region_sample_by_chr:
 rule dna_brnn_all:
     input:
         expand(
-            rules.aggregate_dnabrnn_alr_regions_by_chr.output,
+            rules.aggregate_dnabrnn_alr_regions_by_sample.output,
             sm=SAMPLE_NAMES,
         ),
     default_target: True
