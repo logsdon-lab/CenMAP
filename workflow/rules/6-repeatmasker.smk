@@ -193,7 +193,7 @@ rule format_repeatmasker_output:
 # |1259|28.4|7.4|5.3|GM18989_chr1_hap1-0000003:9717731-15372230|8|560|(5653940)|+|Charlie2b|DNA/hAT-Charlie|120|683|(2099)|1|
 rule merge_repeatmasker_output:
     input:
-        expand(rules.format_repeatmasker_output.output, sm=SAMPLE_NAMES),
+        ancient(expand(rules.format_repeatmasker_output.output, sm=SAMPLE_NAMES)),
     output:
         temp(
             join(
@@ -326,6 +326,6 @@ rule plot_og_rm_bed_by_chr:
 
 rule repeatmasker_all:
     input:
-        expand(rules.format_repeatmasker_output.output, sm=SAMPLE_NAMES),
+        rules.merge_repeatmasker_output.output,
         expand(rules.plot_og_rm_bed_by_chr.output, chr=CHROMOSOMES),
     default_target: True

@@ -13,7 +13,7 @@ HUMAS_SD_BMKDIR = join(BMK_DIR, "8-humas_sd")
 rule extract_cens_for_humas_sd:
     input:
         fa=rules.rename_reort_asm.output.fa,
-        bed=rules.make_complete_cens_bed.output,
+        bed=ancient(rules.make_complete_cens_bed.output),
     output:
         seq=temp(
             join(
