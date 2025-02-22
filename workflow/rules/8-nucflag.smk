@@ -149,7 +149,7 @@ rule format_rm_nucflag_ignore_bed:
 rule format_stv_nucflag_ignore_bed:
     input:
         stv=humas_sd_sm_outputs,
-        bed=rules.make_complete_cens_bed.output,
+        bed=ancient(rules.make_complete_cens_bed.output),
         ignore_bed=(
             config["nucflag"]["ignore_regions"]
             if config["nucflag"].get("ignore_regions")
@@ -216,7 +216,7 @@ NUCFLAG_CFG = {
                 }
             ),
             "config": config["nucflag"]["config_nucflag"],
-            "region_bed": rules.make_complete_cens_bed.output,
+            "region_bed": ancient(rules.make_complete_cens_bed.output),
             # Ignore regions.
             "ignore_bed": ignore_regions,
             "overlay_beds": overlay_beds,

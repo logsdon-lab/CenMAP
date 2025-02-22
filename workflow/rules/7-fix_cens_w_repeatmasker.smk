@@ -58,10 +58,6 @@ def cen_status(wc):
     fa_glob_pattern = join(outdir, "{fname}.fa")
     wcs = glob_wildcards(fa_glob_pattern)
     fnames = wcs.fname
-    assert (
-        len(fnames) != 0
-    ), f"No fasta files found for repeatmasker in {fa_glob_pattern}"
-
     return expand(rules.check_cens_status.output, sm=wc.sm, fname=fnames)
 
 
@@ -94,7 +90,7 @@ rule rename_reort_asm:
     input:
         fa=rules.concat_asm.output.fa,
         idx=rules.concat_asm.output.idx,
-        cens_bed=rules.make_complete_cens_bed.output,
+        cens_bed=ancient(rules.make_complete_cens_bed.output),
     output:
         fa=join(
             CONCAT_ASM_OUTDIR,
@@ -134,8 +130,8 @@ rule rename_reort_asm:
 rule fix_cens_rm_out:
     input:
         script=workflow.source_path("../scripts/rename_reorient_rm_out.py"),
-        rm_rename_key=rules.make_complete_cens_bed.output,
-        rm_out=rules.format_repeatmasker_output.output,
+        rm_rename_key=ancient(rules.make_complete_cens_bed.output),
+        rm_out=ancient(rules.format_repeatmasker_output.output),
     output:
         corrected_rm_out=join(
             FIX_RM_OUTDIR,
@@ -230,7 +226,6 @@ rule plot_fixed_rm_bed_by_chr:
 
 rule fix_cens_w_repeatmasker_all:
     input:
-        expand(rules.make_complete_cens_bed.output, sm=SAMPLE_NAMES),
         expand(rules.rename_reort_asm.output, sm=SAMPLE_NAMES),
         expand(rules.plot_fixed_rm_bed_by_chr.output, chr=CHROMOSOMES),
     default_target: True

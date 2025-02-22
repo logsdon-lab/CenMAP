@@ -14,7 +14,7 @@ if config.get("nucflag"):
 rule get_complete_correct_cens_bed:
     input:
         # (name, st, end, is_partial, ctg_name, ctg_len)
-        interm_bed=rules.make_complete_cens_bed.output,
+        interm_bed=ancient(rules.make_complete_cens_bed.output),
         # (name, st, end, status)
         nucflag_bed=(
             rules.check_asm_nucflag.output.asm_status if config.get("nucflag") else []
