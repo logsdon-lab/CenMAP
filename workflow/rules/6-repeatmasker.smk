@@ -326,6 +326,5 @@ rule plot_og_rm_bed_by_chr:
 
 rule repeatmasker_all:
     input:
-        rules.merge_repeatmasker_output.output,
         expand(rules.plot_og_rm_bed_by_chr.output, chr=CHROMOSOMES),
     default_target: True

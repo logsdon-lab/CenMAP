@@ -112,7 +112,7 @@ rule get_original_coords:
 
 # Pass CDR config here.
 CDR_FINDER_CONFIG = {
-    **config["cdr_finder"],
+    "output_dir": CDR_FINDER_OUTDIR,
     "log_dir": CDR_FINDER_LOGDIR,
     "benchmark_dir": CDR_FINDER_BMKDIR,
     "restrict_alr": True,
@@ -126,6 +126,7 @@ CDR_FINDER_CONFIG = {
         }
         for sm in SAMPLE_NAMES_INTERSECTION
     },
+    **config["cdr_finder"],
 }
 
 
