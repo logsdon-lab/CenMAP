@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from typing import Iterable, TextIO, BinaryIO
+from typing import BinaryIO
 from concurrent.futures import ProcessPoolExecutor
 
 from cenplot import (
@@ -107,7 +107,7 @@ def main():
     ap.add_argument(
         "-c",
         "--chroms",
-        type=argparse.FileType("rt"),
+        nargs="+",
         help="Names to plot in this order. Corresponds to 1st col in BED files.",
         required=True,
     )
@@ -129,11 +129,10 @@ def main():
     args = ap.parse_args()
 
     input_tracks: BinaryIO = args.input_tracks
-    chroms: TextIO = args.chroms
     outdir: str = args.outdir
     share_xlim: bool = args.share_xlim
     processes: int = args.processes
-    all_chroms: Iterable[str] = [line.strip() for line in chroms.readlines()]
+    all_chroms: list[str] = args.chroms
 
     inputs: list[tuple[Track, str, str, PlotSettings]] = []
     tracks_settings = []

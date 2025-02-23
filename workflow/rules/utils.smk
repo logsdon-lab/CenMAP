@@ -30,7 +30,7 @@ shell_plot_multiple_cen = """
     -d {output.plot_dir} \
     --share_xlim \
     -p {threads} \
-    -c <(cut -f 1 {input.bed_files[0]} | sort | uniq) || true ;}} 2> {log}
+    -c $(cut -f 1 {input.bed_files[0]} | sort | uniq) || true ;}} 2> {log}
     # Allow failure. Possible to have no correct cens.
     touch {output.plots}
     mkdir -p {output.plot_dir}

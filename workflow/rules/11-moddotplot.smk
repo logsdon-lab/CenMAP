@@ -156,7 +156,7 @@ rule plot_cen_moddotplot:
         join(MODDOTPLOT_LOGDIR, "plot_moddotplot_{chr}_{fname}.log"),
     shell:
         """
-        cenplot draw -t {input.plot_layout} -d {params.output_dir} -c <(echo {wildcards.fname}) -p {threads} 2> {log}
+        cenplot draw -t {input.plot_layout} -d {params.output_dir} -c {wildcards.fname} -p {threads} 2> {log}
         """
 
 
