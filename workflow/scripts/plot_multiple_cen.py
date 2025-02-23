@@ -1,6 +1,7 @@
 import os
 import sys
 import copy
+import logging
 import argparse
 import multiprocessing
 
@@ -20,6 +21,8 @@ from cenplot import (
     Track,
 )
 
+logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
+
 
 def create_shared_legend(
     plots: list[tuple[Figure, np.ndarray, str]],
@@ -28,16 +31,29 @@ def create_shared_legend(
     dpi: int | None = None,
     transparent: bool = True,
 ):
+    if not plots:
+        logging.error("No plots to get shared legend.")
+        return
+
     legend_fig, legend_axes, _ = copy.deepcopy(plots[reference_ax_idx])
-    legend_ax: Axes = legend_axes[0, 0]
 
     all_legend_elems = {}
+    legend_idx = 0
     for _, axes, _ in plots:
-        ax: Axes = axes[0, 0]
-        # Legend items.
-        legend_handles, legend_labels = ax.get_legend_handles_labels()
-        legend_elems = dict(zip(legend_labels, legend_handles))
-        all_legend_elems.update(legend_elems)
+        for i, ax_row in enumerate(axes):
+            ax_row_elems = {}
+            for ax in ax_row:
+                ax: Axes
+                # Legend items.
+                legend_handles, legend_labels = ax.get_legend_handles_labels()
+                legend_elems = dict(zip(legend_labels, legend_handles))
+                ax_row_elems.update(legend_elems)
+
+            if ax_row_elems:
+                legend_idx = i
+                all_legend_elems.update(ax_row_elems)
+
+    legend_ax: Axes = legend_axes[legend_idx, 0]
 
     # Clear copied axis.
     legend_fig.suptitle(None)
@@ -52,8 +68,8 @@ def create_shared_legend(
         ax.axes.spines["bottom"].set_visible(False)
 
     legend = legend_ax.legend(
-        legend_elems.values(),
-        legend_elems.keys(),
+        all_legend_elems.values(),
+        all_legend_elems.keys(),
         handlelength=1.0,
         handleheight=1.0,
         ncols=10,
