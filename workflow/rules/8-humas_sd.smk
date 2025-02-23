@@ -13,7 +13,7 @@ HUMAS_SD_BMKDIR = join(BMK_DIR, "8-humas_sd")
 rule extract_cens_for_humas_sd:
     input:
         fa=rules.rename_reort_asm.output.fa,
-        bed=rules.make_complete_cens_bed.output,
+        bed=ancient(rules.make_complete_cens_bed.output),
     output:
         seq=temp(
             join(
@@ -105,6 +105,7 @@ def humas_sd_sm_outputs(wc):
 checkpoint run_humas_sd:
     input:
         rules.cens_generate_monomers.output,
+        expand(rules.split_cens_for_humas_sd.output, sm=SAMPLE_NAMES),
         unpack(humas_sd_sm_outputs),
     output:
         touch(join(HUMAS_SD_OUTDIR, "humas_sd_{sm}.done")),
@@ -144,8 +145,4 @@ rule humas_sd_all:
     input:
         rules._force_humas_sd_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
         expand(rules.run_humas_sd.output, sm=SAMPLE_NAMES),
-
-
-rule humas_sd_split_cens_only:
-    input:
-        expand(rules.split_cens_for_humas_sd.output, sm=SAMPLE_NAMES),
+    default_target: True

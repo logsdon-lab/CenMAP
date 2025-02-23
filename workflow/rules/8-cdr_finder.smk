@@ -73,7 +73,7 @@ use rule * from CDR_Align as cdr_aln_*
 rule get_original_coords:
     input:
         # (sample_chr_ctg, st, end, is-misassembled)
-        bed=rules.make_complete_cens_bed.output,
+        bed=ancient(rules.make_complete_cens_bed.output),
         asm_faidx=rules.concat_asm.output.idx,
     output:
         og_coords=join(
@@ -112,7 +112,7 @@ rule get_original_coords:
 
 # Pass CDR config here.
 CDR_FINDER_CONFIG = {
-    **config["cdr_finder"],
+    "output_dir": CDR_FINDER_OUTDIR,
     "log_dir": CDR_FINDER_LOGDIR,
     "benchmark_dir": CDR_FINDER_BMKDIR,
     "restrict_alr": True,
@@ -126,6 +126,7 @@ CDR_FINDER_CONFIG = {
         }
         for sm in SAMPLE_NAMES_INTERSECTION
     },
+    **config["cdr_finder"],
 }
 
 

@@ -22,7 +22,7 @@ rule concat_asm:
     resources:
         mem=config["concat_asm"].get("mem", "4GB"),
     log:
-        join(CONCAT_ASM_BMKDIR, "concat_asm_{sm}.log"),
+        join(CONCAT_ASM_LOGDIR, "concat_asm_{sm}.log"),
     conda:
         "../envs/tools.yaml"
     shell:

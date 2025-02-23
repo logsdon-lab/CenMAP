@@ -2,6 +2,7 @@
 include: "common.smk"
 include: "utils.smk"
 include: "4-ident_cen_ctgs.smk"
+include: "5-dna_brnn.smk"
 
 
 RM_OUTDIR = join(OUTPUT_DIR, "6-repeatmasker")
@@ -11,7 +12,7 @@ RM_BMKDIR = join(BMK_DIR, "6-repeatmasker")
 
 checkpoint split_cens_for_rm:
     input:
-        fa=rules.extract_cens_regions.output.seq,
+        fa=rules.extract_alr_regions_by_sample.output.seq,
         # [old_name, new_name, coords, sm, chr, is_reversed]
         rename_key=rules.map_collapse_cens.output.renamed_cens_key,
     output:
@@ -55,7 +56,7 @@ rule rename_for_repeatmasker:
         fa=join(rules.split_cens_for_rm.output[0], "{fname}.fa"),
     output:
         original_fa_idx=temp(
-            join(rules.split_cens_for_rm.output[0], "{fname}.fa.fai"),
+            join(RM_OUTDIR, "seq", "{sm}_renamed", "{fname}_original.fa.fai"),
         ),
         # Use different dir to avoid greedy wildcard recursively running rule.
         # TODO: rules.split_cens_for_rm.output[0]
@@ -83,7 +84,7 @@ rule rename_for_repeatmasker:
         join(RM_LOGDIR, "rename_for_repeatmasker_{sm}_{fname}.log"),
     shell:
         """
-        samtools faidx {input.fa} 2> {log}
+        samtools faidx {input.fa} -o {output.original_fa_idx} 2> {log}
         seqtk rename {input.fa} {params.prefix} > {output.renamed_fa} 2>> {log}
         if [ -s {output.renamed_fa} ]; then
             samtools faidx {output.renamed_fa} 2>> {log}
@@ -165,9 +166,6 @@ def refmt_rm_output(wc):
     )
     wcs = glob_wildcards(fa_glob_pattern)
     fnames = wcs.fname
-    assert (
-        len(fnames) != 0
-    ), f"No fasta files found for repeatmasker in {fa_glob_pattern}"
     return expand(rules.reformat_repeatmasker_output.output, sm=wc.sm, fname=fnames)
 
 
@@ -195,7 +193,7 @@ rule format_repeatmasker_output:
 # |1259|28.4|7.4|5.3|GM18989_chr1_hap1-0000003:9717731-15372230|8|560|(5653940)|+|Charlie2b|DNA/hAT-Charlie|120|683|(2099)|1|
 rule merge_repeatmasker_output:
     input:
-        expand(rules.format_repeatmasker_output.output, sm=SAMPLE_NAMES),
+        ancient(expand(rules.format_repeatmasker_output.output, sm=SAMPLE_NAMES)),
     output:
         temp(
             join(
@@ -328,6 +326,5 @@ rule plot_og_rm_bed_by_chr:
 
 rule repeatmasker_all:
     input:
-        expand(rules.format_repeatmasker_output.output, sm=SAMPLE_NAMES),
         expand(rules.plot_og_rm_bed_by_chr.output, chr=CHROMOSOMES),
     default_target: True
