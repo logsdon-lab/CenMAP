@@ -153,6 +153,7 @@ def main():
             "query_len": pl.Int64,
             "reverse_complement": pl.Boolean,
         },
+        orient="row",
     )
     df_minmax.write_csv(args.output, separator="\t", include_header=False)
 
