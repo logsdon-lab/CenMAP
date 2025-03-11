@@ -38,9 +38,11 @@ def main():
         )
         .group_by("ctg")
         .agg(pl.sum("length").alias("length"))
-        .with_columns(pl.col("ctg").str.split_exact("_", 2))
+        .with_columns(
+            pl.col("ctg").str.extract_groups(r"(.*?)_(rc-chr[XY0-9]+|chr[XY0-9]+)_(.*?)")
+        )
         .unnest("ctg")
-        .rename({"field_0": "sample", "field_1": "chr", "field_2": "ctg"})
+        .rename({"1": "sample", "2": "chr", "3": "ctg"})
     )
 
     df_cnts = (
