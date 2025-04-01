@@ -92,20 +92,22 @@ rule get_original_coords:
         "../envs/tools.yaml"
     shell:
         """
-        {{ join -1 3 -2 1 \
-            <(sed 's/_/\\t/g' {input.bed} | sort -k 3 | cut -f 1,2,3,4,5) \
+        {{ join -1 1 -2 1 \
+            <(sort -k 5 {input.bed} | awk -v OFS="\\t" '{{print $5, $2, $3, $1}}') \
             <(cut -f 1,2 {input.asm_faidx} | sort -k 1) | \
         awk -v OFS="\\t" '{{
-            ctg=$2"_"$3"_"$1
-            is_reversed=($3 ~ "rc")
-            start=$4; end=$5;
-            adj_start=$4; adj_end=$5;
+            ctg=$1
+            final_ctg=$4
+            len=$5
+            is_reversed=($4 ~ "rc")
+            start=$2; end=$3;
+            adj_start=$2; adj_end=$3;
             if (is_reversed) {{
-                adj_start=$6-end
-                adj_end=$6-start
+                adj_start=len-end
+                adj_end=len-start
             }}
-            print $1, adj_start, adj_end > "{output.og_coords}"
-            print $1, adj_start, adj_end, ctg, start, end, $6
+            print ctg, adj_start, adj_end > "{output.og_coords}"
+            print ctg, adj_start, adj_end, final_ctg, start, end, len
         }}';}} > {output.og_coords_key} 2> {log}
         """
 
