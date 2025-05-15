@@ -232,9 +232,8 @@ NUCFLAG_CFG = {
 
 module NucFlag:
     snakefile:
-        github(
-            "logsdon-lab/Snakemake-NucFlag", path="workflow/Snakefile", branch="main"
-        )
+        # TODO: Update commit and use submodule here.
+        "Snakemake-NucFlag/workflow/Snakefile"
     config:
         NUCFLAG_CFG
 
