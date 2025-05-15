@@ -43,7 +43,8 @@ repeatmasker:
   repeat_colors: "config/repeatmasker_colors.json"
   config_censtats_status: "config/censtats.json"
 
-humas_sd:
+humas_annot:
+  mode: "sd"
   hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
   threads: 4
 

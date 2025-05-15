@@ -76,7 +76,8 @@ repeatmasker:
   repeat_colors: "config/repeatmasker_colors.json"
   threads: 12
 
-humas_sd:
+humas_annot:
+  mode: "hmmer" # or "sd"
   threads: 6
   mem: 30GB
   hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
