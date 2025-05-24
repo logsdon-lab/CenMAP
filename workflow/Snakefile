@@ -70,9 +70,9 @@ module fix_cens_w_repeatmasker:
         config
 
 
-module humas_sd:
+module humas_annot:
     snakefile:
-        "rules/8-humas_sd.smk"
+        "rules/8-humas_annot.smk"
     config:
         config
 
@@ -164,13 +164,7 @@ use rule * from repeatmasker
 use rule * from fix_cens_w_repeatmasker
 
 
-use rule * from humas_sd
-
-
 use rule * from format_repeatmasker_sat_annot
-
-
-use rule * from format_hor_stv
 
 
 use rule * from get_complete_correct_cens
@@ -189,13 +183,22 @@ output = [
     rules.dna_brnn_all.input,
     rules.repeatmasker_all.input,
     rules.fix_cens_w_repeatmasker_all.input,
-    rules.humas_sd_all.input,
     rules.get_complete_correct_cens_all.input,
 ]
 
 # Download T2T-CHM13 reference assembly if existing path not provided.
 if not config["align_asm_to_ref"].get("reference"):
     output.append(rules.download_ref_asm.output)
+
+
+if config.get("humas_annot"):
+
+    use rule * from humas_annot
+
+    use rule * from format_hor_stv
+
+    output.append(rules.humas_annot_all.input)
+
 
 # Omit assembly check. Primarily used for debugging faster.
 if config.get("nucflag"):
@@ -205,7 +208,7 @@ if config.get("nucflag"):
     output.append(rules.nucflag_all.input)
 
 
-if config.get("plot_hor_stv"):
+if config.get("humas_annot") and config.get("plot_hor_stv"):
 
     use rule * from plot_hor_stv
 
@@ -218,14 +221,18 @@ if config.get("plot_hor_stv"):
     )
 
 
-if config.get("moddotplot") and config.get("plot_hor_stv"):
+if (
+    config.get("humas_annot")
+    and config.get("moddotplot")
+    and config.get("plot_hor_stv")
+):
 
     use rule * from moddotplot
 
     output.append(rules.moddotplot_all.input)
 
 
-if config.get("calculate_hor_length"):
+if config.get("humas_annot") and config.get("calculate_hor_length"):
 
     use rule * from calculate_hor_length
 

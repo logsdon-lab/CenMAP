@@ -196,10 +196,14 @@ properties:
 
     required:
       - config_censtats_status
-  humas_sd:
+  humas_annot:
     type: object
     additionalProperties: false
     properties:
+      mode:
+        type: string
+        enum: ["sd", "hmmer"]
+        default: sd
       threads:
         type: integer
         default: 6
@@ -334,4 +338,3 @@ required:
   - ident_cen_ctgs
   - dna_brnn
   - repeatmasker
-  - humas_sd

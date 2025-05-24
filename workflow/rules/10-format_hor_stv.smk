@@ -1,5 +1,5 @@
 include: "common.smk"
-include: "8-humas_sd.smk"
+include: "8-humas_annot.smk"
 include: "9-get_complete_correct_cens.smk"
 
 
@@ -9,7 +9,7 @@ FMT_HOR_STV_LOGDIR = join(LOG_DIR, "10-format_hor_stv")
 
 checkpoint aggregate_format_all_stv_row:
     input:
-        unpack(humas_sd_chr_outputs),
+        unpack(humas_annot_chr_outputs),
     output:
         join(FMT_HOR_STV_OUTDIR, "bed", "{chr}", "stv_all.bed"),
     log:

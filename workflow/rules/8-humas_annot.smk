@@ -5,19 +5,19 @@ include: "1-concat_asm.smk"
 include: "7-fix_cens_w_repeatmasker.smk"
 
 
-HUMAS_SD_OUTDIR = join(OUTPUT_DIR, "8-humas_sd")
-HUMAS_SD_LOGDIR = join(LOG_DIR, "8-humas_sd")
-HUMAS_SD_BMKDIR = join(BMK_DIR, "8-humas_sd")
+HUMAS_ANNOT_OUTDIR = join(OUTPUT_DIR, "8-humas_annot")
+HUMAS_ANNOT_LOGDIR = join(LOG_DIR, "8-humas_annot")
+HUMAS_ANNOT_BMKDIR = join(BMK_DIR, "8-humas_annot")
 
 
-rule extract_cens_for_humas_sd:
+rule extract_cens_for_humas_annot:
     input:
         fa=rules.rename_reort_asm.output.fa,
         bed=ancient(rules.make_complete_cens_bed.output),
     output:
         seq=temp(
             join(
-                HUMAS_SD_OUTDIR,
+                HUMAS_ANNOT_OUTDIR,
                 "seq",
                 "interm",
                 "{sm}_cens.fa",
@@ -25,7 +25,7 @@ rule extract_cens_for_humas_sd:
         ),
         idx=temp(
             join(
-                HUMAS_SD_OUTDIR,
+                HUMAS_ANNOT_OUTDIR,
                 "seq",
                 "interm",
                 "{sm}_cens.fa.fai",
@@ -34,7 +34,7 @@ rule extract_cens_for_humas_sd:
     conda:
         "../envs/tools.yaml"
     log:
-        join(HUMAS_SD_LOGDIR, "extract_cens_for_humas_sd_{sm}.log"),
+        join(HUMAS_ANNOT_LOGDIR, "extract_cens_for_humas_annot_{sm}.log"),
     params:
         # Seqtk outputs 1-based coords which causes name issues.
         bed=lambda wc, input: f"""<(awk -v OFS="\\t" '{{print $1, $2-1, $3}}' {input.bed})""",
@@ -43,18 +43,18 @@ rule extract_cens_for_humas_sd:
         shell_extract_and_index_fa
 
 
-checkpoint split_cens_for_humas_sd:
+checkpoint split_cens_for_humas_annot:
     input:
-        fa=rules.extract_cens_for_humas_sd.output.seq,
+        fa=rules.extract_cens_for_humas_annot.output.seq,
     output:
         touch(
             join(
-                HUMAS_SD_OUTDIR,
-                "split_cens_for_humas_sd_{sm}.done",
+                HUMAS_ANNOT_OUTDIR,
+                "split_cens_for_humas_annot_{sm}.done",
             )
         ),
     log:
-        join(HUMAS_SD_LOGDIR, "split_{sm}_cens_for_humas_sd.log"),
+        join(HUMAS_ANNOT_LOGDIR, "split_{sm}_cens_for_humas_annot.log"),
     params:
         split_dir=HUMAS_CENS_SPLIT_DIR,
     conda:
@@ -72,25 +72,35 @@ checkpoint split_cens_for_humas_sd:
         """
 
 
-module HumAS_SD:
+if config["humas_annot"]["mode"] == "sd":
+    humas_module_smk = "Snakemake-HumAS-SD/workflow/Snakefile"
+    humas_env = "Snakemake-HumAS-SD/workflow/envs/env.yaml"
+else:
+    humas_module_smk = "Snakemake-HumAS-HMMER/workflow/Snakefile"
+    humas_env = "Snakemake-HumAS-HMMER/workflow/envs/env.yaml"
+
+
+module HumAS_Annot:
     snakefile:
-        "Snakemake-HumAS-SD/workflow/Snakefile"
+        humas_module_smk
     config:
         {
-            **config["humas_sd"],
+            **config["humas_annot"],
+            # if hmmer, otherwise no effect.
+            "mode": "hor",
             "input_dir": HUMAS_CENS_SPLIT_DIR,
-            "output_dir": HUMAS_SD_OUTDIR,
-            "logs_dir": HUMAS_SD_LOGDIR,
-            "benchmarks_dir": HUMAS_SD_BMKDIR,
+            "output_dir": HUMAS_ANNOT_OUTDIR,
+            "logs_dir": HUMAS_ANNOT_LOGDIR,
+            "benchmarks_dir": HUMAS_ANNOT_BMKDIR,
         }
 
 
-use rule * from HumAS_SD as cens_*
+use rule * from HumAS_Annot as cens_*
 
 
 # https://stackoverflow.com/a/63040288
-def humas_sd_sm_outputs(wc):
-    _ = checkpoints.split_cens_for_humas_sd.get(**wc).output
+def humas_annot_sm_outputs(wc):
+    _ = checkpoints.split_cens_for_humas_annot.get(**wc).output
     wcs = glob_wildcards(
         join(HUMAS_CENS_SPLIT_DIR, wc.sm + "_{chrom}_{ctg}.fa"),
     )
@@ -102,18 +112,23 @@ def humas_sd_sm_outputs(wc):
     }
 
 
-checkpoint run_humas_sd:
+checkpoint run_humas_annot:
     input:
-        rules.cens_generate_monomers.output,
-        expand(rules.split_cens_for_humas_sd.output, sm=SAMPLE_NAMES),
-        unpack(humas_sd_sm_outputs),
+        # Force monomers to be generated.
+        (
+            rules.cens_generate_monomers.output
+            if config["humas_annot"]["mode"] == "sd"
+            else []
+        ),
+        expand(rules.split_cens_for_humas_annot.output, sm=SAMPLE_NAMES),
+        unpack(humas_annot_sm_outputs),
     output:
-        touch(join(HUMAS_SD_OUTDIR, "humas_sd_{sm}.done")),
+        touch(join(HUMAS_ANNOT_OUTDIR, "humas_annot_{sm}.done")),
 
 
 # https://stackoverflow.com/a/63040288
-def humas_sd_chr_outputs(wc):
-    _ = [checkpoints.run_humas_sd.get(sm=sm).output for sm in SAMPLE_NAMES]
+def humas_annot_chr_outputs(wc):
+    _ = [checkpoints.run_humas_annot.get(sm=sm).output for sm in SAMPLE_NAMES]
     wcs = glob_wildcards(
         join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg}.fa"),
     )
@@ -132,17 +147,17 @@ def humas_sd_chr_outputs(wc):
 
 # Force including conda so --containerize includes.
 # Must be done since Snakemake won't know rule metadata until runtime.
-rule _force_humas_sd_env_inclusion:
+rule _force_humas_annot_env_inclusion:
     output:
-        plots=touch("conda_humas_sd.done"),
+        plots=touch("conda_humas_annot.done"),
     conda:
-        "Snakemake-HumAS-SD/workflow/envs/env.yaml"
+        humas_env
     shell:
         "echo ''"
 
 
-rule humas_sd_all:
+rule humas_annot_all:
     input:
-        rules._force_humas_sd_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
-        expand(rules.run_humas_sd.output, sm=SAMPLE_NAMES),
+        rules._force_humas_annot_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
+        expand(rules.run_humas_annot.output, sm=SAMPLE_NAMES),
     default_target: True

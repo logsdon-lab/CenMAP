@@ -1,12 +1,16 @@
 include: "common.smk"
 include: "1-concat_asm.smk"
 include: "7-fix_cens_w_repeatmasker.smk"
-include: "8-humas_sd.smk"
 
 
 NUCFLAG_OUTDIR = join(OUTPUT_DIR, "8-nucflag")
 NUCFLAG_LOGDIR = join(LOG_DIR, "8-nucflag")
 NUCFLAG_BMKDIR = join(BMK_DIR, "8-nucflag")
+
+
+if config.get("humas_annot"):
+
+    include: "8-humas_annot.smk"
 
 
 # Simplify RepeatMasker annotations
@@ -78,7 +82,7 @@ rule format_repeatmasker_to_overlay_bed:
 # Convert stv_row bed to overlay bed with colors based on monomer len.
 rule format_stv_to_overlay_bed:
     input:
-        stv=humas_sd_sm_outputs,
+        stv=lambda wc: humas_annot_sm_outputs(wc) if config.get("humas_annot") else [],
         annot_colors=(
             config["plot_hor_stv"]["stv_annot_colors"]
             if config.get("plot_hor_stv")
@@ -148,7 +152,7 @@ rule format_rm_nucflag_ignore_bed:
 # Also add ignore bed if provided.
 rule format_stv_nucflag_ignore_bed:
     input:
-        stv=humas_sd_sm_outputs,
+        stv=lambda wc: humas_annot_sm_outputs(wc) if config.get("humas_annot") else [],
         bed=ancient(rules.make_complete_cens_bed.output),
         ignore_bed=(
             config["nucflag"]["ignore_regions"]
@@ -190,7 +194,7 @@ IGNORE_TYPE = config["nucflag"].get("ignore_type")
 if IGNORE_TYPE == "asat":
     ignore_regions = str(rules.format_rm_nucflag_ignore_bed.output)
     overlay_beds = [str(rules.format_repeatmasker_to_overlay_bed.output)]
-elif IGNORE_TYPE == "live_asat":
+elif config.get("humas_annot") and IGNORE_TYPE == "live_asat":
     ignore_regions = [str(rules.format_stv_nucflag_ignore_bed.output)]
     overlay_beds = [str(rules.format_stv_to_overlay_bed.output)]
 else:
