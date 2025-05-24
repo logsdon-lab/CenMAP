@@ -114,6 +114,12 @@ def humas_annot_sm_outputs(wc):
 
 checkpoint run_humas_annot:
     input:
+        # Force monomers to be generated.
+        (
+            rules.cens_generate_monomers.output
+            if config["humas_annot"]["mode"] == "sd"
+            else []
+        ),
         expand(rules.split_cens_for_humas_annot.output, sm=SAMPLE_NAMES),
         unpack(humas_annot_sm_outputs),
     output:
