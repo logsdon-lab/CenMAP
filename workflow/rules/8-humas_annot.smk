@@ -108,7 +108,7 @@ def humas_annot_sm_outputs(wc):
     chrs = wcs.chrom
 
     return {
-        "stv": expand(outfile, zip, fname=fnames, chr=chrs),
+        "stv": expand(rules.cens_generate_stv.output, zip, fname=fnames, chr=chrs),
     }
 
 
