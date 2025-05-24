@@ -41,6 +41,8 @@ rule create_rm_satellite_annotations:
         sat_annot_colors=lambda wc, input: (
             f"--patterns {input.rm_sat_patterns}" if input.rm_sat_patterns else ""
         ),
+    log:
+        join(FMT_RM_SAT_LOGDIR, "create_rm_satellite_annotations.log"),
     conda:
         "../envs/py.yaml"
     shell:
