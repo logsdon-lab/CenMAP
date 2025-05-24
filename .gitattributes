@@ -21,3 +21,7 @@ test/filter_dnabrnn_output/input/HG03248_chr16_hap1_reverse.bed filter=lfs diff=
 test/filter_dnabrnn_output/expected/HG03248_chr16_hap1_reverse_filtered.bed filter=lfs diff=lfs merge=lfs -text
 test/format_rm_sat_annot/input/HG00731_correct_ALR_regions.fa.reformatted.out filter=lfs diff=lfs merge=lfs -text
 test/format_rm_sat_annot/expected/HG00731_correct_ALR_regions.fa.reformatted.bed filter=lfs diff=lfs merge=lfs -text
+test/make_complete_cens/expected/HG02583.bed filter=lfs diff=lfs merge=lfs -text
+test/make_complete_cens/expected/HG02583_new_name.bed filter=lfs diff=lfs merge=lfs -text
+test/make_complete_cens/input/HG02583.fa.fai filter=lfs diff=lfs merge=lfs -text
+test/make_complete_cens/input/HG02583.tsv filter=lfs diff=lfs merge=lfs -text

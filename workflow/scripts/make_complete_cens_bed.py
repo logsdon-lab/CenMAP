@@ -25,6 +25,9 @@ def main():
         type=argparse.FileType("wt"),
         help=f"Output rename key. Format: {OUTPUT_FIELDS}",
     )
+    ap.add_argument(
+        "--use_new_name", action="store_true", help="Use censtats new_name column."
+    )
     args = ap.parse_args()
 
     # join_cen_status_and_og_status
@@ -46,8 +49,14 @@ def main():
             name_elems=pl.col("old_name")
             .str.extract_groups(r"(.*?)_(chr[0-9XY]+)_(.*?):(.*?)$")
             .struct.rename_fields(["sample", "chrom", "ctg_name", "coords"]),
+            new_name_elems=pl.col("new_name")
+            .str.extract_groups(r"(.*?)_(chr[0-9XY]+)_(.*?):(.*?)$")
+            .struct.rename_fields(
+                ["new_sample", "new_chrom", "new_ctg_name", "new_coords"]
+            ),
         )
         .unnest("name_elems")
+        .unnest("new_name_elems")
         .with_columns(
             pl.col("coords")
             .str.split_exact(by="-", n=1)
@@ -64,11 +73,27 @@ def main():
         separator="\t",
     ).drop("a", "b", "c")
 
+    col_prefix = "new_" if args.use_new_name else ""
+    new_name_expr = (
+        pl.when(pl.col("ort") == "rev")
+        .then(
+            pl.col(f"{col_prefix}sample")
+            + "_rc-"
+            + pl.col(f"{col_prefix}chrom")
+            + "_"
+            + pl.col(f"{col_prefix}ctg_name")
+        )
+        .otherwise(
+            pl.col(f"{col_prefix}sample")
+            + "_"
+            + pl.col(f"{col_prefix}chrom")
+            + "_"
+            + pl.col(f"{col_prefix}ctg_name")
+        )
+    )
     # get_final_rename_key
     df_status_w_ctg_len = df_statuses.join(df_fai, on=["ctg_name"]).with_columns(
-        new_name=pl.when(pl.col("ort") == "rev")
-        .then(pl.col("sample") + "_rc-" + pl.col("chrom") + "_" + pl.col("ctg_name"))
-        .otherwise(pl.col("sample") + "_" + pl.col("chrom") + "_" + pl.col("ctg_name")),
+        new_name=new_name_expr,
         new_cen_st=pl.when(pl.col("ort") == "rev")
         .then(pl.col("ctg_len") - pl.col("cen_end") + 1)
         .otherwise(pl.col("cen_st")),

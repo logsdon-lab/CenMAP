@@ -75,13 +75,19 @@ rule make_complete_cens_bed:
             "interm",
             "{sm}_complete_cens.bed",
         ),
+    params:
+        use_censtats_new_name=(
+            "--use_new_name"
+            if config["repeatmasker"].get("use_censtats_new_name")
+            else ""
+        )
     log:
         join(FIX_RM_LOGDIR, "get_complete_cens_bed_{sm}.log"),
     conda:
         "../envs/py.yaml"
     shell:
         """
-        python {input.script} -i {input.status} -f {input.faidx} > {output} 2> {log}
+        python {input.script} -i {input.status} -f {input.faidx} {params.use_censtats_new_name} > {output} 2> {log}
         """
 
 

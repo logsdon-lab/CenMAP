@@ -75,6 +75,7 @@ repeatmasker:
   - data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
   config_censtats_status: "config/censtats.json"
   repeat_colors: "config/repeatmasker_colors.json"
+  use_censtats_new_name: true
   threads: 12
 
 humas_annot:

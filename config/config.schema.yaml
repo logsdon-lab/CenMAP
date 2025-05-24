@@ -197,7 +197,10 @@ properties:
       threads:
         type: integer
         default: 12
-
+      use_censtats_new_name:
+        type: boolean
+        description: Use censtats status new name. Helps in reducing false chromosome mappings in acrocentric chromosomes.
+        default: true
     required:
       - config_censtats_status
   humas_annot:
