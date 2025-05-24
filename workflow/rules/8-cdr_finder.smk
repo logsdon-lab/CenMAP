@@ -60,9 +60,7 @@ CDR_ALIGN_CFG = {
 
 module CDR_Align:
     snakefile:
-        github(
-            "logsdon-lab/Snakemake-Aligner", path="workflow/Snakefile", branch="main"
-        )
+        "Snakemake-Aligner/workflow/Snakefile"
     config:
         CDR_ALIGN_CFG
 

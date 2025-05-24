@@ -16,15 +16,15 @@
         "color": "#3A3A3A"
     },
     "hsat2":{
-        "pattern": "HSATII\\b",
+        "pattern": "^HSATII$",
         "color": "#3A3A3A"
     },
     "hsat1B":{
-        "pattern": "HSATI\\b",
+        "pattern": "^HSATI$",
         "color": "#3A3A3A"
     },
     "hsat3":{
-        "pattern": "(CATTC)n\\|(GAATG)n",
+        "pattern": "(CATTC)n|(GAATG)n",
         "color": "#3A3A3A"
     },
     "ct": {

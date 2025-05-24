@@ -27,11 +27,7 @@ ALN_CFG = {
 # https://github.com/mrvollger/asm-to-reference-alignment/blob/main/workflow/rules/reference_alignment.smk
 module align_asm_to_ref:
     snakefile:
-        github(
-            "koisland/asm-to-reference-alignment",
-            path="workflow/Snakefile",
-            branch="minimal",
-        )
+        "asm-to-reference-alignment/workflow/Snakefile"
     config:
         ALN_CFG
 
