@@ -12,7 +12,7 @@ conda:
 
 update_submodules:
 	git submodule init
-	git submodule update --remote --recursive
+	git submodule update --init --recursive --remote
 
 dockerfile:
 	snakemake -p -c 1 --sdm apptainer --configfile test/config/config.yaml --containerize > Dockerfile

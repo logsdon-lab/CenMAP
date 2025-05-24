@@ -232,7 +232,6 @@ NUCFLAG_CFG = {
 
 module NucFlag:
     snakefile:
-        # TODO: Update commit and use submodule here.
         "Snakemake-NucFlag/workflow/Snakefile"
     config:
         NUCFLAG_CFG
