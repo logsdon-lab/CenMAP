@@ -51,7 +51,7 @@ rule run_moddotplot:
 rule filter_annotations_moddotplot:
     input:
         chr_stv_row_bed=rules.aggregate_format_all_stv_row.output,
-        all_sat_annot_bed=rules.aggregate_rm_satellite_annotations.output,
+        all_sat_annot_bed=rules.create_rm_satellite_annotations.output,
         all_cdr_bed=(
             join(
                 OUTPUT_DIR,

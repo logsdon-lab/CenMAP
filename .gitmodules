@@ -1,6 +1,6 @@
 [submodule "workflow/rules/CDR-Finder"]
 	path = workflow/rules/CDR-Finder
-	url = https://github.com/logsdon-lab/CDR-Finder
+	url = https://github.com/koisland/CDR-Finder.git
 [submodule "workflow/rules/Snakemake-HumAS-SD"]
 	path = workflow/rules/Snakemake-HumAS-SD
 	url = https://github.com/logsdon-lab/Snakemake-HumAS-SD.git
