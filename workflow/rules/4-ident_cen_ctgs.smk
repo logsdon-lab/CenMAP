@@ -84,8 +84,6 @@ rule intersect_with_pq_arm:
 
 
 # Map each centromeric contig to a chromosome based on intersection with CHM13 monomeric regions.
-# Also attempt to reorient.
-# No length threshold at this point.
 rule map_collapse_cens:
     input:
         script=workflow.source_path("../scripts/map_cens.py"),
@@ -105,14 +103,15 @@ rule map_collapse_cens:
             "{sm}_renamed_cens.tsv",
         ),
     params:
-        thr_ctg_len=0,
+        # TODO: Should also affect humas-sd monomer lib creation.
+        allow_pq_mismatch="--allow_pq_mismatch" if config["ident_cen_ctgs"].get("allow_pq_mismatch") else ""
     conda:
         "../envs/py.yaml"
     log:
         join(IDENT_CEN_CTGS_LOGDIR, "map_collapse_cens_{sm}.log"),
     shell:
         """
-        python {input.script} -i {input.regions} -t {params.thr_ctg_len} > {output.cens_key} 2> {log}
+        python {input.script} -i {input.regions} {params.allow_pq_mismatch} > {output.cens_key} 2> {log}
         awk -v OFS="\\t" '{{
             st=$2+1
             end=$3
@@ -124,7 +123,7 @@ rule map_collapse_cens:
         """
 
 
-# Extract centromeric contigs.
+# Extract complete centromeric contigs.
 rule extract_cens_regions:
     input:
         bed=rules.map_collapse_cens.output.cens_key,

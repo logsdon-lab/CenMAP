@@ -1,5 +1,7 @@
 import sys
 import argparse
+from typing import Any, Callable, Iterable
+from collections import defaultdict, deque
 import polars as pl
 
 ALN_HEADER = [
@@ -28,6 +30,40 @@ ALN_HEADER = [
 ]
 ACRO_CHRS = {"chr21", "chr22", "chr13", "chr14", "chr15"}
 
+Interval = tuple[int, int, Any]
+                 
+def merge_itvs(
+    itvs: Iterable[Interval],
+    dst: int = 1,
+    fn_cmp: Callable[[Interval, Interval], bool] | None = None,
+    fn_merge_itv: Callable[[Interval, Interval], Interval] | None = None,
+) -> list[Interval]:
+    if not fn_cmp:
+        fn_cmp = lambda x, y: True
+    if not fn_merge_itv:
+        fn_merge_itv = lambda x, y: (x[0], y[1], None)
+
+    final_itvs = []
+    sorted_itvs = deque(sorted(itvs))
+    while sorted_itvs:
+        try:
+            itv_1 = sorted_itvs.popleft()
+        except IndexError:
+            break
+        try:
+            itv_2 = sorted_itvs.popleft()
+        except IndexError:
+            final_itvs.append(itv_1)
+            break
+        dst_between = itv_2[0] - itv_1[1]
+        passes_cmp = fn_cmp(itv_1, itv_2)
+        if dst_between <= dst and passes_cmp:
+            sorted_itvs.appendleft(fn_merge_itv(itv_1, itv_2))
+        else:
+            final_itvs.append(itv_1)
+            sorted_itvs.appendleft(itv_2)
+
+    return final_itvs
 
 def main():
     ap = argparse.ArgumentParser("Map cens from alignments.")
@@ -39,7 +75,9 @@ def main():
         type=argparse.FileType("rb"),
     )
     ap.add_argument("-o", "--output", default=sys.stdout, type=argparse.FileType("wt"))
-    ap.add_argument("-t", "--len_thr", default=1_000_000, type=int)
+    ap.add_argument("-m", "--merge", default=5_000_000, type=int, help="Merge pq arm alignments by n bps. ")
+    ap.add_argument("-s", "--slop", default=500_000, type=int, help="Add n bps to ends. ")
+    ap.add_argument("--allow_pq_mismatch", action="store_true", help="Allow non-matching chromosome pq arm pairs.")
 
     args = ap.parse_args()
 
@@ -47,115 +85,64 @@ def main():
         args.input, separator="\t", new_columns=ALN_HEADER, has_header=False
     )
 
-    # To pass, a given query sequence must have both p and q arms mapped.
-    # The acrocentrics are exceptions and only require the q-arm.
-    df = df.filter(
-        pl.when(~pl.col("reference_name").is_in(ACRO_CHRS))
-        .then(
-            pl.all_horizontal(
-                (pl.col("arm") == "p-arm").any(), (pl.col("arm") == "q-arm").any()
-            ).over("query_name")
-        )
-        .otherwise(
-            pl.all_horizontal((pl.col("arm") == "q-arm").any()).over("query_name")
-        )
-    )
-
-    df_qarms = df.filter(pl.col("arm") == "q-arm").filter(
-        pl.col("matches") == pl.col("matches").max().over(["query_name"])
-    )
-    df_concensus_mapping = (
-        # Default to picking reference by number of matches
-        df.filter(pl.col("matches") == pl.col("matches").max().over(["query_name"]))
-        .join(df_qarms, on=["query_name"], how="left")
-        .select("query_name", "reference_name", "reference_name_right", "arm_right")
-        .unique()
-        # But if has alignment to q-arm, take that instead.
-        .with_columns(
-            reference_name=pl.when(pl.col("arm_right") == "q-arm")
-            .then(pl.col("reference_name_right"))
-            .otherwise(pl.col("reference_name"))
-        )
-        .select(["query_name", "reference_name_right"])
-    )
-    df_ctg_groups = (
-        df.join(df_concensus_mapping, on=["query_name"], how="left")
-        .rename(
-            {
-                "reference_name_right": "final_reference_name",
-            }
-        )
-        .group_by(["query_name", "final_reference_name"])
-    )
-
-    rows_ctg_grps: list[tuple[str, int, int, int, str]] = []
-    for (qname, rname), df_ctg_grp in df_ctg_groups:
-        ctg_start = df_ctg_grp["query_start"].min()
-        ctg_end = df_ctg_grp["query_end"].max()
-        ctg_len = ctg_end - ctg_start
-
-        if ctg_len < args.len_thr:
-            continue
-
-        # Find arm mapping with highest number of matches.
-        df_ctg_pqarm_mapping = df_ctg_grp.filter(pl.col("arm") != ".").filter(
-            pl.col("matches") == pl.col("matches").max().over(["arm"])
-        )
-
-        # Reverse complement if needed.
-        df_ort_check = df_ctg_pqarm_mapping.with_columns(
-            exp_arm=pl.when(pl.col("query_start") == pl.col("query_start").min())
-            .then(pl.lit("p-arm"))
-            .otherwise(pl.lit("q-arm"))
-        )
-        if df_ort_check.is_empty():
-            continue
-        # Either:
-        # * Mapping with pq arm covers same region
-        #   p| | |q (+)
-        #   q| | |p (-)
-        # * Unable to determine without both arms.
-        # Rely on solely aln strand information.
-        elif (
-            df_ort_check.shape[0] == 1
-            or df_ort_check.select("reference_name", "reference_start", "reference_end")
-            .unique()
-            .shape[0]
-            == 1
-        ):
-            is_not_rc = df_ort_check["strand"][0] == "+"
-        else:
-            is_not_rc = (df_ort_check["arm"] == df_ort_check["exp_arm"]).all() or (
-                df_ort_check["strand"] != "-"
-            ).all()
-
-        adj_ctg_start = ctg_start
-        adj_ctg_end = ctg_end
-
-        rows_ctg_grps.append(
-            (
-                qname,
-                adj_ctg_start,
-                adj_ctg_end,
-                rname,
-                adj_ctg_end - adj_ctg_start,
-                not is_not_rc,
+    for qname, df_query in df.sort(by="query_name").group_by(["query_name"], maintain_order=True):
+        qname = qname[0]
+        # To pass, a given query sequence must have both p and q arms mapped.
+        # The acrocentrics are exceptions and only require the q-arm.
+        df_query = df_query.filter(
+            pl.when(~pl.col("reference_name").is_in(ACRO_CHRS))
+            .then(
+                pl.all_horizontal(
+                    (pl.col("arm") == "p-arm").any(), (pl.col("arm") == "q-arm").any()
+                )
             )
+            .otherwise(pl.all_horizontal((pl.col("arm") == "q-arm").any()))
+        ).sort(by=["query_start"])
+        if df_query.is_empty():
+            print(f"Skipped {qname}.", file=sys.stderr)
+            continue
+
+        df_pqarms = df_query.filter(
+            (pl.col("arm") == "p-arm") | (pl.col("arm") == "q-arm")
+        ).select(
+            "reference_name", "strand", "matches", "query_start", "query_end", "arm"
         )
 
-    df_minmax = pl.DataFrame(
-        rows_ctg_grps,
-        schema={
-            "query_name": pl.String,
-            "query_start": pl.Int64,
-            "query_end": pl.Int64,
-            "reference_name": pl.String,
-            "query_len": pl.Int64,
-            "reverse_complement": pl.Boolean,
-        },
-        orient="row",
-    )
-    df_minmax.write_csv(args.output, separator="\t", include_header=False)
+        arms = defaultdict(dict)
+        for prts, df_arm in df_pqarms.partition_by(["reference_name", "arm"], as_dict=True).items():
+            ref, arm = prts
+            itvs = merge_itvs(
+                df_arm.select("query_start", "query_end", "strand").iter_rows(),
+                dst=args.merge,
+            )
+            arms[arm][ref] = itvs
+        
+        for ref_chrom, itvs in arms["q-arm"].items():
+            if len(itvs) > 1:
+                print(f"Multiple {ref_chrom} q-arms after merging. {itvs}", file=sys.stderr)
+            qarm_itv = itvs[0]
+
+            if ref_chrom in ACRO_CHRS or args.allow_pq_mismatch:
+                parm_itvs = [itv for pitvs in arms["p-arm"].values() for itv in pitvs]
+            else:
+                parm_itvs = arms["p-arm"][ref_chrom]
+            try:
+                closest_parm_itv = min(parm_itvs, key=lambda x: abs(x[0] - qarm_itv[1]))
+            except ValueError:
+                # No p-arm
+                continue
+            
+            st = min(closest_parm_itv[0], qarm_itv[0])
+            end = max(closest_parm_itv[1], qarm_itv[1])
+            if qarm_itv[2] == "+" or closest_parm_itv[2] == "+":
+                is_rc = "false"
+            else:
+                is_rc = "true"
+
+            row = [
+                qname, st - args.slop, end + args.slop, ref_chrom, end-st, is_rc
+            ]
+            print("\t".join(str(e) for e in row), file=args.output)
 
 
 if __name__ == "__main__":

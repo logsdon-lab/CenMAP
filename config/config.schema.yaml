@@ -83,6 +83,10 @@ properties:
     type: object
     additionalProperties: false
     properties:
+      allow_pq_mismatch:
+        type: boolean
+        default: false
+        description: Allow mismatch reference chromosome in pq arm match. For abnormal centromeres with translocations/breakpoints.
       ref_cens_regions:
         type: string
         description: Path to BED file with reference centromere regions.

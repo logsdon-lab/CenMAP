@@ -9,6 +9,7 @@ from test.helpers.integration import run_integration_test
             f"test/map_cens/input/{sm}_cens.bed",
             f"test/map_cens/expected/{sm}_expected_cens.bed",
         )
+        # HG00512 - no p-arm
         for sm in ["HG00512", "NA19705", "NA20355"]
     ],
 )
