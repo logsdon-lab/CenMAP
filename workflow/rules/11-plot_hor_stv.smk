@@ -25,7 +25,7 @@ rule filter_annotations_hor_stv:
         ),
         all_stv_bed=rules.aggregate_format_all_stv_row.output,
         complete_stv_bed=rules.filter_complete_correct_stv_row.output,
-        all_rm_sat_bed=rules.aggregate_rm_satellite_annotations.output,
+        all_rm_sat_bed=rules.create_rm_satellite_annotations.output,
     output:
         all_stv_bed=join(
             PLT_HOR_STV_OUTDIR,

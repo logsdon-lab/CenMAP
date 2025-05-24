@@ -45,11 +45,6 @@ MONOMER_ORDER = {
     "chrX": "large",
     "chrY": "small",
 }
-if config.get("plot_hor_stv"):
-    with open(config["plot_hor_stv"]["sat_annot_colors"]) as fh:
-        ANNOTATE_SAT_REPEATS = json.load(fh)
-else:
-    ANNOTATE_SAT_REPEATS = {}
 
 REF_CENS_EDGE_LEN = round(
     (500_000 + config["extract_ref_hor_arrays"]["added_bases"]) / 1000
