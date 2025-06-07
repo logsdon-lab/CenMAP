@@ -12,39 +12,12 @@ CONTAINER = config["container"]
 OUTPUT_DIR = "results"
 LOG_DIR = "logs"
 BMK_DIR = "benchmarks"
-HUMAS_CENS_SPLIT_DIR = join(OUTPUT_DIR, "8-humas_sd", "seq")
+HUMAS_CENS_SPLIT_DIR = join(OUTPUT_DIR, "8-humas_annot", "seq")
 FINAL_OUTPUT_DIR = join(OUTPUT_DIR, "final")
 
 SAMPLE_NAMES = config["samples"]
 CHROMOSOMES = config["chromosomes"]
 RGX_CHR = re.compile(r"(chr[0-9XY]+)")
-
-MONOMER_ORDER = {
-    "chr1": "large",
-    "chr2": "small",
-    "chr3": "small",
-    "chr4": "small",
-    "chr5": "small",
-    "chr6": "small",
-    "chr7": "small",
-    "chr8": "small",
-    "chr9": " large",
-    "chr10": "large",
-    "chr11": "small",
-    "chr12": "small",
-    "chr13": "small",
-    "chr14": "large",
-    "chr15": "small",
-    "chr16": "small",
-    "chr17": "large",
-    "chr18": "small",
-    "chr19": "large",
-    "chr20": "large",
-    "chr21": "small",
-    "chr22": "small",
-    "chrX": "large",
-    "chrY": "small",
-}
 
 REF_CENS_EDGE_LEN = round(
     (500_000 + config["extract_ref_hor_arrays"]["added_bases"]) / 1000

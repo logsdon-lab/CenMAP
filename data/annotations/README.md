@@ -19,10 +19,6 @@
     * Missing chrY.
     * No header.
 
-### dna-nn
-* `chm13_cens.trimmed.bed`
-    * dna-brnn output on chm13 centromeres.
-
 ### Lengths
 * `chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed`
     * chm13 HOR full array length with 500kbp added to ends.

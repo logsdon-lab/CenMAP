@@ -35,23 +35,23 @@ module extract_ref_hor_arrays:
         config
 
 
+module srf:
+    snakefile:
+        "rules/3-srf.smk"
+    config:
+        config
+
+
 module align_asm_to_ref:
     snakefile:
-        "rules/3-align_asm_to_ref.smk"
+        "rules/4-align_asm_to_ref.smk"
     config:
         config
 
 
 module ident_cen_ctgs:
     snakefile:
-        "rules/4-ident_cen_ctgs.smk"
-    config:
-        config
-
-
-module dna_brnn:
-    snakefile:
-        "rules/5-dna_brnn.smk"
+        "rules/5-ident_cen_ctgs.smk"
     config:
         config
 
@@ -149,13 +149,13 @@ use rule * from concat_asm
 use rule * from extract_ref_hor_arrays
 
 
+use rule * from srf
+
+
 use rule * from align_asm_to_ref
 
 
 use rule * from ident_cen_ctgs
-
-
-use rule * from dna_brnn
 
 
 use rule * from repeatmasker
@@ -170,17 +170,11 @@ use rule * from format_repeatmasker_sat_annot
 use rule * from get_complete_correct_cens
 
 
-rule extract_cens_all:
-    input:
-        rules.extract_ref_hor_arrays_all.input,
-        rules.align_asm_ref_all.input,
-        rules.ident_cen_ctgs_all.input,
-
-
 output = [
     # Required output.
-    rules.extract_cens_all.input,
-    rules.dna_brnn_all.input,
+    rules.srf_all.input,
+    rules.extract_ref_hor_arrays_all.input,
+    rules.ident_cen_ctgs_all.input,
     rules.repeatmasker_all.input,
     rules.fix_cens_w_repeatmasker_all.input,
     rules.get_complete_correct_cens_all.input,

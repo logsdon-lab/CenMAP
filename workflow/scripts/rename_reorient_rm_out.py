@@ -61,35 +61,47 @@ def main():
             schema_overrides={f: pl.String for f in ("right", "x", "y", "z")},
         )
         .with_columns(
-            pl.col("ctg")
-            .str.split_exact(by=":", n=1)
-            .struct.rename_fields(("ctg", "coords"))
+            mtch=pl.col("ctg").str.extract_groups(r"^.*?_.*?_(?<ctg_name>.*):(?<ctg_st>\d+)-(?<ctg_end>\d+)")
         )
-        .unnest("ctg")
-        .with_columns(
-            pl.col("coords")
-            .str.split_exact(by="-", n=1)
-            .struct.rename_fields(("cen_start", "cen_end"))
-        )
-        .unnest("coords")
-        .cast({"cen_start": pl.Int64, "cen_end": pl.Int64})
+        .unnest("mtch")
+        .cast({"ctg_st": pl.Int64, "ctg_end": pl.Int64})
     )
     df_rename_key = (
         pl.read_csv(
             args.rename_key, has_header=False, new_columns=KEY_FIELDS, separator="\t"
         )
-        .with_columns(is_rc=(pl.col("new_name").str.contains("_rc-")))
-        .with_columns(ctg=pl.col("new_name").str.replace("_rc-", "_"))
-        .select("ctg", "new_name", "is_rc", "ctg_len")
+        .with_columns(
+            is_rc=pl.col("new_name").str.contains("_rc-"),
+            ctg=pl.col("new_name").str.replace("_rc-", "_"),
+        )
+        .with_columns(
+            # Recalculate original contig start and end to join on.
+            ctg_st=pl.when(pl.col("is_rc"))
+            .then(
+                pl.col("ctg_len")-pl.col("new_cen_end") + 1
+            )
+            .otherwise(pl.col("new_cen_st")),
+            ctg_end=pl.when(pl.col("is_rc"))
+            .then(
+                pl.col("ctg_len")-pl.col("new_cen_st") + 1
+            )
+            .otherwise(pl.col("new_cen_end")),
+        )
+        .select("ctg", "new_name", "is_rc", "ctg_len", "ctg_name", "ctg_st", "ctg_end")
     )
-
     df_final_rm = (
-        df_rm.join(df_rename_key, on=["ctg"], how="inner")
+        df_rm.join(df_rename_key, on=["ctg_name", "ctg_st", "ctg_end"], how="inner")
         .with_columns(
             ctg=pl.when(pl.col("is_rc"))
-            .then(pl.col("new_name"))
+            .then(
+                pl.col("new_name")
+                + ":"
+                + (pl.col("ctg_len") - pl.col("ctg_end") + 1).cast(pl.String)
+                + "-"
+                + (pl.col("ctg_len") - pl.col("ctg_st") + 1).cast(pl.String)
+            )
             .otherwise(pl.col("ctg")),
-            cen_len=pl.col("cen_end") - pl.col("cen_start"),
+            cen_len=pl.col("ctg_end") - pl.col("ctg_st"),
         )
         .with_columns(
             start=pl.when(pl.col("is_rc"))
@@ -98,23 +110,8 @@ def main():
             end=pl.when(pl.col("is_rc"))
             .then(pl.col("cen_len") - pl.col("start") + 1)
             .otherwise(pl.col("end")),
-            ctg=pl.when(pl.col("is_rc"))
-            .then(
-                pl.col("ctg")
-                + ":"
-                + (pl.col("ctg_len") - pl.col("cen_end") + 1).cast(pl.String)
-                + "-"
-                + (pl.col("ctg_len") - pl.col("cen_start") + 1).cast(pl.String)
-            )
-            .otherwise(
-                pl.col("ctg")
-                + ":"
-                + pl.col("cen_start").cast(pl.String)
-                + "-"
-                + pl.col("cen_end").cast(pl.String)
-            ),
         )
-        .drop("new_name", "is_rc", "cen_start", "cen_end", "cen_len", "ctg_len")
+        .drop("new_name", "is_rc", "ctg_st", "ctg_end", "cen_len", "ctg_len")
         .sort(by=["ctg", "start"])
     )
     df_final_rm.write_csv(args.output, include_header=False, separator="\t")

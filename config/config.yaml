@@ -25,19 +25,20 @@ chromosomes:
   - "chrY"
 
 samples:
-  - HG00171
+  - HG008-N
+  - HG008-T
 
 # Specify container to run workflow if using singularity.
 # Optional
 container: "docker://logsdonlab/cenmap:latest"
 
 concat_asm:
-  input_dir: "data/assemblies"
+  input_dir: "data/asm"
   mem: 20GB
 
 align_asm_to_ref:
-  # reference: "data/reference/T2T-CHM13v2.fasta.gz"
-  threads: 8
+  reference: "data/reference/T2T-CHM13.fa.gz"
+  threads: 16
   mem: 120GB
 
 extract_ref_hor_arrays:
@@ -45,7 +46,7 @@ extract_ref_hor_arrays:
   added_bases: 1_000_000
 
 ident_cen_ctgs:
-  allow_pq_mismatch: false
+  allow_pq_mismatch: true
   ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
   ref_cens_unique_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
 
@@ -57,9 +58,9 @@ dna_brnn:
   thr_file: "config/dnabrnn_thresholds.json"
 
 nucflag:
-  input_hifi_reads_fofn_dir: "data/hifi"
-  # input_hifi_reads_dir: "data/hifi"
-  # reads_rgx: ".*\\.fastq.gz$"
+  # input_hifi_reads_fofn_dir: "data/hifi"
+  input_hifi_reads_dir: "data/hifi"
+  reads_rgx: ".*\\.bam$"
   config_nucflag: "config/nucflag.toml"
   threads_aln: 24
   processes_nucflag: 12
@@ -105,22 +106,22 @@ moddotplot:
   ident_thr: 70.0
   window: 5000
 
-cdr_finder:
-  # Either minimap2 or winnowmap
-  # Use aligner_opts to override defaults.
-  aligner: minimap2
-  # aligner_opts: "-y -a --eqx --cs -x lr:hqae -I8g -s 4000" # minimap2
-  # aligner_opts: "-y -a --eqx --cs -x map-ont -I8g -s 4000" # winnowmap
-  # Expects sample subdir in input_dir.
-  # Uses find and file pattern to merge bam.
-  input_bam_dir: "data/ont"
-  bam_rgx: ".*prom_pass.bam$"
-  aln_mem: 50GB
-  aln_threads: 24
-  window_size: 5000
-  alr_threshold: 100000
-  bp_alr_merge: 1000
-  bp_edge: 500_000
-  height_perc_valley_threshold: 0.34
-  prom_perc_valley_threshold: 0.3
-  extend_edges_std: -1
+# cdr_finder:
+#   # Either minimap2 or winnowmap
+#   # Use aligner_opts to override defaults.
+#   aligner: minimap2
+#   # aligner_opts: "-y -a --eqx --cs -x lr:hqae -I8g -s 4000" # minimap2
+#   # aligner_opts: "-y -a --eqx --cs -x map-ont -I8g -s 4000" # winnowmap
+#   # Expects sample subdir in input_dir.
+#   # Uses find and file pattern to merge bam.
+#   input_bam_dir: "data/ont"
+#   bam_rgx: ".*prom_pass.bam$"
+#   aln_mem: 50GB
+#   aln_threads: 24
+#   window_size: 5000
+#   alr_threshold: 100000
+#   bp_alr_merge: 1000
+#   bp_edge: 500_000
+#   height_perc_valley_threshold: 0.34
+#   prom_perc_valley_threshold: 0.3
+#   extend_edges_std: -1

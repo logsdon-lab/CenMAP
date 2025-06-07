@@ -169,13 +169,26 @@ def moddotplot_outputs(wc):
         pass
 
     wcs = glob_wildcards(
-        join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg}.fa"),
+        join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg}:{coords}.fa"),
     )
-    fnames = [
-        f"{sm}_{chrom}_{ctg}"
-        for sm, chrom, ctg in zip(wcs.sm, wcs.chr, wcs.ctg)
-        if chrom == wc.chr or chrom == f"rc-{wc.chr}"
-    ]
+    fnames = []
+    # Sort by coords so if multiple chr, chr position in name (chr3-chr21) matches.
+    sorted_wcs = sorted(zip(wcs.sm, wcs.chr, wcs.ctg, wcs.coords), key=lambda x: (x[1], x[2], x[3]), reverse=True)
+    
+    # Store index of chrom per contig.
+    # In cases of dicentric contigs.
+    ctg_counter = Counter()
+    for sm, chrom, ctg, coords in sorted_wcs:
+        chroms: list[str] = chrom.replace("rc-", "").split("-")
+        if not wc.chr in chroms:
+            continue
+        ctg_id = (sm, chrom, ctg)
+        idx = ctg_counter[ctg_id]
+        ctg_counter[ctg_id] += 1
+        if wc.chr != chroms[idx]:
+            continue
+        fnames.append(f"{sm}_{chrom}_{ctg}:{coords}")
+
     return dict(
         moddotplot=expand(rules.run_moddotplot.output, chr=wc.chr, fname=fnames),
         cen_moddoplot=expand(

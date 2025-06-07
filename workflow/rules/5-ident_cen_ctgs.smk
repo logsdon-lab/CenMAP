@@ -5,12 +5,12 @@
 include: "utils.smk"
 include: "common.smk"
 include: "1-concat_asm.smk"
-include: "3-align_asm_to_ref.smk"
+include: "4-align_asm_to_ref.smk"
 
 
-IDENT_CEN_CTGS_OUTDIR = join(OUTPUT_DIR, "4-ident_cen_ctgs")
-IDENT_CEN_CTGS_LOGDIR = join(LOG_DIR, "4-ident_cen_ctgs")
-IDENT_CEN_CTGS_BMKDIR = join(BMK_DIR, "4-ident_cen_ctgs")
+IDENT_CEN_CTGS_OUTDIR = join(OUTPUT_DIR, "5-ident_cen_ctgs")
+IDENT_CEN_CTGS_LOGDIR = join(LOG_DIR, "5-ident_cen_ctgs")
+IDENT_CEN_CTGS_BMKDIR = join(BMK_DIR, "5-ident_cen_ctgs")
 
 
 # Convert rustybam stats bedfile by adjusting start and end positions.
@@ -31,63 +31,30 @@ rule format_hor_ref_aln_cen_contigs:
     log:
         join(IDENT_CEN_CTGS_LOGDIR, "format_hor_ref_aln_cen_contigs_{sm}.log"),
     shell:
-        # 1. chr2:91797392-95576642
-        # 2. 3054999
-        # 3. 3779251
-        # 4. 3779251
-        # 5. -
-        # 6. h1tg000001l#1-110442987
-        # 7. 15032098
-        # 8. 15756783
-        # 9. 110442987
-        # 10. 99.97791
-        # 11. 99.97032
-        # 12. 99.89915
-        # 13. 724023
-        # 14. 160
-        # 15. 27
-        # 16. 28
-        # 17. 69
-        # 18. 502
         """
-        awk -v OFS="\\t" 'NR>1 {{
+        awk -v OFS="\\t" '{{
+            if (NR == 1) {{
+                print;
+                next;
+            }} 
             # Find starts/ends in contig name.
-            match($1, ":(.+)-", starts);
+            match($1, ":(.+)-", ref_starts);
             # Remove coords from ctg name
             gsub(":.*-.*", "", $1)
             # Print columns.
-            print $1, $2+starts[1], $3+starts[1], $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+            $2=$2+ref_starts[1]
+            $3=$3+ref_starts[1]
+            print
         }}' {input} > {output} 2> {log}
         """
 
 
-# Add unique regions in monomeric pq arms and intersect with alignments.
-rule intersect_with_pq_arm:
-    input:
-        aln_cens_bed=rules.format_hor_ref_aln_cen_contigs.output,
-        ref_unique_bed=config["ident_cen_ctgs"]["ref_cens_unique_regions"],
-    output:
-        qarms_cen_regions=join(
-            IDENT_CEN_CTGS_OUTDIR,
-            "bed",
-            "interm",
-            "{sm}_pqarm_cens.bed",
-        ),
-    conda:
-        "../envs/tools.yaml"
-    log:
-        join(IDENT_CEN_CTGS_LOGDIR, "intersect_ref_cen_pqarm_{sm}.log"),
-    shell:
-        """
-        bedtools intersect -loj -a {input.aln_cens_bed} -b  {input.ref_unique_bed} > {output.qarms_cen_regions} 2> {log}
-        """
-
-
-# Map each centromeric contig to a chromosome based on intersection with CHM13 monomeric regions.
+# Map each centromeric contig to a chromosome.
 rule map_collapse_cens:
     input:
         script=workflow.source_path("../scripts/map_cens.py"),
-        regions=rules.intersect_with_pq_arm.output,
+        regions=rules.format_hor_ref_aln_cen_contigs.output,
+        fai=rules.concat_asm.output.idx,
     output:
         cens_key=join(
             IDENT_CEN_CTGS_OUTDIR,
@@ -104,22 +71,25 @@ rule map_collapse_cens:
         ),
     params:
         # TODO: Should also affect humas-sd monomer lib creation.
-        allow_pq_mismatch="--allow_pq_mismatch" if config["ident_cen_ctgs"].get("allow_pq_mismatch") else ""
+        allow_multi_chr_prop=33.0,
     conda:
         "../envs/py.yaml"
     log:
         join(IDENT_CEN_CTGS_LOGDIR, "map_collapse_cens_{sm}.log"),
     shell:
         """
-        python {input.script} -i {input.regions} {params.allow_pq_mismatch} > {output.cens_key} 2> {log}
+        python {input.script} -i {input.regions} --allow_multi_chr_prop {params.allow_multi_chr_prop} > {output.cens_key} 2> {log}
         awk -v OFS="\\t" '{{
-            st=$2+1
-            end=$3
-            coords=st"-"end
-            old_name=$1
-            new_name="{wildcards.sm}_"$4"_"$1
+            # 1-based index for seqtk
+            st=$2 + 1;
+            # Query length. seqtk caps at contig length.
+            # Cannot use rb stats as only centromere length.
+            end=($3 > $7) ? $7 : $3;
+            coords=st"-"end;
+            old_name=$1;
+            new_name="{wildcards.sm}_"$4"_"$1;
             print old_name,new_name,coords,"{wildcards.sm}",$4,$6
-        }}' {output.cens_key} > {output.renamed_cens_key} 2> {log}
+        }}' <(join <(sort -k1,1 {output.cens_key}) <(cut -f1,2 {input.fai} | sort -k1,1)) > {output.renamed_cens_key} 2> {log}
         """
 
 

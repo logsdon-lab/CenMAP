@@ -47,13 +47,14 @@ def main():
         # We expect these fields are splitting.
         .with_columns(
             name_elems=pl.col("old_name")
-            .str.extract_groups(r"(.*?)_(chr[0-9XY]+)_(.*?):(.*?)$")
+            .str.extract_groups(r"(.*)_(.*)_(.*):(.*)$")
             .struct.rename_fields(["sample", "chrom", "ctg_name", "coords"]),
             new_name_elems=pl.col("new_name")
-            .str.extract_groups(r"(.*?)_(chr[0-9XY]+)_(.*?):(.*?)$")
+            .str.extract_groups(r"(.*)_(.*)_(.*):(.*)$")
             .struct.rename_fields(
                 ["new_sample", "new_chrom", "new_ctg_name", "new_coords"]
             ),
+            is_multichr=pl.col("old_name").str.count_matches(r"(chr[0-9XY]+)").gt(1)
         )
         .unnest("name_elems")
         .unnest("new_name_elems")
@@ -64,6 +65,41 @@ def main():
         )
         .unnest("coords")
         .cast({"cen_st": pl.Int64, "cen_end": pl.Int64})
+        .sort(by="cen_st")
+    )
+
+    # In cases where dicentric contigs.
+    df_multichr_rename_key = (
+        df_statuses
+        .filter((pl.col("ctg_name").count() > 1).over("ctg_name"))
+        .sort("ctg_name", "cen_st")
+        .select("ctg_name", "chrom", "new_chrom", "ort")
+        .group_by(["ctg_name"])
+        .agg(
+            pl.col("chrom").str.join("-"),
+            pl.col("new_chrom").str.join("-"),
+            # Just take first orientation. One contig may be reversed.
+            pl.col("ort").first()
+        )
+    )
+    # Then update df_statuses's chrom and new_chrom
+    df_statuses = (
+        df_statuses.join(df_multichr_rename_key, on="ctg_name", how="left")
+        .with_columns(
+            chrom=pl.when(pl.col("chrom_right").is_not_null())
+            .then(pl.col("chrom_right"))
+            .otherwise(pl.col("chrom")),
+            new_chrom=pl.when(pl.col("new_chrom_right").is_not_null())
+            .then(pl.col("new_chrom_right"))
+            .otherwise(pl.col("new_chrom")),
+            is_multichr=pl.when(pl.col("chrom_right").is_not_null())
+            .then(True)
+            .otherwise(pl.col("is_multichr")),
+            ort=pl.when(pl.col("ort_right").is_not_null())
+            .then(pl.col("ort_right"))
+            .otherwise(pl.col("ort"))
+        )
+        .drop("chrom_right", "new_chrom_right", "ort_right")
     )
 
     df_fai = pl.read_csv(
@@ -75,20 +111,21 @@ def main():
 
     col_prefix = "new_" if args.use_new_name else ""
     new_name_expr = (
+        # Don't use new chrom assignment if multichr.
         pl.when(pl.col("ort") == "rev")
         .then(
-            pl.col(f"{col_prefix}sample")
+            pl.col("sample")
             + "_rc-"
-            + pl.col(f"{col_prefix}chrom")
+            + pl.when(pl.col("is_multichr")).then(pl.col("chrom")).otherwise(pl.col(f"{col_prefix}chrom"))
             + "_"
-            + pl.col(f"{col_prefix}ctg_name")
+            + pl.col("ctg_name")
         )
         .otherwise(
-            pl.col(f"{col_prefix}sample")
+            pl.col("sample")
             + "_"
-            + pl.col(f"{col_prefix}chrom")
+            + pl.when(pl.col("is_multichr")).then(pl.col("chrom")).otherwise(pl.col(f"{col_prefix}chrom"))
             + "_"
-            + pl.col(f"{col_prefix}ctg_name")
+            + pl.col("ctg_name")
         )
     )
     # get_final_rename_key

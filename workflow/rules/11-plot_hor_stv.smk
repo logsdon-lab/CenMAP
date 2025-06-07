@@ -52,7 +52,7 @@ rule filter_annotations_hor_stv:
             "cdr.bed",
         ),
     params:
-        rgx_chr=lambda wc: f"{wc.chr}[_:]",
+        rgx_chr=lambda wc: f"{wc.chr}[_:-]",
         cdr_output=bool(config.get("cdr_finder", False)),
     log:
         join(PLT_HOR_STV_LOGDIR, "filter_annotations_{chr}_hor_stv.log"),

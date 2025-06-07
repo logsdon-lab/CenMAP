@@ -32,7 +32,7 @@ checkpoint aggregate_format_all_stv_row:
             $8=$8+starts[1];
             print
         }}' {input} | \
-        grep -P "{wildcards.chr}[_:]" || true ;}} > {output} 2> {log}
+        grep -P "{wildcards.chr}[_:-]" || true ;}} > {output} 2> {log}
         """
 
 

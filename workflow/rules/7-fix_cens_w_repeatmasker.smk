@@ -1,7 +1,7 @@
 include: "common.smk"
 include: "utils.smk"
 include: "1-concat_asm.smk"
-include: "4-ident_cen_ctgs.smk"
+include: "5-ident_cen_ctgs.smk"
 include: "6-repeatmasker.smk"
 
 
@@ -122,10 +122,10 @@ rule rename_reort_asm:
         -k <(awk -v OFS="\\t" '{{ print $5, $1}}' {input.cens_bed}) \
         <(cat \
             <(seqtk subseq {input.fa} \
-                <(awk '$1 ~ "rc-chr"' {input.cens_bed} | cut -f5) | \
+                <(awk '$1 ~ "rc-chr"' {input.cens_bed} | cut -f5 | sort | uniq) | \
                 seqtk seq -r) \
             <(seqtk subseq {input.fa} \
-                <(grep -v -f <(awk '$1 ~ "rc-chr"' {input.cens_bed} | cut -f5) {input.idx} | cut -f 1)) \
+                <(grep -v -f <(awk '$1 ~ "rc-chr"' {input.cens_bed} | cut -f5 | sort | uniq) {input.idx} | cut -f 1)) \
         ) \
         --keep-key > {output.fa} 2> {log}
         samtools faidx {output.fa} 2>> {log}

@@ -1,37 +1,16 @@
 import sys
 import argparse
-from typing import Any, Callable, Iterable
-from collections import defaultdict, deque
+
 import polars as pl
 
-ALN_HEADER = [
-    "reference_name",
-    "reference_start",
-    "reference_end",
-    "reference_length",
-    "strand",
-    "query_name",
-    "query_start",
-    "query_end",
-    "query_length",
-    "perID_by_matches",
-    "perID_by_events",
-    "perID_by_all",
-    "matches",
-    "mismatches",
-    "deletion_events",
-    "insertion_events",
-    "deletions",
-    "insertions",
-    "mon_reference_name",
-    "mon_start",
-    "mon_end",
-    "arm",
-]
+from collections import deque
+from intervaltree import Interval
+from typing import Callable, Iterable
+
+
 ACRO_CHRS = {"chr21", "chr22", "chr13", "chr14", "chr15"}
 
-Interval = tuple[int, int, Any]
-                 
+
 def merge_itvs(
     itvs: Iterable[Interval],
     dst: int = 1,
@@ -41,7 +20,7 @@ def merge_itvs(
     if not fn_cmp:
         fn_cmp = lambda x, y: True
     if not fn_merge_itv:
-        fn_merge_itv = lambda x, y: (x[0], y[1], None)
+        fn_merge_itv = lambda x, y: Interval(x.begin, y.end, x.data)
 
     final_itvs = []
     sorted_itvs = deque(sorted(itvs))
@@ -65,84 +44,114 @@ def merge_itvs(
 
     return final_itvs
 
+
+def fn_cmp(itv_1: Interval, itv_2: Interval) -> bool:
+    itv_1_chr = itv_1.data
+    itv_2_chr = itv_2.data
+    # Allow merge if same chromosome or if acrocentrics.
+    return itv_1_chr == itv_2_chr
+
+
 def main():
     ap = argparse.ArgumentParser("Map cens from alignments.")
     ap.add_argument(
         "-i",
         "--input",
-        help="Input alignment bed intersected with chr p and q arms.",
+        help="Input alignment bed.",
         default=sys.stdin,
         type=argparse.FileType("rb"),
     )
-    ap.add_argument("-o", "--output", default=sys.stdout, type=argparse.FileType("wt"))
-    ap.add_argument("-m", "--merge", default=5_000_000, type=int, help="Merge pq arm alignments by n bps. ")
-    ap.add_argument("-s", "--slop", default=500_000, type=int, help="Add n bps to ends. ")
-    ap.add_argument("--allow_pq_mismatch", action="store_true", help="Allow non-matching chromosome pq arm pairs.")
+    ap.add_argument("-o", "--output", default=sys.stdout, type=argparse.FileType("at"))
+    ap.add_argument(
+        "--allow_multi_chr_prop",
+        type=float,
+        default=33.0,
+        help="Allow multiple chromosome assignment if accounts for greater than x percent of contig.",
+    )
+    ap.add_argument(
+        "--ignore_multi_chr_assignments",
+        nargs="*",
+        default=ACRO_CHRS,
+        help="Ignore chromosomes when building multiple chromosome assignments"
+    )
 
     args = ap.parse_args()
 
-    df = pl.read_csv(
-        args.input, separator="\t", new_columns=ALN_HEADER, has_header=False
+    df = (
+        pl.read_csv(
+            args.input, separator="\t", has_header=True
+        )
+        .with_columns(
+            query_contig_start=pl.col("query_name").str.extract(r":(\d+)-"),
+            query_contig_end=pl.col("query_name").str.extract(r"-(\d+)$")
+        )
+        .cast({"query_contig_start": pl.Int64, "query_contig_end": pl.Int64})
+        .with_columns(
+            pl.col("query_start") + pl.col("query_contig_start"),
+            pl.col("query_end") + pl.col("query_contig_start"),
+        )
     )
 
-    for qname, df_query in df.sort(by="query_name").group_by(["query_name"], maintain_order=True):
+    for qname, df_query in df.sort(by="query_name").group_by(
+        ["query_name"], maintain_order=True
+    ):
         qname = qname[0]
-        # To pass, a given query sequence must have both p and q arms mapped.
-        # The acrocentrics are exceptions and only require the q-arm.
-        df_query = df_query.filter(
-            pl.when(~pl.col("reference_name").is_in(ACRO_CHRS))
-            .then(
-                pl.all_horizontal(
-                    (pl.col("arm") == "p-arm").any(), (pl.col("arm") == "q-arm").any()
+        query_length = df_query["query_length"].first()
+        qitvs = merge_itvs(
+            (
+                Interval(
+                    itv["query_start"],
+                    itv["query_end"],
+                    itv["#reference_name"],
                 )
-            )
-            .otherwise(pl.all_horizontal((pl.col("arm") == "q-arm").any()))
-        ).sort(by=["query_start"])
-        if df_query.is_empty():
-            print(f"Skipped {qname}.", file=sys.stderr)
-            continue
-
-        df_pqarms = df_query.filter(
-            (pl.col("arm") == "p-arm") | (pl.col("arm") == "q-arm")
-        ).select(
-            "reference_name", "strand", "matches", "query_start", "query_end", "arm"
+                for itv in df_query.select("query_start", "query_end", "#reference_name").iter_rows(named=True)
+            ),
+            dst=1,
+            fn_cmp=fn_cmp,
         )
 
-        arms = defaultdict(dict)
-        for prts, df_arm in df_pqarms.partition_by(["reference_name", "arm"], as_dict=True).items():
-            ref, arm = prts
-            itvs = merge_itvs(
-                df_arm.select("query_start", "query_end", "strand").iter_rows(),
-                dst=args.merge,
+        df_ref_length_prop = (
+            pl.DataFrame(
+                [(itv.data, itv.length()) for itv in qitvs],
+                orient="row",
+                schema=["#reference_name", "length"]
             )
-            arms[arm][ref] = itvs
+            .group_by(["#reference_name"])
+            .agg(prop=100 * (pl.col("length").sum() / query_length))
+        )
+        chrom = "-".join(
+            df_ref_length_prop
+            .filter((pl.col("prop") > args.allow_multi_chr_prop) & (~pl.col("#reference_name").is_in(args.ignore_multi_chr_assignments)))
+            .get_column("#reference_name")
+            .unique(maintain_order=True)
+            .to_list()
+        )
+        if not chrom:
+            chrom = df_ref_length_prop.filter(pl.col("prop") == pl.col("prop").max()).get_column("#reference_name").first()
         
-        for ref_chrom, itvs in arms["q-arm"].items():
-            if len(itvs) > 1:
-                print(f"Multiple {ref_chrom} q-arms after merging. {itvs}", file=sys.stderr)
-            qarm_itv = itvs[0]
-
-            if ref_chrom in ACRO_CHRS or args.allow_pq_mismatch:
-                parm_itvs = [itv for pitvs in arms["p-arm"].values() for itv in pitvs]
-            else:
-                parm_itvs = arms["p-arm"][ref_chrom]
-            try:
-                closest_parm_itv = min(parm_itvs, key=lambda x: abs(x[0] - qarm_itv[1]))
-            except ValueError:
-                # No p-arm
-                continue
-            
-            st = min(closest_parm_itv[0], qarm_itv[0])
-            end = max(closest_parm_itv[1], qarm_itv[1])
-            if qarm_itv[2] == "+" or closest_parm_itv[2] == "+":
-                is_rc = "false"
-            else:
-                is_rc = "true"
-
-            row = [
-                qname, st - args.slop, end + args.slop, ref_chrom, end-st, is_rc
-            ]
-            print("\t".join(str(e) for e in row), file=args.output)
+        df_query_summary = (
+            df_query
+            .group_by(["query_name"])
+            .agg(
+                # Use SRF determined start and end. Not alignment based.
+                st=pl.col("query_contig_start").first(),
+                end=pl.col("query_contig_end").last(),
+                new_chrom=pl.lit(chrom),
+                is_rc=pl.when(
+                    pl.col("strand").mode().first() == pl.lit("+")
+                )
+                .then(pl.lit("false"))
+                .otherwise(pl.lit("true")),
+            )
+            .with_columns(
+                query_name=pl.col("query_name").str.extract(r"^(.+):"),
+                length=pl.col("end")-pl.col("st")
+            )
+            .select(
+                "query_name", "st", "end", "new_chrom", "length", "is_rc"
+            )
+        )
+        df_query_summary.write_csv(args.output, separator="\t", include_header=False)
 
 
 if __name__ == "__main__":

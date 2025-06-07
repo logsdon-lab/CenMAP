@@ -6,7 +6,7 @@ import tomllib
 import yaml
 
 from os.path import join
-from collections import defaultdict
+from collections import defaultdict, Counter
 from typing import Any
 from snakemake.settings.types import DeploymentMethod
 from snakemake.utils import validate

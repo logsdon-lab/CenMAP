@@ -16,3 +16,6 @@
 [submodule "workflow/rules/Snakemake-NucFlag"]
 	path = workflow/rules/Snakemake-NucFlag
 	url = https://github.com/logsdon-lab/Snakemake-NucFlag.git
+[submodule "workflow/rules/Snakemake-srf"]
+	path = workflow/rules/Snakemake-srf
+	url = git@github.com:koisland/Snakemake-srf.git

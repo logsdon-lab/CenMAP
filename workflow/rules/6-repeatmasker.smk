@@ -1,8 +1,7 @@
 
 include: "common.smk"
 include: "utils.smk"
-include: "4-ident_cen_ctgs.smk"
-include: "5-dna_brnn.smk"
+include: "5-ident_cen_ctgs.smk"
 
 
 RM_OUTDIR = join(OUTPUT_DIR, "6-repeatmasker")
@@ -10,9 +9,34 @@ RM_LOGDIR = join(LOG_DIR, "6-repeatmasker")
 RM_BMKDIR = join(BMK_DIR, "6-repeatmasker")
 
 
+rule setup_repeatmasker:
+    output:
+        chkpt=touch(join(RM_OUTDIR, "rm_setup.done")),
+        seq=join(RM_OUTDIR, "rm_setup.fa"),
+        rm_dir=directory(join(RM_OUTDIR, "rm_setup")),
+    params:
+        species="human",
+        engine="rmblast",
+    threads: 1
+    log:
+        join(RM_LOGDIR, "setup_repeatmasker.log"),
+    conda:
+        "../envs/tools.yaml"
+    shell:
+        """
+        echo ">rm_setup" > {output.seq}
+        echo "NNNNNNNNNNNNNNNNNNNNN" >> {output.seq}
+        RepeatMasker \
+            -engine {params.engine} \
+            -species {params.species} \
+            -dir {output.rm_dir} \
+            -pa {threads} \
+            {output.seq} &> {log}
+        """
+
 checkpoint split_cens_for_rm:
     input:
-        fa=rules.extract_alr_regions_by_sample.output.seq,
+        fa=rules.extract_cens_regions.output.seq,
         # [old_name, new_name, coords, sm, chr, is_reversed]
         rename_key=rules.map_collapse_cens.output.renamed_cens_key,
     output:
@@ -31,13 +55,12 @@ checkpoint split_cens_for_rm:
             # Read key values in first file.
             if (FNR == NR) {{
                 # Add coords to name.
-                kv[$1]=$2;
+                kv[$1":"$3]=$2":"$3
                 next;
             }}
             if (substr($0, 1, 1)==">") {{
                 ctg_name=substr($0,2)
-                split(ctg_name, ctg_name_parts, ":")
-                new_ctg_name=kv[ctg_name_parts[1]]":"ctg_name_parts[2]
+                new_ctg_name=kv[ctg_name]
                 filename=("{params.split_dir}/" new_ctg_name ".fa")
                 print ">"new_ctg_name > filename
             }} else {{
@@ -96,6 +119,7 @@ rule rename_for_repeatmasker:
 
 rule run_repeatmasker:
     input:
+        setup=rules.setup_repeatmasker.output,
         seq=rules.rename_for_repeatmasker.output.renamed_fa,
     output:
         temp(
