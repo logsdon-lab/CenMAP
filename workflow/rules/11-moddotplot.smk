@@ -173,8 +173,12 @@ def moddotplot_outputs(wc):
     )
     fnames = []
     # Sort by coords so if multiple chr, chr position in name (chr3-chr21) matches.
-    sorted_wcs = sorted(zip(wcs.sm, wcs.chr, wcs.ctg, wcs.coords), key=lambda x: (x[1], x[2], x[3]), reverse=True)
-    
+    sorted_wcs = sorted(
+        zip(wcs.sm, wcs.chr, wcs.ctg, wcs.coords),
+        key=lambda x: (x[1], x[2], x[3]),
+        reverse=True,
+    )
+
     # Store index of chrom per contig.
     # In cases of dicentric contigs.
     ctg_counter = Counter()

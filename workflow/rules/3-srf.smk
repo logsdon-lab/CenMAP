@@ -42,13 +42,10 @@ module srf_sm:
                 sm: {
                     "input_dir": expand(rules.split_fa_srf.output, sm=sm),
                     # Use default.
-                    "parameters": {
-                        "kmer_size": 151,
-                        "exclude_kmers_lt_n": 3
-                    }
+                    "parameters": {"kmer_size": 151, "exclude_kmers_lt_n": 3},
                 }
                 for sm in SAMPLE_NAMES
-            }
+            },
         }
 
 
@@ -65,7 +62,7 @@ rule create_region_bed:
             SRF_OUTDIR,
             "bed",
             "{sm}.bed",
-        )
+        ),
     log:
         join(SRF_LOGDIR, "format_region_bed_{sm}.log"),
     conda:
@@ -74,6 +71,7 @@ rule create_region_bed:
         """
         python {input.script} -i {input.bed} -m {input.monomers} > {output.bed} 2> {log}
         """
+
 
 rule extract_alr_regions_by_sample:
     input:
@@ -104,8 +102,10 @@ rule extract_alr_regions_by_sample:
 
 rule srf_all:
     input:
-        ancient(expand(
-            rules.extract_alr_regions_by_sample.output,
-            sm=SAMPLE_NAMES,
-        )),
+        ancient(
+            expand(
+                rules.extract_alr_regions_by_sample.output,
+                sm=SAMPLE_NAMES,
+            )
+        ),
     default_target: True

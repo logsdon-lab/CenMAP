@@ -80,7 +80,7 @@ rule make_complete_cens_bed:
             "--use_new_name"
             if config["repeatmasker"].get("use_censtats_new_name")
             else ""
-        )
+        ),
     log:
         join(FIX_RM_LOGDIR, "get_complete_cens_bed_{sm}.log"),
     conda:

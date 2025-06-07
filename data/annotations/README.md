@@ -22,5 +22,3 @@
 ### Lengths
 * `chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed`
     * chm13 HOR full array length with 500kbp added to ends.
-* `chm13_v2.0_hor_arrays.bed`
-    * chm13 HOR array lengths.

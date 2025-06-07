@@ -10,7 +10,10 @@ ASM_REF_BMKDIR = join(BMK_DIR, "4-align_asm_to_ref")
 
 ALN_CFG = {
     "ref": {f"{REF_NAME}_cens": rules.extract_ref_hor_arrays.output.seq},
-    "sm": {sm: ancient(expand(rules.extract_alr_regions_by_sample.output.seq, sm=sm)) for sm in SAMPLE_NAMES},
+    "sm": {
+        sm: ancient(expand(rules.extract_alr_regions_by_sample.output.seq, sm=sm))
+        for sm in SAMPLE_NAMES
+    },
     "temp_dir": join(ASM_REF_OUTDIR, "temp"),
     "output_dir": ASM_REF_OUTDIR,
     "logs_dir": ASM_REF_LOGDIR,

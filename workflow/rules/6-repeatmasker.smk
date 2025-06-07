@@ -34,6 +34,7 @@ rule setup_repeatmasker:
             {output.seq} &> {log}
         """
 
+
 checkpoint split_cens_for_rm:
     input:
         fa=rules.extract_cens_regions.output.seq,
