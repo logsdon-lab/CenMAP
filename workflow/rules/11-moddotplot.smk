@@ -116,6 +116,7 @@ rule filter_annotations_moddotplot:
 
 rule modify_moddotplot_cenplot_tracks:
     input:
+        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
         plot_layout=workflow.source_path("../scripts/cenplot_moddotplot.toml"),
         infiles=[rules.filter_annotations_moddotplot.output.cdr_bed],
     output:
@@ -124,13 +125,19 @@ rule modify_moddotplot_cenplot_tracks:
             "{chr}",
             "{fname}.yaml",
         ),
-    run:
-        format_toml_path(
-            input_plot_layout=input.plot_layout,
-            output_plot_layout=output.plot_layout,
-            indir=os.path.abspath(os.path.dirname(str(input.infiles[0]))),
-            **dict(params.items()),
-        )
+    conda:
+        "../envs/py.yaml"
+    log:
+        join(MODDOTPLOT_LOGDIR, "modify_moddotplot_cenplot_tracks_{chr}_{fname}.log"),
+    params:
+        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infiles[0]))),
+    shell:
+        """
+        python {input.script} \
+        -i {input.plot_layout} \
+        -o {output.plot_layout} \
+        -k indir={params.indir} &> {log}
+        """
 
 
 rule plot_cen_moddotplot:

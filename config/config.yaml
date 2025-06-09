@@ -106,22 +106,22 @@ moddotplot:
   ident_thr: 70.0
   window: 5000
 
-# cdr_finder:
-#   # Either minimap2 or winnowmap
-#   # Use aligner_opts to override defaults.
-#   aligner: minimap2
-#   # aligner_opts: "-y -a --eqx --cs -x lr:hqae -I8g -s 4000" # minimap2
-#   # aligner_opts: "-y -a --eqx --cs -x map-ont -I8g -s 4000" # winnowmap
-#   # Expects sample subdir in input_dir.
-#   # Uses find and file pattern to merge bam.
-#   input_bam_dir: "data/ont"
-#   bam_rgx: ".*prom_pass.bam$"
-#   aln_mem: 50GB
-#   aln_threads: 24
-#   window_size: 5000
-#   alr_threshold: 100000
-#   bp_alr_merge: 1000
-#   bp_edge: 500_000
-#   height_perc_valley_threshold: 0.34
-#   prom_perc_valley_threshold: 0.3
-#   extend_edges_std: -1
+cdr_finder:
+  # Either minimap2 or winnowmap
+  # Use aligner_opts to override defaults.
+  aligner: minimap2
+  # aligner_opts: "-y -a --eqx --cs -x lr:hqae -I8g -s 4000" # minimap2
+  # aligner_opts: "-y -a --eqx --cs -x map-ont -I8g -s 4000" # winnowmap
+  # Expects sample subdir in input_dir.
+  # Uses find and file pattern to merge bam.
+  input_bam_dir: "data/ont"
+  bam_rgx: ".*\\.bam$"
+  aln_mem: 50GB
+  aln_threads: 24
+  window_size: 5000
+  alr_threshold: 100000
+  bp_alr_merge: 1000
+  bp_edge: 500_000
+  height_perc_valley_threshold: 0.34
+  prom_perc_valley_threshold: 0.3
+  extend_edges_std: -1

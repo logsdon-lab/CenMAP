@@ -100,7 +100,13 @@ def main():
                 + "-"
                 + (pl.col("ctg_len") - pl.col("ctg_st") + 1).cast(pl.String)
             )
-            .otherwise(pl.col("ctg")),
+            .otherwise(
+                pl.col("new_name")
+                + ":"
+                + pl.col("ctg_st").cast(pl.String)
+                + "-"
+                + pl.col("ctg_end").cast(pl.String)
+            ),
             cen_len=pl.col("ctg_end") - pl.col("ctg_st"),
         )
         .with_columns(

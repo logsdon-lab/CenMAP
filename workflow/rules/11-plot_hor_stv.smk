@@ -73,6 +73,7 @@ rule filter_annotations_hor_stv:
 # Require both to exist before beginning plotting.
 rule modify_hor_stv_cenplot_tracks:
     input:
+        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
         plot_layout=workflow.source_path("../scripts/cenplot_hor_stv_plot.toml"),
         infiles=rules.filter_annotations_hor_stv.output,
     output:
@@ -81,15 +82,19 @@ rule modify_hor_stv_cenplot_tracks:
             "plots",
             "{typ}_cens_{chr}.yaml",
         ),
+    conda:
+        "../envs/py.yaml"
+    log:
+        join(PLT_HOR_STV_LOGDIR, "modify_hor_stv_cenplot_tracks_{typ}_{chr}.log"),
     params:
-        typ="{typ}",
-    run:
-        format_toml_path(
-            input_plot_layout=input.plot_layout,
-            output_plot_layout=output.plot_layout,
-            indir=os.path.abspath(os.path.dirname(str(input.infiles[0]))),
-            **dict(params.items()),
-        )
+        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infiles[0]))),
+    shell:
+        """
+        python {input.script} \
+        -i {input.plot_layout} \
+        -o {output.plot_layout} \
+        -k indir={params.indir} typ={wildcards.typ} &> {log}
+        """
 
 
 # hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],

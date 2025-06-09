@@ -129,15 +129,29 @@ def main():
         )
     )
     # get_final_rename_key
-    df_status_w_ctg_len = df_statuses.join(df_fai, on=["ctg_name"]).with_columns(
-        new_name=new_name_expr,
-        new_cen_st=pl.when(pl.col("ort") == "rev")
-        .then(pl.col("ctg_len") - pl.col("cen_end") + 1)
-        .otherwise(pl.col("cen_st")),
-        new_cen_end=pl.when(pl.col("ort") == "rev")
-        .then(pl.col("ctg_len") - pl.col("cen_st") + 1)
-        .otherwise(pl.col("cen_end")),
+    df_status_w_ctg_len = (
+        df_statuses.join(df_fai, on=["ctg_name"])
+        .with_columns(
+            # Don't rename if partial.
+            # Means fragment and not enough information in pericentromeric repeats to rename accurately.
+            new_name=pl.when(~pl.col("is_partial"))
+            .then(new_name_expr)
+            .otherwise(
+                pl.col("sample")
+                + "_"
+                + pl.col("chrom")
+                + "_"
+                + pl.col("ctg_name")
+            ),
+            new_cen_st=pl.when(pl.col("ort") == "rev")
+            .then(pl.col("ctg_len") - pl.col("cen_end") + 1)
+            .otherwise(pl.col("cen_st")),
+            new_cen_end=pl.when(pl.col("ort") == "rev")
+            .then(pl.col("ctg_len") - pl.col("cen_st") + 1)
+            .otherwise(pl.col("cen_end")),
+        )
     )
+
     df_status_w_ctg_len.select(OUTPUT_FIELDS).write_csv(
         args.output, include_header=False, separator="\t"
     )

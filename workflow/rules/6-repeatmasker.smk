@@ -72,9 +72,6 @@ checkpoint split_cens_for_rm:
 
 
 # RepeatMasker has a limit of 50 characters for sequence names.
-# While I was able to create a fork of RepeatMasker that allowed for longer sequence names, I still ran into issues.
-# Bumping to v4.1.5 and also adding the increased limit fixed the issue but resulted in a 5-10x increase in runtime.
-# So I downgraded the repeatmasker70 image to v4.1.0.
 rule rename_for_repeatmasker:
     input:
         fa=join(rules.split_cens_for_rm.output[0], "{fname}.fa"),
@@ -301,6 +298,7 @@ rule create_og_rm_bed:
 
 rule modify_og_rm_cenplot_tracks:
     input:
+        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
         plot_layout=workflow.source_path("../scripts/cenplot_repeatmasker_plot.toml"),
         infiles=rules.create_og_rm_bed.output,
     output:
@@ -309,13 +307,19 @@ rule modify_og_rm_cenplot_tracks:
             "plots",
             "{chr}_cens_og.yaml",
         ),
-    run:
-        format_toml_path(
-            input_plot_layout=input.plot_layout,
-            output_plot_layout=output.plot_layout,
-            indir=os.path.abspath(os.path.dirname(str(input.infiles[0]))),
-            **dict(params.items()),
-        )
+    conda:
+        "../envs/py.yaml"
+    log:
+        join(RM_LOGDIR, "modify_og_rm_cenplot_tracks_{chr}.log"),
+    params:
+        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infiles[0]))),
+    shell:
+        """
+        python {input.script} \
+        -i {input.plot_layout} \
+        -o {output.plot_layout} \
+        -k indir={params.indir} &> {log}
+        """
 
 
 rule plot_og_rm_bed_by_chr:
