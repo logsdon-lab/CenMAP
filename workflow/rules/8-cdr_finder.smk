@@ -152,11 +152,11 @@ use rule reorient_bed as reorient_cdr_bed with:
         bed=lambda wc: expand(rules.cdr_call_cdrs.output, sample=wc.sm),
         og_coords_key=rules.get_original_coords.output.og_coords_key,
     output:
-        join(
+        temp(join(
             CDR_FINDER_OUTDIR,
             "bed",
             "{sm}_cdr_final.bed",
-        ),
+        )),
     log:
         join(CDR_FINDER_LOGDIR, "reorient_cdr_bed_{sm}.log"),
     params:

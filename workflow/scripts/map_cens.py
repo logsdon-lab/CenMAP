@@ -79,11 +79,11 @@ def main():
 
     df = (
         pl.read_csv(
-            args.input, separator="\t", has_header=True
+            args.input, separator="\t", has_header=True, truncate_ragged_lines=True
         )
         .with_columns(
-            query_contig_start=pl.col("query_name").str.extract(r":(\d+)-"),
-            query_contig_end=pl.col("query_name").str.extract(r"-(\d+)$")
+            query_contig_start=pl.col("query_name").str.extract(r":(\d+)-").fill_null(0),
+            query_contig_end=pl.col("query_name").str.extract(r"-(\d+)$").fill_null(0)
         )
         .cast({"query_contig_start": pl.Int64, "query_contig_end": pl.Int64})
         .with_columns(
@@ -116,7 +116,7 @@ def main():
                 orient="row",
                 schema=["#reference_name", "length"]
             )
-            .group_by(["#reference_name"])
+            .group_by(["#reference_name"], maintain_order=True)
             .agg(prop=100 * (pl.col("length").sum() / query_length))
         )
         chrom = "-".join(
@@ -144,7 +144,7 @@ def main():
                 .otherwise(pl.lit("true")),
             )
             .with_columns(
-                query_name=pl.col("query_name").str.extract(r"^(.+):"),
+                query_name=pl.col("query_name").str.extract(r"^(.+):").fill_null(pl.col("query_name")),
                 length=pl.col("end")-pl.col("st")
             )
             .select(

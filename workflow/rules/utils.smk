@@ -89,7 +89,7 @@ rule reorient_bed:
             }}
             # Check overlap with contig coordinates. In case of dicentrics.
             if (st > ctg_st[1] && end < ctg_end[1]) {{
-                print new_name, $2, $3 {params.additional_cols}
+                print new_name, st, end {params.additional_cols}
             }}
         }}';}} > {output} 2> {log}
         """
