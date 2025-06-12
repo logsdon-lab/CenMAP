@@ -4,11 +4,19 @@ import argparse
 import polars as pl
 
 from collections import deque
-from intervaltree import Interval
-from typing import Callable, Iterable
+from typing import Any, Callable, Iterable, NamedTuple
 
 
 ACRO_CHRS = {"chr21", "chr22", "chr13", "chr14", "chr15"}
+
+
+class Interval(NamedTuple):
+    begin: int
+    end: int
+    data: Any
+
+    def length(self):
+        return self.end - self.begin
 
 
 def merge_itvs(
