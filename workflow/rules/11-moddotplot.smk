@@ -96,17 +96,15 @@ rule filter_annotations_moddotplot:
         ),
     params:
         cdr_output=bool(config.get("cdr_finder", False)),
-        # Use base of fname incase of off by ones in name coords
-        fname_base=lambda wc: wc.fname.split(":")[0],
     shell:
         """
-        ( grep '{params.fname_base}' {input.all_sat_annot_bed} || true ) > {output.sat_annot_bed}
-        ( grep '{params.fname_base}' {input.chr_stv_row_bed} || true ) > {output.stv_row_bed}
+        ( grep '{wildcards.fname}' {input.all_sat_annot_bed} || true ) > {output.sat_annot_bed}
+        ( grep '{wildcards.fname}' {input.chr_stv_row_bed} || true ) > {output.stv_row_bed}
         # Remove header.
         tail -n+2 {input.ident_bed} > {output.ident_bed}
         if [ "{params.cdr_output}" != "False" ]; then
-            ( grep '{params.fname_base}' {input.all_cdr_bed} || true ) > {output.cdr_bed}
-            ( grep '{params.fname_base}' {input.all_binned_methyl_bed} || true ) > {output.binned_methyl_bed}
+            ( grep '{wildcards.fname}' {input.all_cdr_bed} || true ) > {output.cdr_bed}
+            ( grep '{wildcards.fname}' {input.all_binned_methyl_bed} || true ) > {output.binned_methyl_bed}
         else
             touch {output.cdr_bed}
             touch {output.binned_methyl_bed}

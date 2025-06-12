@@ -71,17 +71,24 @@ rule reorient_bed:
         additional_cols="",
     shell:
         """
-        nfs=$(awk 'NR < 2 {{ print NF }}' {input.bed})
         {{ join -1 1 -2 1 \
             <(sort -k1 {input.bed}) \
             <(awk -v OFS="\\t" '{{ print {params.legend_col_chrom_og}, {params.legend_col_chrom_new}, {params.legend_col_chrom_len} }}' {input.og_coords_key}) | \
-        awk -v OG_NF="${{nfs}}" -v OFS="\\t" '{{
+        awk -v OG_NF=$(awk 'NR < 2 {{ print NF }}' {input.bed}) -v OFS="\\t" '{{
             new_name=$(OG_NF + 1)
             chrom_len=$(OG_NF + 2)
             is_rc=(new_name ~ "rc-");
+            match(new_name, ":([0-9]+)-", ctg_st);
+            match(new_name, "-([0-9]+)$", ctg_end);
             if (is_rc) {{
-                print new_name, chrom_len-$3, chrom_len-$2 {params.additional_cols}
+                st=chrom_len-$3
+                end=chrom_len-$2 
             }} else {{
+                st=$2
+                end=$3
+            }}
+            # Check overlap with contig coordinates. In case of dicentrics.
+            if (st > ctg_st[1] && end < ctg_end[1]) {{
                 print new_name, $2, $3 {params.additional_cols}
             }}
         }}';}} > {output} 2> {log}
