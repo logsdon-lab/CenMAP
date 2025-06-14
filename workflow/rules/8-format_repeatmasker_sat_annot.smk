@@ -9,10 +9,13 @@ FMT_RM_SAT_BMKDIR = join(BMK_DIR, "8-format_repeatmasker_sat_annot")
 
 rule merge_complete_and_correct_rm_out:
     input:
-        expand(
-            rules.fix_cens_rm_out.output,
-            sm=SAMPLE_NAMES,
-        ),
+        [
+            expand(
+                rules.fix_cens_rm_out.output,
+                sm=SAMPLE_NAMES,
+            ),
+            rules.merge_control_repeatmasker_output.output,
+        ],
     output:
         join(
             FMT_RM_SAT_OUTDIR,

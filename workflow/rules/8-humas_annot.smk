@@ -156,7 +156,7 @@ def humas_annot_chr_outputs(wc):
 
     return {
         "stv": [
-            *config["plot_hor_stv"].get("ref_stv", []),
+            *config.get("plot_hor_stv", {}).get("ref_stv", []),
             *expand(rules.cens_generate_stv.output, fname=fnames, chr=wc.chr),
         ],
     }
