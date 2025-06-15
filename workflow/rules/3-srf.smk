@@ -20,12 +20,15 @@ rule split_fa_srf:
     shell:
         """
         mkdir -p {params.split_dir}
-        awk '{{
+        awk -v PIPE="|" '{{
             if (substr($0, 1, 1)==">") {{
                 fname=substr($0,2)
                 filename=("{params.split_dir}/" fname ".fa")
             }}
-            print $0 > filename
+            # Ignore filenames with pipes.
+            if (!index(filename, PIPE)) {{
+                print $0 > filename
+            }}
         }}' {input.fa} 2> {log}
         """
 
