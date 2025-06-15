@@ -1,0 +1,3 @@
+old_name,new_name,ort,is_partial,sample,chrom,ctg_name,cen_st,cen_end,new_sample,new_chrom,new_ctg_name,new_coords,is_multichr
+HG008-T_chr21_haplotype1-0000014:4149473-11535834,HG008-T_chr13_haplotype1-0000014:4149473-11535834,fwd,false,HG008-T,chr21-chr3,haplotype1-0000014,4149473,11535834,HG008-T,chr13-chr3,haplotype1-0000014,4149473-11535834,true
+HG008-T_chr3_haplotype1-0000014:151869577-160077511,HG008-T_chr3_haplotype1-0000014:151869577-160077511,fwd,false,HG008-T,chr21-chr3,haplotype1-0000014,151869577,160077511,HG008-T,chr13-chr3,haplotype1-0000014,151869577-160077511,true

@@ -54,7 +54,7 @@ def main():
             .struct.rename_fields(
                 ["new_sample", "new_chrom", "new_ctg_name", "new_coords"]
             ),
-            is_multichr=pl.col("old_name").str.count_matches(r"(chr[0-9XY]+)").gt(1)
+            is_multichr=pl.col("old_name").str.count_matches(r"(chr[0-9XY]+)").gt(1),
         )
         .unnest("name_elems")
         .unnest("new_name_elems")
@@ -70,8 +70,7 @@ def main():
 
     # In cases where dicentric contigs.
     df_multichr_rename_key = (
-        df_statuses
-        .filter((pl.col("ctg_name").count() > 1).over("ctg_name"))
+        df_statuses.filter((pl.col("ctg_name").count() > 1).over("ctg_name"))
         .sort("ctg_name", "cen_st")
         .select("ctg_name", "chrom", "new_chrom", "ort")
         .group_by(["ctg_name"])
@@ -79,7 +78,7 @@ def main():
             pl.col("chrom").str.join("-"),
             pl.col("new_chrom").str.join("-"),
             # Just take first orientation. One contig may be reversed.
-            pl.col("ort").first()
+            pl.col("ort").first(),
         )
     )
     # Then update df_statuses's chrom and new_chrom
@@ -92,12 +91,9 @@ def main():
             new_chrom=pl.when(pl.col("new_chrom_right").is_not_null())
             .then(pl.col("new_chrom_right"))
             .otherwise(pl.col("new_chrom")),
-            is_multichr=pl.when(pl.col("chrom_right").is_not_null())
-            .then(True)
-            .otherwise(pl.col("is_multichr")),
             ort=pl.when(pl.col("ort_right").is_not_null())
             .then(pl.col("ort_right"))
-            .otherwise(pl.col("ort"))
+            .otherwise(pl.col("ort")),
         )
         .drop("chrom_right", "new_chrom_right", "ort_right")
     )
@@ -111,45 +107,35 @@ def main():
 
     col_prefix = "new_" if args.use_new_name else ""
     new_name_expr = (
-        # Don't use new chrom assignment if multichr.
         pl.when(pl.col("ort") == "rev")
         .then(
             pl.col("sample")
             + "_rc-"
-            + pl.when(pl.col("is_multichr")).then(pl.col("chrom")).otherwise(pl.col(f"{col_prefix}chrom"))
+            + pl.col(f"{col_prefix}chrom")
             + "_"
             + pl.col("ctg_name")
         )
         .otherwise(
             pl.col("sample")
             + "_"
-            + pl.when(pl.col("is_multichr")).then(pl.col("chrom")).otherwise(pl.col(f"{col_prefix}chrom"))
+            + pl.col(f"{col_prefix}chrom")
             + "_"
             + pl.col("ctg_name")
         )
     )
     # get_final_rename_key
-    df_status_w_ctg_len = (
-        df_statuses.join(df_fai, on=["ctg_name"])
-        .with_columns(
-            # Don't rename if partial.
-            # Means fragment and not enough information in pericentromeric repeats to rename accurately.
-            new_name=pl.when(~pl.col("is_partial"))
-            .then(new_name_expr)
-            .otherwise(
-                pl.col("sample")
-                + "_"
-                + pl.col("chrom")
-                + "_"
-                + pl.col("ctg_name")
-            ),
-            new_cen_st=pl.when(pl.col("ort") == "rev")
-            .then(pl.col("ctg_len") - pl.col("cen_end") + 1)
-            .otherwise(pl.col("cen_st")),
-            new_cen_end=pl.when(pl.col("ort") == "rev")
-            .then(pl.col("ctg_len") - pl.col("cen_st") + 1)
-            .otherwise(pl.col("cen_end")),
-        )
+    df_status_w_ctg_len = df_statuses.join(df_fai, on=["ctg_name"]).with_columns(
+        # Don't rename if partial.
+        # Means fragment and not enough information in pericentromeric repeats to rename accurately.
+        new_name=pl.when(~pl.col("is_partial"))
+        .then(new_name_expr)
+        .otherwise(pl.col("sample") + "_" + pl.col("chrom") + "_" + pl.col("ctg_name")),
+        new_cen_st=pl.when(pl.col("ort") == "rev")
+        .then(pl.col("ctg_len") - pl.col("cen_end") + 1)
+        .otherwise(pl.col("cen_st")),
+        new_cen_end=pl.when(pl.col("ort") == "rev")
+        .then(pl.col("ctg_len") - pl.col("cen_st") + 1)
+        .otherwise(pl.col("cen_end")),
     )
 
     df_status_w_ctg_len.select(OUTPUT_FIELDS).write_csv(
