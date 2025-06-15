@@ -181,7 +181,7 @@ output = [
 ]
 
 # Download T2T-CHM13 reference assembly if existing path not provided.
-if not config["align_asm_to_ref"].get("reference"):
+if not config["ident_cen_ctgs"].get("reference"):
     output.append(rules.download_ref_asm.output)
 
 

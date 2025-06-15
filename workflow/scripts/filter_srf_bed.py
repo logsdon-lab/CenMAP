@@ -10,8 +10,21 @@ from collections import deque
 # https://github.com/lh3/srf/blob/e54ca8c8eccf6b1f19428b0f862f2c90575290a0/srfutils.js#L336C8-L336C79
 INPUT_SRF_COLS = ("chrom", "st", "en", "motif", "wt_ident", "tlen", "len", "keep")
 # https://github.com/lh3/TRF-mod/commit/ce9b54f34d571a3f7047ea46ba647bd424ff81dd
-INPUT_MON_COLS = ("chrom", "motif", "st", "end", "period", "copyNum", "fracMatch", "fracGap", "score", "entroy", "pattern")
+INPUT_MON_COLS = (
+    "chrom",
+    "motif",
+    "st",
+    "end",
+    "period",
+    "copyNum",
+    "fracMatch",
+    "fracGap",
+    "score",
+    "entroy",
+    "pattern",
+)
 OUTPUT_COLS = ("chrom", "new_st", "new_en", "len")
+
 
 def group_by_dst(df: pl.DataFrame, dst: int, group_name: str) -> pl.DataFrame:
     try:
@@ -55,6 +68,14 @@ def group_by_dst(df: pl.DataFrame, dst: int, group_name: str) -> pl.DataFrame:
     )
 
 
+def no_cmp(x: Interval, y: Interval):
+    return True
+
+
+def merge_itv(x: Interval, y: Interval):
+    return Interval(x.begin, y.end, x.data)
+
+
 def merge_itvs(
     itvs: Iterable[Interval],
     dst: int = 1,
@@ -62,9 +83,9 @@ def merge_itvs(
     fn_merge_itv: Callable[[Interval, Interval], Interval] | None = None,
 ) -> list[Interval]:
     if not fn_cmp:
-        fn_cmp = lambda x, y: True
+        fn_cmp = no_cmp
     if not fn_merge_itv:
-        fn_merge_itv = lambda x, y: Interval(x.begin, y.end, x.data)
+        fn_merge_itv = merge_itv
 
     final_itvs = []
     sorted_itvs = deque(sorted(itvs))
@@ -96,21 +117,21 @@ def main():
         "--input_bed",
         nargs="+",
         type=argparse.FileType("rb"),
-        help=f"Input srf bed. Format: {INPUT_SRF_COLS}"
+        help=f"Input srf bed. Format: {INPUT_SRF_COLS}",
     )
     ap.add_argument(
         "-m",
         "--monomers_tsv",
         nargs="+",
         type=argparse.FileType("rb"),
-        help=f"Input trf monomers. Format: {INPUT_MON_COLS}"
+        help=f"Input trf monomers. Format: {INPUT_MON_COLS}",
     )
     ap.add_argument(
         "-o",
         "--output_bed",
         type=argparse.FileType("at"),
         default=sys.stdout,
-        help=f"Output regions. Format: {OUTPUT_COLS}"
+        help=f"Output regions. Format: {OUTPUT_COLS}",
     )
     ap.add_argument(
         "--allowed_monomers",
@@ -119,79 +140,70 @@ def main():
         # 170 - ALR, 42 - SAR
         # https://www.sciencedirect.com/science/article/pii/S1084952122001379
         default=[170, 42],
-        help="Allowed monomer lengths."
+        help="Allowed monomer lengths.",
     )
     ap.add_argument(
-        "--required_monomer",
-        type=int,
-        default=170,
-        help="Required monomer lengths."
+        "--required_monomer", type=int, default=170, help="Required monomer lengths."
     )
     ap.add_argument(
         "--top_monomer_by_cn",
         type=int,
         default=3,
-        help="Take top n monomers by copy number per chrom and motif."
+        help="Take top n monomers by copy number per chrom and motif.",
     )
     ap.add_argument(
         "--thr_perc_monomer_diff",
         type=float,
         default=5.0,
-        help="Percent difference to allow motif based on: 100 * ((motif_len % monomer_length) / monomer_length)"
+        help="Percent difference to allow motif based on: 100 * ((motif_len % monomer_length) / monomer_length)",
     )
     ap.add_argument(
-        "-g",
-        "--group_by",
+        "-g", "--group_by", type=int, default=1_000_000, help="Distance used to group."
+    )
+    ap.add_argument(
+        "-l", "--min_length", type=int, default=30_000, help="Minimum length of region."
+    )
+    ap.add_argument(
+        "--bp_slop",
         type=int,
         default=1_000_000,
-        help="Distance used to group."
-    )
-    ap.add_argument(
-        "-l",
-        "--min_length",
-        type=int,
-        default=30_000,
-        help="Minimum length of region."
+        help="Add additional base pairs to ends.",
     )
     args = ap.parse_args()
-    
+
     df_srf = pl.concat(
-        pl.read_csv(
-            bed,
-            has_header=False,
-            separator="\t",
-            new_columns=INPUT_SRF_COLS
-        )
+        pl.read_csv(bed, has_header=False, separator="\t", new_columns=INPUT_SRF_COLS)
         for bed in args.input_bed
     )
     df_monomers = (
         pl.concat(
             pl.read_csv(
-                tsv,
-                has_header=False,
-                separator="\t",
-                new_columns=INPUT_MON_COLS
+                tsv, has_header=False, separator="\t", new_columns=INPUT_MON_COLS
             )
             for tsv in args.monomers_tsv
         )
         .with_columns(
-            pl.col("chrom").str.extract(r".*?_(rc-chr[0-9XY]+|chr[0-9XY]+)_(?<chrom>.*)", 2).fill_null(pl.col("chrom"))
+            pl.col("chrom")
+            .str.extract(r".*?_(rc-chr[0-9XY]+|chr[0-9XY]+)_(?<chrom>.*)", 2)
+            .fill_null(pl.col("chrom"))
         )
         .select("chrom", "motif", "period", "copyNum")
         # https://stackoverflow.com/a/78441223
         # Take top 3 motifs with the largest copy number.
         .group_by("chrom", "motif")
-        .agg(
-            pl.all().top_k_by("copyNum", k=args.top_monomer_by_cn)
-        )
+        .agg(pl.all().top_k_by("copyNum", k=args.top_monomer_by_cn))
         .explode("period", "copyNum")
     )
 
-    df_monomer_lengths = df_srf.select("chrom").unique().with_columns(mon=args.allowed_monomers).explode("mon")
+    df_monomer_lengths = (
+        df_srf.select("chrom")
+        .unique()
+        .with_columns(mon=args.allowed_monomers)
+        .explode("mon")
+    )
     # TRF might skip small dimers
     df_all_motifs = (
-        df_srf
-        .select("chrom", "motif")
+        df_srf.select("chrom", "motif")
         .unique()
         .join(df_monomers, on=["chrom", "motif"])
         .join(df_monomer_lengths, on="chrom")
@@ -201,19 +213,19 @@ def main():
         )
         .with_columns(valid=pl.col("perc_diff") <= args.thr_perc_monomer_diff)
     )
-    df_valid_motifs = df_all_motifs.group_by(["chrom", "motif"]).agg(valid=pl.col("valid").any(), mons=pl.col("mon"))
+    df_valid_motifs = df_all_motifs.group_by(["chrom", "motif"]).agg(
+        valid=pl.col("valid").any(), mons=pl.col("mon")
+    )
 
     df_srf = (
-        df_srf.join(
-            df_valid_motifs,
-            how="left",
-            on=["chrom", "motif"]
-        )
+        df_srf.join(df_valid_motifs, how="left", on=["chrom", "motif"])
         .with_columns(pl.col("valid").fill_null(False))
         .filter(pl.col("valid"))
     )
 
-    for chrom, df_chrom in df_srf.sort(by="chrom").group_by(["chrom"], maintain_order=True):
+    for chrom, df_chrom in df_srf.sort(by="chrom").group_by(
+        ["chrom"], maintain_order=True
+    ):
         chrom = chrom[0]
         df_chrom_srf = (
             group_by_dst(df_chrom, args.group_by, "group")
@@ -223,41 +235,48 @@ def main():
                 pl.col("st").min(),
                 pl.col("en").max(),
             )
-            .with_columns(
-                rpt_len=pl.col("en")-pl.col("st")
-            )
+            .with_columns(rpt_len=pl.col("en") - pl.col("st"))
             .drop("group")
             .sort(by="st")
             .filter(pl.col("rpt_len") > args.min_length)
-            .with_columns(pl.col("chrom").str.splitn(":", 2).struct.rename_fields(["chrom", "coords"]))
+            .with_columns(
+                pl.col("chrom")
+                .str.splitn(":", 2)
+                .struct.rename_fields(["chrom", "coords"])
+            )
             .unnest("chrom")
-            .with_columns(pl.col("coords").str.splitn("-", 2).struct.rename_fields(["chrom_st", "chrom_en"]))
+            .with_columns(
+                pl.col("coords")
+                .str.splitn("-", 2)
+                .struct.rename_fields(["chrom_st", "chrom_en"])
+            )
             .unnest("coords")
             .cast({"chrom_st": pl.Int64, "chrom_en": pl.Int64})
             .fill_null(0)
             # Adjust coordinates by contig
             # Add 500 kbp.
             .with_columns(
-                new_st=(pl.col("st") + pl.col("chrom_st") - 1_000_000).clip(lower_bound=0),
-                new_en=pl.col("en") + pl.col("chrom_st") + 1_000_000
+                new_st=(pl.col("st") + pl.col("chrom_st") - args.bp_slop).clip(
+                    lower_bound=0
+                ),
+                new_en=pl.col("en") + pl.col("chrom_st") + args.bp_slop,
             )
         )
 
         # Must also contain required monomer.
         valid_itvs = []
         for row in df_chrom_srf.iter_rows(named=True):
-            df_qry = (
-                df_srf
-                .filter(
-                    (pl.col("chrom") == chrom) &
-                    (pl.col("st") >= row["st"]) & (pl.col("en") <= row["en"]) &
-                    pl.col("mons").list.contains(args.required_monomer))
-                )
+            df_qry = df_srf.filter(
+                (pl.col("chrom") == chrom)
+                & (pl.col("st") >= row["st"])
+                & (pl.col("en") <= row["en"])
+                & pl.col("mons").list.contains(args.required_monomer)
+            )
             if df_qry.is_empty():
                 continue
 
             valid_itvs.append(Interval(row["new_st"], row["new_en"], row["chrom"]))
-        
+
         final_itvs = merge_itvs(
             valid_itvs,
             dst=args.group_by,

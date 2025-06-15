@@ -53,32 +53,6 @@ properties:
         default: 20GB
     required:
       - input_dir
-  align_asm_to_ref:
-    type: object
-    additionalProperties: false
-    properties:
-      reference:
-        type: ["string", "null"]
-        description: >-
-          Path to reference assembly.
-          Will download CHM13v2.0 if not specified.
-          Only applicable if user has CHM13v2.0 on cluster and wants to avoid redownloading the assembly.
-        default: null
-      threads:
-        type: integer
-        default: 4
-      mem:
-        type: string
-        pattern: "\\d+GB"
-        default: 30GB
-  extract_ref_hor_arrays:
-    type: object
-    additionalProperties: false
-    properties:
-      added_bases:
-        type: integer
-        description: Add bp to extend edges of HOR array for alignment. In addition to default 500kbp.
-        default: 1000000
   ident_cen_ctgs:
     type: object
     additionalProperties: false
@@ -87,38 +61,35 @@ properties:
         type: boolean
         default: false
         description: Allow mismatch reference chromosome in pq arm match. For abnormal centromeres with translocations/breakpoints.
-      ref_cens_regions:
-        type: string
-        description: Path to BED file with reference centromere regions.
-        default: data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed
-      ref_cens_unique_regions:
-        type: string
+      reference:
+        type: ["string", "null"]
         description: >-
-          Path to BED file with reference centromere regions that are used for contig mapping.
-          These must be unique (not in SDs, include TEs) regions.
-          Currently, only CHM13 is supported.
-        default: data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed
-  dna_brnn:
-    type: object
-    additionalProperties: false
-    properties:
-      model:
+          Path to reference assembly.
+          Will download CHM13v2.0 if not specified.
+          Only applicable if user has CHM13v2.0 on cluster and wants to avoid redownloading the assembly.
+        default: null
+      reference_bed:
         type: string
-        description: Path to model used to train dna-brnn.
-        default: data/models/attcc-alpha.knm
-      threads:
+        description: Path to BED file with reference centromere regions to map chromosomes.
+        default: data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed
+      threads_srf:
         type: integer
-        default: 12
-      mem:
+        default: 4
+      mem_srf:
         type: string
         pattern: "\\d+GB"
-        default: 8GB
-      thr_file:
+        default: 12GB
+      threads_aln:
+        type: integer
+        default: 8
+      mem_aln:
         type: string
-        description: >-
-          Path to file of chromosome specific thresholds
-          for filtering and trimming dna-brnn output.
-        default: config/dnabrnn_thresholds.json
+        pattern: "\\d+GB"
+        default: 50GB
+      added_bases:
+        type: integer
+        description: Add bp to extend edges of HOR array for alignment and query HOR array. In addition to default 500kbp.
+        default: 1000000
   nucflag:
     type: object
     additionalProperties: false
@@ -340,8 +311,5 @@ required:
   - samples
   - chromosomes
   - concat_asm
-  - align_asm_to_ref
-  - extract_ref_hor_arrays
   - ident_cen_ctgs
-  - dna_brnn
   - repeatmasker

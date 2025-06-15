@@ -8,7 +8,7 @@ EXT_REF_HOR_ARR_BMKDIR = join(BMK_DIR, "2-extract_ref_hor_arrays")
 
 rule adjust_ref_hor_arrays:
     input:
-        config["ident_cen_ctgs"]["ref_cens_regions"],
+        config["ident_cen_ctgs"]["reference_bed"],
     output:
         join(
             EXT_REF_HOR_ARR_OUTDIR,
@@ -17,7 +17,7 @@ rule adjust_ref_hor_arrays:
     conda:
         "../envs/tools.yaml"
     params:
-        added_bases=config["extract_ref_hor_arrays"].get("added_bases", 0),
+        added_bases=config["ident_cen_ctgs"]["added_bases"],
     shell:
         """
         awk -v OFS="\\t" '{{ print $1, $2-{params.added_bases}, $3+{params.added_bases} }}' {input} > {output}
@@ -28,8 +28,8 @@ rule adjust_ref_hor_arrays:
 rule extract_ref_hor_arrays:
     input:
         ref=(
-            config["align_asm_to_ref"]["reference"]
-            if config["align_asm_to_ref"].get("reference")
+            config["ident_cen_ctgs"]["reference"]
+            if config["ident_cen_ctgs"].get("reference")
             else REF_FA
         ),
         cens_regions=rules.adjust_ref_hor_arrays.output,

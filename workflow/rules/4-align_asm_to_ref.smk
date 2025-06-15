@@ -18,8 +18,8 @@ ALN_CFG = {
     "output_dir": ASM_REF_OUTDIR,
     "logs_dir": ASM_REF_LOGDIR,
     "benchmarks_dir": ASM_REF_BMKDIR,
-    "aln_threads": config["align_asm_to_ref"]["threads"],
-    "aln_mem": config["align_asm_to_ref"]["mem"],
+    "aln_threads": config["ident_cen_ctgs"]["threads_aln"],
+    "aln_mem": config["ident_cen_ctgs"]["mem_aln"],
     "mm2_opts": "-x asm20 --secondary=no -s 25000 -K 8G",
 }
 

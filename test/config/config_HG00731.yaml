@@ -4,25 +4,13 @@ chromosomes:
 samples:
 - HG00731
 
-align_asm_to_ref:
-  reference: "test/data/reference/T2T-CHM13v2_chrY.fasta.gz"
-  threads: 4
-  mem: 60GB
-
 concat_asm:
   input_dir: "test/data/assemblies"
 
-extract_ref_hor_arrays:
-  added_bases: 0
-
 ident_cen_ctgs:
-  ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
-  ref_cens_unique_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
-
-dna_brnn:
-  model: "data/models/attcc-alpha.knm"
-  threads: 4
-  thr_file: "config/dnabrnn_thresholds.json"
+  reference: "test/data/reference/T2T-CHM13v2_chrY.fasta.gz"
+  reference_bed: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
+  added_bases: 0
 
 nucflag:
   input_hifi_reads_dir: "test/data/raw_data"

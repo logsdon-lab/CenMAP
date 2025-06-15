@@ -38,6 +38,8 @@ module srf_sm:
             "output_dir": SRF_OUTDIR,
             "log_dir": SRF_LOGDIR,
             "benchmark_dir": SRF_BMKDIR,
+            "threads": config["ident_cen_ctgs"]["threads_srf"],
+            "mem": config["ident_cen_ctgs"]["mem_srf"],
             "samples": {
                 sm: {
                     "input_dir": expand(rules.split_fa_srf.output, sm=sm),
@@ -65,11 +67,13 @@ rule create_region_bed:
         ),
     log:
         join(SRF_LOGDIR, "format_region_bed_{sm}.log"),
+    params:
+        added_bases=config["ident_cen_ctgs"]["added_bases"],
     conda:
         "../envs/py.yaml"
     shell:
         """
-        python {input.script} -i {input.bed} -m {input.monomers} > {output.bed} 2> {log}
+        python {input.script} -i {input.bed} -m {input.monomers} --bp_slop {params.added_bases} > {output.bed} 2> {log}
         """
 
 

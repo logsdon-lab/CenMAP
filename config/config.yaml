@@ -36,26 +36,15 @@ concat_asm:
   input_dir: "data/asm"
   mem: 20GB
 
-align_asm_to_ref:
-  reference: "data/reference/T2T-CHM13.fa.gz"
-  threads: 16
-  mem: 120GB
-
-extract_ref_hor_arrays:
-  # Add bp to extend edges of HOR array for alignment. In addition to default 500kbp.
-  added_bases: 1_000_000
-
 ident_cen_ctgs:
+  threads_srf: 4
+  mem_srf: 20GB
+  threads_aln: 8
+  mem_aln: 40GB
+  added_bases: 1_000_000
+  reference: "data/reference/T2T-CHM13.fa.gz"
+  reference_bed: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
   allow_pq_mismatch: true
-  ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
-  ref_cens_unique_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
-
-dna_brnn:
-  # https://github.com/lh3/dna-nn/tree/master/models
-  model: "data/models/attcc-alpha.knm"
-  threads: 12
-  mem: 8GB
-  thr_file: "config/dnabrnn_thresholds.json"
 
 nucflag:
   # input_hifi_reads_fofn_dir: "data/hifi"

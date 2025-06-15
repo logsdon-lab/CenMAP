@@ -19,9 +19,7 @@ SAMPLE_NAMES = config["samples"]
 CHROMOSOMES = config["chromosomes"]
 RGX_CHR = re.compile(r"(chr[0-9XY]+)")
 
-REF_CENS_EDGE_LEN = round(
-    (500_000 + config["extract_ref_hor_arrays"]["added_bases"]) / 1000
-)
+REF_CENS_EDGE_LEN = round((500_000 + config["ident_cen_ctgs"]["added_bases"]) / 1000)
 
 # Check if command is to containerize workflow.
 ARGUMENTS = set(sys.argv)
