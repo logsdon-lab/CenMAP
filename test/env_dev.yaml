@@ -8,4 +8,4 @@ dependencies:
   - pip:
     - polars
     - pytest
-    - snakemake==8.18.2
+    - snakemake==9.5.1
