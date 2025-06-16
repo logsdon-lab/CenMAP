@@ -74,7 +74,7 @@ properties:
         default: data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed
       threads_srf:
         type: integer
-        default: 4
+        default: 16
       mem_srf:
         type: string
         pattern: "\\d+GB"
@@ -85,7 +85,7 @@ properties:
       mem_aln:
         type: string
         pattern: "\\d+GB"
-        default: 50GB
+        default: 20GB
       added_bases:
         type: integer
         description: Add bp to extend edges of HOR array for alignment and query HOR array. In addition to default 500kbp.

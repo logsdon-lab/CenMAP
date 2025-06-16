@@ -12,7 +12,7 @@ rule split_fa_srf:
     input:
         fa=rules.concat_asm.output.fa,
     output:
-        directory(join(SRF_OUTDIR, "seq", "interm", "{sm}")),
+        temp(directory(join(SRF_OUTDIR, "seq", "interm", "{sm}"))),
     log:
         join(SRF_LOGDIR, "split_fa_{sm}.log"),
     params:
@@ -60,8 +60,8 @@ use rule * from srf_sm as srf_*
 rule create_region_bed:
     input:
         script=workflow.source_path("../scripts/filter_srf_bed.py"),
-        bed=ancient(rules.srf_merge_files_n_cleanup.output.bed),
-        monomers=ancient(rules.srf_merge_files_n_cleanup.output.monomers),
+        bed=ancient(rules.srf_merge_files.output.bed),
+        monomers=ancient(rules.srf_merge_files.output.monomers),
     output:
         bed=join(
             SRF_OUTDIR,
