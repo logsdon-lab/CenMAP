@@ -33,7 +33,7 @@ options = { legend = false, hide_x = true }
 position = "overlap"
 type = "hor"
 path = "{indir}/stv.bed"
-options = { legend = false, sort_order = "descending", hide_x = true, border = true, hor_filter = 1, live_only = false }
+options = { legend = false, sort_order = "descending", hide_x = true, bg_border = true, hor_filter = 1, live_only = false }
 
 [[tracks]]
 position = "relative"

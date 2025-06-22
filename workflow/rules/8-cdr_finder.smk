@@ -41,7 +41,7 @@ CDR_ALIGN_CFG = {
     "samples": [
         {
             "name": sm,
-            "asm_fa": expand(rules.concat_asm.output.fa, sm=sm),
+            "asm_fa": expand(rules.concat_asm.output.fa, sm=sm)[0],
             "read_dir": join(config["cdr_finder"]["input_bam_dir"], sm),
             "read_rgx": config["cdr_finder"]["bam_rgx"],
         }
@@ -130,7 +130,6 @@ CDR_FINDER_CONFIG = {
 }
 
 
-# Avoid using github() due to Snakemake caching causing reruns.
 module CDR_Finder:
     snakefile:
         "CDR-Finder/workflow/Snakefile"
@@ -141,22 +140,18 @@ module CDR_Finder:
 use rule * from CDR_Finder as cdr_*
 
 
-use rule calc_windows from CDR_Finder as cdr_calc_windows with:
-    resources:
-        mem=30,
-        hrs=1,
-
-
 use rule reorient_bed as reorient_cdr_bed with:
     input:
         bed=lambda wc: expand(rules.cdr_call_cdrs.output, sample=wc.sm),
         og_coords_key=rules.get_original_coords.output.og_coords_key,
     output:
-        temp(join(
-            CDR_FINDER_OUTDIR,
-            "bed",
-            "{sm}_cdr_final.bed",
-        )),
+        temp(
+            join(
+                CDR_FINDER_OUTDIR,
+                "bed",
+                "{sm}_cdr_final.bed",
+            )
+        ),
     log:
         join(CDR_FINDER_LOGDIR, "reorient_cdr_bed_{sm}.log"),
     params:
@@ -168,9 +163,7 @@ use rule reorient_bed as reorient_cdr_bed with:
 
 use rule reorient_bed as reorient_binned_methyl_bed with:
     input:
-        bed=lambda wc: expand(
-            rules.cdr_add_target_bed_coords_windows.output, sample=wc.sm
-        ),
+        bed=lambda wc: expand(rules.cdr_calc_windows.output, sample=wc.sm),
         og_coords_key=rules.get_original_coords.output.og_coords_key,
     output:
         temp(
