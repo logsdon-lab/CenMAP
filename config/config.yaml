@@ -40,11 +40,10 @@ ident_cen_ctgs:
   threads_srf: 4
   mem_srf: 20GB
   threads_aln: 8
-  mem_aln: 40GB
-  added_bases: 1_000_000
+  mem_aln: 150GB
+  bp_group: 2500000
+  bp_slop: 1000000
   reference: "data/reference/T2T-CHM13.fa.gz"
-  reference_bed: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
-  allow_pq_mismatch: true
 
 nucflag:
   # input_hifi_reads_fofn_dir: "data/hifi"
@@ -63,9 +62,8 @@ repeatmasker:
   ref_repeatmasker_output:
   - data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   - data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
-  config_censtats_status: "config/censtats.json"
   repeat_colors: "config/repeatmasker_colors.json"
-  use_censtats_new_name: true
+  bp_shannon_window: 100000
   threads: 12
 
 humas_annot:

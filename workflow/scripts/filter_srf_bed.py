@@ -163,12 +163,6 @@ def main():
     ap.add_argument(
         "-l", "--min_length", type=int, default=30_000, help="Minimum length of region."
     )
-    ap.add_argument(
-        "--bp_slop",
-        type=int,
-        default=1_000_000,
-        help="Add additional base pairs to ends.",
-    )
     args = ap.parse_args()
 
     df_srf = pl.concat(
@@ -254,12 +248,9 @@ def main():
             .cast({"chrom_st": pl.Int64, "chrom_en": pl.Int64})
             .fill_null(0)
             # Adjust coordinates by contig
-            # Add 500 kbp.
             .with_columns(
-                new_st=(pl.col("st") + pl.col("chrom_st") - args.bp_slop).clip(
-                    lower_bound=0
-                ),
-                new_en=pl.col("en") + pl.col("chrom_st") + args.bp_slop,
+                new_st=pl.col("st") + pl.col("chrom_st"),
+                new_en=pl.col("en") + pl.col("chrom_st"),
             )
         )
 

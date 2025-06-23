@@ -19,8 +19,6 @@ SAMPLE_NAMES = config["samples"]
 CHROMOSOMES = config["chromosomes"]
 RGX_CHR = re.compile(r"(chr[0-9XY]+)")
 
-REF_CENS_EDGE_LEN = round((500_000 + config["ident_cen_ctgs"]["added_bases"]) / 1000)
-
 # Check if command is to containerize workflow.
 ARGUMENTS = set(sys.argv)
 IS_CONTAINERIZE_CMD = "--containerize" in ARGUMENTS
@@ -28,12 +26,6 @@ IS_SINGULARITY = (
     DeploymentMethod.APPTAINER in workflow.deployment_settings.deployment_method
 )
 IS_CONDA = DeploymentMethod.CONDA in workflow.deployment_settings.deployment_method
-
-
-# Thresholds
-DEF_CENSTATS_STATUS_EDGE_LEN_THR = 500_000
-DEF_CENSTATS_STATUS_EDGE_PERC_ALR_THR = 0.95
-DEF_CENSTATS_STATUS_MAX_ALR_LEN_THR = 250_000
 
 
 # Set shared constraints.

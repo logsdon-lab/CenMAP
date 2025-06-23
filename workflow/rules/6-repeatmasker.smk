@@ -38,12 +38,10 @@ rule setup_repeatmasker:
 checkpoint split_cens_for_rm:
     input:
         fa=rules.extract_cens_regions.output.seq,
-        # [old_name, new_name, coords, sm, chr, is_reversed]
-        rename_key=rules.map_collapse_cens.output.renamed_cens_key,
     output:
         directory(join(RM_OUTDIR, "seq", "interm", "{sm}")),
     log:
-        join(RM_LOGDIR, "split_{sm}_cens_for_humas_sd.log"),
+        join(RM_LOGDIR, "split_{sm}_cens_for_rm.log"),
     params:
         split_dir=lambda wc, output: output[0],
     conda:
@@ -53,21 +51,12 @@ checkpoint split_cens_for_rm:
         """
         mkdir -p {params.split_dir}
         awk '{{
-            # Read key values in first file.
-            if (FNR == NR) {{
-                # Add coords to name.
-                kv[$1":"$3]=$2":"$3
-                next;
-            }}
             if (substr($0, 1, 1)==">") {{
                 ctg_name=substr($0,2)
-                new_ctg_name=kv[ctg_name]
-                filename=("{params.split_dir}/" new_ctg_name ".fa")
-                print ">"new_ctg_name > filename
-            }} else {{
-                print $0 > filename
+                filename=("{params.split_dir}/" ctg_name ".fa")
             }}
-        }}' {input.rename_key} {input.fa} 2> {log}
+            print $0 > filename
+        }}' {input.fa} 2> {log}
         """
 
 

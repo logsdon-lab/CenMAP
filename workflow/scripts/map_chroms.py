@@ -19,6 +19,14 @@ class Interval(NamedTuple):
         return self.end - self.begin
 
 
+def cmp(x: Interval, y: Interval) -> bool:
+    return True
+
+
+def merge(x: Interval, y: Interval) -> Interval:
+    return Interval(x.begin, y.end, x.data)
+
+
 def merge_itvs(
     itvs: Iterable[Interval],
     dst: int = 1,
@@ -26,9 +34,9 @@ def merge_itvs(
     fn_merge_itv: Callable[[Interval, Interval], Interval] | None = None,
 ) -> list[Interval]:
     if not fn_cmp:
-        fn_cmp = lambda x, y: True
+        fn_cmp = cmp
     if not fn_merge_itv:
-        fn_merge_itv = lambda x, y: Interval(x.begin, y.end, x.data)
+        fn_merge_itv = merge
 
     final_itvs = []
     sorted_itvs = deque(sorted(itvs))
@@ -73,31 +81,20 @@ def main():
     ap.add_argument(
         "--allow_multi_chr_prop",
         type=float,
-        default=33.0,
+        default=5.0,
         help="Allow multiple chromosome assignment if accounts for greater than x percent of contig.",
     )
     ap.add_argument(
         "--ignore_multi_chr_assignments",
         nargs="*",
         default=ACRO_CHRS,
-        help="Ignore chromosomes when building multiple chromosome assignments"
+        help="Ignore chromosomes when building multiple chromosome assignments",
     )
 
     args = ap.parse_args()
 
-    df = (
-        pl.read_csv(
-            args.input, separator="\t", has_header=True, truncate_ragged_lines=True
-        )
-        .with_columns(
-            query_contig_start=pl.col("query_name").str.extract(r":(\d+)-").fill_null(0),
-            query_contig_end=pl.col("query_name").str.extract(r"-(\d+)$").fill_null(0)
-        )
-        .cast({"query_contig_start": pl.Int64, "query_contig_end": pl.Int64})
-        .with_columns(
-            pl.col("query_start") + pl.col("query_contig_start"),
-            pl.col("query_end") + pl.col("query_contig_start"),
-        )
+    df = pl.read_csv(
+        args.input, separator="\t", has_header=True, truncate_ragged_lines=True
     )
 
     for qname, df_query in df.sort(by="query_name").group_by(
@@ -112,7 +109,9 @@ def main():
                     itv["query_end"],
                     itv["#reference_name"],
                 )
-                for itv in df_query.select("query_start", "query_end", "#reference_name").iter_rows(named=True)
+                for itv in df_query.select(
+                    "query_start", "query_end", "#reference_name"
+                ).iter_rows(named=True)
             ),
             dst=1,
             fn_cmp=fn_cmp,
@@ -122,42 +121,54 @@ def main():
             pl.DataFrame(
                 [(itv.data, itv.length()) for itv in qitvs],
                 orient="row",
-                schema=["#reference_name", "length"]
+                schema=["#reference_name", "length"],
             )
             .group_by(["#reference_name"], maintain_order=True)
             .agg(prop=100 * (pl.col("length").sum() / query_length))
+            .filter(pl.col("prop") > args.allow_multi_chr_prop)
         )
+
+        # Ignore and just take max if all multi_chr.
+        if (
+            df_ref_length_prop["#reference_name"]
+            .is_in(args.ignore_multi_chr_assignments)
+            .all()
+        ):
+            df_ref_length_prop = df_ref_length_prop.filter(
+                pl.col("prop") == pl.col("prop").max()
+            )
+
         chrom = "-".join(
-            df_ref_length_prop
-            .filter((pl.col("prop") > args.allow_multi_chr_prop) & (~pl.col("#reference_name").is_in(args.ignore_multi_chr_assignments)))
-            .get_column("#reference_name")
+            df_ref_length_prop.get_column("#reference_name")
             .unique(maintain_order=True)
             .to_list()
         )
         if not chrom:
-            chrom = df_ref_length_prop.filter(pl.col("prop") == pl.col("prop").max()).get_column("#reference_name").first()
-        
+            chrom = (
+                df_ref_length_prop.filter(pl.col("prop") == pl.col("prop").max())
+                .get_column("#reference_name")
+                .first()
+            )
+
+        df_strand_max = (
+            df_query.group_by(["query_name", "strand"])
+            .agg(pl.col("matches").sum())
+            .filter(pl.col("matches") == pl.col("matches").max())
+            .drop("matches")
+        )
+
         df_query_summary = (
-            df_query
-            .group_by(["query_name"])
-            .agg(
+            df_query.select("query_name")
+            .unique()
+            .join(df_strand_max, on="query_name")
+            .with_columns(
                 # Use SRF determined start and end. Not alignment based.
-                st=pl.col("query_contig_start").first(),
-                end=pl.col("query_contig_end").last(),
                 new_chrom=pl.lit(chrom),
-                is_rc=pl.when(
-                    pl.col("strand").mode().first() == pl.lit("+")
-                )
+                is_rc=pl.when(pl.col("strand").mode().first() == pl.lit("+"))
                 .then(pl.lit("false"))
                 .otherwise(pl.lit("true")),
             )
-            .with_columns(
-                query_name=pl.col("query_name").str.extract(r"^(.+):").fill_null(pl.col("query_name")),
-                length=pl.col("end")-pl.col("st")
-            )
-            .select(
-                "query_name", "st", "end", "new_chrom", "length", "is_rc"
-            )
+            .select("query_name", "new_chrom", "is_rc")
         )
         df_query_summary.write_csv(args.output, separator="\t", include_header=False)
 

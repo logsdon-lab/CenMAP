@@ -2,9 +2,9 @@ include: "common.smk"
 include: "utils.smk"
 
 
-CONCAT_ASM_OUTDIR = join(OUTPUT_DIR, "1-concat_asm")
-CONCAT_ASM_LOGDIR = join(LOG_DIR, "1-concat_asm")
-CONCAT_ASM_BMKDIR = join(BMK_DIR, "1-concat_asm")
+CONCAT_ASM_OUTDIR = join(OUTPUT_DIR, "2-concat_asm")
+CONCAT_ASM_LOGDIR = join(LOG_DIR, "2-concat_asm")
+CONCAT_ASM_BMKDIR = join(BMK_DIR, "2-concat_asm")
 
 
 rule concat_asm:

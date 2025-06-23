@@ -4,7 +4,7 @@
 
 include: "utils.smk"
 include: "common.smk"
-include: "1-concat_asm.smk"
+include: "2-concat_asm.smk"
 include: "4-align_asm_to_ref.smk"
 
 
@@ -13,106 +13,130 @@ IDENT_CEN_CTGS_LOGDIR = join(LOG_DIR, "5-ident_cen_ctgs")
 IDENT_CEN_CTGS_BMKDIR = join(BMK_DIR, "5-ident_cen_ctgs")
 
 
-# Convert rustybam stats bedfile by adjusting start and end positions.
-rule format_hor_ref_aln_cen_contigs:
+# Map each contig to a chromosome.
+rule map_chroms:
     input:
-        aln_bed=expand(
-            rules.asm_ref_aln_to_bed.output, ref=f"{REF_NAME}_cens", sm="{sm}"
-        ),
+        script=workflow.source_path("../scripts/map_chroms.py"),
+        alns=expand(rules.asm_ref_aln_to_bed.output, ref=REF_NAME, sm="{sm}"),
     output:
-        cen_regions=join(
+        # (old_name, new_name)
+        rename_key=join(
             IDENT_CEN_CTGS_OUTDIR,
             "bed",
-            "interm",
-            "{sm}_cens.bed",
+            "{sm}_rename_key.tsv",
+        ),
+    params:
+        allow_multi_chr_prop=config["ident_cen_ctgs"]["perc_multi_chrom"],
+    conda:
+        "../envs/py.yaml"
+    log:
+        join(IDENT_CEN_CTGS_LOGDIR, "map_chroms_{sm}.log"),
+    shell:
+        """
+        python {input.script} -i {input.alns} --allow_multi_chr_prop {params.allow_multi_chr_prop} | \
+        awk -v OFS="\\t" '{{
+            old_name=$1;
+            chrom=$2;
+            rc=($3== "true") ? "rc-" : "";
+            new_name="{wildcards.sm}_"rc""chrom"_"old_name
+            print old_name, new_name
+        }}' > {output.rename_key} 2> {log}
+        """
+
+
+rule rename_reort_asm:
+    input:
+        fa=rules.concat_asm.output.fa,
+        idx=rules.concat_asm.output.idx,
+        rename_key=rules.map_chroms.output,
+    output:
+        fa=join(
+            CONCAT_ASM_OUTDIR,
+            "{sm}-asm-renamed-reort.fa",
+        ),
+        idx=join(
+            CONCAT_ASM_OUTDIR,
+            "{sm}-asm-renamed-reort.fa.fai",
+        ),
+    params:
+        pattern=r"'^(\S+)\s*'",
+        replacement=lambda wc: "'{kv}'",
+    conda:
+        "../envs/tools.yaml"
+    log:
+        join(IDENT_CEN_CTGS_LOGDIR, "fix_{sm}_asm_orientation.log"),
+    shell:
+        """
+        # Get the reverse cens and reverse them.
+        # Get all the non-reversed contigs.
+        # Then replace the names.
+        seqkit replace -p {params.pattern} -r {params.replacement} \
+        -k {input.rename_key} \
+        <(cat \
+            <(seqtk subseq {input.fa} \
+                <(awk '$2 ~ "rc-chr"' {input.rename_key} | cut -f1) | \
+                seqtk seq -r) \
+            <(seqtk subseq {input.fa} \
+                <(grep -v -f <(awk '$2 ~ "rc-chr"' {input.rename_key} | cut -f1) {input.idx} | cut -f 1)) \
+        ) \
+        --keep-key > {output.fa} 2> {log}
+        samtools faidx {output.fa} 2>> {log}
+        """
+
+
+# Reorient satellite bed.
+# Don't wait for rename assembly as can do in parallel.
+rule reorient_satellite_bed:
+    input:
+        bed=rules.slop_region_bed.output,
+        rename_key=rules.map_chroms.output,
+        idx=rules.concat_asm.output.idx,
+    output:
+        bed=join(
+            IDENT_CEN_CTGS_OUTDIR,
+            "bed",
+            "{sm}.bed",
         ),
     conda:
         "../envs/tools.yaml"
     log:
-        join(IDENT_CEN_CTGS_LOGDIR, "format_hor_ref_aln_cen_contigs_{sm}.log"),
+        join(IDENT_CEN_CTGS_LOGDIR, "reorient_satellite_bed_{sm}.log"),
     shell:
         """
+        {{ join <(sort -k1,1 {input.bed}) <(sort -k1,1 {input.rename_key}) | \
+        join - <(cut -f 1,2 {input.idx}| sort -k1,1) | \
         awk -v OFS="\\t" '{{
-            if (NR == 1) {{
-                print;
-                next;
-            }} 
-            # Find starts/ends in contig name.
-            match($1, ":(.+)-", ref_starts);
-            # Remove coords from ctg name
-            gsub(":.*-.*", "", $1)
-            # Print columns.
-            $2=$2+ref_starts[1]
-            $3=$3+ref_starts[1]
-            print
-        }}' {input} > {output} 2> {log}
-        """
-
-
-# Map each centromeric contig to a chromosome.
-rule map_collapse_cens:
-    input:
-        script=workflow.source_path("../scripts/map_cens.py"),
-        regions=rules.format_hor_ref_aln_cen_contigs.output,
-        fai=rules.concat_asm.output.idx,
-    output:
-        cens_key=join(
-            IDENT_CEN_CTGS_OUTDIR,
-            "bed",
-            "interm",
-            "{sm}_mapped_cens.bed",
-        ),
-        # old_name, new_name, coords, sample, chrom, is_reverse
-        renamed_cens_key=join(
-            IDENT_CEN_CTGS_OUTDIR,
-            "bed",
-            "interm",
-            "{sm}_renamed_cens.tsv",
-        ),
-    params:
-        # TODO: Should also affect humas-sd monomer lib creation.
-        allow_multi_chr_prop=33.0,
-    conda:
-        "../envs/py.yaml"
-    log:
-        join(IDENT_CEN_CTGS_LOGDIR, "map_collapse_cens_{sm}.log"),
-    shell:
-        """
-        python {input.script} -i {input.regions} --allow_multi_chr_prop {params.allow_multi_chr_prop} > {output.cens_key} 2> {log}
-        awk -v OFS="\\t" '{{
-            # 1-based index for seqtk
-            st=$2 + 1;
-            # Query length. seqtk caps at contig length.
-            # Cannot use rb stats as only centromere length.
-            end=($3 > $7) ? $7 : $3;
-            coords=st"-"end;
-            old_name=$1;
-            new_name="{wildcards.sm}_"$4"_"$1;
-            print old_name,new_name,coords,"{wildcards.sm}",$4,$6
-        }}' <(join <(sort -k1,1 {output.cens_key}) <(cut -f1,2 {input.fai} | sort -k1,1)) > {output.renamed_cens_key} 2> {log}
+            ctg_len=$6;
+            if ($5 ~ "rc-chr") {{
+                st=ctg_len-$3;
+                end=ctg_len-$2;
+            }} else {{
+                st=$2;
+                end=$3;
+            }}
+            print $5, st, end, end-st
+        }}' ;}} > {output.bed} 2> {log}
         """
 
 
 # Extract complete centromeric contigs.
 rule extract_cens_regions:
     input:
-        bed=rules.map_collapse_cens.output.cens_key,
-        fa=rules.concat_asm.output.fa,
+        bed=rules.reorient_satellite_bed.output,
+        fa=rules.rename_reort_asm.output.fa,
     output:
         seq=temp(
             join(
                 IDENT_CEN_CTGS_OUTDIR,
                 "seq",
-                "interm",
-                "{sm}_centromeric_regions.fa",
+                "{sm}_satellite_regions.fa",
             )
         ),
         idx=temp(
             join(
                 IDENT_CEN_CTGS_OUTDIR,
                 "seq",
-                "interm",
-                "{sm}_centromeric_regions.fa.fai",
+                "{sm}_satellite_regions.fa.fai",
             )
         ),
     params:
@@ -128,7 +152,15 @@ rule extract_cens_regions:
 rule ident_cen_ctgs_all:
     input:
         expand(
-            rules.map_collapse_cens.output,
+            rules.map_chroms.output,
+            sm=SAMPLE_NAMES,
+        ),
+        expand(
+            rules.rename_reort_asm.output,
+            sm=SAMPLE_NAMES,
+        ),
+        expand(
+            rules.extract_cens_regions.output,
             sm=SAMPLE_NAMES,
         ),
     default_target: True

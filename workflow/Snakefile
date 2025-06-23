@@ -16,21 +16,14 @@ containerized: CONTAINER
 # Main workflow.
 module download_ref:
     snakefile:
-        "rules/0-download_ref.smk"
+        "rules/1-download_ref.smk"
     config:
         config
 
 
 module concat_asm:
     snakefile:
-        "rules/1-concat_asm.smk"
-    config:
-        config
-
-
-module extract_ref_hor_arrays:
-    snakefile:
-        "rules/2-extract_ref_hor_arrays.smk"
+        "rules/2-concat_asm.smk"
     config:
         config
 
@@ -146,9 +139,6 @@ use rule * from download_ref
 use rule * from concat_asm
 
 
-use rule * from extract_ref_hor_arrays
-
-
 use rule * from srf
 
 
@@ -173,7 +163,6 @@ use rule * from get_complete_correct_cens
 output = [
     # Required output.
     rules.srf_all.input,
-    rules.extract_ref_hor_arrays_all.input,
     rules.ident_cen_ctgs_all.input,
     rules.repeatmasker_all.input,
     rules.fix_cens_w_repeatmasker_all.input,

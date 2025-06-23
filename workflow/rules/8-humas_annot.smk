@@ -1,7 +1,7 @@
 
 include: "common.smk"
 include: "utils.smk"
-include: "1-concat_asm.smk"
+include: "5-ident_cen_ctgs.smk"
 include: "7-fix_cens_w_repeatmasker.smk"
 
 
@@ -114,12 +114,6 @@ def humas_annot_sm_outputs(wc):
 
 checkpoint run_humas_annot:
     input:
-        # Force monomers to be generated.
-        (
-            rules.cens_generate_monomers.output
-            if config["humas_annot"]["mode"] == "sd"
-            else []
-        ),
         expand(rules.split_cens_for_humas_annot.output, sm=SAMPLE_NAMES),
         unpack(humas_annot_sm_outputs),
     output:

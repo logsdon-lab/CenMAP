@@ -1,6 +1,5 @@
 include: "utils.smk"
 include: "common.smk"
-include: "2-extract_ref_hor_arrays.smk"
 include: "3-srf.smk"
 
 
@@ -9,11 +8,14 @@ ASM_REF_LOGDIR = join(LOG_DIR, "4-align_asm_to_ref")
 ASM_REF_BMKDIR = join(BMK_DIR, "4-align_asm_to_ref")
 
 ALN_CFG = {
-    "ref": {f"{REF_NAME}_cens": rules.extract_ref_hor_arrays.output.seq},
-    "sm": {
-        sm: ancient(expand(rules.extract_alr_regions_by_sample.output.seq, sm=sm))
-        for sm in SAMPLE_NAMES
+    "ref": {
+        REF_NAME: (
+            config["ident_cen_ctgs"]["reference"]
+            if config["ident_cen_ctgs"].get("reference")
+            else REF_FA
+        )
     },
+    "sm": {sm: rules.concat_asm.output.fa for sm in SAMPLE_NAMES},
     "temp_dir": join(ASM_REF_OUTDIR, "temp"),
     "output_dir": ASM_REF_OUTDIR,
     "logs_dir": ASM_REF_LOGDIR,

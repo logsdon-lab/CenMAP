@@ -9,7 +9,6 @@ concat_asm:
 
 ident_cen_ctgs:
   reference: "data/reference/T2T-CHM13.fa.gz"
-  reference_bed: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
   added_bases: 0
 
 nucflag:

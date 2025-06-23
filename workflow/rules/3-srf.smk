@@ -1,5 +1,5 @@
 include: "common.smk"
-include: "1-concat_asm.smk"
+include: "2-concat_asm.smk"
 
 
 SRF_OUTDIR = join(OUTPUT_DIR, "3-srf")
@@ -63,7 +63,31 @@ rule create_region_bed:
         bed=ancient(rules.srf_merge_files.output.bed),
         monomers=ancient(rules.srf_merge_files.output.monomers),
     output:
-        bed=join(
+        bed=pipe(
+            join(
+                SRF_OUTDIR,
+                "bed",
+                "{sm}_interm.bed",
+            )
+        ),
+    params:
+        bp_group=config["ident_cen_ctgs"]["bp_group"],
+    log:
+        join(SRF_LOGDIR, "create_region_bed_{sm}.log"),
+    conda:
+        "../envs/py.yaml"
+    shell:
+        """
+        python {input.script} -i {input.bed} -m {input.monomers} -g {params.bp_group} > {output.bed} 2> {log}
+        """
+
+
+rule slop_region_bed:
+    input:
+        bed=rules.create_region_bed.output,
+        idx=rules.concat_asm.output.idx,
+    output:
+        join(
             SRF_OUTDIR,
             "bed",
             "{sm}.bed",
@@ -71,48 +95,19 @@ rule create_region_bed:
     log:
         join(SRF_LOGDIR, "format_region_bed_{sm}.log"),
     params:
-        added_bases=config["ident_cen_ctgs"]["added_bases"],
-    conda:
-        "../envs/py.yaml"
-    shell:
-        """
-        python {input.script} -i {input.bed} -m {input.monomers} --bp_slop {params.added_bases} > {output.bed} 2> {log}
-        """
-
-
-rule extract_alr_regions_by_sample:
-    input:
-        fa=rules.concat_asm.output.fa,
-        bed=rules.create_region_bed.output,
-    output:
-        seq=join(
-            SRF_OUTDIR,
-            "seq",
-            "interm",
-            "{sm}.fa",
-        ),
-        idx=join(
-            SRF_OUTDIR,
-            "seq",
-            "interm",
-            "{sm}.fa.fai",
-        ),
-    params:
-        **params_shell_extract_and_index_fa,
-    log:
-        join(SRF_LOGDIR, "extract_alr_region_{sm}.log"),
+        bp_slop=config["ident_cen_ctgs"]["bp_slop"],
     conda:
         "../envs/tools.yaml"
     shell:
-        shell_extract_and_index_fa
+        """
+        bedtools slop -i {input.bed} -g {input.idx} -b {params.bp_slop} > {output} 2> {log}
+        """
 
 
 rule srf_all:
     input:
-        ancient(
-            expand(
-                rules.extract_alr_regions_by_sample.output,
-                sm=SAMPLE_NAMES,
-            )
+        expand(
+            rules.slop_region_bed.output,
+            sm=SAMPLE_NAMES,
         ),
     default_target: True

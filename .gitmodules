@@ -1,6 +1,7 @@
 [submodule "workflow/rules/Snakemake-HumAS-SD"]
 	path = workflow/rules/Snakemake-HumAS-SD
 	url = https://github.com/logsdon-lab/Snakemake-HumAS-SD.git
+	branch = feature/multi-chr-lib
 	ignore = dirty
 [submodule "workflow/rules/Snakemake-HumAS-HMMER"]
 	path = workflow/rules/Snakemake-HumAS-HMMER
