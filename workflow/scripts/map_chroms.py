@@ -158,7 +158,7 @@ def main():
         )
 
         df_query_summary = (
-            df_query.select("query_name")
+            df_query.select("query_name", "query_length")
             .unique()
             .join(df_strand_max, on="query_name")
             .with_columns(
@@ -168,7 +168,7 @@ def main():
                 .then(pl.lit("false"))
                 .otherwise(pl.lit("true")),
             )
-            .select("query_name", "new_chrom", "is_rc")
+            .select("query_name", "new_chrom", "is_rc", "query_length")
         )
         df_query_summary.write_csv(args.output, separator="\t", include_header=False)
 

@@ -100,6 +100,7 @@ use rule * from CDR_Finder as cdr_*
 
 rule merge_cdr_beds:
     input:
+        bed=expand(rules.make_complete_cens_bed.output, sm=SAMPLE_NAMES_INTERSECTION),
         cdr_output=expand(rules.cdr_call_cdrs.output, sample=SAMPLE_NAMES_INTERSECTION),
         methyl_cdr_output=expand(
             rules.cdr_calc_windows.output, sample=SAMPLE_NAMES_INTERSECTION
@@ -117,8 +118,20 @@ rule merge_cdr_beds:
         ),
     shell:
         """
-        cat {input.cdr_output} > {output.reorient_cdr_output}
-        cat {input.methyl_cdr_output} > {output.reorient_methyl_cdr_output}
+        sort -k1,1 {input.cdr_output} | \
+        join - <(cat {input.bed} | sort -k1,1) | \
+        awk -v OFS="\\t" '{{
+            if ($2 >= $4 && $3 <= $5) {{
+                print $1":"$4"-"$5, $2,$3
+            }}
+        }}' > {output.reorient_cdr_output}
+        sort -k1,1 {input.methyl_cdr_output}  | \
+        join - <(cat {input.bed} | sort -k1,1) | \
+        awk -v OFS="\\t" '{{
+            if ($2 >= $6 && $3 <= $7) {{
+                print $1":"$6"-"$7,$2,$3,$4,$5
+            }}
+        }}' > {output.reorient_methyl_cdr_output}
         """
 
 

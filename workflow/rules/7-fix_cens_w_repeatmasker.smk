@@ -74,8 +74,9 @@ def cen_entropy(wc):
 rule make_complete_cens_bed:
     input:
         entropy=cen_entropy,
+        rename_key=rules.map_chroms.output,
     output:
-        # (new_name, st, end)
+        # (new_name, st, end, ctg, ctg_len)
         cen_bed=join(
             FIX_RM_OUTDIR,
             "bed",
@@ -86,7 +87,10 @@ rule make_complete_cens_bed:
         "../envs/tools.yaml"
     shell:
         """
-        cat {input.entropy} > {output}
+        cat {input.entropy} | \
+        sort -k1,1 | \
+        join -1 1 -2 2 - <(sort -k2,2 {input.rename_key}) | \
+        awk -v OFS="\\t" '{{$1=$1; print}}' > {output}
         """
 
 

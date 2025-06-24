@@ -38,8 +38,9 @@ rule map_chroms:
             old_name=$1;
             chrom=$2;
             rc=($3== "true") ? "rc-" : "";
+            ctg_len=$4;
             new_name="{wildcards.sm}_"rc""chrom"_"old_name
-            print old_name, new_name
+            print old_name, new_name, ctg_len
         }}' > {output.rename_key} 2> {log}
         """
 
