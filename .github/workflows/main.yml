@@ -58,7 +58,7 @@ jobs:
 
     - name: Test dry-run workflow.
       run: |
-        snakemake -c 1 -np \
+        snakemake -c 2 -np \
         --workflow-profile none \
         --configfile test/config/config.yaml
 
