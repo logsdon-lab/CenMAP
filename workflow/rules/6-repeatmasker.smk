@@ -68,8 +68,6 @@ rule rename_for_repeatmasker:
         original_fa_idx=temp(
             join(RM_OUTDIR, "seq", "{sm}_renamed", "{fname}_original.fa.fai"),
         ),
-        # Use different dir to avoid greedy wildcard recursively running rule.
-        # TODO: rules.split_cens_for_rm.output[0]
         renamed_fa=temp(
             join(
                 RM_OUTDIR,
@@ -126,8 +124,6 @@ rule run_repeatmasker:
         "../envs/tools.yaml"
     log:
         join(RM_LOGDIR, "repeatmasker_{sm}_{fname}.log"),
-    # Retry in case of .RepeatMaskerCache failure.
-    retries: 2
     benchmark:
         join(RM_BMKDIR, "repeatmasker_{sm}_{fname}.tsv")
     shell:

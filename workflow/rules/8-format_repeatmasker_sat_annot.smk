@@ -31,7 +31,7 @@ rule merge_complete_and_correct_rm_out:
 
 rule create_rm_satellite_annotations:
     input:
-        script="workflow/scripts/format_rm_sat_annot.py",
+        script=workflow.source_path("../scripts/format_rm_sat_annot.py"),
         rm_output=rules.merge_complete_and_correct_rm_out.output,
         rm_sat_patterns=config["plot_hor_stv"].get("sat_annot_colors", []),
     output:

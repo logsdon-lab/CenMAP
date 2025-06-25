@@ -66,3 +66,4 @@ rule format_hor_stv_all:
             rules.filter_complete_correct_stv_row.output,
             chr=CHROMOSOMES,
         ),
+    default_target: True

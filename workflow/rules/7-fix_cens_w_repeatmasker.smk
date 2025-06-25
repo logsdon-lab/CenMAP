@@ -112,7 +112,7 @@ rule fix_cens_rm_out:
         "../envs/tools.yaml"
     shell:
         """
-        grep -f <(cut -f1 {input.bed}) {input.rm_out} > {output} 2> {log}
+        grep -f <(awk '{{print $1":"$2"-"$3}}' {input.bed}) {input.rm_out} > {output} 2> {log}
         """
 
 

@@ -43,3 +43,4 @@ use rule * from align_asm_to_ref as asm_ref_*
 use rule all from align_asm_to_ref as align_asm_ref_all with:
     input:
         rules.asm_ref_all.input,
+    default_target: True

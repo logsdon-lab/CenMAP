@@ -247,3 +247,4 @@ use rule * from NucFlag
 rule nucflag_all:
     input:
         expand(rules.nucflag.input, sm=SAMPLE_NAMES),
+    default_target: True
