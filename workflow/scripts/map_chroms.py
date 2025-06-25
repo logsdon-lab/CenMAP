@@ -79,6 +79,7 @@ def main():
     )
     ap.add_argument("-o", "--output", default=sys.stdout, type=argparse.FileType("at"))
     ap.add_argument(
+        "-p",
         "--allow_multi_chr_prop",
         type=float,
         default=5.0,
