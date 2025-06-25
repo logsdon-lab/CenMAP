@@ -1,5 +1,3 @@
-test/rename_rm/HG01596_expected.fa.out filter=lfs diff=lfs merge=lfs -text
-test/rename_rm/HG01596_renamed.fa.out filter=lfs diff=lfs merge=lfs -text
 test/data/assemblies/HG00731/HG00731_chrY_h2tg000043l.fasta.gz filter=lfs diff=lfs merge=lfs -text
 test/data/raw_data/HG00731/HG00731_chrY_h2tg000043l_reads.fastq.gz filter=lfs diff=lfs merge=lfs -text
 test/data/reference/T2T-CHM13v2_chrY.fasta.gz filter=lfs diff=lfs merge=lfs -text
@@ -16,3 +14,7 @@ test/filter_srf_bed/input/srf_HG008-T.bed filter=lfs diff=lfs merge=lfs -text
 test/filter_srf_bed/input/monomers_HG008-N.tsv filter=lfs diff=lfs merge=lfs -text
 test/filter_srf_bed/expected/HG008-N.bed filter=lfs diff=lfs merge=lfs -text
 test/filter_srf_bed/expected/HG008-T.bed filter=lfs diff=lfs merge=lfs -text
+test/reformat_rm/input/HG01596.fa.fai filter=lfs diff=lfs merge=lfs -text
+test/reformat_rm/input/HG01596_renamed.fa.fai filter=lfs diff=lfs merge=lfs -text
+test/reformat_rm/input/HG01596_renamed.fa.out filter=lfs diff=lfs merge=lfs -text
+test/reformat_rm/expected/HG01596_expected.fa.out filter=lfs diff=lfs merge=lfs -text

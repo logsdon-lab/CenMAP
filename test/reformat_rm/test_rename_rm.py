@@ -1,15 +1,19 @@
+import os
 import pytest
 from test.helpers.integration import run_integration_test
+
+
+WD = os.path.dirname(__file__)
 
 
 @pytest.mark.parametrize(
     ["rm_out", "original_faidx", "renamed_faidx", "expected"],
     [
         (
-            "test/rename_rm/HG01596_renamed.fa.out",
-            "test/rename_rm/HG01596.fa.fai",
-            "test/rename_rm/HG01596_renamed.fa.fai",
-            "test/rename_rm/HG01596_expected.fa.out",
+            f"{WD}/input/HG01596_renamed.fa.out",
+            f"{WD}/input/HG01596.fa.fai",
+            f"{WD}/input/HG01596_renamed.fa.fai",
+            f"{WD}/expected/HG01596_expected.fa.out",
         )
     ],
 )
