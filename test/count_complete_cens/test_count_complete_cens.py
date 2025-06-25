@@ -1,13 +1,17 @@
+import os
 import pytest
 from test.helpers.integration import run_integration_test
+
+
+WD = os.path.dirname(__file__)
 
 
 @pytest.mark.parametrize(
     ["infile", "expected"],
     [
         (
-            "test/count_cens/all_AS-HOR_lengths.tsv",
-            "test/count_cens/expected_counts.tsv",
+            f"{WD}/input/all_AS-HOR_lengths.tsv",
+            f"{WD}/expected/expected_counts.tsv",
         )
     ],
 )
