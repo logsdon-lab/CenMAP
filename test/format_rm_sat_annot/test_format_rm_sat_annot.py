@@ -1,13 +1,17 @@
+import os
 import pytest
 from test.helpers.integration import run_integration_test
+
+
+WD = os.path.dirname(__file__)
 
 
 @pytest.mark.parametrize(
     ["infile", "expected"],
     [
         (
-            "test/format_rm_sat_annot/input/HG00731_correct_ALR_regions.fa.reformatted.out",
-            "test/format_rm_sat_annot/expected/HG00731_correct_ALR_regions.fa.reformatted.bed",
+            f"{WD}/input/HG00731_correct_ALR_regions.fa.reformatted.out",
+            f"{WD}/expected/HG00731_correct_ALR_regions.fa.reformatted.bed",
         )
     ],
 )

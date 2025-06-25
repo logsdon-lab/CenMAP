@@ -10,3 +10,9 @@ test/map_chroms/input/HG008-N.bed filter=lfs diff=lfs merge=lfs -text
 test/map_chroms/input/HG008-T.bed filter=lfs diff=lfs merge=lfs -text
 test/map_chroms/expected/HG008-N.tsv filter=lfs diff=lfs merge=lfs -text
 test/map_chroms/expected/HG008-T.tsv filter=lfs diff=lfs merge=lfs -text
+test/filter_srf_bed/input/monomers_HG008-T.tsv filter=lfs diff=lfs merge=lfs -text
+test/filter_srf_bed/input/srf_HG008-N.bed filter=lfs diff=lfs merge=lfs -text
+test/filter_srf_bed/input/srf_HG008-T.bed filter=lfs diff=lfs merge=lfs -text
+test/filter_srf_bed/input/monomers_HG008-N.tsv filter=lfs diff=lfs merge=lfs -text
+test/filter_srf_bed/expected/HG008-N.bed filter=lfs diff=lfs merge=lfs -text
+test/filter_srf_bed/expected/HG008-T.bed filter=lfs diff=lfs merge=lfs -text

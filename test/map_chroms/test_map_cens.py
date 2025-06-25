@@ -1,13 +1,17 @@
+import os
 import pytest
 from test.helpers.integration import run_integration_test
+
+
+WD = os.path.dirname(__file__)
 
 
 @pytest.mark.parametrize(
     ["infile", "expected"],
     [
         (
-            f"test/map_chroms/input/{sm}.bed",
-            f"test/map_chroms/expected/{sm}.tsv",
+            f"{WD}/input/{sm}.bed",
+            f"{WD}/expected/{sm}.tsv",
         )
         for sm in ["HG008-N", "HG008-T"]
     ],
