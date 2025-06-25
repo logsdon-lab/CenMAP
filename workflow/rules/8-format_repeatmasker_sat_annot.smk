@@ -50,7 +50,7 @@ rule create_rm_satellite_annotations:
         "../envs/py.yaml"
     shell:
         """
-        python {input.script} -i {input.rm_output} {params.sat_annot_colors} > {output} 2> {log}
+        python {input.script} -i {input.rm_output} {params.sat_annot_colors} --add_ct > {output} 2> {log}
         """
 
 
