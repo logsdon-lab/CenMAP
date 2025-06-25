@@ -4,15 +4,16 @@ import argparse
 from typing import Any
 import polars as pl
 
+CT_HEX = "#DDDDDD"
 DEF_PATTERNS = {
-    "asat": {"pattern": r"ALR", "color": "#522758"},
+    "asat": {"pattern": r"ALR", "color": "#58245B"},
     "bsat": {"pattern": r"BSR", "color": "#3A3A3A"},
-    "gsat": {"pattern": r"GSAT", "color": "#DDDDDD"},
+    "gsat": {"pattern": r"GSAT", "color": "#3A3A3A"},
     "hsat1A": {"pattern": r"SAR", "color": "#3A3A3A"},
     "hsat2": {"pattern": r"^HSATII$", "color": "#3A3A3A"},
     "hsat1B": {"pattern": r"^HSATI$", "color": "#3A3A3A"},
     "hsat3": {"pattern": r"(CATTC)n|(GAATG)n", "color": "#3A3A3A"},
-    "ct": {"pattern": None, "color": "#d1d3d4"},
+    "ct": {"pattern": None, "color": CT_HEX},
 }
 
 OUTPUT_COLS = [
@@ -26,6 +27,7 @@ OUTPUT_COLS = [
     "thick_end",
     "item_rgb",
 ]
+RGX_COORDS = r"^(?<ctg>.+):(?<ctg_st>\d+)-(?<ctg_end>\d+)$"
 
 
 def main():
@@ -43,7 +45,11 @@ def main():
     ap.add_argument(
         "-p",
         "--patterns",
-        help="JSON file of regex patterns to label satellite types. Requires format: {'satellite': {'pattern': ..., 'color': ...}}",
+        help=(
+            "JSON file of regex patterns to label satellite types. "
+            "Any type not in patterns is removed. "
+            "Requires format: {'satellite': {'pattern': ..., 'color': ...}}"
+        ),
         required=False,
         default=DEF_PATTERNS,
     )
@@ -53,6 +59,11 @@ def main():
         help="Output BED9 file.",
         default=sys.stdout,
         type=argparse.FileType("wt"),
+    )
+    ap.add_argument(
+        "--add_ct",
+        action="store_true",
+        help=f"Add CT track with color {CT_HEX} filling entire region. Region corresponds to regex pattern: ({RGX_COORDS})",
     )
 
     args = ap.parse_args()
@@ -97,8 +108,10 @@ def main():
     else:
         patterns = args.patterns
 
-    expr_name = pl.when(pl.lit(False)).then(pl.lit("ct"))
-    expr_item_rgb = pl.when(pl.lit(False)).then(pl.lit("#d1d3d4"))
+    # Remove repeats not matched.
+    # Add ct to fill in the rest.
+    expr_name = pl.when(pl.lit(False)).then(None)
+    expr_item_rgb = pl.when(pl.lit(False)).then(None)
     for sat, pat in patterns.items():
         rgx_pattern = pat.get("pattern")
         color = pat.get("color")
@@ -112,10 +125,39 @@ def main():
         expr_item_rgb = expr_item_rgb.when(
             pl.col("rtype").str.contains(rgx_pattern)
         ).then(pl.lit(color))
-    expr_name = expr_name.otherwise(pl.lit("ct"))
-    expr_item_rgb = expr_item_rgb.otherwise(pl.lit("#d1d3d4"))
+    expr_name = expr_name.otherwise(None)
+    expr_item_rgb = expr_item_rgb.otherwise(None)
 
-    df = df.with_columns(name=expr_name, item_rgb=expr_item_rgb).select(OUTPUT_COLS)
+    df = (
+        df.with_columns(name=expr_name, item_rgb=expr_item_rgb)
+        .select(OUTPUT_COLS)
+        .drop_nulls()
+    )
+
+    if args.add_ct:
+        df_ct = (
+            df.get_column("chrom")
+            .unique()
+            .str.extract_groups(RGX_COORDS)
+            .to_frame(name="mtch_ctg")
+            .unnest("mtch_ctg")
+            .with_columns(
+                chrom=pl.col("ctg") + ":" + pl.col("ctg_st") + "-" + pl.col("ctg_end"),
+            )
+            .cast({"ctg_st": pl.Int64, "ctg_end": pl.Int64})
+            .with_columns(
+                chrom_st=pl.col("ctg_st"),
+                chrom_end=pl.col("ctg_end"),
+                name=pl.lit("ct"),
+                score=pl.lit(0),
+                strand=pl.lit("."),
+                thick_st=pl.col("ctg_st"),
+                thick_end=pl.col("ctg_end"),
+                item_rgb=pl.lit(CT_HEX),
+            )
+            .select(OUTPUT_COLS)
+        )
+        df = pl.concat((df, df_ct)).sort(by=["chrom", "chrom_st"])
 
     df.write_csv(args.output_bed, separator="\t", include_header=False)
 
