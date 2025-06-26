@@ -1,5 +1,5 @@
 include: "common.smk"
-include: "1-concat_asm.smk"
+include: "5-ident_cen_ctgs.smk"
 include: "7-fix_cens_w_repeatmasker.smk"
 
 
@@ -247,3 +247,4 @@ use rule * from NucFlag
 rule nucflag_all:
     input:
         expand(rules.nucflag.input, sm=SAMPLE_NAMES),
+    default_target: True
