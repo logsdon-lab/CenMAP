@@ -143,7 +143,10 @@ def main():
         help="Allowed monomer lengths.",
     )
     ap.add_argument(
-        "--required_monomer", type=int, default=170, help="Required monomer lengths."
+        "--required_monomer",
+        type=int,
+        default=170,
+        help="Required monomer lengths. If required, allowed HORs must also only contain this monomer.",
     )
     ap.add_argument(
         "--top_monomer_by_cn",
@@ -195,15 +198,29 @@ def main():
         .with_columns(mon=args.allowed_monomers)
         .explode("mon")
     )
-    # TRF might skip small dimers
+    df_all_monomers_list = (
+        df_monomers.with_columns(period_div=pl.col("period") / args.required_monomer)
+        # Do not filter here.
+        # Calculate abs difference from required monomer period.
+        .with_columns(
+            perc_diff=(pl.col("period_div") - pl.col("period_div").round()).abs()
+            * 100.0
+        )
+        .group_by(["chrom", "motif"])
+        .agg(all_required_monomers=pl.col("perc_diff") <= args.thr_perc_monomer_diff)
+        .with_columns(pl.col("all_required_monomers").list.all())
+    )
+
     df_all_motifs = (
         df_srf.select("chrom", "motif")
         .unique()
         .join(df_monomers, on=["chrom", "motif"])
         .join(df_monomer_lengths, on="chrom")
         .filter(pl.col("period") >= pl.col("mon"))
+        .with_columns(period_div=pl.col("period") / pl.col("mon"))
         .with_columns(
-            perc_diff=((pl.col("period") % pl.col("mon")) / pl.col("mon")) * 100
+            perc_diff=(pl.col("period_div") - pl.col("period_div").round()).abs()
+            * 100.0
         )
         .with_columns(valid=pl.col("perc_diff") <= args.thr_perc_monomer_diff)
     )
@@ -215,6 +232,21 @@ def main():
         df_srf.join(df_valid_motifs, how="left", on=["chrom", "motif"])
         .with_columns(pl.col("valid").fill_null(False))
         .filter(pl.col("valid"))
+        # Store if interval contains required monomer
+        .with_columns(
+            contains_required_monomer=pl.col("mons").list.contains(
+                args.required_monomer
+            )
+        )
+        .join(df_all_monomers_list, how="left", on=["chrom", "motif"])
+        # Then check if contains a required monomer period, and that all monomers for that HOR must have it.
+        # Alpha-satellite HORs should not contain other tandem repeat monomer period aside from ~170 bp.
+        # But will keep other monomers if provided (ex. 42bp for SAR/HSAT-1A)
+        .filter(
+            pl.when(pl.col("contains_required_monomer"))
+            .then(pl.col("all_required_monomers"))
+            .otherwise(True)
+        )
     )
 
     for chrom, df_chrom in df_srf.sort(by="chrom").group_by(
@@ -261,7 +293,7 @@ def main():
                 (pl.col("chrom") == chrom)
                 & (pl.col("st") >= row["st"])
                 & (pl.col("en") <= row["en"])
-                & pl.col("mons").list.contains(args.required_monomer)
+                & pl.col("contains_required_monomer")
             )
             if df_qry.is_empty():
                 continue
