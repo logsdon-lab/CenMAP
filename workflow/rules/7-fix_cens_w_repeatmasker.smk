@@ -54,11 +54,9 @@ rule filter_entropy_bed:
         join(FIX_RM_LOGDIR, "filter_entropy_bed_{sm}_{fname}.log"),
     conda:
         "../envs/py.yaml"
-    params:
-        thr_length=config["repeatmasker"]["bp_shannon_window"],
     shell:
         """
-        python {input.script} -i {input.entropy_bed} -r {input.rm_out} -l {params.thr_length} > {output} 2> {log}
+        python {input.script} -i {input.entropy_bed} -r {input.rm_out} > {output} 2> {log}
         """
 
 

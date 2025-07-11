@@ -8,5 +8,6 @@ dependencies:
   - pip:
     - polars
     - intervaltree
+    - scipy
     - pytest
     - snakemake==9.5.1
