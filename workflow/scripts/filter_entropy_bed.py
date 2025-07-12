@@ -114,8 +114,7 @@ def main():
             if itree_rm[chrom].overlaps(st, end) and score == 0.0:
                 valid_length += end - st
 
-        valid_prop = valid_length / total_length
-        if valid_prop > thr_valid_prop:
+        if total_length > 0 and ((valid_length / total_length) > thr_valid_prop):
             chrom, coords = chrom.split(":")
             st, end = coords.split("-")
             print(f"{chrom}\t{st}\t{end}")

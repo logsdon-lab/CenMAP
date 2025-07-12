@@ -157,11 +157,11 @@ def main():
     ap.add_argument(
         "--thr_perc_monomer_diff",
         type=float,
-        default=5.0,
+        default=1.5,
         help="Percent difference to allow motif based on: 100 * ((motif_len % monomer_length) / monomer_length)",
     )
     ap.add_argument(
-        "-g", "--group_by", type=int, default=1_000_000, help="Distance used to group."
+        "-g", "--group_by", type=int, default=2_500_000, help="Distance used to group."
     )
     ap.add_argument(
         "-l", "--min_length", type=int, default=30_000, help="Minimum length of region."
