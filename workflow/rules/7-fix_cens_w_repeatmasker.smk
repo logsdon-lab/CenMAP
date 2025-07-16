@@ -37,6 +37,7 @@ rule calculate_entropy:
 
 
 # Filter valid cens based on entropy and overlap with ALR/Alpha
+# Then trim.
 rule filter_entropy_bed:
     input:
         script=workflow.source_path("../scripts/filter_entropy_bed.py"),
@@ -52,15 +53,20 @@ rule filter_entropy_bed:
         ),
     log:
         join(FIX_RM_LOGDIR, "filter_entropy_bed_{sm}_{fname}.log"),
+    params:
+        trim_to_repeats=" ".join(["ALR/Alpha", "SAR"]),
     conda:
         "../envs/py.yaml"
     shell:
         """
-        python {input.script} -i {input.entropy_bed} -r {input.rm_out} > {output} 2> {log}
+        python {input.script} \
+        -i {input.entropy_bed} \
+        -r {input.rm_out} \
+        --trim_to_repeats {params.trim_to_repeats} > {output} 2> {log}
         """
 
 
-def cen_entropy(wc):
+def valid_beds_by_cen_entropy(wc):
     outdir = checkpoints.split_cens_for_rm.get(**wc).output[0]
     fa_glob_pattern = join(outdir, "{fname}.fa")
     wcs = glob_wildcards(fa_glob_pattern)
@@ -71,8 +77,9 @@ def cen_entropy(wc):
 # Merge valid cens coordinates.
 rule make_complete_cens_bed:
     input:
-        entropy=cen_entropy,
+        beds=valid_beds_by_cen_entropy,
         rename_key=rules.map_chroms.output,
+        idx=rules.rename_reort_asm.output.idx,
     output:
         # (new_name, st, end, ctg, ctg_len)
         cen_bed=join(
@@ -83,12 +90,15 @@ rule make_complete_cens_bed:
         ),
     conda:
         "../envs/tools.yaml"
+    params:
+        bp_slop=config["ident_cen_ctgs"]["bp_slop"],
     shell:
         """
-        cat {input.entropy} | \
-        sort -k1,1 | \
+        cat {input.beds} | \
+        sort -k1,1 -k 2,2n | \
         join -1 1 -2 2 - <(sort -k2,2 {input.rename_key}) | \
-        awk -v OFS="\\t" '{{$1=$1; print}}' > {output}
+        awk -v OFS="\\t" '{{$1=$1; print}}' | \
+        bedtools slop -i - -g {input.idx} -b {params.bp_slop} > {output}
         """
 
 

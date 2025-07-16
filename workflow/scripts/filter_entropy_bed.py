@@ -6,6 +6,48 @@ import intervaltree as it
 from collections import defaultdict
 
 
+def group_by_dst(df: pl.DataFrame, dst: int, group_name: str) -> pl.DataFrame:
+    try:
+        df = df.drop("index")
+    except pl.exceptions.ColumnNotFoundError:
+        pass
+    return (
+        df.with_columns(
+            # c1  st1 (end1)
+            # c1 (st2) end2
+            dst_behind=(pl.col("st") - pl.col("end").shift(1)).fill_null(0),
+            dst_ahead=(pl.col("st").shift(-1) - pl.col("end")).fill_null(0),
+        )
+        .with_row_index()
+        .with_columns(
+            **{
+                # Group HOR units based on distance.
+                group_name: pl.when(pl.col("dst_behind").le(dst))
+                # We assign 0 if within merge dst.
+                .then(pl.lit(0))
+                # Otherwise, give unique index.
+                .otherwise(pl.col("index") + 1)
+                # Then create run-length ID to group on.
+                # Contiguous rows within distance will be grouped together.
+                .rle_id()
+            },
+        )
+        .with_columns(
+            # Adjust groups in scenarios where should join group ahead or behind but given unique group.
+            # B:64617 A:52416 G:1
+            # B:52416 A:1357  G:2 <- This should be group 3.
+            # B:1357  A:1358  G:3
+            pl.when(pl.col("dst_behind").le(dst) & pl.col("dst_ahead").le(dst))
+            .then(pl.col(group_name))
+            .when(pl.col("dst_behind").le(dst))
+            .then(pl.col(group_name).shift(1))
+            .when(pl.col("dst_ahead").le(dst))
+            .then(pl.col(group_name).shift(-1))
+            .otherwise(pl.col(group_name))
+        )
+    )
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Determine if centromeres are valid based on shannon index and ALR overlap. A complete centromere should have dip in entropy overlapping ALR/Alpha."
@@ -38,6 +80,12 @@ def main():
         default=0.5,
         help="Proportion of dips in entropy over all ALR containing regions required to be valid. Majority by default.",
     )
+    ap.add_argument(
+        "--trim_to_repeats",
+        nargs="*",
+        default=["ALR/Alpha", "SAR"],
+        help="Trim coordinates to boundaries contain the largest of these repeats. Merge determined by entropy window.",
+    )
     args = ap.parse_args()
 
     rm = args.repeatmasker
@@ -52,10 +100,10 @@ def main():
         has_header=False,
         columns=[4, 5, 6, 9],
         new_columns=["chrom", "st", "end", "rtype"],
-    ).filter(pl.col("rtype") == "ALR/Alpha")
+    )
 
     itree_rm = defaultdict(it.IntervalTree)
-    for chrom, st, end, _ in df_rm.iter_rows():
+    for chrom, st, end, _ in df_rm.filter(pl.col("rtype") == "ALR/Alpha").iter_rows():
         itree_rm[chrom].add(it.Interval(st, end))
 
     df_entropy = (
@@ -117,7 +165,30 @@ def main():
         if total_length > 0 and ((valid_length / total_length) > thr_valid_prop):
             chrom, coords = chrom.split(":")
             st, end = coords.split("-")
-            print(f"{chrom}\t{st}\t{end}")
+            # Trim to repeats. Should be slopped afterwards.
+            if args.trim_to_repeats:
+                window = (df_entropy["end"] - df_entropy["st"]).median()
+                _, _, trim_st, trim_end, _ = (
+                    group_by_dst(
+                        df_rm.filter(pl.col("rtype").is_in(args.trim_to_repeats)),
+                        window,
+                        "group",
+                    )
+                    .drop_nulls()
+                    .group_by(["group"])
+                    .agg(
+                        pl.col("chrom").first(), pl.col("st").min(), pl.col("end").max()
+                    )
+                    .with_columns(len=pl.col("end") - pl.col("st"))
+                    .filter(pl.col("len") == pl.col("len").max())
+                    .row(0)
+                )
+                st = int(st)
+                new_st = trim_st + st
+                new_end = trim_end + st
+                print(f"{chrom}\t{new_st}\t{new_end}")
+            else:
+                print(f"{chrom}\t{st}\t{end}")
 
 
 if __name__ == "__main__":
