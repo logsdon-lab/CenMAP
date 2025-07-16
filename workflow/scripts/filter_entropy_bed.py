@@ -83,8 +83,8 @@ def main():
     ap.add_argument(
         "--trim_to_repeats",
         nargs="*",
-        default=["ALR/Alpha", "SAR"],
-        help="Trim coordinates to boundaries contain the largest of these repeats. Merge determined by entropy window.",
+        default=None,
+        help="Trim coordinates to boundaries contain the largest block of these repeats. Merge distance determined by median entropy window.",
     )
     args = ap.parse_args()
 

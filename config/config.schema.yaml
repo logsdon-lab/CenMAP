@@ -178,6 +178,12 @@ properties:
           Window size to use in calculating shannon index for region filtering.
           Smaller windows may allow smaller centromeres but will increase the number of false-positives (ex. p-arms of acrocentric chromosomes).
         default: 250000
+      trim_to_repeats:
+        type: array
+        items:
+          type: string
+        description: Trim centromeric regions to the largest block of these RepeatMasker repeat annotations.
+        default: ["ALR/Alpha", "SAR"]
       repeat_colors:
         type: string
         description: Path to JSON file of repeat colors.

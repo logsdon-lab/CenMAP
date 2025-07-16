@@ -54,7 +54,11 @@ rule filter_entropy_bed:
     log:
         join(FIX_RM_LOGDIR, "filter_entropy_bed_{sm}_{fname}.log"),
     params:
-        trim_to_repeats=" ".join(["ALR/Alpha", "SAR"]),
+        trim_to_repeats=(
+            f"--trim_to_repeats {' '.join(config['repeatmasker']['trim_to_repeats'])}"
+            if config["repeatmasker"]["trim_to_repeats"]
+            else ""
+        ),
     conda:
         "../envs/py.yaml"
     shell:
@@ -62,7 +66,7 @@ rule filter_entropy_bed:
         python {input.script} \
         -i {input.entropy_bed} \
         -r {input.rm_out} \
-        --trim_to_repeats {params.trim_to_repeats} > {output} 2> {log}
+        {params.trim_to_repeats} > {output} 2> {log}
         """
 
 
