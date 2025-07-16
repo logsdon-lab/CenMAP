@@ -80,12 +80,27 @@ properties:
         default: 20GB
       bp_group:
         type: integer
-        description: Group HOR array satellite regions by n base pairs.
-        default: 2500000
+        description: Group satellite repeats with a 171/42 bp periodicity found SRF and TRF by n base pairs.
+        default: 1000000
+      bp_min_length:
+        type: integer
+        description: Minimum length of satellite repeat groups. Occurs after grouping but before merging. Allows removing small false-positive TRs matching required 171/42 bp periods.
+        default: 30000
+      bp_merge:
+        type: integer
+        description: >-
+          Merge grouped satellite repeat blocks n base pairs.
+          Smaller values will reduce the length of p-arms of the acrocentric chromosomes but at the risk of considering a p-arm as a correct centromere.
+          The repeatmasker.bp_shannon_window parameter should be increased as well to prevent this.
+        default: 5000000
       bp_slop:
         type: integer
         description: Add n base pairs to extend edges of query HOR array.
         default: 1000000
+      perc_mon_len_diff:
+        type: number
+        description: "Percent difference in monomer length to allow motif based on: 100 * ((motif_len % monomer_length) / monomer_length)"
+        default: 2.0
       perc_multi_chrom:
         type: number
         description: Percent of mapped reference chromosome required to add to name.
@@ -162,7 +177,7 @@ properties:
         description: >-
           Window size to use in calculating shannon index for region filtering.
           Smaller windows may allow smaller centromeres but will increase the number of false-positives (ex. p-arms of acrocentric chromosomes).
-        default: 100000
+        default: 250000
       repeat_colors:
         type: string
         description: Path to JSON file of repeat colors.

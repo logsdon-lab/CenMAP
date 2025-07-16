@@ -151,17 +151,28 @@ def main():
     ap.add_argument(
         "--top_monomer_by_cn",
         type=int,
-        default=3,
+        default=1,
         help="Take top n monomers by copy number per chrom and motif.",
     )
     ap.add_argument(
+        "-d",
         "--thr_perc_monomer_diff",
         type=float,
-        default=1.5,
+        default=2.0,
         help="Percent difference to allow motif based on: 100 * ((motif_len % monomer_length) / monomer_length)",
     )
     ap.add_argument(
-        "-g", "--group_by", type=int, default=2_500_000, help="Distance used to group."
+        "-g",
+        "--group_by",
+        type=int,
+        default=2_500_000,
+        help="Distance used to group SRF found monomers.",
+    )
+    ap.add_argument(
+        "--merge_by",
+        type=int,
+        default=5_000_000,
+        help="Distance used to merge satellite groups.",
     )
     ap.add_argument(
         "-l", "--min_length", type=int, default=30_000, help="Minimum length of region."
@@ -198,10 +209,10 @@ def main():
         .with_columns(mon=args.allowed_monomers)
         .explode("mon")
     )
+    # Do not filter here.
+    # Calculate abs difference from required monomer period.
     df_all_monomers_list = (
         df_monomers.with_columns(period_div=pl.col("period") / args.required_monomer)
-        # Do not filter here.
-        # Calculate abs difference from required monomer period.
         .with_columns(
             perc_diff=(pl.col("period_div") - pl.col("period_div").round()).abs()
             * 100.0
@@ -255,6 +266,7 @@ def main():
         chrom = chrom[0]
         df_chrom_srf = (
             group_by_dst(df_chrom, args.group_by, "group")
+            .drop_nulls()
             .group_by(["group"])
             .agg(
                 pl.col("chrom").first(),
@@ -302,7 +314,7 @@ def main():
 
         final_itvs = merge_itvs(
             valid_itvs,
-            dst=args.group_by,
+            dst=args.merge_by,
             fn_cmp=lambda x, y: x.data == y.data,
         )
         for itv in final_itvs:

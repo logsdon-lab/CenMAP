@@ -115,8 +115,10 @@ rule reorient_satellite_bed:
                 st=$2;
                 end=$3;
             }}
-            print $5, st, end, end-st
-        }}' ;}} > {output.bed} 2> {log}
+            print $5, st, end
+        }}' | \
+        sort -k1,1 -k2,2n | \
+        bedtools merge -i - ;}} > {output.bed} 2> {log}
         """
 
 

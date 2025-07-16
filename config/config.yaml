@@ -37,11 +37,11 @@ concat_asm:
   mem: 20GB
 
 ident_cen_ctgs:
-  threads_srf: 4
+  threads_srf: 16
   mem_srf: 20GB
   threads_aln: 8
   mem_aln: 150GB
-  bp_group: 2500000
+  bp_group: 500000
   bp_slop: 1000000
   reference: "data/reference/T2T-CHM13.fa.gz"
 
@@ -63,7 +63,7 @@ repeatmasker:
   - data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   - data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
   repeat_colors: "config/repeatmasker_colors.json"
-  bp_shannon_window: 100000
+  bp_shannon_window: 250000
   threads: 12
 
 humas_annot:

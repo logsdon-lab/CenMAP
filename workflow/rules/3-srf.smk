@@ -72,13 +72,22 @@ rule create_region_bed:
         ),
     params:
         bp_group=config["ident_cen_ctgs"]["bp_group"],
+        bp_min_length=config["ident_cen_ctgs"]["bp_min_length"],
+        bp_merge=config["ident_cen_ctgs"]["bp_merge"],
+        perc_mon_len_diff=config["ident_cen_ctgs"]["perc_mon_len_diff"],
     log:
         join(SRF_LOGDIR, "create_region_bed_{sm}.log"),
     conda:
         "../envs/py.yaml"
     shell:
         """
-        python {input.script} -i {input.bed} -m {input.monomers} -g {params.bp_group} > {output.bed} 2> {log}
+        python {input.script} \
+        -i {input.bed} \
+        -m {input.monomers} \
+        -g {params.bp_group} \
+        -l {params.bp_min_length} \
+        -d {params.perc_mon_len_diff} \
+        --merge_by {params.bp_merge} > {output.bed} 2> {log}
         """
 
 
