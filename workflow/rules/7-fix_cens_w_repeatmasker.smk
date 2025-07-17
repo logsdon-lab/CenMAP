@@ -143,8 +143,7 @@ rule fix_cens_rm_out:
         awk -v OFS="\\t" '{{
             if (FNR == NR) {{ kv[$1]=$2; next; }};
             new_name=kv[$5];
-            if (new_name) {{ $5=new_name; }}
-            print
+            if (new_name) {{ $5=new_name; print }}
         }}' {input.rename_key} {input.rm_out} > {output} 2> {log}
         """
 
