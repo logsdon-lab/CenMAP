@@ -13,7 +13,7 @@ HUMAS_ANNOT_BMKDIR = join(BMK_DIR, "8-humas_annot")
 rule extract_cens_for_humas_annot:
     input:
         fa=rules.rename_reort_asm.output.fa,
-        bed=ancient(rules.make_complete_cens_bed.output),
+        bed=ancient(rules.make_complete_cens_bed.output.cen_bed),
     output:
         seq=temp(
             join(

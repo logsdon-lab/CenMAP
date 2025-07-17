@@ -186,9 +186,9 @@ def main():
                 st = int(st)
                 new_st = trim_st + st
                 new_end = trim_end + st
-                print(f"{chrom}\t{new_st}\t{new_end}")
+                print(f"{chrom}\t{new_st}\t{new_end}\t{chrom}:{st}-{end}")
             else:
-                print(f"{chrom}\t{st}\t{end}")
+                print(f"{chrom}\t{st}\t{end}\t{chrom}:{st}-{end}")
 
 
 if __name__ == "__main__":

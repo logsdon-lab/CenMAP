@@ -44,12 +44,14 @@ rule filter_entropy_bed:
         entropy_bed=rules.calculate_entropy.output,
         rm_out=rules.reformat_repeatmasker_output.output,
     output:
-        # (chrom, st, end)
-        bed=join(
-            FIX_RM_OUTDIR,
-            "bed",
-            "{sm}",
-            "{fname}.bed",
+        # (chrom, st, end, old_chrom)
+        bed=temp(
+            join(
+                FIX_RM_OUTDIR,
+                "bed",
+                "interm",
+                "{sm}_{fname}.bed",
+            )
         ),
     log:
         join(FIX_RM_LOGDIR, "filter_entropy_bed_{sm}_{fname}.log"),
@@ -81,16 +83,27 @@ def valid_beds_by_cen_entropy(wc):
 # Merge valid cens coordinates.
 rule make_complete_cens_bed:
     input:
+        # (sm_ctg, st, end, old_sm_ctg)
         beds=valid_beds_by_cen_entropy,
+        # (ctg, sm_ctg, ctg_len)
         rename_key=rules.map_chroms.output,
         idx=rules.rename_reort_asm.output.idx,
     output:
-        # (new_name, st, end, ctg, ctg_len)
+        # (sm_ctg, st, end, ctg, ctg_len)
         cen_bed=join(
             FIX_RM_OUTDIR,
             "bed",
             "interm",
             "{sm}_complete_cens.bed",
+        ),
+        # (old_sm_ctg, sm_ctg)
+        rename_key=temp(
+            join(
+                FIX_RM_OUTDIR,
+                "bed",
+                "interm",
+                "{sm}_complete_cens_rename_key.tsv",
+            )
         ),
     conda:
         "../envs/tools.yaml"
@@ -98,18 +111,21 @@ rule make_complete_cens_bed:
         bp_slop=config["ident_cen_ctgs"]["bp_slop"],
     shell:
         """
-        cat {input.beds} | \
-        sort -k1,1 -k 2,2n | \
+        sort -k1,1 -k 2,2n {input.beds}  | \
         join -1 1 -2 2 - <(sort -k2,2 {input.rename_key}) | \
-        awk -v OFS="\\t" '{{$1=$1; print}}' | \
-        bedtools slop -i - -g {input.idx} -b {params.bp_slop} > {output}
+        awk -v OFS="\\t" '{{ $1=$1; print }}' | \
+        bedtools slop -i - -g {input.idx} -b {params.bp_slop} | \
+        awk -v OFS="\\t" '{{
+            print $4, $1":"$2"-"$3 >> "{output.rename_key}"
+            print $1, $2, $3, $5, $6
+        }}' > {output.cen_bed}
         """
 
 
 # Filter original RM annotations.
 rule fix_cens_rm_out:
     input:
-        bed=rules.make_complete_cens_bed.output,
+        rename_key=rules.make_complete_cens_bed.output.rename_key,
         rm_out=rules.format_repeatmasker_output.output,
     output:
         corrected_rm_out=join(
@@ -124,7 +140,12 @@ rule fix_cens_rm_out:
         "../envs/tools.yaml"
     shell:
         """
-        grep -f <(awk '{{print $1":"$2"-"$3}}' {input.bed}) {input.rm_out} > {output} 2> {log}
+        awk -v OFS="\\t" '{{
+            if (FNR == NR) {{ kv[$1]=$2; next; }};
+            new_name=kv[$5];
+            if (new_name) {{ $5=new_name; }}
+            print
+        }}' {input.rename_key} {input.rm_out} > {output} 2> {log}
         """
 
 

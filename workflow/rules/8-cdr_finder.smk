@@ -77,7 +77,7 @@ CDR_FINDER_CONFIG = {
     "samples": {
         sm: {
             "fasta": expand(rules.rename_reort_asm.output.fa, sm=sm),
-            "regions": expand(rules.make_complete_cens_bed.output, sm=sm),
+            "regions": expand(rules.make_complete_cens_bed.output.cen_bed, sm=sm),
             "bam": expand(
                 rules.cdr_aln_merge_read_asm_alignments.output.alignment, sm=sm
             ),
@@ -100,7 +100,9 @@ use rule * from CDR_Finder as cdr_*
 
 rule merge_cdr_beds:
     input:
-        bed=expand(rules.make_complete_cens_bed.output, sm=SAMPLE_NAMES_INTERSECTION),
+        bed=expand(
+            rules.make_complete_cens_bed.output.cen_bed, sm=SAMPLE_NAMES_INTERSECTION
+        ),
         cdr_output=expand(rules.cdr_call_cdrs.output, sample=SAMPLE_NAMES_INTERSECTION),
         methyl_cdr_output=expand(
             rules.cdr_calc_windows.output, sample=SAMPLE_NAMES_INTERSECTION
