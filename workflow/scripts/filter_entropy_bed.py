@@ -77,7 +77,7 @@ def main():
         "-p",
         "--prop_valid",
         type=float,
-        default=0.5,
+        default=0.99,
         help="Proportion of dips in entropy over all ALR containing regions required to be valid. Majority by default.",
     )
     ap.add_argument(
