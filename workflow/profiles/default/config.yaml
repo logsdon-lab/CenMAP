@@ -8,3 +8,5 @@ rerun-incomplete: True
 show-failed-logs: True
 rerun-triggers: mtime
 restart-times: 1
+scheduler: greedy
+scheduler-subsample: 200

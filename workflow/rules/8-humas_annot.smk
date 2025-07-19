@@ -1,7 +1,7 @@
 
 include: "common.smk"
 include: "utils.smk"
-include: "1-concat_asm.smk"
+include: "5-ident_cen_ctgs.smk"
 include: "7-fix_cens_w_repeatmasker.smk"
 
 
@@ -13,7 +13,7 @@ HUMAS_ANNOT_BMKDIR = join(BMK_DIR, "8-humas_annot")
 rule extract_cens_for_humas_annot:
     input:
         fa=rules.rename_reort_asm.output.fa,
-        bed=ancient(rules.make_complete_cens_bed.output),
+        bed=ancient(rules.make_complete_cens_bed.output.cen_bed),
     output:
         seq=temp(
             join(
@@ -114,12 +114,6 @@ def humas_annot_sm_outputs(wc):
 
 checkpoint run_humas_annot:
     input:
-        # Force monomers to be generated.
-        (
-            rules.cens_generate_monomers.output
-            if config["humas_annot"]["mode"] == "sd"
-            else []
-        ),
         expand(rules.split_cens_for_humas_annot.output, sm=SAMPLE_NAMES),
         unpack(humas_annot_sm_outputs),
     output:
@@ -130,16 +124,33 @@ checkpoint run_humas_annot:
 def humas_annot_chr_outputs(wc):
     _ = [checkpoints.run_humas_annot.get(sm=sm).output for sm in SAMPLE_NAMES]
     wcs = glob_wildcards(
-        join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg}.fa"),
+        join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg}:{coords}.fa"),
     )
-    fnames = [
-        f"{sm}_{chrom}_{ctg}"
-        for sm, chrom, ctg in zip(wcs.sm, wcs.chr, wcs.ctg)
-        if chrom == wc.chr or chrom == f"rc-{wc.chr}"
-    ]
+    fnames = []
+    # Sort by coords so if multiple chr, chr position in name (chr3-chr21) matches.
+    sorted_wcs = sorted(
+        zip(wcs.sm, wcs.chr, wcs.ctg, wcs.coords),
+        key=lambda x: (x[1], x[2], x[3]),
+        reverse=True,
+    )
+
+    # Store index of chrom per contig.
+    # In cases of dicentric contigs.
+    ctg_counter = Counter()
+    for sm, chrom, ctg, coords in sorted_wcs:
+        chroms: list[str] = chrom.replace("rc-", "").split("-")
+        if not wc.chr in chroms:
+            continue
+        ctg_id = (sm, chrom, ctg)
+        idx = ctg_counter[ctg_id]
+        ctg_counter[ctg_id] += 1
+        if wc.chr != chroms[idx]:
+            continue
+        fnames.append(f"{sm}_{chrom}_{ctg}:{coords}")
+
     return {
         "stv": [
-            *config["plot_hor_stv"].get("ref_stv", []),
+            *config.get("plot_hor_stv", {}).get("ref_stv", []),
             *expand(rules.cens_generate_stv.output, fname=fnames, chr=wc.chr),
         ],
     }

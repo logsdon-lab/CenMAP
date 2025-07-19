@@ -96,17 +96,15 @@ rule filter_annotations_moddotplot:
         ),
     params:
         cdr_output=bool(config.get("cdr_finder", False)),
-        # Use base of fname incase of off by ones in name coords
-        fname_base=lambda wc: wc.fname.split(":")[0],
     shell:
         """
-        ( grep '{params.fname_base}' {input.all_sat_annot_bed} || true ) > {output.sat_annot_bed}
-        ( grep '{params.fname_base}' {input.chr_stv_row_bed} || true ) > {output.stv_row_bed}
+        ( grep '{wildcards.fname}' {input.all_sat_annot_bed} || true ) > {output.sat_annot_bed}
+        ( grep '{wildcards.fname}' {input.chr_stv_row_bed} || true ) > {output.stv_row_bed}
         # Remove header.
         tail -n+2 {input.ident_bed} > {output.ident_bed}
         if [ "{params.cdr_output}" != "False" ]; then
-            ( grep '{params.fname_base}' {input.all_cdr_bed} || true ) > {output.cdr_bed}
-            ( grep '{params.fname_base}' {input.all_binned_methyl_bed} || true ) > {output.binned_methyl_bed}
+            ( grep '{wildcards.fname}' {input.all_cdr_bed} || true ) > {output.cdr_bed}
+            ( grep '{wildcards.fname}' {input.all_binned_methyl_bed} || true ) > {output.binned_methyl_bed}
         else
             touch {output.cdr_bed}
             touch {output.binned_methyl_bed}
@@ -116,6 +114,7 @@ rule filter_annotations_moddotplot:
 
 rule modify_moddotplot_cenplot_tracks:
     input:
+        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
         plot_layout=workflow.source_path("../scripts/cenplot_moddotplot.toml"),
         infiles=[rules.filter_annotations_moddotplot.output.cdr_bed],
     output:
@@ -124,13 +123,19 @@ rule modify_moddotplot_cenplot_tracks:
             "{chr}",
             "{fname}.yaml",
         ),
-    run:
-        format_toml_path(
-            input_plot_layout=input.plot_layout,
-            output_plot_layout=output.plot_layout,
-            indir=os.path.abspath(os.path.dirname(str(input.infiles[0]))),
-            **dict(params.items()),
-        )
+    conda:
+        "../envs/py.yaml"
+    log:
+        join(MODDOTPLOT_LOGDIR, "modify_moddotplot_cenplot_tracks_{chr}_{fname}.log"),
+    params:
+        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infiles[0]))),
+    shell:
+        """
+        python {input.script} \
+        -i {input.plot_layout} \
+        -o {output.plot_layout} \
+        -k indir={params.indir} &> {log}
+        """
 
 
 rule plot_cen_moddotplot:
@@ -169,13 +174,30 @@ def moddotplot_outputs(wc):
         pass
 
     wcs = glob_wildcards(
-        join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg}.fa"),
+        join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg}:{coords}.fa"),
     )
-    fnames = [
-        f"{sm}_{chrom}_{ctg}"
-        for sm, chrom, ctg in zip(wcs.sm, wcs.chr, wcs.ctg)
-        if chrom == wc.chr or chrom == f"rc-{wc.chr}"
-    ]
+    fnames = []
+    # Sort by coords so if multiple chr, chr position in name (chr3-chr21) matches.
+    sorted_wcs = sorted(
+        zip(wcs.sm, wcs.chr, wcs.ctg, wcs.coords),
+        key=lambda x: (x[1], x[2], x[3]),
+        reverse=True,
+    )
+
+    # Store index of chrom per contig.
+    # In cases of dicentric contigs.
+    ctg_counter = Counter()
+    for sm, chrom, ctg, coords in sorted_wcs:
+        chroms: list[str] = chrom.replace("rc-", "").split("-")
+        if not wc.chr in chroms:
+            continue
+        ctg_id = (sm, chrom, ctg)
+        idx = ctg_counter[ctg_id]
+        ctg_counter[ctg_id] += 1
+        if wc.chr != chroms[idx]:
+            continue
+        fnames.append(f"{sm}_{chrom}_{ctg}:{coords}")
+
     return dict(
         moddotplot=expand(rules.run_moddotplot.output, chr=wc.chr, fname=fnames),
         cen_moddoplot=expand(
