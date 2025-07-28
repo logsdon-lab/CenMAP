@@ -125,8 +125,8 @@ def main():
         expr_item_rgb = expr_item_rgb.when(
             pl.col("rtype").str.contains(rgx_pattern)
         ).then(pl.lit(color))
-    expr_name = expr_name.otherwise(None)
-    expr_item_rgb = expr_item_rgb.otherwise(None)
+    expr_name = expr_name.otherwise(pl.col("rtype"))
+    expr_item_rgb = expr_item_rgb.otherwise(pl.lit(CT_HEX))
 
     df = (
         df.with_columns(name=expr_name, item_rgb=expr_item_rgb)

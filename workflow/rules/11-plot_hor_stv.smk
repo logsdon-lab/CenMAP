@@ -73,7 +73,6 @@ rule filter_annotations_hor_stv:
 # Require both to exist before beginning plotting.
 rule modify_hor_stv_cenplot_tracks:
     input:
-        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
         plot_layout=workflow.source_path("../scripts/cenplot_hor_stv_plot.toml"),
         infiles=rules.filter_annotations_hor_stv.output,
     output:
@@ -87,10 +86,11 @@ rule modify_hor_stv_cenplot_tracks:
     log:
         join(PLT_HOR_STV_LOGDIR, "modify_hor_stv_cenplot_tracks_{typ}_{chr}.log"),
     params:
+        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
         indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infiles[0]))),
     shell:
         """
-        python {input.script} \
+        python {params.script} \
         -i {input.plot_layout} \
         -o {output.plot_layout} \
         -k indir={params.indir} typ={wildcards.typ} &> {log}
@@ -101,7 +101,6 @@ rule modify_hor_stv_cenplot_tracks:
 rule plot_hor_stv:
     input:
         bed_files=rules.filter_annotations_hor_stv.output,
-        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
         plot_layout=expand(
             rules.modify_hor_stv_cenplot_tracks.output, chr="{chr}", typ="all"
         ),
@@ -122,6 +121,8 @@ rule plot_hor_stv:
                 "all_{chr}",
             )
         ),
+    params:
+        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
     log:
         join(PLT_HOR_STV_LOGDIR, "plot_{chr}_hor_stv_all.log"),
     threads: 4
@@ -134,7 +135,6 @@ rule plot_hor_stv:
 rule plot_hor_stv_complete:
     input:
         bed_files=rules.filter_annotations_hor_stv.output,
-        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
         plot_layout=expand(
             rules.modify_hor_stv_cenplot_tracks.output, chr="{chr}", typ="complete"
         ),
@@ -155,6 +155,8 @@ rule plot_hor_stv_complete:
                 "complete_{chr}",
             )
         ),
+    params:
+        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
     log:
         join(PLT_HOR_STV_LOGDIR, "plot_{chr}_hor_stv_complete.log"),
     threads: 4

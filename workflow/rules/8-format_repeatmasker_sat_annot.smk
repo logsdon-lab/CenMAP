@@ -31,7 +31,6 @@ rule merge_complete_and_correct_rm_out:
 
 rule create_rm_satellite_annotations:
     input:
-        script=workflow.source_path("../scripts/format_rm_sat_annot.py"),
         rm_output=rules.merge_complete_and_correct_rm_out.output,
         rm_sat_patterns=config.get("plot_hor_stv", {}).get("sat_annot_colors", []),
     output:
@@ -44,13 +43,14 @@ rule create_rm_satellite_annotations:
         sat_annot_colors=lambda wc, input: (
             f"--patterns {input.rm_sat_patterns}" if input.rm_sat_patterns else ""
         ),
+        script=workflow.source_path("../scripts/format_rm_sat_annot.py"),
     log:
         join(FMT_RM_SAT_LOGDIR, "create_rm_satellite_annotations.log"),
     conda:
         "../envs/py.yaml"
     shell:
         """
-        python {input.script} -i {input.rm_output} {params.sat_annot_colors} --add_ct > {output} 2> {log}
+        python {params.script} -i {input.rm_output} {params.sat_annot_colors} --add_ct > {output} 2> {log}
         """
 
 

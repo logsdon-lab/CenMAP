@@ -19,13 +19,13 @@ shell_extract_and_index_fa = """
 
 
 shell_create_rm_bed = """
-    python {input.script} -i <(cat {input.rm_out}) -c {params.chr_rgx} -m {params.color_mapping} > {output.rm_bed} 2> {log}
+    python {params.script} -i <(cat {input.rm_out}) -c {params.chr_rgx} -m {params.color_mapping} > {output.rm_bed} 2> {log}
 """
 
 
 shell_plot_multiple_cen = """
     # Then use custom script and cenplot.
-    {{ python {input.script} \
+    {{ python {params.script} \
     -t {input.plot_layout} \
     -d {output.plot_dir} \
     --share_xlim \
@@ -82,7 +82,7 @@ rule reorient_bed:
             match(new_name, "-([0-9]+)$", ctg_end);
             if (is_rc) {{
                 st=chrom_len-$3
-                end=chrom_len-$2 
+                end=chrom_len-$2
             }} else {{
                 st=$2
                 end=$3

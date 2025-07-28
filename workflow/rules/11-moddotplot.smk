@@ -114,7 +114,6 @@ rule filter_annotations_moddotplot:
 
 rule modify_moddotplot_cenplot_tracks:
     input:
-        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
         plot_layout=workflow.source_path("../scripts/cenplot_moddotplot.toml"),
         infiles=[rules.filter_annotations_moddotplot.output.cdr_bed],
     output:
@@ -129,9 +128,10 @@ rule modify_moddotplot_cenplot_tracks:
         join(MODDOTPLOT_LOGDIR, "modify_moddotplot_cenplot_tracks_{chr}_{fname}.log"),
     params:
         indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infiles[0]))),
+        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
     shell:
         """
-        python {input.script} \
+        python {params.script} \
         -i {input.plot_layout} \
         -o {output.plot_layout} \
         -k indir={params.indir} &> {log}

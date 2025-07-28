@@ -66,7 +66,6 @@ def args_ref_hor_lengths(wc, input) -> str:
 
 rule plot_as_hor_length:
     input:
-        script=workflow.source_path("../scripts/plot_hor_length.py"),
         ref_hor_lengths=[
             ref["path"]
             for ref in config["calculate_hor_length"].get("ref_hor_lengths", [])
@@ -79,6 +78,7 @@ rule plot_as_hor_length:
             "all_AS-HOR_lengths.png",
         ),
     params:
+        script=workflow.source_path("../scripts/plot_hor_length.py"),
         # Random colors given for each ref.
         # Run separately to get desired colors.
         args_added_lengths=args_ref_hor_lengths,
@@ -89,7 +89,7 @@ rule plot_as_hor_length:
     shell:
         """
         if [ -s {input.lengths} ]; then
-            python {input.script} \
+            python {params.script} \
             -i {input.lengths} \
             -o {output} {params.args_added_lengths} 2> {log}
         else

@@ -144,7 +144,6 @@ rule run_repeatmasker:
 # Rename repeatmasker output to match the original sequence names.
 rule reformat_repeatmasker_output:
     input:
-        script=workflow.source_path("../scripts/reformat_rm.py"),
         rm_out=rules.run_repeatmasker.output,
         original_fai=rules.rename_for_repeatmasker.output.original_fa_idx,
         renamed_fai=rules.rename_for_repeatmasker.output.renamed_fa_idx,
@@ -155,13 +154,15 @@ rule reformat_repeatmasker_output:
             "{sm}",
             "{fname}.fa.out",
         ),
+    params:
+        script=workflow.source_path("../scripts/reformat_rm.py"),
     log:
         join(RM_LOGDIR, "reformat_repeatmasker_output_{sm}_{fname}.log"),
     conda:
         "../envs/py.yaml"
     shell:
         """
-        python {input.script} -i {input.rm_out} -of {input.original_fai} -rf {input.renamed_fai} > {output} 2> {log}
+        python {params.script} -i {input.rm_out} -of {input.original_fai} -rf {input.renamed_fai} > {output} 2> {log}
         """
 
 
@@ -261,7 +262,6 @@ rule format_add_control_repeatmasker_output:
 
 rule create_og_rm_bed:
     input:
-        script=workflow.source_path("../scripts/create_rm_bed.py"),
         rm_out=rules.format_add_control_repeatmasker_output.output,
     output:
         rm_bed=join(
@@ -273,6 +273,7 @@ rule create_og_rm_bed:
     params:
         chr_rgx="{chr}[:_]",
         color_mapping=config["repeatmasker"]["repeat_colors"],
+        script=workflow.source_path("../scripts/create_rm_bed.py"),
     log:
         join(RM_LOGDIR, "create_og_rm_bed_{chr}.log"),
     conda:
@@ -283,7 +284,6 @@ rule create_og_rm_bed:
 
 rule modify_og_rm_cenplot_tracks:
     input:
-        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
         plot_layout=workflow.source_path("../scripts/cenplot_repeatmasker_plot.toml"),
         infiles=rules.create_og_rm_bed.output,
     output:
@@ -298,9 +298,10 @@ rule modify_og_rm_cenplot_tracks:
         join(RM_LOGDIR, "modify_og_rm_cenplot_tracks_{chr}.log"),
     params:
         indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infiles[0]))),
+        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
     shell:
         """
-        python {input.script} \
+        python {params.script} \
         -i {input.plot_layout} \
         -o {output.plot_layout} \
         -k indir={params.indir} &> {log}
@@ -310,7 +311,6 @@ rule modify_og_rm_cenplot_tracks:
 rule plot_og_rm_bed_by_chr:
     input:
         bed_files=[rules.create_og_rm_bed.output],
-        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
         plot_layout=rules.modify_og_rm_cenplot_tracks.output,
     output:
         plots=multiext(
@@ -329,6 +329,8 @@ rule plot_og_rm_bed_by_chr:
                 "{chr}_cens_og",
             )
         ),
+    params:
+        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
     threads: 4
     log:
         join(RM_LOGDIR, "plot_og_rm_bed_{chr}.log"),

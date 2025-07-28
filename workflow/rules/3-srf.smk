@@ -59,7 +59,6 @@ use rule * from srf_sm as srf_*
 
 rule create_region_bed:
     input:
-        script=workflow.source_path("../scripts/filter_srf_bed.py"),
         bed=ancient(rules.srf_merge_files.output.bed),
         monomers=ancient(rules.srf_merge_files.output.monomers),
     output:
@@ -71,6 +70,7 @@ rule create_region_bed:
             )
         ),
     params:
+        script=workflow.source_path("../scripts/filter_srf_bed.py"),
         bp_group=config["ident_cen_ctgs"]["bp_group"],
         bp_min_length=config["ident_cen_ctgs"]["bp_min_length"],
         bp_merge=config["ident_cen_ctgs"]["bp_merge"],
@@ -81,7 +81,7 @@ rule create_region_bed:
         "../envs/py.yaml"
     shell:
         """
-        python {input.script} \
+        python {params.script} \
         -i {input.bed} \
         -m {input.monomers} \
         -g {params.bp_group} \

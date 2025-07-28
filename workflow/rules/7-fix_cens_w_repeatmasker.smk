@@ -40,7 +40,6 @@ rule calculate_entropy:
 # Then trim.
 rule filter_entropy_bed:
     input:
-        script=workflow.source_path("../scripts/filter_entropy_bed.py"),
         entropy_bed=rules.calculate_entropy.output,
         rm_out=rules.reformat_repeatmasker_output.output,
     output:
@@ -56,6 +55,7 @@ rule filter_entropy_bed:
     log:
         join(FIX_RM_LOGDIR, "filter_entropy_bed_{sm}_{fname}.log"),
     params:
+        script=workflow.source_path("../scripts/filter_entropy_bed.py"),
         trim_to_repeats=(
             f"--trim_to_repeats {' '.join(config['repeatmasker']['trim_to_repeats'])}"
             if config["repeatmasker"]["trim_to_repeats"]
@@ -65,7 +65,7 @@ rule filter_entropy_bed:
         "../envs/py.yaml"
     shell:
         """
-        python {input.script} \
+        python {params.script} \
         -i {input.entropy_bed} \
         -r {input.rm_out} \
         {params.trim_to_repeats} > {output} 2> {log}
@@ -150,7 +150,6 @@ rule fix_cens_rm_out:
 
 rule create_fixed_rm_bed:
     input:
-        script=workflow.source_path("../scripts/create_rm_bed.py"),
         rm_out=[
             expand(rules.fix_cens_rm_out.output, sm=SAMPLE_NAMES),
             rules.merge_control_repeatmasker_output.output,
@@ -165,6 +164,7 @@ rule create_fixed_rm_bed:
     params:
         chr_rgx="{chr}[:_]",
         color_mapping=config["repeatmasker"]["repeat_colors"],
+        script=workflow.source_path("../scripts/create_rm_bed.py"),
     log:
         join(FIX_RM_LOGDIR, "create_fixed_rm_bed_{chr}.log"),
     conda:
@@ -175,7 +175,6 @@ rule create_fixed_rm_bed:
 
 rule modify_rm_cenplot_tracks:
     input:
-        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
         plot_layout=workflow.source_path("../scripts/cenplot_repeatmasker_plot.toml"),
         infiles=rules.create_fixed_rm_bed.output,
     output:
@@ -189,10 +188,11 @@ rule modify_rm_cenplot_tracks:
     log:
         join(FIX_RM_LOGDIR, "modify_rm_cenplot_tracks_{chr}.log"),
     params:
+        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
         indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infiles[0]))),
     shell:
         """
-        python {input.script} \
+        python {params.script} \
         -i {input.plot_layout} \
         -o {output.plot_layout} \
         -k indir={params.indir} &> {log}
@@ -202,7 +202,6 @@ rule modify_rm_cenplot_tracks:
 rule plot_fixed_rm_bed_by_chr:
     input:
         bed_files=[rules.create_fixed_rm_bed.output],
-        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
         plot_layout=rules.modify_rm_cenplot_tracks.output,
     output:
         plots=multiext(
@@ -221,6 +220,8 @@ rule plot_fixed_rm_bed_by_chr:
                 "{chr}_cens",
             )
         ),
+    params:
+        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
     threads: 4
     log:
         join(FIX_RM_LOGDIR, "plot_fixed_rm_bed_{chr}.log"),

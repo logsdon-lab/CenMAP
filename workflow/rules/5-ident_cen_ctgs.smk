@@ -16,7 +16,6 @@ IDENT_CEN_CTGS_BMKDIR = join(BMK_DIR, "5-ident_cen_ctgs")
 # Map each contig to a chromosome.
 rule map_chroms:
     input:
-        script=workflow.source_path("../scripts/map_chroms.py"),
         alns=expand(rules.asm_ref_aln_to_bed.output, ref=REF_NAME, sm="{sm}"),
     output:
         # (old_name, new_name)
@@ -26,6 +25,7 @@ rule map_chroms:
             "{sm}_rename_key.tsv",
         ),
     params:
+        script=workflow.source_path("../scripts/map_chroms.py"),
         allow_multi_chr_prop=config["ident_cen_ctgs"]["perc_multi_chrom"],
     conda:
         "../envs/py.yaml"
@@ -33,7 +33,7 @@ rule map_chroms:
         join(IDENT_CEN_CTGS_LOGDIR, "map_chroms_{sm}.log"),
     shell:
         """
-        python {input.script} -i {input.alns} --allow_multi_chr_prop {params.allow_multi_chr_prop} | \
+        python {params.script} -i {input.alns} --allow_multi_chr_prop {params.allow_multi_chr_prop} | \
         awk -v OFS="\\t" '{{
             old_name=$1;
             chrom=$2;

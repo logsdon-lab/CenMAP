@@ -121,7 +121,6 @@ rule format_stv_to_overlay_bed:
 # Also add ignore bed if provided.
 rule format_rm_nucflag_ignore_bed:
     input:
-        script=workflow.source_path("../scripts/simplify_rm_coords.py"),
         bed=rules.format_repeatmasker_to_overlay_bed.output,
         ignore_bed=(
             config["nucflag"]["ignore_regions"]
@@ -134,6 +133,7 @@ rule format_rm_nucflag_ignore_bed:
             "{sm}_correct_ALR_regions.rm.simple.bed",
         ),
     params:
+        script=workflow.source_path("../scripts/simplify_rm_coords.py"),
         # Concatenate ignore bed.
         ignore_bed=lambda wc, input: (
             f"| cat - {input.ignore_bed}" if input.ignore_bed else ""
@@ -144,7 +144,7 @@ rule format_rm_nucflag_ignore_bed:
         join(NUCFLAG_LOGDIR, "simplify_rm_overlay_bed_{sm}.log"),
     shell:
         """
-        python {input.script} -i {input.bed} {params.ignore_bed} > {output} 2> {log}
+        python {params.script} -i {input.bed} {params.ignore_bed} > {output} 2> {log}
         """
 
 
