@@ -26,7 +26,7 @@ options = { legend = true, legend_title = "{chrom}", legend_title_only = true, h
 position = "overlap"
 type = "hor"
 path = "{indir}/stv_{typ}.bed"
-options = { legend = true, legend_title = "{chrom}", legend_title_only = true, hide_x = true }
+options = { legend = true, legend_title = "{chrom}", legend_title_only = true, hide_x = true, live_only = false }
 
 [[tracks]]
 position = "relative"

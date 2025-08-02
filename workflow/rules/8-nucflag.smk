@@ -1,5 +1,5 @@
 include: "common.smk"
-include: "1-concat_asm.smk"
+include: "5-ident_cen_ctgs.smk"
 include: "7-fix_cens_w_repeatmasker.smk"
 
 
@@ -121,7 +121,6 @@ rule format_stv_to_overlay_bed:
 # Also add ignore bed if provided.
 rule format_rm_nucflag_ignore_bed:
     input:
-        script=workflow.source_path("../scripts/simplify_rm_coords.py"),
         bed=rules.format_repeatmasker_to_overlay_bed.output,
         ignore_bed=(
             config["nucflag"]["ignore_regions"]
@@ -134,6 +133,7 @@ rule format_rm_nucflag_ignore_bed:
             "{sm}_correct_ALR_regions.rm.simple.bed",
         ),
     params:
+        script=workflow.source_path("../scripts/simplify_rm_coords.py"),
         # Concatenate ignore bed.
         ignore_bed=lambda wc, input: (
             f"| cat - {input.ignore_bed}" if input.ignore_bed else ""
@@ -144,7 +144,7 @@ rule format_rm_nucflag_ignore_bed:
         join(NUCFLAG_LOGDIR, "simplify_rm_overlay_bed_{sm}.log"),
     shell:
         """
-        python {input.script} -i {input.bed} {params.ignore_bed} > {output} 2> {log}
+        python {params.script} -i {input.bed} {params.ignore_bed} > {output} 2> {log}
         """
 
 
@@ -153,7 +153,7 @@ rule format_rm_nucflag_ignore_bed:
 rule format_stv_nucflag_ignore_bed:
     input:
         stv=lambda wc: humas_annot_sm_outputs(wc) if config.get("humas_annot") else [],
-        bed=ancient(rules.make_complete_cens_bed.output),
+        bed=ancient(rules.make_complete_cens_bed.output.cen_bed),
         ignore_bed=(
             config["nucflag"]["ignore_regions"]
             if config["nucflag"].get("ignore_regions")
@@ -220,7 +220,7 @@ NUCFLAG_CFG = {
                 }
             ),
             "config": config["nucflag"]["config_nucflag"],
-            "region_bed": ancient(rules.make_complete_cens_bed.output),
+            "region_bed": ancient(rules.make_complete_cens_bed.output.cen_bed),
             # Ignore regions.
             "ignore_bed": ignore_regions,
             "overlay_beds": overlay_beds,
@@ -247,3 +247,4 @@ use rule * from NucFlag
 rule nucflag_all:
     input:
         expand(rules.nucflag.input, sm=SAMPLE_NAMES),
+    default_target: True

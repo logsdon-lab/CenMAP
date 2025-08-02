@@ -1,8 +1,7 @@
 
 include: "common.smk"
 include: "utils.smk"
-include: "4-ident_cen_ctgs.smk"
-include: "5-dna_brnn.smk"
+include: "5-ident_cen_ctgs.smk"
 
 
 RM_OUTDIR = join(OUTPUT_DIR, "6-repeatmasker")
@@ -10,15 +9,39 @@ RM_LOGDIR = join(LOG_DIR, "6-repeatmasker")
 RM_BMKDIR = join(BMK_DIR, "6-repeatmasker")
 
 
+rule setup_repeatmasker:
+    output:
+        chkpt=touch(join(RM_OUTDIR, "rm_setup.done")),
+        seq=join(RM_OUTDIR, "rm_setup.fa"),
+        rm_dir=directory(join(RM_OUTDIR, "rm_setup")),
+    params:
+        species="human",
+        engine="rmblast",
+    threads: 1
+    log:
+        join(RM_LOGDIR, "setup_repeatmasker.log"),
+    conda:
+        "../envs/tools.yaml"
+    shell:
+        """
+        echo ">rm_setup" > {output.seq}
+        echo "NNNNNNNNNNNNNNNNNNNNN" >> {output.seq}
+        RepeatMasker \
+            -engine {params.engine} \
+            -species {params.species} \
+            -dir {output.rm_dir} \
+            -pa {threads} \
+            {output.seq} &> {log}
+        """
+
+
 checkpoint split_cens_for_rm:
     input:
-        fa=rules.extract_alr_regions_by_sample.output.seq,
-        # [old_name, new_name, coords, sm, chr, is_reversed]
-        rename_key=rules.map_collapse_cens.output.renamed_cens_key,
+        fa=rules.extract_cens_regions.output.seq,
     output:
         directory(join(RM_OUTDIR, "seq", "interm", "{sm}")),
     log:
-        join(RM_LOGDIR, "split_{sm}_cens_for_humas_sd.log"),
+        join(RM_LOGDIR, "split_{sm}_cens_for_rm.log"),
     params:
         split_dir=lambda wc, output: output[0],
     conda:
@@ -28,29 +51,16 @@ checkpoint split_cens_for_rm:
         """
         mkdir -p {params.split_dir}
         awk '{{
-            # Read key values in first file.
-            if (FNR == NR) {{
-                # Add coords to name.
-                kv[$1]=$2;
-                next;
-            }}
             if (substr($0, 1, 1)==">") {{
                 ctg_name=substr($0,2)
-                split(ctg_name, ctg_name_parts, ":")
-                new_ctg_name=kv[ctg_name_parts[1]]":"ctg_name_parts[2]
-                filename=("{params.split_dir}/" new_ctg_name ".fa")
-                print ">"new_ctg_name > filename
-            }} else {{
-                print $0 > filename
+                filename=("{params.split_dir}/" ctg_name ".fa")
             }}
-        }}' {input.rename_key} {input.fa} 2> {log}
+            print $0 > filename
+        }}' {input.fa} 2> {log}
         """
 
 
 # RepeatMasker has a limit of 50 characters for sequence names.
-# While I was able to create a fork of RepeatMasker that allowed for longer sequence names, I still ran into issues.
-# Bumping to v4.1.5 and also adding the increased limit fixed the issue but resulted in a 5-10x increase in runtime.
-# So I downgraded the repeatmasker70 image to v4.1.0.
 rule rename_for_repeatmasker:
     input:
         fa=join(rules.split_cens_for_rm.output[0], "{fname}.fa"),
@@ -58,8 +68,6 @@ rule rename_for_repeatmasker:
         original_fa_idx=temp(
             join(RM_OUTDIR, "seq", "{sm}_renamed", "{fname}_original.fa.fai"),
         ),
-        # Use different dir to avoid greedy wildcard recursively running rule.
-        # TODO: rules.split_cens_for_rm.output[0]
         renamed_fa=temp(
             join(
                 RM_OUTDIR,
@@ -96,6 +104,7 @@ rule rename_for_repeatmasker:
 
 rule run_repeatmasker:
     input:
+        setup=rules.setup_repeatmasker.output,
         seq=rules.rename_for_repeatmasker.output.renamed_fa,
     output:
         temp(
@@ -115,8 +124,6 @@ rule run_repeatmasker:
         "../envs/tools.yaml"
     log:
         join(RM_LOGDIR, "repeatmasker_{sm}_{fname}.log"),
-    # Retry in case of .RepeatMaskerCache failure.
-    retries: 2
     benchmark:
         join(RM_BMKDIR, "repeatmasker_{sm}_{fname}.tsv")
     shell:
@@ -137,7 +144,6 @@ rule run_repeatmasker:
 # Rename repeatmasker output to match the original sequence names.
 rule reformat_repeatmasker_output:
     input:
-        script=workflow.source_path("../scripts/reformat_rm.py"),
         rm_out=rules.run_repeatmasker.output,
         original_fai=rules.rename_for_repeatmasker.output.original_fa_idx,
         renamed_fai=rules.rename_for_repeatmasker.output.renamed_fa_idx,
@@ -148,13 +154,15 @@ rule reformat_repeatmasker_output:
             "{sm}",
             "{fname}.fa.out",
         ),
+    params:
+        script=workflow.source_path("../scripts/reformat_rm.py"),
     log:
         join(RM_LOGDIR, "reformat_repeatmasker_output_{sm}_{fname}.log"),
     conda:
         "../envs/py.yaml"
     shell:
         """
-        python {input.script} -i {input.rm_out} -of {input.original_fai} -rf {input.renamed_fai} > {output} 2> {log}
+        python {params.script} -i {input.rm_out} -of {input.original_fai} -rf {input.renamed_fai} > {output} 2> {log}
         """
 
 
@@ -254,7 +262,6 @@ rule format_add_control_repeatmasker_output:
 
 rule create_og_rm_bed:
     input:
-        script=workflow.source_path("../scripts/create_rm_bed.py"),
         rm_out=rules.format_add_control_repeatmasker_output.output,
     output:
         rm_bed=join(
@@ -266,6 +273,7 @@ rule create_og_rm_bed:
     params:
         chr_rgx="{chr}[:_]",
         color_mapping=config["repeatmasker"]["repeat_colors"],
+        script=workflow.source_path("../scripts/create_rm_bed.py"),
     log:
         join(RM_LOGDIR, "create_og_rm_bed_{chr}.log"),
     conda:
@@ -284,19 +292,25 @@ rule modify_og_rm_cenplot_tracks:
             "plots",
             "{chr}_cens_og.yaml",
         ),
-    run:
-        format_toml_path(
-            input_plot_layout=input.plot_layout,
-            output_plot_layout=output.plot_layout,
-            indir=os.path.abspath(os.path.dirname(str(input.infiles[0]))),
-            **dict(params.items()),
-        )
+    conda:
+        "../envs/py.yaml"
+    log:
+        join(RM_LOGDIR, "modify_og_rm_cenplot_tracks_{chr}.log"),
+    params:
+        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infiles[0]))),
+        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
+    shell:
+        """
+        python {params.script} \
+        -i {input.plot_layout} \
+        -o {output.plot_layout} \
+        -k indir={params.indir} &> {log}
+        """
 
 
 rule plot_og_rm_bed_by_chr:
     input:
         bed_files=[rules.create_og_rm_bed.output],
-        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
         plot_layout=rules.modify_og_rm_cenplot_tracks.output,
     output:
         plots=multiext(
@@ -315,6 +329,8 @@ rule plot_og_rm_bed_by_chr:
                 "{chr}_cens_og",
             )
         ),
+    params:
+        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
     threads: 4
     log:
         join(RM_LOGDIR, "plot_og_rm_bed_{chr}.log"),
