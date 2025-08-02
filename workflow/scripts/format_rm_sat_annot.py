@@ -126,15 +126,12 @@ def main():
             pl.col("rtype").str.contains(rgx_pattern)
         ).then(pl.lit(color))
     expr_name = expr_name.otherwise(pl.col("rtype"))
-    expr_item_rgb = expr_item_rgb.otherwise(pl.lit(CT_HEX))
+    expr_item_rgb = expr_item_rgb.otherwise(None)
 
-    df = (
-        df.with_columns(name=expr_name, item_rgb=expr_item_rgb)
-        .select(OUTPUT_COLS)
-        .drop_nulls()
-    )
+    df = df.with_columns(name=expr_name, item_rgb=expr_item_rgb).select(OUTPUT_COLS)
 
     if args.add_ct:
+        df = df.drop_nulls()
         df_ct = (
             df.get_column("chrom")
             .unique()
@@ -158,6 +155,8 @@ def main():
             .select(OUTPUT_COLS)
         )
         df = pl.concat((df, df_ct)).sort(by=["chrom", "chrom_st"])
+    else:
+        df = df.with_columns(pl.col("item_rgb").fill_null(pl.lit(CT_HEX)))
 
     df.write_csv(args.output_bed, separator="\t", include_header=False)
 
