@@ -21,7 +21,7 @@
 	ignore = dirty
 [submodule "workflow/rules/Snakemake-srf"]
 	path = workflow/rules/Snakemake-srf
-	url = git@github.com:koisland/Snakemake-srf.git
+	url = https://github.com/logsdon-lab/Snakemake-srf.git
 	ignore = dirty
 [submodule "workflow/rules/CDR-Finder"]
 	path = workflow/rules/CDR-Finder
