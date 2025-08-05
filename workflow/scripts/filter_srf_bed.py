@@ -190,11 +190,6 @@ def main():
             )
             for tsv in args.monomers_tsv
         )
-        .with_columns(
-            pl.col("chrom")
-            .str.extract(r".*?_(rc-chr[0-9XY]+|chr[0-9XY]+)_(?<chrom>.*)", 2)
-            .fill_null(pl.col("chrom"))
-        )
         .select("chrom", "motif", "period", "copyNum")
         # https://stackoverflow.com/a/78441223
         # Take top 3 motifs with the largest copy number.
