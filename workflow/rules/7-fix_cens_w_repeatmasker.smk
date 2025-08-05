@@ -47,7 +47,7 @@ rule filter_entropy_bed:
         bed=temp(
             join(
                 FIX_RM_OUTDIR,
-                "bed",
+                "entropy",
                 "interm",
                 "{sm}_{fname}.bed",
             )
