@@ -116,7 +116,7 @@ rule make_complete_cens_bed:
         awk -v OFS="\\t" '{{ $1=$1; print }}' | \
         bedtools slop -i - -g {input.idx} -b {params.bp_slop} | \
         awk -v OFS="\\t" '{{
-            print $4, $1":"$2"-"$3 >> "{output.rename_key}"
+            print $4, $1":"$2+1"-"$3 >> "{output.rename_key}"
             print $1, $2, $3, $5, $6
         }}' > {output.cen_bed}
         """

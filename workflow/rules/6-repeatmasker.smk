@@ -174,7 +174,10 @@ def refmt_rm_output(wc):
     )
     wcs = glob_wildcards(fa_glob_pattern)
     fnames = wcs.fname
-    return expand(rules.reformat_repeatmasker_output.output, sm=wc.sm, fname=fnames)
+    files = expand(rules.reformat_repeatmasker_output.output, sm=wc.sm, fname=fnames)
+    if not files:
+        raise RuntimeError(f"No {wc.sm} centromeres found.")
+    return files
 
 
 rule format_repeatmasker_output:

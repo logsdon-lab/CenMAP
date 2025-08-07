@@ -27,7 +27,7 @@ def format_toml_path(
                 new_trk = trk.copy()
                 original_idx = trk.get("options", {}).get("index")
                 if original_idx:
-                    new_trk["options"]["index"] = original_idx - number_skipped
+                    new_trk["options"]["index"] = max(0, original_idx - number_skipped)
             else:
                 new_trk = trk
 
@@ -59,14 +59,21 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--infile", type=argparse.FileType("rb"), required=True)
     ap.add_argument("-o", "--outfile", type=argparse.FileType("wt"), default=sys.stdout)
-    ap.add_argument("-k", "--kwargs", nargs="*", metavar="{key}={value}", type=lambda x: x.split("=", 1))
+    ap.add_argument(
+        "-k",
+        "--kwargs",
+        nargs="*",
+        metavar="{key}={value}",
+        type=lambda x: x.split("=", 1),
+    )
     args = ap.parse_args()
 
     format_toml_path(
         input_plot_layout=args.infile,
         output_plot_layout=args.outfile,
-        **dict(args.kwargs)
+        **dict(args.kwargs),
     )
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

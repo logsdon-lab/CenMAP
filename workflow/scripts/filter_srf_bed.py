@@ -11,7 +11,6 @@ from collections import deque
 INPUT_SRF_COLS = ("chrom", "st", "en", "motif", "wt_ident", "tlen", "len", "keep")
 # https://github.com/lh3/TRF-mod/commit/ce9b54f34d571a3f7047ea46ba647bd424ff81dd
 INPUT_MON_COLS = (
-    "chrom",
     "motif",
     "st",
     "end",
@@ -22,6 +21,7 @@ INPUT_MON_COLS = (
     "score",
     "entroy",
     "pattern",
+    "chrom",
 )
 OUTPUT_COLS = ("chrom", "new_st", "new_en", "len")
 
