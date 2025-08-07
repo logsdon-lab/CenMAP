@@ -51,6 +51,7 @@ module srf_sm:
                 }
                 for sm in SAMPLE_NAMES
             },
+            "workflow_dir": "Snakemake-srf/workflow",
         }
 
 
