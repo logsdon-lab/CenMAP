@@ -37,7 +37,7 @@ rule extract_cens_for_humas_annot:
         join(HUMAS_ANNOT_LOGDIR, "extract_cens_for_humas_annot_{sm}.log"),
     params:
         # Seqtk outputs 1-based coords which causes name issues.
-        bed=lambda wc, input: f"""<(awk -v OFS="\\t" '{{print $1, $2-1, $3}}' {input.bed})""",
+        bed=lambda wc, input: f"""<(awk -v OFS="\\t" '{{new_len=$2-1; print $1, (new_len < 0) ? 0 : new_len, $3}}' {input.bed})""",
         added_cmds="",
     shell:
         shell_extract_and_index_fa
