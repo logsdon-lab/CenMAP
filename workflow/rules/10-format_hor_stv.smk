@@ -32,7 +32,7 @@ checkpoint aggregate_format_all_stv_row:
             $8=$8+starts[1];
             print
         }}' {input} | \
-        grep -P "{wildcards.chr}[_:]" || true ;}} > {output} 2> {log}
+        grep -P "{wildcards.chr}[_:-]" || true ;}} > {output} 2> {log}
         """
 
 
@@ -66,3 +66,4 @@ rule format_hor_stv_all:
             rules.filter_complete_correct_stv_row.output,
             chr=CHROMOSOMES,
         ),
+    default_target: True

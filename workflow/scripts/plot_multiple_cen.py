@@ -19,13 +19,14 @@ from cenplot import (
     plot_one_cen,
     read_one_cen_tracks,
     Track,
+    TrackPosition,
 )
 
 logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
 
 
 def create_shared_legend(
-    plots: list[tuple[Figure, np.ndarray, str]],
+    plots: list[tuple[tuple[Figure, np.ndarray, str], list[Track]]],
     outdir: str,
     reference_ax_idx: int,
     dpi: int | None = None,
@@ -34,13 +35,13 @@ def create_shared_legend(
     if not plots:
         logging.error("No plots to get shared legend.")
         return
-
-    legend_fig, legend_axes, _ = copy.deepcopy(plots[reference_ax_idx])
+    (legend_fig, legend_axes, _), _ = copy.deepcopy(plots[reference_ax_idx])
 
     all_legend_elems = {}
     legend_idx = 0
-    for _, axes, _ in plots:
-        for i, ax_row in enumerate(axes):
+    for (_, axes, _), tracks in plots:
+        show_legend = [trk.options.legend for trk in tracks if trk.pos != TrackPosition.Overlap]
+        for i, (ax_row, show_legend) in enumerate(zip(axes, show_legend)):
             ax_row_elems = {}
             for ax in ax_row:
                 ax: Axes
@@ -49,7 +50,7 @@ def create_shared_legend(
                 legend_elems = dict(zip(legend_labels, legend_handles))
                 ax_row_elems.update(legend_elems)
 
-            if ax_row_elems:
+            if ax_row_elems and show_legend:
                 legend_idx = i
                 all_legend_elems.update(ax_row_elems)
 
@@ -192,25 +193,24 @@ def main():
             max_workers=processes, mp_context=multiprocessing.get_context("spawn")
         ) as pool:
             futures = [
-                (draw_arg[2], pool.submit(plot_one_cen, *draw_arg))
+                (draw_arg[2], pool.submit(plot_one_cen, *draw_arg), draw_arg[0])
                 for draw_arg in inputs
             ]  # type: ignore[assignment]
             plots = []
-            for chrom, future in futures:
+            for chrom, future, tracks in futures:
                 if future.exception():
                     print(
                         f"Failed to plot {chrom} ({future.exception()})",
                         file=sys.stderr,
                     )
                     continue
-                plots.append(future.result())
+                plots.append((future.result(), tracks))
 
     legend_plot = create_shared_legend(
         plots, outdir, args.ref_ax_idx, dpi=dpi, transparent=transparent
     )
-    plots.append(legend_plot)
-
-    merged_images = np.concatenate([plt.imread(files[0]) for _, _, files in plots])
+    plots.append((legend_plot, []))
+    merged_images = np.concatenate([plt.imread(files[0]) for (_, _, files), _ in plots])
     plt.imsave(f"{outdir}.png", merged_images)
     plt.imsave(f"{outdir}.pdf", merged_images)
 

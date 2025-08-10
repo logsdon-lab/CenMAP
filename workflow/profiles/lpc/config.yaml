@@ -9,10 +9,12 @@ default-resources:
   lsf_project: default
   # Hard memory limit that prevents out of memory for jobs.
   # LSF doesn't respect solely just rusage.
-  lsf_extra: "'-M 100GB'"
+  lsf_extra: "'-M 200GB'"
 printshellcmds: True
 rerun-incomplete: True
 show-failed-logs: True
 rerun-triggers: mtime
 restart-times: 1
 latency-wait: 60
+scheduler: greedy
+scheduler-subsample: 200

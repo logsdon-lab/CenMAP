@@ -13,8 +13,8 @@ if config.get("nucflag"):
 
 rule get_complete_correct_cens_bed:
     input:
-        # (name, st, end, is_partial, ctg_name, ctg_len)
-        interm_bed=ancient(rules.make_complete_cens_bed.output),
+        # (name, st, end, ctg_name, ctg_len)
+        interm_bed=ancient(rules.make_complete_cens_bed.output.cen_bed),
         # (name, st, end, status)
         nucflag_bed=(
             rules.check_asm_nucflag.output.asm_status if config.get("nucflag") else []
@@ -44,8 +44,8 @@ rule get_complete_correct_cens_bed:
         awk -v OFS="\\t" '{{
             adj_name=$1;
             adj_st=$2; adj_end=$3;
-            ctg_name=$5;
-            ctg_len=$6;
+            ctg_name=$4;
+            ctg_len=$5;
             ort=($1 ~ "rc-") ? "-" : "+";
             ctg_st=$2; ctg_end=$3;
             if (ort == "-") {{
@@ -54,7 +54,7 @@ rule get_complete_correct_cens_bed:
                 ctg_st=new_ctg_st;
                 ctg_end=new_ctg_end;
             }}
-            status=(($9 == "good" || $9 == "") && ($4 == "false")) ? "good" : "misassembled";
+            status=($8 == "good" || $8 == "") ? "good" : "misassembled";
             if (status != "good") {{
                 next;
             }};
@@ -86,7 +86,7 @@ rule get_complete_correct_cens_fa:
         join(COMPLETE_CORRECT_CENS_LOGDIR, "get_complete_correct_cens_fa_{sm}.log"),
     params:
         added_cmds="",
-        bed=lambda wc, input: f"""<(awk -v OFS="\\t" '{{print $4, $7-1, $8}}' {input.bed})""",
+        bed=lambda wc, input: f"""<(awk -v OFS="\\t" '{{new_len=$7-1; print $4, (new_len < 0) ? 0 : new_len, $8}}' {input.bed})""",
     shell:
         shell_extract_and_index_fa
 

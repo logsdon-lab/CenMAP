@@ -14,4 +14,4 @@ def run_integration_test(*args: str, expected_output: str) -> None:
         exp_res = sorted(
             line.strip().split("\t") for line in exp_res_fh.readlines() if line
         )
-        assert res == exp_res
+        assert res == exp_res, f"Not equal ({res} != {exp_res})"
