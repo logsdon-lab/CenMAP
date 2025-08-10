@@ -116,7 +116,10 @@ rule make_complete_cens_bed:
         awk -v OFS="\\t" '{{ $1=$1; print }}' | \
         bedtools slop -i - -g {input.idx} -b {params.bp_slop} | \
         awk -v OFS="\\t" '{{
-            print $4, $1":"$2+1"-"$3 >> "{output.rename_key}"
+            # Adjust for seqtk 1-index
+            $2=($2 == 0) ? 1 : $2
+            new_name=$1":"$2"-"$3
+            print $4, new_name >> "{output.rename_key}"
             print $1, $2, $3, $5, $6
         }}' > {output.cen_bed}
         """
@@ -125,6 +128,7 @@ rule make_complete_cens_bed:
 # Filter original RM annotations.
 rule fix_cens_rm_out:
     input:
+        bed=rules.make_complete_cens_bed.output.cen_bed,
         rename_key=rules.make_complete_cens_bed.output.rename_key,
         rm_out=rules.format_repeatmasker_output.output,
     output:
@@ -140,11 +144,22 @@ rule fix_cens_rm_out:
         "../envs/tools.yaml"
     shell:
         """
-        awk -v OFS="\\t" '{{
+        {{ awk -v OFS="\\t" '{{
             if (FNR == NR) {{ kv[$1]=$2; next; }};
             new_name=kv[$5];
-            if (new_name) {{ $5=new_name; print }}
-        }}' {input.rename_key} {input.rm_out} > {output} 2> {log}
+            match($5, ":(.+)-", ctg_st);
+            match($5, "^(.+):", ctg_name);
+            # Convert to absolute coordinates
+            $6=$6+ctg_st[1];
+            $7=$7+ctg_st[1];
+            # Make bed-like
+            if (new_name) {{
+                $5=new_name;
+                print ctg_name[1], $6, $7, $0
+            }}
+        }}' {input.rename_key} <(cut -f1-15 {input.rm_out}) | \
+        bedtools intersect -a - -b {input.bed} | \
+        cut -f 4-18 ;}} > {output} 2> {log}
         """
 
 
