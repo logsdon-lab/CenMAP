@@ -1,7 +1,7 @@
 # Scripts
 
 ## `cenplot*.toml`
-Various configuration for cenplot scripts. Can be modified to change layout of scripts. 
+Various configuration for cenplot scripts. Can be modified to change layout of scripts.
 
 Format string `{indir}` should remain the same.
 
@@ -9,3 +9,6 @@ Format string `{indir}` should remain the same.
 Count complete centromeres.
 
 ## `create_rm_bed.py`
+
+## `srf-n-trf`
+https://github.com/koisland/srf-n-trf

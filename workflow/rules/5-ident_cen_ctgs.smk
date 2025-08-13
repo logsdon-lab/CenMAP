@@ -89,7 +89,7 @@ rule rename_reort_asm:
 # Don't wait for rename assembly as can do in parallel.
 rule reorient_satellite_bed:
     input:
-        bed=rules.slop_region_bed.output,
+        bed=rules.merge_slop_region_bed.output,
         rename_key=rules.map_chroms.output,
         idx=rules.concat_asm.output.idx,
     output:
@@ -104,7 +104,7 @@ rule reorient_satellite_bed:
         join(IDENT_CEN_CTGS_LOGDIR, "reorient_satellite_bed_{sm}.log"),
     shell:
         """
-        {{ join <(sort -k1,1 {input.bed}) <(sort -k1,1 {input.rename_key}) | \
+        {{ join <(sort -k1,1 {input.bed} | cut -f 1-4) <(sort -k1,1 {input.rename_key}) | \
         join - <(cut -f 1,2 {input.idx}| sort -k1,1) | \
         awk -v OFS="\\t" '{{
             ctg_len=$6;

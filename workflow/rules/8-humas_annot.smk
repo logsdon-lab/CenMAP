@@ -72,9 +72,48 @@ checkpoint split_cens_for_humas_annot:
         """
 
 
-if config["humas_annot"]["mode"] == "sd":
+checkpoint split_srf_trf_monomers:
+    input:
+        expand(rules.merge_slop_region_bed.output, sm=SAMPLE_NAMES),
+    output:
+        join(HUMAS_ANNOT_OUTDIR, "srf_monomers", "{fname}.fa"),
+    conda:
+        "../envs/tools.yaml"
+    params:
+        output_dir=lambda wc, output: dirname(output[0]),
+        # Can't use sample wildcard so figure out from fname.
+        sample=lambda wc: wc.fname.split("_")[0],
+        contig=lambda wc: wc.fname.split("_", 2)[2].split(":", 1)[0],
+    shell:
+        """
+        mkdir -p {params.output_dir}
+        awk -v OFS="\\t" '{{
+            if ($1 != "{params.contig}") {{ next; }}
+            split($4, monomers, ",");
+            out_fa="{params.output_dir}/{wildcards.fname}.tmp_fa"
+            for (i in monomers) {{
+                print ">monomer" >> out_fa
+                print monomers[i] >> out_fa
+            }};
+            print out_fa
+        }}' $(find {input} -name "{params.sample}.bed") | \
+        xargs -I {{}} \
+        bash -c 'seqkit rmdup -s {{}} | seqkit rename > {params.output_dir}/{wildcards.fname}.fa && rm -f {{}}'
+        """
+
+
+added_as_cfg = {}
+if (
+    config["humas_annot"]["mode"] == "sd"
+    or config["humas_annot"]["mode"] == "srf-n-trf"
+):
     humas_module_smk = "Snakemake-HumAS-SD/workflow/Snakefile"
     humas_env = "Snakemake-HumAS-SD/workflow/envs/env.yaml"
+    if config["humas_annot"]["mode"] == "srf-n-trf":
+        added_as_cfg["run_stv"] = False
+        added_as_cfg["monomer_dir"] = dirname(rules.split_srf_trf_monomers.output[0])
+        # Remove hmm profile if added.
+        config["humas_annot"].pop("hmm_profile")
 else:
     humas_module_smk = "Snakemake-HumAS-HMMER/workflow/Snakefile"
     humas_env = "Snakemake-HumAS-HMMER/workflow/envs/env.yaml"
@@ -92,10 +131,29 @@ module HumAS_Annot:
             "output_dir": HUMAS_ANNOT_OUTDIR,
             "logs_dir": HUMAS_ANNOT_LOGDIR,
             "benchmarks_dir": HUMAS_ANNOT_BMKDIR,
+            **added_as_cfg,
         }
 
 
 use rule * from HumAS_Annot as cens_*
+
+
+rule format_filter_srf_trf_annot:
+    input:
+        rules.cens_convert_to_bed9.output,
+    output:
+        join(
+            HUMAS_ANNOT_OUTDIR,
+            "{fname}",
+            "stv_mon.bed",
+        ),
+    params:
+        script=workflow.source_path("../scripts/merge_srf_mons.py"),
+        thr_ident=70.0,
+    shell:
+        """
+        python {params.script} -i {input} -t {params.thr_ident} > {output}
+        """
 
 
 # https://stackoverflow.com/a/63040288
@@ -106,16 +164,18 @@ def humas_annot_sm_outputs(wc):
     )
     fnames = [f"{wc.sm}_{chrom}_{ctg}" for chrom, ctg in zip(wcs.chrom, wcs.ctg)]
     chrs = wcs.chrom
+    _ = [checkpoints.split_srf_trf_monomers.get(fname=fname).output for fname in fnames]
 
-    return {
-        "stv": expand(rules.cens_generate_stv.output, zip, fname=fnames, chr=chrs),
-    }
+    if config["humas_annot"]["mode"] == "srf-n-trf":
+        return expand(rules.format_filter_srf_trf_annot.output, fname=fnames)
+    else:
+        return expand(rules.cens_generate_stv.output, zip, fname=fnames, chr=chrs)
 
 
 checkpoint run_humas_annot:
     input:
         expand(rules.split_cens_for_humas_annot.output, sm=SAMPLE_NAMES),
-        unpack(humas_annot_sm_outputs),
+        humas_annot_sm_outputs,
     output:
         touch(join(HUMAS_ANNOT_OUTDIR, "humas_annot_{sm}.done")),
 
@@ -148,12 +208,12 @@ def humas_annot_chr_outputs(wc):
             continue
         fnames.append(f"{sm}_{chrom}_{ctg}:{coords}")
 
-    return {
-        "stv": [
+    return (
+        [
             *config.get("plot_hor_stv", {}).get("ref_stv", []),
             *expand(rules.cens_generate_stv.output, fname=fnames, chr=wc.chr),
         ],
-    }
+    )
 
 
 # Force including conda so --containerize includes.

@@ -5,7 +5,7 @@ import glob
 import tomllib
 import yaml
 
-from os.path import join
+from os.path import join, dirname
 from collections import defaultdict, Counter
 from typing import Any
 from snakemake.settings.types import DeploymentMethod

@@ -37,11 +37,11 @@ concat_asm:
   mem: 20GB
 
 ident_cen_ctgs:
-  threads_srf: 16
-  mem_srf: 20GB
+  threads_srf: 32
+  mem_srf: 50GB
   threads_aln: 8
   mem_aln: 150GB
-  bp_group: 500000
+  bp_merge: 2500000
   bp_slop: 1000000
   reference: "data/reference/T2T-CHM13.fa.gz"
 

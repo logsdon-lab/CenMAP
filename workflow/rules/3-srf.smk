@@ -58,43 +58,37 @@ module srf_sm:
 use rule * from srf_sm as srf_*
 
 
-rule create_region_bed:
+rule extract_filter_monomers:
     input:
-        bed=ancient(rules.srf_merge_files.output.bed),
+        paf=ancient(rules.srf_merge_files.output.paf),
         monomers=ancient(rules.srf_merge_files.output.monomers),
     output:
-        bed=pipe(
-            join(
-                SRF_OUTDIR,
-                "bed",
-                "{sm}_interm.bed",
-            )
+        bed_mon=join(
+            SRF_OUTDIR,
+            "bed",
+            "{sm}_monomers_filtered.bed",
         ),
     params:
-        script=workflow.source_path("../scripts/filter_srf_bed.py"),
-        bp_group=config["ident_cen_ctgs"]["bp_group"],
-        bp_min_length=config["ident_cen_ctgs"]["bp_min_length"],
-        bp_merge=config["ident_cen_ctgs"]["bp_merge"],
-        perc_mon_len_diff=config["ident_cen_ctgs"]["perc_mon_len_diff"],
+        script="workflow/scripts/srf-n-trf",
+        # Look for alpha-sat and hsat-1a
+        mon_periods=" ".join(str(e) for e in [170, 340, 42]),
+        perc_mon_len_diff=config["ident_cen_ctgs"]["perc_mon_len_diff"] / 100.0,
     log:
         join(SRF_LOGDIR, "create_region_bed_{sm}.log"),
-    conda:
-        "../envs/py.yaml"
+    localrule: True
     shell:
         """
-        python {params.script} \
-        -i {input.bed} \
+        {params.script} extract \
+        -p <(zcat {input.paf}) \
         -m {input.monomers} \
-        -g {params.bp_group} \
-        -l {params.bp_min_length} \
-        -d {params.perc_mon_len_diff} \
-        --merge_by {params.bp_merge} > {output.bed} 2> {log}
+        -s {params.mon_periods} \
+        -d {params.perc_mon_len_diff} > {output.bed_mon} 2> {log}
         """
 
 
-rule slop_region_bed:
+rule merge_slop_region_bed:
     input:
-        bed=rules.create_region_bed.output,
+        bed=rules.extract_filter_monomers.output.bed_mon,
         idx=rules.concat_asm.output.idx,
     output:
         join(
@@ -105,19 +99,32 @@ rule slop_region_bed:
     log:
         join(SRF_LOGDIR, "format_region_bed_{sm}.log"),
     params:
+        script="workflow/scripts/srf-n-trf",
         bp_slop=config["ident_cen_ctgs"]["bp_slop"],
+        bp_merge=config["ident_cen_ctgs"]["bp_merge"],
+        bp_min_length=config["ident_cen_ctgs"]["bp_min_length"],
+        # But only use regions with alpha-sat.
+        req_mon_periods=" ".join(str(e) for e in [170, 340]),
+        perc_mon_len_diff=config["ident_cen_ctgs"]["perc_mon_len_diff"] / 100.0,
+    localrule: True
     conda:
         "../envs/tools.yaml"
     shell:
         """
-        bedtools slop -i {input.bed} -g {input.idx} -b {params.bp_slop} > {output} 2> {log}
+        {{ {params.script} merge \
+            -b {input.bed} \
+            -m {params.bp_min_length} \
+            -d {params.bp_merge} \
+            -s {params.req_mon_periods} \
+            --diff {params.perc_mon_len_diff} | \
+        bedtools slop -i - -g {input.idx} -b {params.bp_slop} ;}} > {output} 2> {log}
         """
 
 
 rule srf_all:
     input:
         expand(
-            rules.slop_region_bed.output,
+            rules.merge_slop_region_bed.output,
             sm=SAMPLE_NAMES,
         ),
     default_target: True
