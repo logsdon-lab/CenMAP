@@ -91,8 +91,8 @@ def main():
     format_toml_path(
         input_plot_layout=args.infile,
         output_plot_layout=args.outfile,
-        path_kwargs=dict(args.path_kwargs),
-        options=dict(args.options),
+        path_kwargs=dict(args.path_kwargs) if args.path_kwargs else {},
+        options=dict(args.options) if args.options else {},
     )
 
 
