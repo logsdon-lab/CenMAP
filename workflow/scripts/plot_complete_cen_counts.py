@@ -18,6 +18,7 @@ def main():
         type=argparse.FileType("rb"),
     )
     ap.add_argument("-o", "--output", help="Output plot file.", type=str, required=True)
+    # TODO: Add argparse # for chroms.
 
     args = ap.parse_args()
 

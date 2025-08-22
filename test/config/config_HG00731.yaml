@@ -13,7 +13,7 @@ ident_cen_ctgs:
   mem_srf: 40GB
   threads_aln: 16
   mem_aln: 150GB
-  bp_group: 2500000
+  bp_merge: 2500000
   bp_slop: 1000000
   perc_multi_chrom: 5.0
 

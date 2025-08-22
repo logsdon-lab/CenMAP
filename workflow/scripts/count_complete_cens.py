@@ -38,8 +38,11 @@ def main():
         )
         .group_by("ctg")
         .agg(pl.sum("length").alias("length"))
+        # TODO: Replace with argparse regex for chroms. Should be based on config chroms.
         .with_columns(
-            pl.col("ctg").str.extract_groups(r"(.*?)_(rc-chr[XY0-9]+|chr[XY0-9]+)_(.*?)")
+            pl.col("ctg").str.extract_groups(
+                r"(.*?)_(rc-chr[XY0-9]+|chr[XY0-9]+)_(.*?)"
+            )
         )
         .unnest("ctg")
         .rename({"1": "sample", "2": "chr", "3": "ctg"})

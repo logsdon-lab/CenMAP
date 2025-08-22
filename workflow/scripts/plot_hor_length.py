@@ -8,6 +8,7 @@ from collections import OrderedDict
 
 
 DEF_COLS = ["chrom", "chrom_st", "chrom_end", "length"]
+# TODO: Replace with argparse regex for chroms. Should be based on config chroms.
 CHR_ORDER = [f"chr{i}" for i in (*range(1, 23), "X", "Y")]
 CHR_COLORS = dict(
     zip(
@@ -105,6 +106,7 @@ def main():
     df_all_lengths: pl.DataFrame = pl.concat([df_lengths, *dfs_added_lengths])
     df_all_lengths = df_all_lengths.with_columns(
         chrom_name=pl.col("chrom")
+        # TODO: Replace with argparse regex for chroms. Should be based on config chroms.
         .str.extract(r"(chr\d+|chrX|chrY)")
         .cast(pl.Enum(CHR_ORDER))
     )
