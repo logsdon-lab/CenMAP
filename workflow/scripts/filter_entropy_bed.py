@@ -81,10 +81,17 @@ def main():
         help="Proportion of dips in entropy over all ALR containing regions required to be valid. Majority by default.",
     )
     ap.add_argument(
+        "-d",
+        "--dst",
+        type=int,
+        default=1_000_000,
+        help="Merge distance.",
+    )
+    ap.add_argument(
         "--trim_to_repeats",
         nargs="*",
         default=None,
-        help="Trim coordinates to boundaries contain the largest block of these repeats. Merge distance determined by median entropy window.",
+        help="Trim coordinates to boundaries contain the largest block of these repeats.",
     )
     args = ap.parse_args()
 
@@ -167,11 +174,10 @@ def main():
             st, end = coords.split("-")
             # Trim to repeats. Should be slopped afterwards.
             if args.trim_to_repeats:
-                window = (df_entropy["end"] - df_entropy["st"]).median()
                 _, _, trim_st, trim_end, _ = (
                     group_by_dst(
                         df_rm.filter(pl.col("rtype").is_in(args.trim_to_repeats)),
-                        window,
+                        args.dst,
                         "group",
                     )
                     .drop_nulls()

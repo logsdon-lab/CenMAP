@@ -27,11 +27,13 @@ rule run_moddotplot:
                 "{{fname}}_{otype}.{ext}",
             ),
             otype=["FULL", "HIST", "TRI"],
-            ext=["png", "pdf"],
+            ext=["png"],
         ),
         bed=join(MODDOTPLOT_OUTDIR_OG, "{chr}", "{fname}", "{fname}.bed"),
     conda:
         "../envs/py.yaml"
+    # singularity:
+    #     "/project/logsdon_shared/tools/moddotplot.sif"
     params:
         window=config["moddotplot"]["window"],
         ident_thr=config["moddotplot"]["ident_thr"],
@@ -114,8 +116,13 @@ rule filter_annotations_moddotplot:
 
 rule modify_moddotplot_cenplot_tracks:
     input:
-        plot_layout=workflow.source_path("../scripts/cenplot_moddotplot.toml"),
+        plot_layout=(
+            workflow.source_path("../scripts/cenplot_moddotplot.toml")
+            if config["humas_annot"]["mode"] != "sf"
+            else workflow.source_path("../scripts/cenplot_moddotplot_sf.toml")
+        ),
         infiles=[rules.filter_annotations_moddotplot.output.cdr_bed],
+        hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],
     output:
         plot_layout=join(
             MODDOTPLOT_OUTDIR_PLOT,
@@ -134,7 +141,8 @@ rule modify_moddotplot_cenplot_tracks:
         python {params.script} \
         -i {input.plot_layout} \
         -o {output.plot_layout} \
-        -k indir={params.indir} &> {log}
+        -p indir={params.indir} \
+        --options color_map_file={input.hor_stv_colors} &> {log}
         """
 
 
@@ -173,30 +181,38 @@ def moddotplot_outputs(wc):
     except AttributeError:
         pass
 
-    wcs = glob_wildcards(
-        join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg}:{coords}.fa"),
-    )
+    fastas = glob.glob(join(HUMAS_CENS_SPLIT_DIR, "*.fa"))
+    sms, chroms, ctgs, coords = [], [], [], []
+    for fasta in fastas:
+        bname, _ = splitext(basename(fasta))
+        fname, coord = bname.rsplit(":", 1)
+        sm, chrom, ctg = fname.split("_", 2)
+        sms.append(sm)
+        chroms.append(chrom)
+        ctgs.append(ctg)
+        coords.append(coord)
+
     fnames = []
     # Sort by coords so if multiple chr, chr position in name (chr3-chr21) matches.
     sorted_wcs = sorted(
-        zip(wcs.sm, wcs.chr, wcs.ctg, wcs.coords),
+        zip(sms, chroms, ctgs, coords),
         key=lambda x: (x[1], x[2], x[3]),
         reverse=True,
     )
 
     # Store index of chrom per contig.
-    # In cases of dicentric contigs.
+    # In cases of dicentric contigs (chr3-chr21). Don't want to include twice.
     ctg_counter = Counter()
-    for sm, chrom, ctg, coords in sorted_wcs:
-        chroms: list[str] = chrom.replace("rc-", "").split("-")
-        if not wc.chr in chroms:
+    for sm, chrom, ctg, coord in sorted_wcs:
+        chrom_names: list[str] = chrom.replace("rc-", "").split("-")
+        if not wc.chr in chrom_names:
             continue
-        ctg_id = (sm, chrom, ctg)
+        ctg_id = (sm, chrom, ctg, coord)
         idx = ctg_counter[ctg_id]
         ctg_counter[ctg_id] += 1
-        if wc.chr != chroms[idx]:
+        if wc.chr != chrom_names[idx]:
             continue
-        fnames.append(f"{sm}_{chrom}_{ctg}:{coords}")
+        fnames.append(f"{sm}_{chrom}_{ctg}:{coord}")
 
     return dict(
         moddotplot=expand(rules.run_moddotplot.output, chr=wc.chr, fname=fnames),

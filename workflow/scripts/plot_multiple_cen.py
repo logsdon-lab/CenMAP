@@ -40,7 +40,9 @@ def create_shared_legend(
     all_legend_elems = {}
     legend_idx = 0
     for (_, axes, _), tracks in plots:
-        show_legend = [trk.options.legend for trk in tracks if trk.pos != TrackPosition.Overlap]
+        show_legend = [
+            trk.options.legend for trk in tracks if trk.pos != TrackPosition.Overlap
+        ]
         for i, (ax_row, show_legend) in enumerate(zip(axes, show_legend)):
             ax_row_elems = {}
             for ax in ax_row:
@@ -142,8 +144,12 @@ def main():
             tracks_settings.append(
                 (chrom, *read_one_cen_tracks(input_tracks, chrom=chrom))
             )
-        except Exception:
-            pass
+        except Exception as err:
+            print(
+                f"Failed to plot {chrom} ({err})",
+                file=sys.stderr,
+            )
+            continue
 
     dpi = None
     transparent = True

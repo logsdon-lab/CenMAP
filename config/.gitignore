@@ -1,3 +1,4 @@
 *.yaml
 !config.yaml
+!config_primates.yaml
 !config.schema.yaml

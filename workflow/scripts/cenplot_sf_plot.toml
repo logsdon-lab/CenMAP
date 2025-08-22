@@ -24,17 +24,28 @@ options = { legend = true, legend_title = "{chrom}", legend_title_only = true, h
 
 [[tracks]]
 position = "overlap"
-type = "hor"
+type = "label"
 path = "{indir}/stv_{typ}.bed"
-# color_map_file gets replaced.
-options = { legend = true, legend_title = "{chrom}", legend_title_only = true, hide_x = true, live_only = false, color_map_file = "none" }
+options = { legend = true,  legend_title = "{chrom}", legend_title_only = true, hide_x = true }
 
 [[tracks]]
 position = "relative"
-proportion = 0.1
+proportion = 0.005
 type = "horort"
 path = "{indir}/stv_{typ}.bed"
-options = { legend = false, hide_x = true, scale = 15 }
+
+[tracks.options]
+legend = false
+hide_x = true
+scale = 15
+live_only = false
+mer_filter = 1
+arr_opt_min_arr_hor_units = 1
+arr_opt_min_blk_hor_units = 1
+arr_opt_bp_merge_units = 100000
+arr_opt_bp_merge_blks = 100000
+arr_opt_min_arr_len = 170
+arr_opt_min_arr_prop = 0.9
 
 [[tracks]]
 position = "relative"

@@ -8,7 +8,10 @@ from typing import Any, TextIO
 
 
 def format_toml_path(
-    input_plot_layout: BytesIO, output_plot_layout: TextIO, **kwargs: Any
+    input_plot_layout: BytesIO,
+    output_plot_layout: TextIO,
+    options: dict[str, Any],
+    path_kwargs: Any,
 ):
     """
     Format the plot layout filling any kwargs in the path.
@@ -20,11 +23,22 @@ def format_toml_path(
     number_skipped = 0
     for trk in settings["tracks"]:
         path = trk.get("path")
+        new_trk = trk.copy()
+
+        try:
+            for opt, _ in trk.get("options", {}).items():
+                new_value = options.get(opt)
+                if new_value:
+                    new_trk["options"][opt] = new_value
+        except KeyError:
+            print(
+                f"Invalid format key in path {path} from cenplot track file, {input_plot_layout.name}.",
+                file=sys.stderr,
+            )
         # Some tracks don't have paths.
         if not path:
             # If any track is a legend track, need to track index and update when empty (-number skipped.)
             if trk["type"] == "legend":
-                new_trk = trk.copy()
                 original_idx = trk.get("options", {}).get("index")
                 if original_idx:
                     new_trk["options"]["index"] = max(0, original_idx - number_skipped)
@@ -34,7 +48,7 @@ def format_toml_path(
             new_settings["tracks"].append(new_trk)
             continue
         try:
-            new_path = path.format(**kwargs)
+            new_path = path.format(**path_kwargs)
         except KeyError:
             print(
                 f"Invalid format key in path {path} from cenplot track file, {input_plot_layout.name}.",
@@ -60,8 +74,14 @@ def main():
     ap.add_argument("-i", "--infile", type=argparse.FileType("rb"), required=True)
     ap.add_argument("-o", "--outfile", type=argparse.FileType("wt"), default=sys.stdout)
     ap.add_argument(
-        "-k",
-        "--kwargs",
+        "-p",
+        "--path_kwargs",
+        nargs="*",
+        metavar="{key}={value}",
+        type=lambda x: x.split("=", 1),
+    )
+    ap.add_argument(
+        "--options",
         nargs="*",
         metavar="{key}={value}",
         type=lambda x: x.split("=", 1),
@@ -71,7 +91,8 @@ def main():
     format_toml_path(
         input_plot_layout=args.infile,
         output_plot_layout=args.outfile,
-        **dict(args.kwargs),
+        path_kwargs=dict(args.path_kwargs),
+        options=dict(args.options),
     )
 
 

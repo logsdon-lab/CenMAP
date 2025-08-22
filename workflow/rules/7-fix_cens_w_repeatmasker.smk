@@ -84,7 +84,7 @@ def valid_beds_by_cen_entropy(wc):
 rule make_complete_cens_bed:
     input:
         # (sm_ctg, st, end, old_sm_ctg)
-        beds=valid_beds_by_cen_entropy,
+        beds=ancient(valid_beds_by_cen_entropy),
         # (ctg, sm_ctg, ctg_len)
         rename_key=rules.map_chroms.output,
         idx=rules.rename_reort_asm.output.idx,
@@ -118,7 +118,7 @@ rule make_complete_cens_bed:
         awk -v OFS="\\t" '{{
             # Adjust for seqtk 1-index
             $2=($2 == 0) ? 1 : $2
-            new_name=$1":"$2"-"$3
+            new_name=$1":"$2+1"-"$3
             print $4, new_name >> "{output.rename_key}"
             print $1, $2, $3, $5, $6
         }}' > {output.cen_bed}
@@ -210,7 +210,7 @@ rule modify_rm_cenplot_tracks:
         python {params.script} \
         -i {input.plot_layout} \
         -o {output.plot_layout} \
-        -k indir={params.indir} &> {log}
+        -p indir={params.indir} &> {log}
         """
 
 

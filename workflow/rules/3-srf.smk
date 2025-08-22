@@ -5,6 +5,7 @@ include: "2-concat_asm.smk"
 SRF_OUTDIR = join(OUTPUT_DIR, "3-srf")
 SRF_LOGDIR = join(LOG_DIR, "3-srf")
 SRF_BMKDIR = join(BMK_DIR, "3-srf")
+MONOMER_PERIODS = config["ident_cen_ctgs"]["monomer_periods"]
 
 
 # Then split them into unique files per contig.
@@ -58,7 +59,8 @@ module srf_sm:
 use rule * from srf_sm as srf_*
 
 
-rule extract_filter_monomers:
+# TODO: Replace with bioconda script.
+checkpoint extract_filter_monomers:
     input:
         paf=ancient(rules.srf_merge_files.output.paf),
         monomers=ancient(rules.srf_merge_files.output.monomers),
@@ -71,14 +73,14 @@ rule extract_filter_monomers:
     params:
         script="workflow/scripts/srf-n-trf",
         # Look for alpha-sat and hsat-1a
-        mon_periods=" ".join(str(e) for e in [170, 340, 42]),
+        mon_periods=" ".join(str(e) for e in [*MONOMER_PERIODS, 42]),
         perc_mon_len_diff=config["ident_cen_ctgs"]["perc_mon_len_diff"] / 100.0,
     log:
         join(SRF_LOGDIR, "create_region_bed_{sm}.log"),
     localrule: True
     shell:
         """
-        {params.script} extract \
+        {params.script} monomers \
         -p <(zcat {input.paf}) \
         -m {input.monomers} \
         -s {params.mon_periods} \
@@ -104,14 +106,14 @@ rule merge_slop_region_bed:
         bp_merge=config["ident_cen_ctgs"]["bp_merge"],
         bp_min_length=config["ident_cen_ctgs"]["bp_min_length"],
         # But only use regions with alpha-sat.
-        req_mon_periods=" ".join(str(e) for e in [170, 340]),
+        req_mon_periods=" ".join(str(e) for e in MONOMER_PERIODS),
         perc_mon_len_diff=config["ident_cen_ctgs"]["perc_mon_len_diff"] / 100.0,
     localrule: True
     conda:
         "../envs/tools.yaml"
     shell:
         """
-        {{ {params.script} merge \
+        {{ {params.script} regions \
             -b {input.bed} \
             -m {params.bp_min_length} \
             -d {params.bp_merge} \

@@ -118,7 +118,7 @@ rule run_repeatmasker:
     threads: config["repeatmasker"]["threads"]
     params:
         output_dir=lambda wc, output: os.path.dirname(str(output)),
-        species="human",
+        species=config["repeatmasker"]["species"],
         engine="rmblast",
     conda:
         "../envs/tools.yaml"
@@ -307,7 +307,7 @@ rule modify_og_rm_cenplot_tracks:
         python {params.script} \
         -i {input.plot_layout} \
         -o {output.plot_layout} \
-        -k indir={params.indir} &> {log}
+        -p indir={params.indir} &> {log}
         """
 
 

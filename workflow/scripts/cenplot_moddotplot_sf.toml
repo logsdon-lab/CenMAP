@@ -1,0 +1,68 @@
+[settings]
+title = "{chrom}"
+layout = "constrained"
+format = ["png", "pdf"]
+transparent = false
+dim = [16.0, 8.0]
+axis_h_pad = 0.05
+dpi = 600
+
+[[tracks]]
+position = "relative"
+type = "label"
+proportion = 0.005
+path = "{indir}/cdrs.bed"
+options = { color = "black", legend = false, hide_x = true }
+
+[[tracks]]
+title = "Mean CpG\nmethylation\n(%)"
+position = "relative"
+type = "bar"
+proportion = 0.1
+path = "{indir}/methyl.bed"
+options = { hide_x = true, ymax = 100.0 }
+
+[[tracks]]
+position = "relative"
+proportion = 0.05
+type = "label"
+path = "{indir}/sat_annot.bed"
+options = { legend = false, hide_x = true }
+
+[[tracks]]
+position = "overlap"
+type = "label"
+path = "{indir}/stv.bed"
+options = { legend = false, hide_x = true, bg_border = true}
+
+[[tracks]]
+position = "relative"
+proportion = 0.005
+type = "horort"
+path = "{indir}/stv.bed"
+
+[tracks.options]
+legend = false
+hide_x = true
+scale = 15
+live_only = false
+mer_filter = 1
+arr_opt_min_arr_hor_units = 1
+arr_opt_min_blk_hor_units = 1
+arr_opt_bp_merge_units = 100000
+arr_opt_bp_merge_blks = 100000
+arr_opt_min_arr_len = 170
+arr_opt_min_arr_prop = 0.9
+
+[[tracks]]
+position = "relative"
+type = "selfident"
+proportion = 0.7
+path = "{indir}/ident.bed"
+options = { legend = true, hide_x = false, invert = true, legend_asp_ratio = 1.0 }
+
+[[tracks]]
+position = "relative"
+proportion = 0.1
+type = "legend"
+options = { index = 2, legend_ncols = 10 }

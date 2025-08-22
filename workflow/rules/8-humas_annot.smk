@@ -1,6 +1,7 @@
 
 include: "common.smk"
 include: "utils.smk"
+include: "3-srf.smk"
 include: "5-ident_cen_ctgs.smk"
 include: "7-fix_cens_w_repeatmasker.smk"
 
@@ -18,16 +19,14 @@ rule extract_cens_for_humas_annot:
         seq=temp(
             join(
                 HUMAS_ANNOT_OUTDIR,
-                "seq",
-                "interm",
+                "temp",
                 "{sm}_cens.fa",
             )
         ),
         idx=temp(
             join(
                 HUMAS_ANNOT_OUTDIR,
-                "seq",
-                "interm",
+                "temp",
                 "{sm}_cens.fa.fai",
             )
         ),
@@ -36,8 +35,7 @@ rule extract_cens_for_humas_annot:
     log:
         join(HUMAS_ANNOT_LOGDIR, "extract_cens_for_humas_annot_{sm}.log"),
     params:
-        # Seqtk outputs 1-based coords which causes name issues.
-        bed=lambda wc, input: f"""<(awk -v OFS="\\t" '{{new_len=$2-1; print $1, (new_len < 0) ? 0 : new_len, $3}}' {input.bed})""",
+        bed=lambda wc, input: input.bed,
         added_cmds="",
     shell:
         shell_extract_and_index_fa
@@ -74,7 +72,7 @@ checkpoint split_cens_for_humas_annot:
 
 checkpoint split_srf_trf_monomers:
     input:
-        expand(rules.merge_slop_region_bed.output, sm=SAMPLE_NAMES),
+        beds=expand(rules.merge_slop_region_bed.output, sm=SAMPLE_NAMES),
     output:
         join(HUMAS_ANNOT_OUTDIR, "srf_monomers", "{fname}.fa"),
     conda:
@@ -84,10 +82,12 @@ checkpoint split_srf_trf_monomers:
         # Can't use sample wildcard so figure out from fname.
         sample=lambda wc: wc.fname.split("_")[0],
         contig=lambda wc: wc.fname.split("_", 2)[2].split(":", 1)[0],
+    log:
+        join(HUMAS_ANNOT_LOGDIR, "split_srf_trf_monomers_{fname}.log"),
     shell:
         """
         mkdir -p {params.output_dir}
-        awk -v OFS="\\t" '{{
+        {{ awk -v OFS="\\t" '{{
             if ($1 != "{params.contig}") {{ next; }}
             split($4, monomers, ",");
             out_fa="{params.output_dir}/{wildcards.fname}.tmp_fa"
@@ -96,27 +96,32 @@ checkpoint split_srf_trf_monomers:
                 print monomers[i] >> out_fa
             }};
             print out_fa
-        }}' $(find {input} -name "{params.sample}.bed") | \
+        }}' $(find {input.beds} -name "{params.sample}.bed") | \
         xargs -I {{}} \
-        bash -c 'seqkit rmdup -s {{}} | seqkit rename > {params.output_dir}/{wildcards.fname}.fa && rm -f {{}}'
+        bash -c 'seqkit rmdup -s {{}} 2>> {log} | seqkit rename 2>> {log} > {params.output_dir}/{wildcards.fname}.fa && rm -f {{}}' ;}} 2> {log}
         """
 
 
+# Choose which annotation workflow.
 added_as_cfg = {}
-if (
-    config["humas_annot"]["mode"] == "sd"
-    or config["humas_annot"]["mode"] == "srf-n-trf"
-):
+if config["humas_annot"]["mode"] == "sd":
     humas_module_smk = "Snakemake-HumAS-SD/workflow/Snakefile"
     humas_env = "Snakemake-HumAS-SD/workflow/envs/env.yaml"
-    if config["humas_annot"]["mode"] == "srf-n-trf":
-        added_as_cfg["run_stv"] = False
-        added_as_cfg["monomer_dir"] = dirname(rules.split_srf_trf_monomers.output[0])
-        # Remove hmm profile if added.
-        config["humas_annot"].pop("hmm_profile")
+elif config["humas_annot"]["mode"] == "srf-n-trf":
+    humas_module_smk = "Snakemake-HumAS-SD/workflow/Snakefile"
+    humas_env = "Snakemake-HumAS-SD/workflow/envs/env.yaml"
+    added_as_cfg["run_stv"] = False
+    added_as_cfg["monomer_dir"] = dirname(rules.split_srf_trf_monomers.output[0])
+    # Remove hmm profile if added.
+    config["humas_annot"].pop("hmm_profile")
 else:
     humas_module_smk = "Snakemake-HumAS-HMMER/workflow/Snakefile"
     humas_env = "Snakemake-HumAS-HMMER/workflow/envs/env.yaml"
+    added_as_cfg["mode"] = (
+        config["humas_annot"]["mode"]
+        if config["humas_annot"]["mode"] == "sf"
+        else "hor"
+    )
 
 
 module HumAS_Annot:
@@ -125,8 +130,6 @@ module HumAS_Annot:
     config:
         {
             **config["humas_annot"],
-            # if hmmer, otherwise no effect.
-            "mode": "hor",
             "input_dir": HUMAS_CENS_SPLIT_DIR,
             "output_dir": HUMAS_ANNOT_OUTDIR,
             "logs_dir": HUMAS_ANNOT_LOGDIR,
@@ -140,7 +143,9 @@ use rule * from HumAS_Annot as cens_*
 
 rule format_filter_srf_trf_annot:
     input:
-        rules.cens_convert_to_bed9.output,
+        rules.cens_convert_to_bed9.output
+        if config["humas_annot"]["mode"] == "srf-n-trf"
+        else [],
     output:
         join(
             HUMAS_ANNOT_OUTDIR,
@@ -148,11 +153,44 @@ rule format_filter_srf_trf_annot:
             "stv_mon.bed",
         ),
     params:
-        script=workflow.source_path("../scripts/merge_srf_mons.py"),
         thr_ident=70.0,
     shell:
         """
-        python {params.script} -i {input} -t {params.thr_ident} > {output}
+        awk -v OFS="\\t" -v THR_IDENT={params.thr_ident} '$5 >= THR_IDENT' {input} > {output}
+        """
+
+
+rule format_monomer_sf_classes:
+    input:
+        sf_annot_colors=(
+            config["plot_hor_stv"]["sf_annot_colors"]
+            if config.get("plot_hor_stv")
+            else []
+        ),
+        bed=lambda wc: expand(
+            rules.cens_filter_reformat_hmm_tbl_to_bed_w_thr.output,
+            fname=wc.fname,
+            mode="sf",
+        ),
+    output:
+        join(
+            HUMAS_ANNOT_OUTDIR,
+            "{fname}_sf_colored.bed",
+        ),
+    shell:
+        """
+        awk -v OFS="\\t" '{{
+            if (FNR == NR) {{
+                mon_sf[$2]=$1;
+                mon_color[$2]=$3;
+                next
+            }};
+            mon=$4;
+            $4=mon_sf[mon];
+            $9=mon_color[mon];
+            $5=0;
+            print
+        }}' {input.sf_annot_colors} {input.bed} > {output}
         """
 
 
@@ -164,10 +202,15 @@ def humas_annot_sm_outputs(wc):
     )
     fnames = [f"{wc.sm}_{chrom}_{ctg}" for chrom, ctg in zip(wcs.chrom, wcs.ctg)]
     chrs = wcs.chrom
-    _ = [checkpoints.split_srf_trf_monomers.get(fname=fname).output for fname in fnames]
 
     if config["humas_annot"]["mode"] == "srf-n-trf":
+        _ = [
+            checkpoints.split_srf_trf_monomers.get(fname=fname).output
+            for fname in fnames
+        ]
         return expand(rules.format_filter_srf_trf_annot.output, fname=fnames)
+    elif config["humas_annot"]["mode"] == "sf":
+        return expand(rules.format_monomer_sf_classes.output, fname=fnames)
     else:
         return expand(rules.cens_generate_stv.output, zip, fname=fnames, chr=chrs)
 
@@ -183,37 +226,53 @@ checkpoint run_humas_annot:
 # https://stackoverflow.com/a/63040288
 def humas_annot_chr_outputs(wc):
     _ = [checkpoints.run_humas_annot.get(sm=sm).output for sm in SAMPLE_NAMES]
-    wcs = glob_wildcards(
-        join(HUMAS_CENS_SPLIT_DIR, "{sm}_{chr}_{ctg}:{coords}.fa"),
-    )
+    fastas = glob.glob(join(HUMAS_CENS_SPLIT_DIR, "*.fa"))
+    sms, chroms, ctgs, coords = [], [], [], []
+    for fasta in fastas:
+        bname, _ = splitext(basename(fasta))
+        fname, coord = bname.rsplit(":", 1)
+        sm, chrom, ctg = fname.split("_", 2)
+        sms.append(sm)
+        chroms.append(chrom)
+        ctgs.append(ctg)
+        coords.append(coord)
+
     fnames = []
     # Sort by coords so if multiple chr, chr position in name (chr3-chr21) matches.
     sorted_wcs = sorted(
-        zip(wcs.sm, wcs.chr, wcs.ctg, wcs.coords),
+        zip(sms, chroms, ctgs, coords),
         key=lambda x: (x[1], x[2], x[3]),
         reverse=True,
     )
 
     # Store index of chrom per contig.
-    # In cases of dicentric contigs.
+    # In cases of dicentric contigs (chr3-chr21). Don't want to include twice.
     ctg_counter = Counter()
-    for sm, chrom, ctg, coords in sorted_wcs:
-        chroms: list[str] = chrom.replace("rc-", "").split("-")
-        if not wc.chr in chroms:
+    for sm, chrom, ctg, coord in sorted_wcs:
+        chrom_names: list[str] = chrom.replace("rc-", "").split("-")
+        if not wc.chr in chrom_names:
             continue
-        ctg_id = (sm, chrom, ctg)
+        ctg_id = (sm, chrom, ctg, coord)
         idx = ctg_counter[ctg_id]
         ctg_counter[ctg_id] += 1
-        if wc.chr != chroms[idx]:
+        if wc.chr != chrom_names[idx]:
             continue
-        fnames.append(f"{sm}_{chrom}_{ctg}:{coords}")
+        fnames.append(f"{sm}_{chrom}_{ctg}:{coord}")
 
-    return (
-        [
-            *config.get("plot_hor_stv", {}).get("ref_stv", []),
-            *expand(rules.cens_generate_stv.output, fname=fnames, chr=wc.chr),
-        ],
-    )
+    outputs = config.get("plot_hor_stv", {}).get("ref_stv", [])
+    if config["humas_annot"]["mode"] == "srf-n-trf":
+        _ = [
+            checkpoints.split_srf_trf_monomers.get(fname=fname).output
+            for fname in fnames
+        ]
+        outputs.extend(expand(rules.format_filter_srf_trf_annot.output, fname=fnames))
+    elif config["humas_annot"]["mode"] == "sf":
+        outputs.extend(
+            expand(rules.format_monomer_sf_classes.output, fname=fnames, mode="sf")
+        )
+    else:
+        outputs.extend(expand(rules.cens_generate_stv.output, fname=fnames, chr=wc.chr))
+    return outputs
 
 
 # Force including conda so --containerize includes.

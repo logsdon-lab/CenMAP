@@ -62,7 +62,6 @@ properties:
         description: >-
           Path to reference assembly.
           Will download CHM13v2.0 if not specified.
-          Only applicable if user has CHM13v2.0 on cluster and wants to avoid redownloading the assembly.
         default: null
       threads_srf:
         type: integer
@@ -78,6 +77,12 @@ properties:
         type: string
         pattern: "\\d+GB"
         default: 20GB
+      monomer_periods:
+        type: array
+        items:
+          type: integer
+        description: Monomer periods to search for.
+        default: [170, 340, 510, 680, 850, 1020]
       bp_min_length:
         type: integer
         description: Minimum length of satellite repeat groups. Occurs after grouping but before merging. Allows removing small false-positive TRs matching required 171/42 bp periods.
@@ -179,11 +184,16 @@ properties:
         items:
           type: string
         description: Trim centromeric regions to the largest block of these RepeatMasker repeat annotations.
-        default: ["ALR/Alpha", "SAR"]
+        default: []
+        # default: ["ALR/Alpha", "SAR"]
       repeat_colors:
         type: string
         description: Path to JSON file of repeat colors.
         default: config/repeatmasker_colors.json
+      species:
+        type: string
+        description: Repeatmasker species.
+        default: human
       threads:
         type: integer
         default: 12
@@ -193,8 +203,9 @@ properties:
     properties:
       mode:
         type: string
-        enum: ["sd", "hmmer", "srf-n-trf"]
+        enum: ["sd", "hmmer", "srf-n-trf", "sf"]
         default: sd
+        description: Annotate centromere by reference-based approaches (sd, hmmer, sf) or the monomers found from srf/trf.
       threads:
         type: integer
         default: 6
@@ -227,6 +238,10 @@ properties:
         type: string
         description: Path to mapping file of HOR stv monomer numbers to colors.
         default: config/stv_annot_colors.tsv
+      sf_annot_colors:
+        type: string
+        description: Path to mapping file of HOR stv monomer numbers to colors.
+        default: config/sf_annot_colors.tsv
   calculate_hor_length:
     type: object
     additionalProperties: false

@@ -2,7 +2,7 @@
 [![CI](https://github.com/logsdon-lab/hgsvc3/actions/workflows/main.yml/badge.svg)](https://github.com/logsdon-lab/hgsvc3/actions/workflows/main.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/logsdon-lab/CenMAP)](https://github.com/logsdon-lab/CenMAP/releases)
 
-A centromere mapping and annotation pipeline for T2T human genome assemblies implemented in [`Snakemake`](https://snakemake.github.io/).
+A centromere mapping and annotation pipeline for T2T human and primate genome assemblies implemented in [`Snakemake`](https://snakemake.github.io/).
 
 <table>
   <tr>

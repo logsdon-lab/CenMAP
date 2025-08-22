@@ -73,8 +73,13 @@ rule filter_annotations_hor_stv:
 # Require both to exist before beginning plotting.
 rule modify_hor_stv_cenplot_tracks:
     input:
-        plot_layout=workflow.source_path("../scripts/cenplot_hor_stv_plot.toml"),
+        plot_layout=(
+            workflow.source_path("../scripts/cenplot_hor_stv_plot.toml")
+            if config["humas_annot"]["mode"] != "sf"
+            else workflow.source_path("../scripts/cenplot_sf_plot.toml")
+        ),
         infiles=rules.filter_annotations_hor_stv.output,
+        hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],
     output:
         plot_layout=join(
             PLT_HOR_STV_OUTDIR,
@@ -93,11 +98,11 @@ rule modify_hor_stv_cenplot_tracks:
         python {params.script} \
         -i {input.plot_layout} \
         -o {output.plot_layout} \
-        -k indir={params.indir} typ={wildcards.typ} &> {log}
+        -p indir={params.indir} typ={wildcards.typ} \
+        --options color_map_file={input.hor_stv_colors} &> {log}
         """
 
 
-# hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],
 rule plot_hor_stv:
     input:
         bed_files=rules.filter_annotations_hor_stv.output,

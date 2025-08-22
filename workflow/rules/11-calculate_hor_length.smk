@@ -10,15 +10,21 @@ rule calculate_as_hor_length:
     input:
         stv_row_bed=rules.filter_complete_correct_stv_row.output,
     output:
-        stv_row_live_bed=join(
+        stv_row_strand_bed=join(
             HOR_ARR_LEN_OUTDIR,
             "bed",
-            "{chr}_AS-HOR_stv_row.live.bed",
+            "{chr}_AS-HOR_strand.bed",
         ),
         arr_lens_bed=join(
             HOR_ARR_LEN_OUTDIR,
             "bed",
             "{chr}_AS-HOR_lengths.bed",
+        ),
+    params:
+        length_params=(
+            "--allow_nonlive"
+            if config["humas_annot"]["mode"] not in ["sd", "hmmer"]
+            else ""
         ),
     conda:
         "../envs/py.yaml"
@@ -26,9 +32,7 @@ rule calculate_as_hor_length:
         join(HOR_ARR_LEN_LOGDIR, "calculate_{chr}_as_hor_length.log"),
     shell:
         """
-        # Save live output.
-        awk -v OFS="\\t" '$4 ~ "L"' {input.stv_row_bed} > {output.stv_row_live_bed}
-        {{ censtats length -i {output.stv_row_live_bed} || true ;}} > {output.arr_lens_bed} 2> {log}
+        {{ censtats length -i {input.stv_row_bed} -s {output.stv_row_strand_bed} {params.length_params} || true ;}} > {output.arr_lens_bed} 2> {log}
         """
 
 
