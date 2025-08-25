@@ -5,33 +5,7 @@ include: "2-concat_asm.smk"
 SRF_OUTDIR = join(OUTPUT_DIR, "3-srf")
 SRF_LOGDIR = join(LOG_DIR, "3-srf")
 SRF_BMKDIR = join(BMK_DIR, "3-srf")
-MONOMER_PERIODS = config["ident_cen_ctgs"]["monomer_periods"]
-
-
-# Then split them into unique files per contig.
-rule split_fa_srf:
-    input:
-        fa=rules.concat_asm.output.fa,
-    output:
-        temp(directory(join(SRF_OUTDIR, "seq", "interm", "{sm}"))),
-    log:
-        join(SRF_LOGDIR, "split_fa_{sm}.log"),
-    params:
-        split_dir=lambda wc, output: output[0],
-    shell:
-        """
-        mkdir -p {params.split_dir}
-        awk -v PIPE="|" '{{
-            if (substr($0, 1, 1)==">") {{
-                fname=substr($0,2)
-                filename=("{params.split_dir}/" fname ".fa")
-            }}
-            # Ignore filenames with pipes.
-            if (!index(filename, PIPE)) {{
-                print $0 > filename
-            }}
-        }}' {input.fa} 2> {log}
-        """
+MONOMER_PERIODS = sorted(config["ident_cen_ctgs"]["monomer_periods"])
 
 
 module srf_sm:
@@ -46,9 +20,20 @@ module srf_sm:
             "mem": config["ident_cen_ctgs"]["mem_srf"],
             "samples": {
                 sm: {
-                    "input_dir": expand(rules.split_fa_srf.output, sm=sm),
-                    # Use default.
-                    "parameters": {"kmer_size": 151, "exclude_kmers_lt_n": 3},
+                    "input_file": rules.concat_asm.output.fa,
+                    "parameters": {
+                        "kmer_size": (
+                            MONOMER_PERIODS[0] + 1
+                            if MONOMER_PERIODS[0] % 2 == 0
+                            else MONOMER_PERIODS[0]
+                        ),
+                        "exclude_kmers_lt_n": 20,
+                        "mon_periods": [*MONOMER_PERIODS, 42],
+                        "perc_mon_len_diff": config["ident_cen_ctgs"][
+                            "perc_mon_len_diff"
+                        ]
+                        / 100.0,
+                    },
                 }
                 for sm in SAMPLE_NAMES
             },
@@ -62,8 +47,8 @@ use rule * from srf_sm as srf_*
 # TODO: Replace with bioconda script.
 checkpoint extract_filter_monomers:
     input:
-        paf=ancient(rules.srf_merge_files.output.paf),
-        monomers=ancient(rules.srf_merge_files.output.monomers),
+        paf=ancient(rules.srf_map_motifs.output),
+        monomers=ancient(rules.srf_get_monomers.output),
     output:
         bed_mon=join(
             SRF_OUTDIR,

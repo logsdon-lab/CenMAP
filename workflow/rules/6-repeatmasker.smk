@@ -265,7 +265,11 @@ rule format_add_control_repeatmasker_output:
 
 rule create_og_rm_bed:
     input:
-        rm_out=rules.format_add_control_repeatmasker_output.output,
+        rm_out=(
+            rules.format_add_control_repeatmasker_output.output
+            if config["repeatmasker"]["ref_repeatmasker_output"]
+            else rules.merge_repeatmasker_output.output
+        ),
     output:
         rm_bed=join(
             RM_OUTDIR,
@@ -277,6 +281,7 @@ rule create_og_rm_bed:
         chr_rgx="{chr}[:_]",
         color_mapping=config["repeatmasker"]["repeat_colors"],
         script=workflow.source_path("../scripts/create_rm_bed.py"),
+        to_abs="--to_abs",
     log:
         join(RM_LOGDIR, "create_og_rm_bed_{chr}.log"),
     conda:

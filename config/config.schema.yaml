@@ -184,8 +184,7 @@ properties:
         items:
           type: string
         description: Trim centromeric regions to the largest block of these RepeatMasker repeat annotations.
-        default: []
-        # default: ["ALR/Alpha", "SAR"]
+        default: ["ALR/Alpha", "SAR"]
       repeat_colors:
         type: string
         description: Path to JSON file of repeat colors.

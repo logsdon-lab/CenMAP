@@ -19,7 +19,7 @@ shell_extract_and_index_fa = """
 
 
 shell_create_rm_bed = """
-    python {params.script} -i <(cat {input.rm_out}) -c {params.chr_rgx} -m {params.color_mapping} > {output.rm_bed} 2> {log}
+    python {params.script} -i <(cat {input.rm_out}) -c {params.chr_rgx} -m {params.color_mapping} {params.to_abs} > {output.rm_bed} 2> {log}
 """
 
 

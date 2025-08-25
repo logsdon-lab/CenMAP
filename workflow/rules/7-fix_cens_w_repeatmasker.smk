@@ -61,6 +61,7 @@ rule filter_entropy_bed:
             if config["repeatmasker"]["trim_to_repeats"]
             else ""
         ),
+        bp_merge=config["ident_cen_ctgs"]["bp_merge"],
     conda:
         "../envs/py.yaml"
     shell:
@@ -68,7 +69,8 @@ rule filter_entropy_bed:
         python {params.script} \
         -i {input.entropy_bed} \
         -r {input.rm_out} \
-        {params.trim_to_repeats} > {output} 2> {log}
+        {params.trim_to_repeats} \
+        -d {params.bp_merge} > {output} 2> {log}
         """
 
 
@@ -180,6 +182,7 @@ rule create_fixed_rm_bed:
         chr_rgx="{chr}[:_]",
         color_mapping=config["repeatmasker"]["repeat_colors"],
         script=workflow.source_path("../scripts/create_rm_bed.py"),
+        to_abs="",
     log:
         join(FIX_RM_LOGDIR, "create_fixed_rm_bed_{chr}.log"),
     conda:

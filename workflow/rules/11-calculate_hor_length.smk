@@ -22,7 +22,7 @@ rule calculate_as_hor_length:
         ),
     params:
         length_params=(
-            "--allow_nonlive"
+            "--allow_nonlive -mu 100000 -mb 100000 -ua 0 -ub 0 -fp 0.0 -fl 0"
             if config["humas_annot"]["mode"] not in ["sd", "hmmer"]
             else ""
         ),
