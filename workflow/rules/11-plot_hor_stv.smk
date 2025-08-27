@@ -99,7 +99,7 @@ rule modify_hor_stv_cenplot_tracks:
         -i {input.plot_layout} \
         -o {output.plot_layout} \
         -p indir={params.indir} typ={wildcards.typ} \
-        --options color_map_file={input.hor_stv_colors} &> {log}
+        --options color_map_file=$(realpath {input.hor_stv_colors}) &> {log}
         """
 
 

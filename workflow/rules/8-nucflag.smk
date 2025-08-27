@@ -83,10 +83,11 @@ rule format_repeatmasker_to_overlay_bed:
 rule format_stv_to_overlay_bed:
     input:
         stv=lambda wc: humas_annot_sm_outputs(wc) if config.get("humas_annot") else [],
+        # else branch should never be reached.
         annot_colors=(
             config["plot_hor_stv"]["stv_annot_colors"]
             if config.get("plot_hor_stv")
-            else "config/stv_annot_colors.tsv"
+            else []
         ),
     output:
         join(
