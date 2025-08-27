@@ -60,6 +60,11 @@ moddotplot:
   ident_thr: 70.0
   window: 5000
 
+ideogram:
+  title: "{sm}"
+  height: 15
+  width: 5
+
 cdr_finder:
   aligner: minimap2
   # Expects sample subdir in input_dir.

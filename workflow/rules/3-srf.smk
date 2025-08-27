@@ -27,7 +27,9 @@ module srf_sm:
                             if MONOMER_PERIODS[0] % 2 == 0
                             else MONOMER_PERIODS[0]
                         ),
-                        "exclude_kmers_lt_n": 20,
+                        "exclude_kmers_lt_n": config["ident_cen_ctgs"][
+                            "exclude_kmers_lt_n"
+                        ],
                         "mon_periods": [*MONOMER_PERIODS, 42],
                         "perc_mon_len_diff": config["ident_cen_ctgs"][
                             "perc_mon_len_diff"

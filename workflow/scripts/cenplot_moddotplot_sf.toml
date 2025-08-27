@@ -51,8 +51,8 @@ arr_opt_min_arr_hor_units = 1
 arr_opt_min_blk_hor_units = 1
 arr_opt_bp_merge_units = 100000
 arr_opt_bp_merge_blks = 100000
-arr_opt_min_arr_len = 170
-arr_opt_min_arr_prop = 0.9
+arr_opt_min_arr_len = 1
+arr_opt_min_arr_prop = 0.1
 
 [[tracks]]
 position = "relative"

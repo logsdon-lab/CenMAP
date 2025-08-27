@@ -57,3 +57,8 @@ calculate_hor_length:
 moddotplot:
   mem: 4GB
   window: 5000
+
+ideogram:
+  title: "{sm}"
+  height: 15
+  width: 5

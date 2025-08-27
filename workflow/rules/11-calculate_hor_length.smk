@@ -33,6 +33,7 @@ rule calculate_as_hor_length:
     shell:
         """
         {{ censtats length -i {input.stv_row_bed} -s {output.stv_row_strand_bed} {params.length_params} || true ;}} > {output.arr_lens_bed} 2> {log}
+        touch {output}
         """
 
 

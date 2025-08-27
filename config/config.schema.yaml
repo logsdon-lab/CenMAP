@@ -35,7 +35,9 @@ properties:
     type: array
     items:
       type: string
+      # pattern: "^[^_]*$"
     description: Sample names.
+    # description: Sample names. Must not contain '_' in name.
   container:
     type: string
     description: Container for workflow if using singularity.
@@ -81,11 +83,20 @@ properties:
         type: array
         items:
           type: integer
-        description: Monomer periods to search for.
+        description: Monomer periods to search for. Smallest period is used as kmer size.
         default: [170, 340, 510, 680, 850, 1020]
+      exclude_kmers_lt_n:
+        type: integer
+        description: >-
+          Filter kmers occuring less than n times. Corresponds to kmc's ci parameter.
+          Smaller value will pick up smaller, infrequent HORs at the cost of mapping runtime.
+        default: 10
       bp_min_length:
         type: integer
-        description: Minimum length of satellite repeat groups. Occurs after grouping but before merging. Allows removing small false-positive TRs matching required 171/42 bp periods.
+        description: >-
+          Minimum length of satellite repeat groups.
+          Occurs after grouping but before merging.
+          Allows removing small false-positive TRs matching required 171/42 bp periods.
         default: 30000
       bp_merge:
         type: integer
@@ -279,6 +290,26 @@ properties:
         type: integer
         default: 5000
         description: Window size passed to ModDotPlot
+  ideogram:
+    type: object
+    additionalProperties: false
+    properties:
+      title:
+        type: string
+        default: "{sm}"
+        description: Plot title. If "{sm}" is present, replaced with sample name.
+      height:
+        type: integer
+        default: 15
+        description: Plot height.
+      width:
+        type: integer
+        default: 5
+        description: Plot width.
+      legend_prop:
+        type: number
+        default: 0.1
+        description: Legend proportion of plot. Increase if contig names long.
   cdr_finder:
     type: object
     additionalProperties: false

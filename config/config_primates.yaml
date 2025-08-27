@@ -92,6 +92,11 @@ moddotplot:
   ident_thr: 70.0
   window: 5000
 
+ideogram:
+  title: "{sm}"
+  height: 15
+  width: 5
+
 # cdr_finder:
 #   # Either minimap2 or winnowmap
 #   # Use aligner_opts to override defaults.

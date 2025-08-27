@@ -2,7 +2,7 @@
 
 ### Make `rulegraph.svg`
 ```bash
-snakemake -np \
+snakemake \
 --configfile test/config/config.yaml \
 --rulegraph | \
 sed 's/snakemake_dag {/snakemake_dag { ranksep=0.3;/g' | \

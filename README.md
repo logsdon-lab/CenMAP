@@ -22,6 +22,13 @@ A centromere mapping and annotation pipeline for T2T human and primate genome as
         <figcaption>Chr12 α-satellite HOR arrays</figcaption>
       </figure>
     </td>
+    <td rowspan="2">
+      <figure>
+        <img src="docs/ideogram.png" width="80%">
+        <br>
+        <figcaption>Ideogram</figcaption>
+      </figure>
+    </td>
   </tr>
   <tr>
     <td>

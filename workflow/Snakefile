@@ -133,6 +133,13 @@ module count_complete_cens:
         config
 
 
+module plot_ideogram:
+    snakefile:
+        "rules/13-plot_ideogram.smk"
+    config:
+        config
+
+
 use rule * from download_ref
 
 
@@ -227,6 +234,13 @@ if config.get("humas_annot") and config.get("calculate_hor_length"):
             rules.count_complete_cens_all.input,
         ]
     )
+
+
+if config.get("ideogram"):
+
+    use rule * from plot_ideogram
+
+    output.append(rules.plot_ideogram_all.input)
 
 
 if config.get("cdr_finder"):
