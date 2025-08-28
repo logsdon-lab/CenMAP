@@ -8,3 +8,4 @@ dependencies:
   - seqkit
   - gawk
   - repeatmasker==4.1.0
+  - srf-n-trf==0.1.1

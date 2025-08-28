@@ -46,7 +46,6 @@ module srf_sm:
 use rule * from srf_sm as srf_*
 
 
-# TODO: Replace with bioconda script.
 checkpoint extract_filter_monomers:
     input:
         paf=ancient(rules.srf_map_motifs.output),
@@ -58,16 +57,16 @@ checkpoint extract_filter_monomers:
             "{sm}_monomers_filtered.bed",
         ),
     params:
-        script="workflow/scripts/srf-n-trf",
         # Look for alpha-sat and hsat-1a
         mon_periods=" ".join(str(e) for e in [*MONOMER_PERIODS, 42]),
         perc_mon_len_diff=config["ident_cen_ctgs"]["perc_mon_len_diff"] / 100.0,
     log:
         join(SRF_LOGDIR, "create_region_bed_{sm}.log"),
-    localrule: True
+    conda:
+        "../envs/tools.yaml"
     shell:
         """
-        {params.script} monomers \
+        srf-n-trf monomers \
         -p <(zcat {input.paf}) \
         -m {input.monomers} \
         -s {params.mon_periods} \
@@ -88,19 +87,17 @@ rule merge_slop_region_bed:
     log:
         join(SRF_LOGDIR, "format_region_bed_{sm}.log"),
     params:
-        script="workflow/scripts/srf-n-trf",
         bp_slop=config["ident_cen_ctgs"]["bp_slop"],
         bp_merge=config["ident_cen_ctgs"]["bp_merge"],
         bp_min_length=config["ident_cen_ctgs"]["bp_min_length"],
         # But only use regions with alpha-sat.
         req_mon_periods=" ".join(str(e) for e in MONOMER_PERIODS),
         perc_mon_len_diff=config["ident_cen_ctgs"]["perc_mon_len_diff"] / 100.0,
-    localrule: True
     conda:
         "../envs/tools.yaml"
     shell:
         """
-        {{ {params.script} regions \
+        {{ srf-n-trf regions \
             -b {input.bed} \
             -m {params.bp_min_length} \
             -d {params.bp_merge} \

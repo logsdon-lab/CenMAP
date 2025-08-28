@@ -131,7 +131,7 @@ def main():
             options=cplt.LabelTrackSettings(
                 legend=True,
                 legend_title_only=True,
-                legend_title_fontsize="medium",
+                legend_title_fontsize="small",
                 legend_title=contig,
                 bg_border=True,
                 edgecolor="black",
