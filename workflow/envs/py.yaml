@@ -10,6 +10,7 @@ dependencies:
     - seaborn
     - polars
     - scipy
+    - pyarrow
     - intervaltree
     - censtats==0.0.12
     - cenplot==0.1.1
