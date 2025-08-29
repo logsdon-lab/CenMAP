@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 DEF_COLS = ["sample", "cnt", "perc"]
 DEF_CHRS = list(reversed([f"chr{i}" for i in [*range(1, 23), "X", "Y"]]))
+DEF_N_CHR = (len(DEF_CHRS) * 2) - 2
 
 
 def main():
@@ -27,10 +28,15 @@ def main():
         nargs="+",
         help="Chromosome names.",
     )
+    ap.add_argument(
+        "-n",
+        "--n_chroms",
+        default=DEF_N_CHR,
+        help="Number of chromosomes in diploid organism.",
+    )
 
     args = ap.parse_args()
-    chroms = args.chroms
-    n_chroms = len(chroms) * 2
+    n_chroms = args.n_chroms
 
     df_cnts = pl.read_csv(
         args.infile, separator="\t", has_header=False, new_columns=DEF_COLS

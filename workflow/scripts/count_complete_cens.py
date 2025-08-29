@@ -7,6 +7,7 @@ import polars as pl
 DEF_IN_COLS = ["ctg", "start", "end", "length"]
 DEF_OUT_SCHEMA = {"sample": pl.String, "len": pl.UInt32, "perc": pl.Float64}
 DEF_CHRS = list(reversed([f"chr{i}" for i in [*range(1, 23), "X", "Y"]]))
+DEF_N_CHR = (len(DEF_CHRS) * 2) - 2
 
 
 def main():
@@ -35,10 +36,17 @@ def main():
         nargs="+",
         help="Chromosome names.",
     )
+    ap.add_argument(
+        "-n",
+        "--n_chroms",
+        default=DEF_N_CHR,
+        help="Number of chromosomes in diploid organism.",
+    )
 
     args = ap.parse_args()
     chroms = args.chroms
-    n_chroms = len(chroms) * 2
+    n_chroms = args.n_chroms
+
     # Include rc- in pattern
     chroms.extend([f"rc-{chrom}" for chrom in chroms])
     rgx_chrom = "|".join([*chroms, "-"])
