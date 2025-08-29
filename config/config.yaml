@@ -25,8 +25,7 @@ chromosomes:
   - "chrY"
 
 samples:
-  - HG008-N
-  - HG008-T
+  - HG002
 
 # Specify container to run workflow if using singularity.
 # Optional

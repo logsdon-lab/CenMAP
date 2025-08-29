@@ -6,7 +6,7 @@ import polars as pl
 
 DEF_IN_COLS = ["ctg", "start", "end", "length"]
 DEF_OUT_SCHEMA = {"sample": pl.String, "len": pl.UInt32, "perc": pl.Float64}
-NUM_CHRS = 46
+DEF_CHRS = list(reversed([f"chr{i}" for i in [*range(1, 23), "X", "Y"]]))
 
 
 def main():
@@ -27,8 +27,24 @@ def main():
         type=argparse.FileType("wt"),
         help=f"Output centromere counts as TSV with no header and the fields: {list(DEF_OUT_SCHEMA.keys())}",
     )
+    ap.add_argument(
+        "-c",
+        "--chroms",
+        default=DEF_CHRS,
+        type=str,
+        nargs="+",
+        help="Chromosome names.",
+    )
 
     args = ap.parse_args()
+    chroms = args.chroms
+    n_chroms = len(chroms) * 2
+    # Include rc- in pattern
+    chroms.extend([f"rc-{chrom}" for chrom in chroms])
+    rgx_chrom = "|".join([*chroms, "-"])
+    rgx_name_groups = (
+        r"^(?<sample>.*?)_(?<chr>(" + rgx_chrom + r")*)_(?<contig_name>.*?)$"
+    )
     df = (
         pl.read_csv(
             args.input,
@@ -38,20 +54,15 @@ def main():
         )
         .group_by("ctg")
         .agg(pl.sum("length").alias("length"))
-        # TODO: Replace with argparse regex for chroms. Should be based on config chroms.
-        .with_columns(
-            pl.col("ctg").str.extract_groups(
-                r"(.*?)_(rc-chr[XY0-9]+|chr[XY0-9]+)_(.*?)"
-            )
-        )
-        .unnest("ctg")
-        .rename({"1": "sample", "2": "chr", "3": "ctg"})
+        .with_columns(mtch_ctg=pl.col("ctg").str.extract_groups(rgx_name_groups))
+        .unnest("mtch_ctg")
+        .drop("3")
     )
 
     df_cnts = (
         df.group_by("sample")
         .len()
-        .with_columns(perc=((pl.col("len") / NUM_CHRS) * 100).round(1))
+        .with_columns(perc=((pl.col("len") / n_chroms) * 100).round(1))
     )
     df_cnts = pl.concat(
         [
@@ -61,7 +72,7 @@ def main():
                     "sample": "all",
                     "len": df_cnts["len"].sum(),
                     "perc": round(
-                        (df_cnts["len"].sum() / (df_cnts.shape[0] * NUM_CHRS)) * 100, 1
+                        (df_cnts["len"].sum() / (df_cnts.shape[0] * n_chroms)) * 100, 1
                     ),
                 },
                 schema=DEF_OUT_SCHEMA,

@@ -1,5 +1,14 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 properties:
+  output_dir:
+    type: string
+    default: results
+  log_dir:
+    type: string
+    default: logs
+  benchmark_dir:
+    type: string
+    default: benchmarks
   chromosomes:
     type: array
     items:
@@ -274,6 +283,10 @@ properties:
           required:
             - name
             - path
+      chromosome_colors:
+        type: string
+        description: Path to mapping file of chromosome names to colors.
+        default: config/chrom_colors.tsv
   moddotplot:
     type: object
     additionalProperties: false

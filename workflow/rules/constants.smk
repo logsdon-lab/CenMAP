@@ -9,9 +9,9 @@ REF_FA = f"data/reference/{REF_NAME}.fa.gz"
 CONTAINER = config["container"]
 
 # Dirs
-OUTPUT_DIR = "results"
-LOG_DIR = "logs"
-BMK_DIR = "benchmarks"
+OUTPUT_DIR = config["output_dir"]
+LOG_DIR = config["log_dir"]
+BMK_DIR = config["benchmark_dir"]
 HUMAS_CENS_SPLIT_DIR = join(OUTPUT_DIR, "8-humas_annot", "seq")
 FINAL_OUTPUT_DIR = join(OUTPUT_DIR, "final")
 

@@ -87,6 +87,8 @@ rule plot_as_hor_length:
         # Random colors given for each ref.
         # Run separately to get desired colors.
         args_added_lengths=args_ref_hor_lengths,
+        chroms=CHROMOSOMES,
+        chrom_colors=config["calculate_hor_length"]["chromosome_colors"],
     log:
         join(HOR_ARR_LEN_LOGDIR, "plot_all_as_hor_length.log"),
     conda:
@@ -96,7 +98,9 @@ rule plot_as_hor_length:
         if [ -s {input.lengths} ]; then
             python {params.script} \
             -i {input.lengths} \
-            -o {output} {params.args_added_lengths} 2> {log}
+            -o {output} {params.args_added_lengths} \
+            -c {params.chroms} \
+            --chrom_colors {params.chrom_colors} 2> {log}
         else
             touch {output}
         fi
