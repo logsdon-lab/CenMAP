@@ -163,11 +163,12 @@ def main():
         .otherwise(pl.col("chrom_name"))
     )
     palettes = chrom_colors | added_palettes
+    df_all_lengths_pd = df_all_lengths.to_pandas()
     sns.violinplot(
         x="chrom_name",
         y="length",
         hue="chrom_name",
-        data=df_all_lengths,
+        data=df_all_lengths_pd,
         palette=palettes,
         inner="quart",
         cut=0.75,
@@ -175,7 +176,7 @@ def main():
     sns.swarmplot(
         x="chrom_name",
         y="length",
-        data=df_all_lengths,
+        data=df_all_lengths_pd,
         hue="color_key",
         linewidth=0.5,
         edgecolor="black",
