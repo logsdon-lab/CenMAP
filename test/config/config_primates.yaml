@@ -8,7 +8,6 @@ concat_asm:
   input_dir: "test/data/assemblies"
 
 ident_cen_ctgs:
-  reference: "data/reference/T2T-CHM13.fa.gz"
   threads_srf: 24
   mem_srf: 40GB
   threads_aln: 16

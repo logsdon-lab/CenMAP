@@ -77,3 +77,56 @@ jobs:
         --show-failed-logs \
         --conda-cleanup-pkgs cache \
         --conda-frontend conda
+  test_wrapper:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+    # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
+    - name: Delete huge unnecessary tools folder
+      run: rm -rf /opt/hostedtoolcache
+
+    - name: Checkout directory.
+      uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+        lfs: 'true'
+
+    - name: Setup Miniforge.
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        miniforge-version: latest
+        activate-environment: cenmap
+
+    - name: Get date.
+      id: get-date
+      run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Cache conda env.
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.CONDA }}/envs
+        key:
+          conda-${{ runner.os }}--${{ runner.arch }}--${{
+          steps.get-date.outputs.today }}-${{
+          hashFiles('env_all.yaml') }}-${{ env.CACHE_NUMBER }}
+      env:
+        # Increase this value to reset cache if etc/example-environment.yml has not changed
+        CACHE_NUMBER: 0
+      id: cache
+
+    - name: Update environment.
+      run:
+        conda env update -n dev -f env_all.yaml
+      if: steps.cache.outputs.cache-hit != 'true'
+
+    - name: Test chrY workflow.
+      # TODO: Change to bioconda script later.
+      run: |
+        ./cenmap \
+        -i test/data/assemblies/HG00731/*.fasta.gz \
+        --hifi test/data/raw_data/HG00731/*.fastq.gz \
+        -s HG00731 \
+        -p 4

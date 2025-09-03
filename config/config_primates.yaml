@@ -49,7 +49,6 @@ ident_cen_ctgs:
   mem_aln: 150GB
   bp_merge: 5000000
   bp_slop: 1000000
-  reference: "/project/logsdon_shared/data/reference/T2T-CHM13v2.fasta"
 
 nucflag:
   # input_hifi_reads_fofn_dir: "data/hifi"

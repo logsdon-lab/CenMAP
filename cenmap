@@ -9,6 +9,7 @@ from typing import Any, Iterable
 
 
 WD = os.path.dirname(__file__)
+CFG = os.path.join(WD, "config", "config_template.yaml")
 
 
 def symlink_files(
@@ -20,7 +21,7 @@ def symlink_files(
         bname = os.path.basename(file)
         symlinked_file = os.path.join(output_dir, bname)
         try:
-            os.symlink(file, symlinked_file)
+            os.symlink(os.path.abspath(file), symlinked_file)
         except FileExistsError:
             pass
         symlinked_file = os.path.join(output_dir, bname)
@@ -32,8 +33,20 @@ def symlink_files(
                 print(file, file=fh)
 
 
+def update_relative_to_wd(cfg: dict[str, Any]) -> None:
+    # Go through top-level paths and ensure relative to script.
+    for _, v in cfg.items():
+        if isinstance(v, dict):
+            for k2, v2 in v.items():
+                if isinstance(v2, str) and "/" in v2:
+                    v[k2] = os.path.join(WD, v2)
+
+
 def make_config(args: argparse.Namespace, template_config: str) -> str:
     sample = args.sample
+    if not args.sample:
+        raise ValueError("Sample name is required.")
+
     fasta_files = args.input_asm
     ont_files = args.ont
     hifi_files = args.hifi
@@ -52,12 +65,7 @@ def make_config(args: argparse.Namespace, template_config: str) -> str:
     with open(template_config, "rt") as fh:
         cfg: dict[str, Any] = yaml.safe_load(fh)
 
-    # Go through top-level paths and ensure relative to script.
-    for _, v in cfg.items():
-        if isinstance(v, dict):
-            for k2, v2 in v.items():
-                if isinstance(v2, str) and "/" in v2:
-                    v[k2] = os.path.join(WD, v2)
+    update_relative_to_wd(cfg)
 
     # Symlink fasta, hifi, and ont files
     # concat_asm
@@ -67,8 +75,8 @@ def make_config(args: argparse.Namespace, template_config: str) -> str:
 
     # nucflag
     if hifi_files:
-        hifi_dir = os.path.join(data_dir, "hifi", sample)
-        hifi_fofn = os.path.join(data_dir, "hifi", f"{sample}.fofn")
+        hifi_dir = os.path.join(data_dir, "hifi")
+        hifi_fofn = os.path.join(hifi_dir, f"{sample}.fofn")
         symlink_files(hifi_files, hifi_dir, hifi_fofn)
         cfg["nucflag"]["input_hifi_reads_fofn_dir"] = hifi_dir
     else:
@@ -105,7 +113,7 @@ def make_config(args: argparse.Namespace, template_config: str) -> str:
     return new_cfg
 
 
-def main():
+def main() -> int:
     ap = argparse.ArgumentParser(
         description="Centromere mapping and annotation pipeline."
     )
@@ -122,7 +130,14 @@ def main():
         "-c",
         "--config",
         type=str,
-        help="Input configfile. If provided, other arguments are ignored. Allows submission of multiple samples.",
+        help="Input configfile. If provided, other arguments are ignored. Allows submission of multiple samples or parameter tuning.",
+    )
+    group.add_argument(
+        "-g",
+        "--generate-config",
+        dest="generate_config",
+        action="store_true",
+        help="Generate template configfile.",
     )
     ap.add_argument(
         "--hifi",
@@ -136,7 +151,7 @@ def main():
         nargs="*",
         help="Input ONT reads with MM and ML tags for CDR detection. Supports BAM only.",
     )
-    ap.add_argument("-s", "--sample", type=str, required=True, help="Sample name.")
+    ap.add_argument("-s", "--sample", type=str, default=None, help="Sample name.")
     ap.add_argument(
         "--output-dir", dest="output_dir", default="results", help="Output directory."
     )
@@ -153,23 +168,46 @@ def main():
         choices=["human", "primate"],
         help="Species of sample.",
     )
-    ap.add_argument("--cores", default=32, help="Number of cores to run.")
+    ap.add_argument("-p", "--processes", default=32, help="Number of processes to run.")
     ap.add_argument(
         "--snake-opts",
         dest="snake_opts",
         default=None,
         help="Additional snakemake options.",
     )
-
     args = ap.parse_args()
 
     if args.config:
         new_config = args.config
         print(f"Using existing configfile:\n\t{new_config}", file=sys.stderr)
+    elif args.generate_config:
+        with open(CFG, "rt") as fh:
+            cfg: dict[str, Any] = yaml.safe_load(fh)
+            update_relative_to_wd(cfg)
+            cfg["samples"] = []
+            yaml.safe_dump(cfg, sys.stdout)
+            print(
+                "Printed template config to stdout! Update the following fields, comment optional blocks if desired, and add data before running:\n",
+                "1. concat_asm.input_dir\n",
+                " * REQUIRED\n",
+                " * ex. data/asm\n",
+                " * data: {concat_asm.input_dir}/{sm}/{asm}.[fa|fasta|fa.gz|fasta.gz])\n",
+                "2. samples\n",
+                " * REQUIRED\n",
+                " * ex. [HG002]\n",
+                "3. nucflag.input_hifi_reads_fofn_dir\n",
+                " * OPTIONAL\n",
+                " * ex. data/hifi\n",
+                " * data: {nucflag.input_hifi_reads_fofn_dir}/{sm}.fofn\n",
+                "4. cdr_finder.input_bam_dir\n",
+                " * OPTIONAL\n",
+                " * ex. data/ont/{sm}/{read}.bam\n",
+                " * data: {cdr_finder.input_bam_dir}/{sm}.fofn",
+                file=sys.stderr,
+            )
+            return 0
     else:
-        new_config = make_config(
-            args, os.path.join(WD, "config", "config_template.yaml")
-        )
+        new_config = make_config(args, CFG)
         print(f"Generated configfile:\n\t{new_config}", file=sys.stderr)
 
     profile = os.path.join(WD, "workflow/profiles/all")
@@ -178,7 +216,7 @@ def main():
         "--configfile",
         new_config,
         "-c",
-        str(args.cores),
+        str(args.processes),
         "--workflow-profile",
         profile,
     ]
@@ -189,6 +227,7 @@ def main():
     subprocess.run(cmd, check=True)
 
     print("Finished!", file=sys.stderr)
+    return 0
 
 
 if __name__ == "__main__":

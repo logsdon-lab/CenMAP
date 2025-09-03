@@ -41,10 +41,37 @@ A centromere mapping and annotation pipeline for T2T human and primate genome as
   </tr>
 </table>
 
+### [Usage](https://github.com/logsdon-lab/CenMAP/wiki/4.-Usage)
+
+```bash
+conda install bioconda::cenmap
+```
+
+For a single assembly:
+```bash
+# Find centromeres in human samples.
+cenmap -i asm*.fa.gz -s HG002
+# Find centromeres in primate samples.
+cenmap -i asm*.fa.gz -s mPanTro3 --mode primate
+# Find centromeres and validate with nucflag.
+cenmap -i asm*.fa.gz -s HG002 --hifi hifi*.fq.gz
+# Find centromeres and determine centromere dip regions.
+cenmap -i asm*.fa.gz -s HG002 --ont ont*.bam
+# Find centromeres, validate with nucflag, and determine centromere dip regions.
+cenmap -i asm*.fa.gz -s HG002 --hifi hifi*.fq.gz --ont ont*.bam
+```
+
+For multiple assemblies:
+```bash
+# Create new config.
+cenmap --generate-config > example.yaml
+# Modify config parameters and include multiple samples.
+cenmap --config example.yaml
+```
+
 ### [Input](https://github.com/logsdon-lab/CenMAP/wiki/2.-Getting-Started#data)
 * [`Verkko`](https://github.com/marbl/verkko) or [`hifiasm`](https://github.com/chhylp123/hifiasm) human genome assemblies
 * PacBio HiFi reads used in the assemblies
-* [`CHM13`](https://github.com/marbl/CHM13) reference genome assembly
 * (Optional) Unaligned BAM files with 5mC modifications at CpG sites.
 
 ### [Output](https://github.com/logsdon-lab/CenMAP/wiki/5.-Output)
