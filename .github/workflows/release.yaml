@@ -1,5 +1,5 @@
 
-name: Generate release tarball
+name: Release
 
 # https://stackoverflow.com/a/67833464
 on:
@@ -12,6 +12,7 @@ jobs:
   # https://github.com/qmonnet/git-archive-all-action
   create-release:
     if: ${{ github.event.pull_request.merged }}
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:

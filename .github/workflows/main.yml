@@ -119,7 +119,7 @@ jobs:
 
     - name: Update environment.
       run:
-        conda env update -n dev -f env_all.yaml
+        conda env update -n cenmap -f env_all.yaml
       if: steps.cache.outputs.cache-hit != 'true'
 
     - name: Test chrY workflow.
