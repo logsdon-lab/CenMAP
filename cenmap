@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import yaml
+import argparse
+import subprocess
+from typing import Any, Iterable
+
+
+WD = os.path.dirname(__file__)
+
+
+def symlink_files(
+    files: Iterable[str], output_dir: str, output_fofn: str | None = None
+) -> None:
+    os.makedirs(output_dir, exist_ok=True)
+    symlinked_files = []
+    for file in files:
+        bname = os.path.basename(file)
+        symlinked_file = os.path.join(output_dir, bname)
+        try:
+            os.symlink(file, symlinked_file)
+        except FileExistsError:
+            pass
+        symlinked_file = os.path.join(output_dir, bname)
+        symlinked_files.append(symlinked_file)
+
+    if output_fofn:
+        with open(output_fofn, "wt") as fh:
+            for file in symlinked_files:
+                print(file, file=fh)
+
+
+def make_config(args: argparse.Namespace, template_config: str) -> str:
+    sample = args.sample
+    fasta_files = args.input_asm
+    ont_files = args.ont
+    hifi_files = args.hifi
+    mode = args.mode
+    output_dir = os.path.join(args.output_dir, sample)
+    data_dir = os.path.join(args.output_dir, sample, "0-symlink_inputs")
+    benchmark_dir = os.path.join(args.benchmark_dir, sample)
+    log_dir = os.path.join(args.log_dir, sample)
+    new_cfg = os.path.join(args.output_dir, sample, "config.yaml")
+    # Don't overwrite if exists.
+    if os.path.exists(new_cfg) and os.stat(new_cfg).st_size != 0:
+        return new_cfg
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    with open(template_config, "rt") as fh:
+        cfg: dict[str, Any] = yaml.safe_load(fh)
+
+    # Go through top-level paths and ensure relative to script.
+    for _, v in cfg.items():
+        if isinstance(v, dict):
+            for k2, v2 in v.items():
+                if isinstance(v2, str) and "/" in v2:
+                    v[k2] = os.path.join(WD, v2)
+
+    # Symlink fasta, hifi, and ont files
+    # concat_asm
+    asm_dir = os.path.join(data_dir, "asm", sample)
+    symlink_files(fasta_files, asm_dir)
+    cfg["concat_asm"]["input_dir"] = os.path.dirname(asm_dir)
+
+    # nucflag
+    if hifi_files:
+        hifi_dir = os.path.join(data_dir, "hifi", sample)
+        hifi_fofn = os.path.join(data_dir, "hifi", f"{sample}.fofn")
+        symlink_files(hifi_files, hifi_dir, hifi_fofn)
+        cfg["nucflag"]["input_hifi_reads_fofn_dir"] = hifi_dir
+    else:
+        cfg.pop("nucflag")
+
+    # cdr_finder
+    if ont_files:
+        ont_dir = os.path.join(data_dir, "ont", sample)
+        symlink_files(ont_files, ont_dir)
+        cfg["cdr_finder"]["input_bam_dir"] = ont_dir
+    else:
+        cfg.pop("cdr_finder")
+
+    # humas_annot
+    if mode == "human":
+        cfg["humas_annot"]["mode"] = "sd"
+        cfg["humas_annot"]["hmm_profile"] = os.path.join(
+            WD, "data/models/AS-HORs-hmmer3.4-071024.hmm"
+        )
+    else:
+        cfg["humas_annot"]["mode"] = "sf"
+        cfg["humas_annot"]["hmm_profile"] = os.path.join(
+            WD, "data/models/AS-SFs-hmmer3.0.290621.hmm.gz"
+        )
+
+    # Create new config.
+    with open(new_cfg, "wt") as ofh:
+        cfg["output_dir"] = output_dir
+        cfg["log_dir"] = log_dir
+        cfg["benchmark_dir"] = benchmark_dir
+        cfg["samples"] = [sample]
+        yaml.safe_dump(cfg, ofh)
+
+    return new_cfg
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        description="Centromere mapping and annotation pipeline."
+    )
+    group = ap.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "-i",
+        "--infiles",
+        type=str,
+        dest="input_asm",
+        nargs="+",
+        help="Input assembly files for one sample. Supports fasta, fasta.gz, fa, or fa.gz.",
+    )
+    group.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        help="Input configfile. If provided, other arguments are ignored. Allows submission of multiple samples.",
+    )
+    ap.add_argument(
+        "--hifi",
+        type=str,
+        nargs="*",
+        help="Input PacBio HiFi reads for assembly evaluation with NucFlag. Supports BAM, CRAM, gzipped fastq/fasta.",
+    )
+    ap.add_argument(
+        "--ont",
+        type=str,
+        nargs="*",
+        help="Input ONT reads with MM and ML tags for CDR detection. Supports BAM only.",
+    )
+    ap.add_argument("-s", "--sample", type=str, required=True, help="Sample name.")
+    ap.add_argument(
+        "--output-dir", dest="output_dir", default="results", help="Output directory."
+    )
+    ap.add_argument("--log-dir", dest="log_dir", default="logs", help="Log directory.")
+    ap.add_argument(
+        "--benchmark-dir",
+        dest="benchmark_dir",
+        default="benchmarks",
+        help="Benchmark directory.",
+    )
+    ap.add_argument(
+        "--mode",
+        default="human",
+        choices=["human", "primate"],
+        help="Species of sample.",
+    )
+    ap.add_argument("--cores", default=32, help="Number of cores to run.")
+    ap.add_argument(
+        "--snake-opts",
+        dest="snake_opts",
+        default=None,
+        help="Additional snakemake options.",
+    )
+
+    args = ap.parse_args()
+
+    if args.config:
+        new_config = args.config
+        print(f"Using existing configfile:\n\t{new_config}", file=sys.stderr)
+    else:
+        new_config = make_config(
+            args, os.path.join(WD, "config", "config_template.yaml")
+        )
+        print(f"Generated configfile:\n\t{new_config}", file=sys.stderr)
+
+    profile = os.path.join(WD, "workflow/profiles/all")
+    cmd = [
+        "snakemake",
+        "--configfile",
+        new_config,
+        "-c",
+        str(args.cores),
+        "--workflow-profile",
+        profile,
+    ]
+    if args.snake_opts:
+        cmd.append(args.snake_opts)
+
+    print(f"Running command:\n\t{' '.join(cmd)}", file=sys.stderr)
+    subprocess.run(cmd, check=True)
+
+    print("Finished!", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

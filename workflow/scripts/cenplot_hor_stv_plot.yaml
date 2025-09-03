@@ -1,0 +1,46 @@
+settings:
+  format: [png, pdf]
+  transparent: true
+  dim:
+    - 20
+    - 1.5
+  axis_h_pad: 0.05
+  dpi: 300
+  layout: tight
+  legend_prop: 0.2
+  legend_pos: right
+tracks:
+  - position: relative
+    proportion: 0.05
+    type: label
+    path: "cdr"
+    options:
+      legend: false
+      hide_x: true
+  - position: relative
+    proportion: 0.4
+    type: label
+    path: "rm"
+    options:
+      legend: true
+      legend_title: "{chrom}"
+      legend_title_only: true
+      hide_x: true
+  - position: overlap
+    type: hor
+    path: "stv"
+    options:
+      legend: true
+      legend_title: "{chrom}"
+      legend_title_only: true
+      hide_x: true
+      live_only: false
+      color_map_file: none
+  - position: relative
+    proportion: 0.005
+    type: horort
+    path: "stv"
+    options:
+      legend: false
+      hide_x: true
+      scale: 15

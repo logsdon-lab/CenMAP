@@ -3,7 +3,7 @@ import numpy as np
 import polars as pl
 import seaborn as sns
 import matplotlib.pyplot as plt
-
+from matplotlib.patches import Patch
 from collections import OrderedDict
 
 
@@ -185,26 +185,32 @@ def main():
     )
 
     ax = plt.gca()
-
-    # Sort legend elements
-    legend_elem_order = {
-        elem: i for i, elem in enumerate([*args.chroms, *added_palettes.keys()])
-    }
-    handles_labels = ax.get_legend_handles_labels()
-    handles, labels = zip(
-        *sorted(zip(*handles_labels), key=lambda x: legend_elem_order[x[1]])
-    )
-
-    # Place outside of figure.
-    ax.legend(
-        handles,
-        labels,
+    legend_kwargs = dict(
         loc="center left",
         bbox_to_anchor=(1, 0.5),
         title="Source",
         alignment="left",
         frameon=False,
     )
+    try:
+        # Sort legend elements
+        legend_elem_order = {
+            elem: i for i, elem in enumerate([*args.chroms, *added_palettes.keys()])
+        }
+        handles_labels = ax.get_legend_handles_labels()
+        handles, labels = zip(
+            *sorted(zip(*handles_labels), key=lambda x: legend_elem_order[x[1]])
+        )
+
+        # Place outside of figure.
+        ax.legend(handles, labels, **legend_kwargs)
+    except ValueError:
+        ax.legend(
+            handles=[
+                Patch(color=color, label=chrom) for chrom, color in chrom_colors.items()
+            ],
+            **legend_kwargs,
+        )
 
     # Hide spines
     for spine in ["top", "right"]:

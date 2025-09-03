@@ -70,101 +70,41 @@ rule filter_annotations_hor_stv:
         """
 
 
-# Require both to exist before beginning plotting.
-rule modify_hor_stv_cenplot_tracks:
-    input:
-        plot_layout=(
-            workflow.source_path("../scripts/cenplot_hor_stv_plot.toml")
-            if config["humas_annot"]["mode"] != "sf"
-            else workflow.source_path("../scripts/cenplot_sf_plot.toml")
-        ),
-        infiles=rules.filter_annotations_hor_stv.output,
-        hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],
-    output:
-        plot_layout=join(
-            PLT_HOR_STV_OUTDIR,
-            "plots",
-            "{typ}_cens_{chr}.yaml",
-        ),
-    conda:
-        "../envs/py.yaml"
-    log:
-        join(PLT_HOR_STV_LOGDIR, "modify_hor_stv_cenplot_tracks_{typ}_{chr}.log"),
-    params:
-        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
-        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infiles[0]))),
-    shell:
-        """
-        python {params.script} \
-        -i {input.plot_layout} \
-        -o {output.plot_layout} \
-        -p indir={params.indir} typ={wildcards.typ} \
-        --options color_map_file=$(realpath {input.hor_stv_colors}) &> {log}
-        """
-
-
 rule plot_hor_stv:
     input:
-        bed_files=rules.filter_annotations_hor_stv.output,
-        plot_layout=expand(
-            rules.modify_hor_stv_cenplot_tracks.output, chr="{chr}", typ="all"
+        **(
+            {"cdr": rules.filter_annotations_hor_stv.output.cdr_bed}
+            if config.get("cdr_finder")
+            else {}
         ),
+        stv=lambda wc: (
+            rules.filter_annotations_hor_stv.output.complete_stv_bed
+            if wc.typ == "complete"
+            else rules.filter_annotations_hor_stv.output.all_stv_bed
+        ),
+        rm=rules.filter_annotations_hor_stv.output.rm_bed,
     output:
         plots=multiext(
             join(
                 PLT_HOR_STV_OUTDIR,
                 "plots",
-                "all_{chr}",
-            ),
-            ".pdf",
-            ".png",
-        ),
-        plot_dir=directory(
-            join(
-                PLT_HOR_STV_OUTDIR,
-                "plots",
-                "all_{chr}",
-            )
-        ),
-    params:
-        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
-    log:
-        join(PLT_HOR_STV_LOGDIR, "plot_{chr}_hor_stv_all.log"),
-    threads: 4
-    conda:
-        "../envs/py.yaml"
-    shell:
-        shell_plot_multiple_cen
-
-
-rule plot_hor_stv_complete:
-    input:
-        bed_files=rules.filter_annotations_hor_stv.output,
-        plot_layout=expand(
-            rules.modify_hor_stv_cenplot_tracks.output, chr="{chr}", typ="complete"
-        ),
-    output:
-        plots=multiext(
-            join(
-                PLT_HOR_STV_OUTDIR,
-                "plots",
-                "complete_{chr}",
+                "{typ}_{chr}",
             ),
             ".png",
             ".pdf",
         ),
-        plot_dir=directory(
-            join(
-                PLT_HOR_STV_OUTDIR,
-                "plots",
-                "complete_{chr}",
-            )
-        ),
     params:
         script=workflow.source_path("../scripts/plot_multiple_cen.py"),
+        plot_layout=(
+            workflow.source_path("../scripts/cenplot_hor_stv_plot.yaml")
+            if config["humas_annot"]["mode"] != "sf"
+            else workflow.source_path("../scripts/cenplot_sf_plot.yaml")
+        ),
+        output_prefix=lambda wc, output: os.path.splitext(output.plots[0])[0],
+        json_file_str=lambda wc, input: json.dumps(dict(input)),
+        options=lambda wc: f"--options '{json.dumps({"hor":{"color_map_file": os.path.abspath(config["plot_hor_stv"]["stv_annot_colors"])}})}'",
     log:
-        join(PLT_HOR_STV_LOGDIR, "plot_{chr}_hor_stv_complete.log"),
-    threads: 4
+        join(PLT_HOR_STV_LOGDIR, "plot_{chr}_hor_stv_{typ}.log"),
     conda:
         "../envs/py.yaml"
     shell:
@@ -173,12 +113,5 @@ rule plot_hor_stv_complete:
 
 rule plot_hor_stv_all:
     input:
-        expand(
-            rules.plot_hor_stv.output,
-            chr=CHROMOSOMES,
-        ),
-        expand(
-            rules.plot_hor_stv_complete.output,
-            chr=CHROMOSOMES,
-        ),
+        expand(rules.plot_hor_stv.output, chr=CHROMOSOMES, typ=["complete", "all"]),
     default_target: True

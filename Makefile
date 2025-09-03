@@ -10,6 +10,11 @@ conda:
 	conda env create -f env.yaml --name "${TAG}"
 	conda activate "${TAG}"
 
+# Make an environment with all dependencies.
+# Need to manually clean.
+conda_all:
+	bash workflow/scripts/make_env_all.sh
+
 update_submodules:
 	git submodule init
 	git submodule update --init --recursive --remote

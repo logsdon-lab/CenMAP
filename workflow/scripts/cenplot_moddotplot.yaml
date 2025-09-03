@@ -1,0 +1,72 @@
+settings:
+  title: "{chrom}"
+  layout: constrained
+  format:
+    - png
+    - pdf
+  transparent: false
+  dim:
+    - 16
+    - 8
+  axis_h_pad: 0.05
+  dpi: 600
+tracks:
+  - position: relative
+    type: label
+    proportion: 0.005
+    path: "cdr"
+    options:
+      color: black
+      legend: false
+      hide_x: true
+  - title: |-
+      Mean CpG
+      methylation
+      (%)
+    position: relative
+    type: bar
+    proportion: 0.1
+    path: "methyl"
+    options:
+      hide_x: true
+      ymax: 100
+  - position: relative
+    proportion: 0.05
+    type: label
+    path: "rm"
+    options:
+      legend: false
+      hide_x: true
+  - position: overlap
+    type: hor
+    path: "stv"
+    options:
+      legend: false
+      sort_order: descending
+      hide_x: true
+      bg_border: true
+      hor_filter: 1
+      live_only: false
+  - position: relative
+    proportion: 0.005
+    type: horort
+    path: "stv"
+    options:
+      legend: false
+      hide_x: true
+      scale: 15
+  - position: relative
+    type: selfident
+    proportion: 0.7
+    path: "ident"
+    options:
+      legend: true
+      hide_x: false
+      invert: true
+      legend_asp_ratio: 1
+  - position: relative
+    proportion: 0.1
+    type: legend
+    options:
+      index: 2
+      legend_ncols: 10

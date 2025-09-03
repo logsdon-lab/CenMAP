@@ -196,86 +196,42 @@ rule format_repeatmasker_output:
         "../envs/tools.yaml"
     shell:
         """
-        awk -v OFS="\\t" '{{$1=$1; print}}' {input.rm_out} > {output}
+        {{ awk -v OFS="\\t" '{{$1=$1; print}}' {input.rm_out} | cut -f 1-15 ;}} > {output}
         """
 
 
-# Merge repeatmasker and convert sep to tab.
-# |1259|28.4|7.4|5.3|GM18989_chr1_hap1-0000003:9717731-15372230|8|560|(5653940)|+|Charlie2b|DNA/hAT-Charlie|120|683|(2099)|1|
-rule merge_repeatmasker_output:
+rule create_ref_rm_bed:
     input:
-        ancient(expand(rules.format_repeatmasker_output.output, sm=SAMPLE_NAMES)),
-    output:
-        temp(
-            join(
-                RM_OUTDIR,
-                "repeats",
-                "all",
-                "all_samples_cens.fa.out",
-            )
-        ),
-    shell:
-        """
-        cat {input} > {output}
-        """
-
-
-# Format repeatmasker reference output.
-rule merge_control_repeatmasker_output:
-    input:
-        # Contains header. Should be first.
-        config["repeatmasker"]["ref_repeatmasker_output"],
-    output:
-        join(
-            RM_OUTDIR,
-            "repeats",
-            "ref",
-            "ref_ALR_regions.fa.out",
-        ),
-    shell:
-        """
-        cat {input} | awk -v OFS='\\t' '{{$1=$1; print}}' | cut -f 1-15 > {output}
-        """
-
-
-rule format_add_control_repeatmasker_output:
-    input:
-        ref_rm_output=rules.merge_control_repeatmasker_output.output,
-        sample_rm_output=rules.merge_repeatmasker_output.output,
-    output:
-        temp(
-            join(
-                RM_OUTDIR,
-                "repeats",
-                "all",
-                "all_samples_and_ref_cens.fa.out",
-            )
-        ),
-    log:
-        join(RM_LOGDIR, "format_add_control_repeatmasker_output.log"),
-    conda:
-        "../envs/tools.yaml"
-    shell:
-        """
-        # Copy file and append reference repeatmasker output.
-        cp {input.sample_rm_output} {output} 2> {log}
-        {{ awk -v OFS="\\t" '{{$1=$1; print}}' {input.ref_rm_output} | grep "chr" ;}} >> {output} 2> {log}
-        """
-
-
-rule create_og_rm_bed:
-    input:
-        rm_out=(
-            rules.format_add_control_repeatmasker_output.output
-            if config["repeatmasker"]["ref_repeatmasker_output"]
-            else rules.merge_repeatmasker_output.output
-        ),
+        rm_out=config["repeatmasker"]["ref_repeatmasker_output"],
     output:
         rm_bed=join(
             RM_OUTDIR,
             "bed",
             "{chr}_og",
-            "rm.bed",
+            "rm_ref.bed",
+        ),
+    params:
+        chr_rgx="{chr}[:_]",
+        color_mapping=config["repeatmasker"]["repeat_colors"],
+        script=workflow.source_path("../scripts/create_rm_bed.py"),
+        to_abs="--to_abs",
+    log:
+        join(RM_LOGDIR, "create_ref_rm_bed_{chr}.log"),
+    conda:
+        "../envs/py.yaml"
+    shell:
+        shell_create_rm_bed
+
+
+rule create_sm_rm_bed:
+    input:
+        rm_out=expand(rules.format_repeatmasker_output.output, sm=SAMPLE_NAMES),
+    output:
+        rm_bed=join(
+            RM_OUTDIR,
+            "bed",
+            "{chr}_og",
+            "rm_sm.bed",
         ),
     params:
         chr_rgx="{chr}[:_]",
@@ -290,36 +246,16 @@ rule create_og_rm_bed:
         shell_create_rm_bed
 
 
-rule modify_og_rm_cenplot_tracks:
-    input:
-        plot_layout=workflow.source_path("../scripts/cenplot_repeatmasker_plot.toml"),
-        infiles=rules.create_og_rm_bed.output,
-    output:
-        plot_layout=join(
-            RM_OUTDIR,
-            "plots",
-            "{chr}_cens_og.yaml",
-        ),
-    conda:
-        "../envs/py.yaml"
-    log:
-        join(RM_LOGDIR, "modify_og_rm_cenplot_tracks_{chr}.log"),
-    params:
-        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infiles[0]))),
-        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
-    shell:
-        """
-        python {params.script} \
-        -i {input.plot_layout} \
-        -o {output.plot_layout} \
-        -p indir={params.indir} &> {log}
-        """
-
-
 rule plot_og_rm_bed_by_chr:
     input:
-        bed_files=[rules.create_og_rm_bed.output],
-        plot_layout=rules.modify_og_rm_cenplot_tracks.output,
+        rm=[
+            (
+                rules.create_ref_rm_bed.output
+                if config["repeatmasker"]["ref_repeatmasker_output"]
+                else []
+            ),
+            rules.create_sm_rm_bed.output,
+        ],
     output:
         plots=multiext(
             join(
@@ -330,16 +266,12 @@ rule plot_og_rm_bed_by_chr:
             ".pdf",
             ".png",
         ),
-        plot_dir=directory(
-            join(
-                RM_OUTDIR,
-                "plots",
-                "{chr}_cens_og",
-            )
-        ),
     params:
         script=workflow.source_path("../scripts/plot_multiple_cen.py"),
-    threads: 4
+        plot_layout=workflow.source_path("../scripts/cenplot_repeatmasker_plot.yaml"),
+        output_prefix=lambda wc, output: os.path.splitext(output.plots[0])[0],
+        json_file_str=lambda wc, input: json.dumps(dict(input)),
+        options="",
     log:
         join(RM_LOGDIR, "plot_og_rm_bed_{chr}.log"),
     conda:

@@ -167,10 +167,7 @@ rule fix_cens_rm_out:
 
 rule create_fixed_rm_bed:
     input:
-        rm_out=[
-            expand(rules.fix_cens_rm_out.output, sm=SAMPLE_NAMES),
-            rules.merge_control_repeatmasker_output.output,
-        ],
+        rm_out=expand(rules.fix_cens_rm_out.output, sm=SAMPLE_NAMES),
     output:
         rm_bed=join(
             FIX_RM_OUTDIR,
@@ -191,36 +188,16 @@ rule create_fixed_rm_bed:
         shell_create_rm_bed
 
 
-rule modify_rm_cenplot_tracks:
-    input:
-        plot_layout=workflow.source_path("../scripts/cenplot_repeatmasker_plot.toml"),
-        infiles=rules.create_fixed_rm_bed.output,
-    output:
-        plot_layout=join(
-            FIX_RM_OUTDIR,
-            "plots",
-            "{chr}_cens_fixed.yaml",
-        ),
-    conda:
-        "../envs/py.yaml"
-    log:
-        join(FIX_RM_LOGDIR, "modify_rm_cenplot_tracks_{chr}.log"),
-    params:
-        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
-        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infiles[0]))),
-    shell:
-        """
-        python {params.script} \
-        -i {input.plot_layout} \
-        -o {output.plot_layout} \
-        -p indir={params.indir} &> {log}
-        """
-
-
 rule plot_fixed_rm_bed_by_chr:
     input:
-        bed_files=[rules.create_fixed_rm_bed.output],
-        plot_layout=rules.modify_rm_cenplot_tracks.output,
+        rm=[
+            (
+                rules.create_ref_rm_bed.output
+                if config["repeatmasker"]["ref_repeatmasker_output"]
+                else []
+            ),
+            rules.create_fixed_rm_bed.output,
+        ],
     output:
         plots=multiext(
             join(
@@ -231,16 +208,12 @@ rule plot_fixed_rm_bed_by_chr:
             ".pdf",
             ".png",
         ),
-        plot_dir=directory(
-            join(
-                FIX_RM_OUTDIR,
-                "plots",
-                "{chr}_cens",
-            )
-        ),
     params:
         script=workflow.source_path("../scripts/plot_multiple_cen.py"),
-    threads: 4
+        plot_layout=workflow.source_path("../scripts/cenplot_repeatmasker_plot.yaml"),
+        output_prefix=lambda wc, output: os.path.splitext(output.plots[0])[0],
+        json_file_str=lambda wc, input: json.dumps(dict(input)),
+        options="",
     log:
         join(FIX_RM_LOGDIR, "plot_fixed_rm_bed_{chr}.log"),
     conda:

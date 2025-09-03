@@ -11,3 +11,4 @@ dependencies:
     - scipy
     - pytest
     - snakemake==9.5.0
+    - conda-merge

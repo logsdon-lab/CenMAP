@@ -1,23 +1,22 @@
 import os
 import sys
 import yaml
-import tomllib
+import json
 import argparse
 from io import BytesIO
-from typing import Any, TextIO
+from typing import Any
 
 
 def format_toml_path(
+    infiles: dict[str, str],
     input_plot_layout: BytesIO,
-    output_plot_layout: TextIO,
     options: dict[str, Any],
-    path_kwargs: Any,
 ):
     """
     Format the plot layout filling any kwargs in the path.
     Also checks if path is empty.
     """
-    settings = tomllib.load(input_plot_layout)
+    settings: dict[str, Any] = yaml.safe_load(input_plot_layout)
     new_settings = {"settings": settings["settings"], "tracks": []}
 
     number_skipped = 0
@@ -48,7 +47,7 @@ def format_toml_path(
             new_settings["tracks"].append(new_trk)
             continue
         try:
-            new_path = path.format(**path_kwargs)
+            new_path = os.path.abspath(infiles[path])
         except KeyError:
             print(
                 f"Invalid format key in path {path} from cenplot track file, {input_plot_layout.name}.",
@@ -66,20 +65,15 @@ def format_toml_path(
         new_trk["path"] = new_path
         new_settings["tracks"].append(new_trk)
 
-    output_plot_layout.write(yaml.dump(new_settings))
+    print(yaml.dump(new_settings))
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("-i", "--infile", type=argparse.FileType("rb"), required=True)
-    ap.add_argument("-o", "--outfile", type=argparse.FileType("wt"), default=sys.stdout)
     ap.add_argument(
-        "-p",
-        "--path_kwargs",
-        nargs="*",
-        metavar="{key}={value}",
-        type=lambda x: x.split("=", 1),
+        "-i", "--infiles", type=str, required=True, help="Infiles as JSON map."
     )
+    ap.add_argument("-t", "--track_format", type=argparse.FileType("rb"), required=True)
     ap.add_argument(
         "--options",
         nargs="*",
@@ -88,10 +82,11 @@ def main():
     )
     args = ap.parse_args()
 
+    infiles: dict[str, str] = json.loads(args.infiles)
+
     format_toml_path(
-        input_plot_layout=args.infile,
-        output_plot_layout=args.outfile,
-        path_kwargs=dict(args.path_kwargs) if args.path_kwargs else {},
+        infiles=infiles,
+        input_plot_layout=args.track_format,
         options=dict(args.options) if args.options else {},
     )
 

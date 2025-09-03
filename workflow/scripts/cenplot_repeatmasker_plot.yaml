@@ -1,0 +1,22 @@
+settings:
+  format: [png, pdf]
+  transparent: true
+  dim:
+    - 20
+    - 1.25
+  axis_h_pad: 1.0
+  dpi: 300
+  layout: tight
+  legend_prop: 0.05
+  legend_pos: right
+tracks:
+  - position: relative
+    proportion: 0.5
+    type: label
+    # Represents dtype.
+    path: "rm"
+    options:
+      legend: true
+      legend_title: "{chrom}"
+      legend_title_only: true
+      hide_x: true

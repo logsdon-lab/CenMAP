@@ -116,13 +116,15 @@ rule filter_annotations_moddotplot:
 
 rule modify_moddotplot_cenplot_tracks:
     input:
-        plot_layout=(
-            workflow.source_path("../scripts/cenplot_moddotplot.toml")
-            if config["humas_annot"]["mode"] != "sf"
-            else workflow.source_path("../scripts/cenplot_moddotplot_sf.toml")
+        **(
+            {"cdr": rules.filter_annotations_moddotplot.output.cdr_bed}
+            if config.get("cdr_finder")
+            else {}
         ),
-        infiles=[rules.filter_annotations_moddotplot.output.cdr_bed],
-        hor_stv_colors=config["plot_hor_stv"]["stv_annot_colors"],
+        rm=rules.filter_annotations_moddotplot.output.sat_annot_bed,
+        ident=rules.filter_annotations_moddotplot.output.ident_bed,
+        stv=rules.filter_annotations_moddotplot.output.stv_row_bed,
+        methyl=rules.filter_annotations_moddotplot.output.binned_methyl_bed,
     output:
         plot_layout=join(
             MODDOTPLOT_OUTDIR_PLOT,
@@ -134,15 +136,20 @@ rule modify_moddotplot_cenplot_tracks:
     log:
         join(MODDOTPLOT_LOGDIR, "modify_moddotplot_cenplot_tracks_{chr}_{fname}.log"),
     params:
-        indir=lambda wc, input: os.path.abspath(os.path.dirname(str(input.infiles[0]))),
         script=workflow.source_path("../scripts/format_cenplot_toml.py"),
+        plot_layout=(
+            workflow.source_path("../scripts/cenplot_moddotplot.yaml")
+            if config["humas_annot"]["mode"] != "sf"
+            else workflow.source_path("../scripts/cenplot_moddotplot_sf.yaml")
+        ),
+        json_file_str=lambda wc, input: json.dumps(dict(input)),
+        options=lambda wc: f"--options '{json.dumps({"hor":{"color_map_file": os.path.abspath(config["plot_hor_stv"]["stv_annot_colors"])}})}'",
     shell:
         """
         python {params.script} \
-        -i {input.plot_layout} \
-        -o {output.plot_layout} \
-        -p indir={params.indir} \
-        --options color_map_file=$(realpath {input.hor_stv_colors}) &> {log}
+        -i '{params.json_file_str}' \
+        -t {params.plot_layout} \
+        {params.options} &> {log}
         """
 
 
@@ -160,7 +167,6 @@ rule plot_cen_moddotplot:
             ".pdf",
             ".png",
         ),
-    threads: 1
     params:
         output_dir=lambda wc, output: os.path.dirname(output.plots[0]),
     conda:

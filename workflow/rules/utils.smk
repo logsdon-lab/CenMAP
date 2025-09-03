@@ -24,16 +24,12 @@ shell_create_rm_bed = """
 
 
 shell_plot_multiple_cen = """
-    # Then use custom script and cenplot.
     {{ python {params.script} \
-    -t {input.plot_layout} \
-    -d {output.plot_dir} \
-    --share_xlim \
-    -p {threads} \
-    -c $(cut -f 1 {input.bed_files[0]} | sort | uniq) || true ;}} 2> {log}
-    # Allow failure. Possible to have no correct cens.
+    -i '{params.json_file_str}' \
+    -t {params.plot_layout} \
+    -o {params.output_prefix} \
+    {params.options} || true ;}} 2> {log}
     touch {output.plots}
-    mkdir -p {output.plot_dir}
 """
 
 

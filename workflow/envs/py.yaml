@@ -12,6 +12,6 @@ dependencies:
     - scipy
     - pyarrow
     - intervaltree
-    - censtats==0.0.12
-    - cenplot==0.1.1
+    - censtats==0.0.13
+    - cenplot==0.1.3
     - git+https://github.com/marbl/ModDotPlot.git@v0.8.4

@@ -1,0 +1,33 @@
+
+name: Generate release tarball
+
+# https://stackoverflow.com/a/67833464
+on:
+  pull_request:
+    branches:
+      - main
+    types: [closed]
+
+jobs:
+  # https://github.com/qmonnet/git-archive-all-action
+  create-release:
+    if: ${{ github.event.pull_request.merged }}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout project source code
+        uses: actions/checkout@v3
+        with:
+          path: project
+
+      - name: Package source code including submodules
+        uses: qmonnet/git-archive-all-action@v1
+        with:
+          output-files: srcs-full-${{ github.ref_name }}.tar.gz srcs-full-${{ github.ref_name }}.zip
+          base-repo: project
+
+      - name: Create draft release and add artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          files: srcs-full-*

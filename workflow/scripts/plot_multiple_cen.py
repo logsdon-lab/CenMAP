@@ -1,224 +1,161 @@
 import os
 import sys
+import yaml
 import copy
-import logging
+import json
 import argparse
-import multiprocessing
-
-import numpy as np
 import polars as pl
-import matplotlib.pyplot as plt
 
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
-from typing import BinaryIO
-from concurrent.futures import ProcessPoolExecutor
+from typing import Any
+from collections import defaultdict
 
-from cenplot import (
-    PlotSettings,
-    plot_one_cen,
-    read_one_cen_tracks,
-    Track,
-    TrackPosition,
-)
-
-logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
-
-
-def create_shared_legend(
-    plots: list[tuple[tuple[Figure, np.ndarray, str], list[Track]]],
-    outdir: str,
-    reference_ax_idx: int,
-    dpi: int | None = None,
-    transparent: bool = True,
-):
-    if not plots:
-        logging.error("No plots to get shared legend.")
-        return
-    (legend_fig, legend_axes, _), _ = copy.deepcopy(plots[reference_ax_idx])
-
-    all_legend_elems = {}
-    legend_idx = 0
-    for (_, axes, _), tracks in plots:
-        show_legend = [
-            trk.options.legend for trk in tracks if trk.pos != TrackPosition.Overlap
-        ]
-        for i, (ax_row, show_legend) in enumerate(zip(axes, show_legend)):
-            ax_row_elems = {}
-            for ax in ax_row:
-                ax: Axes
-                # Legend items.
-                legend_handles, legend_labels = ax.get_legend_handles_labels()
-                legend_elems = dict(zip(legend_labels, legend_handles))
-                ax_row_elems.update(legend_elems)
-
-            if ax_row_elems and show_legend:
-                legend_idx = i
-                all_legend_elems.update(ax_row_elems)
-
-    legend_ax: Axes = legend_axes[legend_idx, 0]
-
-    # Clear copied axis.
-    legend_fig.suptitle(None)
-    for ax in legend_fig.axes:
-        ax.clear()
-        # Remove all patches.
-        for ptch in ax.patches:
-            ptch.set_visible(False)
-        # Remove all ticks and bottom spine.
-        ax.set_yticks([], [])
-        ax.set_xticks([], [])
-        ax.axes.spines["bottom"].set_visible(False)
-
-    legend = legend_ax.legend(
-        all_legend_elems.values(),
-        all_legend_elems.keys(),
-        handlelength=1.0,
-        handleheight=1.0,
-        ncols=10,
-        frameon=False,
-        loc="center",
-        alignment="center",
-    )
-    # Set patches edge color manually.
-    # Turns out get_legend_handles_labels will get all rect patches and setting linewidth will cause all patches to be black.
-    for ptch in legend.get_patches():
-        ptch.set_linewidth(1.0)
-        ptch.set_edgecolor("black")
-
-    legend_outfile = os.path.join(outdir, "legend.png")
-    legend_fig.tight_layout()
-    legend_fig.savefig(legend_outfile, dpi=dpi, transparent=transparent)
-
-    return (legend_fig, legend_axes, [legend_outfile])
+from cenplot import plot_one_cen, read_one_cen_tracks
 
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Draw centromere tracks.",
+        description="Draw centromere tracks for multiple centromeres.",
+    )
+    ap.add_argument(
+        "-i", "--infiles", required=True, type=str, help="Infile JSON files by type."
     )
     ap.add_argument(
         "-t",
-        "--input_tracks",
+        "--track_format",
         required=True,
         type=argparse.FileType("rb"),
         help=(
-            "TOML file with headerless BED files to plot. "
-            "Specify under tracks the following fields: {name, position, type, proportion, path, or options}."
+            "TOML file for centromere plot. "
+            "Each track's path should have format string matching infile JSON str key."
         ),
     )
     ap.add_argument(
-        "-c",
-        "--chroms",
-        nargs="+",
-        help="Names to plot in this order. Corresponds to 1st col in BED files.",
-        required=True,
-    )
-    ap.add_argument(
-        "-d",
-        "--outdir",
-        help="Output dir to plot multiple separate figures.",
+        "-o",
+        "--output_prefix",
+        help="Output prefix to plot multiple separate figures.",
         type=str,
-        default=".",
+        default="out",
     )
-    ap.add_argument("--share_xlim", help="Share x-axis limits.", action="store_true")
     ap.add_argument(
         "--ref_ax_idx",
         help="Index of reference plot to add legend.",
-        default=-1,
+        default=0,
         type=int,
     )
-    ap.add_argument("-p", "--processes", type=int, default=4, help="Processes to run.")
+    ap.add_argument(
+        "--options",
+        type=str,
+        help="Options by dtype to replace options. ex. cfg['hor']['live_only']",
+        default=None,
+    )
+    ap.add_argument(
+        "--keep_tempfiles",
+        action="store_true",
+        help="Keep files used to generate config.",
+    )
     args = ap.parse_args()
 
-    input_tracks: BinaryIO = args.input_tracks
-    outdir: str = args.outdir
-    share_xlim: bool = args.share_xlim
-    processes: int = args.processes
-    all_chroms: list[str] = args.chroms
-
-    inputs: list[tuple[Track, str, str, PlotSettings]] = []
-    tracks_settings = []
-    for chrom in all_chroms:
-        try:
-            tracks_settings.append(
-                (chrom, *read_one_cen_tracks(input_tracks, chrom=chrom))
-            )
-        except Exception as err:
-            print(
-                f"Failed to plot {chrom} ({err})",
-                file=sys.stderr,
-            )
-            continue
-
-    dpi = None
-    transparent = True
-    xmin_all, xmax_all = sys.maxsize, 0
-    if share_xlim:
-        for *_, settings in tracks_settings:
-            if settings.xlim:
-                xmin, xmax = settings.xlim
-                xmin_all = min(xmin_all, xmin)
-                xmax_all = max(xmax_all, xmax)
-            if settings.dpi:
-                dpi = settings.dpi
-            if settings.transparent:
-                transparent = settings.transparent
-
-    # Add position and legend track at end.
-    for chrom, tracks_summary, plot_settings in tracks_settings:
-        if share_xlim:
-            plot_settings.xlim = (xmin_all, xmax_all)
-        tracks = [
-            Track(
-                trk.title,
-                trk.pos,
-                trk.opt,
-                trk.prop,
-                trk.data.filter(pl.col("chrom") == chrom)
-                if isinstance(trk.data, pl.DataFrame)
-                else None,
-                trk.options,
-            )
-            for trk in tracks_summary.tracks
-        ]
-        inputs.append(
-            (
-                tracks,
-                outdir,
-                chrom,
-                plot_settings,
-            )
-        )
-
-    os.makedirs(outdir, exist_ok=True)
-    if processes == 1:
-        plots = [plot_one_cen(*draw_arg) for draw_arg in inputs]
-    else:
-        with ProcessPoolExecutor(
-            max_workers=processes, mp_context=multiprocessing.get_context("spawn")
-        ) as pool:
-            futures = [
-                (draw_arg[2], pool.submit(plot_one_cen, *draw_arg), draw_arg[0])
-                for draw_arg in inputs
-            ]  # type: ignore[assignment]
-            plots = []
-            for chrom, future, tracks in futures:
-                if future.exception():
-                    print(
-                        f"Failed to plot {chrom} ({future.exception()})",
-                        file=sys.stderr,
-                    )
-                    continue
-                plots.append((future.result(), tracks))
-
-    legend_plot = create_shared_legend(
-        plots, outdir, args.ref_ax_idx, dpi=dpi, transparent=transparent
+    infiles: dict[str, list[str]] = json.loads(args.infiles)
+    track_format: dict[str, Any] = yaml.safe_load(args.track_format)
+    output_prefix: str = args.output_prefix
+    outdir = os.path.dirname(output_prefix)
+    outdir = os.path.abspath(outdir if outdir else ".")
+    bname = os.path.basename(output_prefix)
+    options: dict[str, dict[str, Any]] = (
+        yaml.safe_load(args.options) if args.options else {}
     )
-    plots.append((legend_plot, []))
-    merged_images = np.concatenate([plt.imread(files[0]) for (_, _, files), _ in plots])
-    plt.imsave(f"{outdir}.png", merged_images)
-    plt.imsave(f"{outdir}.pdf", merged_images)
+
+    # Read in all files by dtype.
+    bed_files: defaultdict[str, dict[str, str]] = defaultdict(dict)
+
+    for dtype, files in infiles.items():
+        if isinstance(files, str):
+            files = [files]
+        elif isinstance(files, list):
+            files = files
+        else:
+            raise ValueError(f"Unexpected type for {files}")
+        for file in files:
+            df = pl.read_csv(file, separator="\t", has_header=False)
+            for prt, df_chrom in df.partition_by(["column_1"], as_dict=True).items():
+                chrom = prt[0]
+                fpath = os.path.join(outdir, f"{chrom}_{dtype}.bed")
+                df_chrom.write_csv(fpath, separator="\t", include_header=False)
+                bed_files[chrom][dtype] = fpath
+
+    tracks = []
+    for chrom, dtype_bedfiles in bed_files.items():
+        for trk in track_format["tracks"]:
+            dtype = trk["path"]
+            bed_file = dtype_bedfiles.get(dtype)
+            if not isinstance(bed_file, str):
+                print(f"No data for {dtype}.", file=sys.stderr)
+                continue
+
+            new_trk = copy.deepcopy(trk)
+            # Update config.
+            added_options = options.get(trk["type"])
+            if added_options:
+                for k, v in added_options.items():
+                    new_trk["options"][k] = v
+
+            new_trk["path"] = bed_file
+            tracks.append(new_trk)
+
+    position_track = {
+        "position": "relative",
+        "proportion": 0.05,
+        "type": "position",
+        "options": {"hide_x": False},
+    }
+    spacer_track = {
+        "position": "relative",
+        "proportion": 0.01,
+        "type": "spacer",
+    }
+    legend_track = {
+        "position": "relative",
+        "proportion": 0.25,
+        "type": "legend",
+        "options": {"index": args.ref_ax_idx, "legend_ncols": 10},
+    }
+    tracks.append(position_track)
+    tracks.append(copy.deepcopy(spacer_track))
+    tracks.append(legend_track)
+    tracks.append(copy.deepcopy(spacer_track))
+
+    plot_settings = track_format.get("settings")
+    track_format["settings"]["dim"] = [
+        20,
+        (plot_settings["dim"][1] * len(bed_files.keys())) + 2,
+    ]
+    track_format["tracks"] = tracks
+    cfg = os.path.join(f"{output_prefix}.yaml")
+    with open(cfg, "wt") as fh:
+        yaml.safe_dump(track_format, fh, allow_unicode=True)
+
+    with open(cfg, "rb") as fh:
+        tracks, settings = read_one_cen_tracks(fh, chrom=None)
+        for track in tracks.tracks:
+            if not isinstance(track.data, pl.DataFrame):
+                continue
+            # Update legend title.
+            chrom = track.data["chrom"].first()
+            if hasattr(track.options, "legend_title"):
+                track.options.legend_title = chrom
+        _ = plot_one_cen(tracks.tracks, outdir, bname, settings)
+
+    if not args.keep_tempfiles:
+        try:
+            os.remove(cfg)
+        except FileNotFoundError:
+            pass
+        for chrom, dtype_bedfiles in bed_files.items():
+            for dtype, file in dtype_bedfiles.items():
+                try:
+                    os.remove(file)
+                except FileNotFoundError:
+                    pass
 
 
 if __name__ == "__main__":

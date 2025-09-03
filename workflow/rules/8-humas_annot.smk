@@ -36,7 +36,7 @@ rule extract_cens_for_humas_annot:
         join(HUMAS_ANNOT_LOGDIR, "extract_cens_for_humas_annot_{sm}.log"),
     params:
         bed=lambda wc, input: input.bed,
-        added_cmds="",
+        added_cmds="| seqkit seq --upper-case",
     shell:
         shell_extract_and_index_fa
 

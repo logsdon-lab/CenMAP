@@ -7,31 +7,15 @@ FMT_RM_SAT_LOGDIR = join(LOG_DIR, "8-format_repeatmasker_sat_annot")
 FMT_RM_SAT_BMKDIR = join(BMK_DIR, "8-format_repeatmasker_sat_annot")
 
 
-rule merge_complete_and_correct_rm_out:
+rule create_rm_satellite_annotations:
     input:
-        [
+        rm_output=[
             expand(
                 rules.fix_cens_rm_out.output,
                 sm=SAMPLE_NAMES,
             ),
-            rules.merge_control_repeatmasker_output.output,
+            config["repeatmasker"]["ref_repeatmasker_output"],
         ],
-    output:
-        join(
-            FMT_RM_SAT_OUTDIR,
-            "repeats",
-            "all",
-            "reoriented_all_samples_and_ref_cens.fa.out",
-        ),
-    shell:
-        """
-        cat {input} > {output}
-        """
-
-
-rule create_rm_satellite_annotations:
-    input:
-        rm_output=rules.merge_complete_and_correct_rm_out.output,
         rm_sat_patterns=config.get("plot_hor_stv", {}).get("sat_annot_colors", []),
     output:
         join(
@@ -50,7 +34,10 @@ rule create_rm_satellite_annotations:
         "../envs/py.yaml"
     shell:
         """
-        python {params.script} -i {input.rm_output} {params.sat_annot_colors} --add_ct > {output} 2> {log}
+        python {params.script} \
+        -i <(awk -v OFS="\\t" '{{$1=$1; print}}' {input.rm_output} | cut -f 1-15) \
+        {params.sat_annot_colors} \
+        --add_ct > {output} 2> {log}
         """
 
 
