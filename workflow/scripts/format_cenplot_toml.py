@@ -76,18 +76,20 @@ def main():
     ap.add_argument("-t", "--track_format", type=argparse.FileType("rb"), required=True)
     ap.add_argument(
         "--options",
-        nargs="*",
-        metavar="{key}={value}",
-        type=lambda x: x.split("=", 1),
+        type=str,
+        help="Options by dtype to replace options. ex. cfg['hor']['live_only']",
+        default=None,
     )
     args = ap.parse_args()
 
     infiles: dict[str, str] = json.loads(args.infiles)
-
+    options: dict[str, dict[str, Any]] = (
+        json.loads(args.options) if args.options else {}
+    )
     format_toml_path(
         infiles=infiles,
         input_plot_layout=args.track_format,
-        options=dict(args.options) if args.options else {},
+        options=options,
     )
 
 

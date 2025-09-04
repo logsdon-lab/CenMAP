@@ -129,4 +129,5 @@ jobs:
         -i test/data/assemblies/HG00731/*.fasta.gz \
         --hifi test/data/raw_data/HG00731/*.fastq.gz \
         -s HG00731 \
-        -p 4
+        -p 4 \
+        --chromosomes chrY
