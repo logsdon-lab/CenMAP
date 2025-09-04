@@ -149,7 +149,7 @@ rule modify_moddotplot_cenplot_tracks:
         python {params.script} \
         -i '{params.json_file_str}' \
         -t {params.plot_layout} \
-        {params.options} &> {log}
+        {params.options} > {output} 2> {log}
         """
 
 
