@@ -9,7 +9,7 @@ import polars as pl
 from typing import Any
 from collections import defaultdict
 
-from cenplot import plot_one_cen, read_one_cen_tracks
+from cenplot import plot_tracks, read_tracks
 
 
 def main():
@@ -135,15 +135,17 @@ def main():
         yaml.safe_dump(track_format, fh, allow_unicode=True)
 
     with open(cfg, "rb") as fh:
-        tracks, settings = read_one_cen_tracks(fh, chrom=None)
+        tracks, settings = read_tracks(fh)
         for track in tracks.tracks:
-            if not isinstance(track.data, pl.DataFrame):
+            if track.data.is_empty():
                 continue
             # Update legend title.
             chrom = track.data["chrom"].first()
             if hasattr(track.options, "legend_title"):
                 track.options.legend_title = chrom
-        _ = plot_one_cen(tracks.tracks, outdir, bname, settings)
+        _ = plot_tracks(
+            tracks=tracks.tracks, settings=settings, outdir=outdir, chrom=bname
+        )
 
     if not args.keep_tempfiles:
         try:

@@ -1,8 +1,8 @@
 import sys
 import argparse
-import tempfile
 import polars as pl
 import cenplot as cplt
+import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 
 BED9_COLS = (
@@ -81,9 +81,16 @@ def main():
     ap.add_argument("--legend_prop", type=float, default=0.1, help="Legend proportion.")
     args = ap.parse_args()
 
-    df_cens = pl.read_csv(
-        args.bed_cen, new_columns=BED9_COLS, separator="\t", has_header=False
-    )
+    try:
+        df_cens = pl.read_csv(
+            args.bed_cen, new_columns=BED9_COLS, separator="\t", has_header=False
+        )
+    except pl.exceptions.NoDataError:
+        print("No complete cens.", file=sys.stderr)
+        fig, axes = plt.subplots()
+        fig.savefig(args.output, bbox_inches="tight", dpi=600, transparent=True)
+        return 0
+
     genome_sizes = dict(
         pl.read_csv(
             args.genome_sizes,
@@ -169,24 +176,21 @@ def main():
     )
     idx_position = len(tracks)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        fig, axes, _ = cplt.plot_one_cen(
-            tracks=tracks,
-            outdir=tmpdir,
-            chrom="",
-            settings=cplt.PlotSettings(
-                title=args.title,
-                format="pdf",
-                dim=(args.width, args.height),
-                layout="tight",
-                legend_pos=cplt.LegendPosition.Left,
-                legend_prop=args.legend_prop,
-                xlim=(1, max_contig_length),
-                axis_h_pad=0.5,
-            ),
-        )
-        format_xaxis_ticklabels(axes[idx_position - 1, 1])
-        fig.savefig(args.output, bbox_inches="tight", dpi=600, transparent=True)
+    fig, axes, _ = cplt.plot_tracks(
+        tracks=tracks,
+        settings=cplt.PlotSettings(
+            title=args.title,
+            format="pdf",
+            dim=(args.width, args.height),
+            layout="tight",
+            legend_pos=cplt.LegendPosition.Left,
+            legend_prop=args.legend_prop,
+            xlim=(1, max_contig_length),
+            axis_h_pad=0.5,
+        ),
+    )
+    format_xaxis_ticklabels(axes[idx_position - 1, 1])
+    fig.savefig(args.output, bbox_inches="tight", dpi=600, transparent=True)
 
 
 if __name__ == "__main__":

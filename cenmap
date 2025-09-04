@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 WD = os.path.dirname(__file__)
 CFG = os.path.join(WD, "config", "config_template.yaml")
+CHRS = [f"chr{c}" for c in [*range(1, 23), "X", "Y"]]
 
 
 def symlink_files(
@@ -50,6 +51,7 @@ def make_config(args: argparse.Namespace, template_config: str) -> str:
     fasta_files = args.input_asm
     ont_files = args.ont
     hifi_files = args.hifi
+    chroms = args.chromosomes
     mode = args.mode
     output_dir = os.path.join(args.output_dir, sample)
     data_dir = os.path.join(args.output_dir, sample, "0-symlink_inputs")
@@ -108,6 +110,7 @@ def make_config(args: argparse.Namespace, template_config: str) -> str:
         cfg["log_dir"] = log_dir
         cfg["benchmark_dir"] = benchmark_dir
         cfg["samples"] = [sample]
+        cfg["chromosomes"] = chroms
         yaml.safe_dump(cfg, ofh)
 
     return new_cfg
@@ -152,6 +155,13 @@ def main() -> int:
         help="Input ONT reads with MM and ML tags for CDR detection. Supports BAM only.",
     )
     ap.add_argument("-s", "--sample", type=str, default=None, help="Sample name.")
+    ap.add_argument(
+        "--chromosomes",
+        type=str,
+        nargs="+",
+        default=CHRS,
+        help="Chromosomes to aggregate outputs. Format: chr[0-9XY]+",
+    )
     ap.add_argument(
         "--output-dir", dest="output_dir", default="results", help="Output directory."
     )
