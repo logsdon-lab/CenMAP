@@ -273,8 +273,6 @@ def humas_annot_chr_outputs(wc):
     else:
         outputs.extend(expand(rules.cens_generate_stv.output, fname=fnames, chr=wc.chr))
 
-    if not outputs:
-        raise RuntimeError(f"No hor/sf outputs for {wc.chr}.")
     return outputs
 
 

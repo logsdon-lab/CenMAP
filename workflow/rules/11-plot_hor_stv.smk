@@ -103,6 +103,8 @@ rule plot_hor_stv:
         output_prefix=lambda wc, output: os.path.splitext(output.plots[0])[0],
         json_file_str=lambda wc, input: json.dumps(dict(input)),
         options=lambda wc: f"--options '{json.dumps({"hor":{"color_map_file": os.path.abspath(config["plot_hor_stv"]["stv_annot_colors"])}})}'",
+        omit_if_empty=lambda wc: "--omit_if_any_empty" if wc.typ == "complete" else "",
+        ref_ax_idx="--ref_ax_idx 1",
     log:
         join(PLT_HOR_STV_LOGDIR, "plot_{chr}_hor_stv_{typ}.log"),
     conda:

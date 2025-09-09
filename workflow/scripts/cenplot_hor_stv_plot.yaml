@@ -6,19 +6,19 @@ settings:
     - 1.5
   axis_h_pad: 0.05
   dpi: 300
-  layout: tight
+  layout: constrained
   legend_prop: 0.2
   legend_pos: right
 tracks:
   - position: relative
-    proportion: 0.05
+    proportion: 0.005
     type: label
     path: "cdr"
     options:
       legend: false
       hide_x: true
   - position: relative
-    proportion: 0.4
+    proportion: 0.15
     type: label
     path: "rm"
     options:

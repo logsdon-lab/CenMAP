@@ -136,7 +136,7 @@ rule modify_moddotplot_cenplot_tracks:
     log:
         join(MODDOTPLOT_LOGDIR, "modify_moddotplot_cenplot_tracks_{chr}_{fname}.log"),
     params:
-        script=workflow.source_path("../scripts/format_cenplot_toml.py"),
+        script=workflow.source_path("../scripts/format_cenplot_yaml.py"),
         plot_layout=(
             workflow.source_path("../scripts/cenplot_moddotplot.yaml")
             if config["humas_annot"]["mode"] != "sf"

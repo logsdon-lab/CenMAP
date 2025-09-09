@@ -7,7 +7,7 @@ from io import BytesIO
 from typing import Any
 
 
-def format_toml_path(
+def format_yaml_path(
     infiles: dict[str, str],
     input_plot_layout: BytesIO,
     options: dict[str, Any],
@@ -86,7 +86,7 @@ def main():
     options: dict[str, dict[str, Any]] = (
         json.loads(args.options) if args.options else {}
     )
-    format_toml_path(
+    format_yaml_path(
         infiles=infiles,
         input_plot_layout=args.track_format,
         options=options,

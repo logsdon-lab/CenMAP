@@ -124,14 +124,14 @@ rule merge_cdr_beds:
         join - <(cat {input.bed} | sort -k1,1) | \
         awk -v OFS="\\t" '{{
             if ($2 >= $4 && $3 <= $5) {{
-                print $1":"$4"-"$5, $2,$3
+                print $1":"$4+1"-"$5, $2,$3
             }}
         }}' > {output.reorient_cdr_output}
         sort -k1,1 {input.methyl_cdr_output}  | \
         join - <(cat {input.bed} | sort -k1,1) | \
         awk -v OFS="\\t" '{{
             if ($2 >= $6 && $3 <= $7) {{
-                print $1":"$6"-"$7,$2,$3,$4,$5
+                print $1":"$6+1"-"$7,$2,$3,$4,$5
             }}
         }}' > {output.reorient_methyl_cdr_output}
         """

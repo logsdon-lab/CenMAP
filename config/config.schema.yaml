@@ -323,6 +323,10 @@ properties:
         type: number
         default: 0.1
         description: Legend proportion of plot. Increase if contig names long.
+      use_renamed_reoriented:
+        type: boolean
+        default: true
+        description: Use renamed and reoriented coordinates.
   cdr_finder:
     type: object
     additionalProperties: false

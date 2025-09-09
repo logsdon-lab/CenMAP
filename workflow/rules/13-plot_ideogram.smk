@@ -23,6 +23,11 @@ rule plot_ideogram:
         width=config["ideogram"]["width"],
         title=config["ideogram"]["title"],
         legend_prop=config["ideogram"]["legend_prop"],
+        use_renamed_reoriented=(
+            "--use_renamed_reoriented"
+            if config["ideogram"]["use_renamed_reoriented"]
+            else ""
+        ),
     log:
         join(IDEOGRAM_LOGDIR, "plot_{sm}_ideogram.log"),
     conda:
@@ -36,7 +41,8 @@ rule plot_ideogram:
         -t {params.title} \
         -ht {params.height} \
         -w {params.width} \
-        --legend_prop {params.legend_prop} 2> {log}
+        --legend_prop {params.legend_prop} \
+        {params.use_renamed_reoriented} 2> {log}
         """
 
 

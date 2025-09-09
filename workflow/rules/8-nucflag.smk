@@ -16,7 +16,7 @@ if config.get("humas_annot"):
 # Simplify RepeatMasker annotations
 # Convert coords from relative to absolute coords.
 # Add color specific for alpha-satellite.
-rule format_repeatmasker_to_overlay_bed:
+rule create_rm_overlay_bed:
     input:
         rm=rules.fix_cens_rm_out.output,
     output:
@@ -26,7 +26,7 @@ rule format_repeatmasker_to_overlay_bed:
             "{sm}_plot_rm.bed",
         ),
     log:
-        join(NUCFLAG_LOGDIR, "format_repeatmasker_to_overlay_bed_{sm}.log"),
+        join(NUCFLAG_LOGDIR, "create_rm_overlay_bed_{sm}.log"),
     params:
         color_alr_alpha="#8B008B",
     conda:
@@ -38,10 +38,6 @@ rule format_repeatmasker_to_overlay_bed:
 
             # Find contig coordinates
             match(name, "^(.+):", ctg_name);
-            match(name, ":(.+)-", ctg_start);
-            match(name, ".*-(.+)$", ctg_end);
-            new_start=start+ctg_start[1];
-            new_end=end+ctg_start[1];
 
             # Split repeat class and replace specific repeat types.
             split(rClass, split_rClass, "/" );
@@ -74,13 +70,13 @@ rule format_repeatmasker_to_overlay_bed:
             if (new_rClass == "ALR/Alpha") {{
                 action="plot:{params.color_alr_alpha}"
             }}
-            print ctg_name[1], new_start, new_end, new_rClass, action
+            print ctg_name[1], start, end, new_rClass, action
         }}' {input.rm} > {output} 2> {log}
         """
 
 
 # Convert stv_row bed to overlay bed with colors based on monomer len.
-rule format_stv_to_overlay_bed:
+rule create_stv_overlay_bed:
     input:
         stv=lambda wc: humas_annot_sm_outputs(wc) if config.get("humas_annot") else [],
         # else branch should never be reached.
@@ -95,9 +91,10 @@ rule format_stv_to_overlay_bed:
             "{sm}_plot_stv_row.bed",
         ),
     log:
-        join(NUCFLAG_LOGDIR, "format_stv_to_overlay_bed_{sm}.log"),
+        join(NUCFLAG_LOGDIR, "create_stv_overlay_bed_{sm}.log"),
     params:
         hor_mon_len=170,
+        stv=lambda wc, input: input.stv if input.stv else '<(echo "")',
     conda:
         "../envs/tools.yaml"
     shell:
@@ -114,15 +111,17 @@ rule format_stv_to_overlay_bed:
             stv_color=stv_colors[num_mon]
             if (stv_color == "") {{ stv_color="gray"; }}
             print ctg_name[1], st, end, num_mon, "plot:"stv_color
-        }}' {input.annot_colors} {input.stv} > {output} 2> {log}
+        }}' {input.annot_colors} {params.stv} > {output} 2> {log}
         """
 
 
 # Create bedfile that only looks at regions annotated as ALR/Alpha and ignores everything else.
+# We also ignored unannotated regions and scaffolds at the edges.
 # Also add ignore bed if provided.
-rule format_rm_nucflag_ignore_bed:
+rule create_rm_nucflag_ignore_bed:
     input:
-        bed=rules.format_repeatmasker_to_overlay_bed.output,
+        rm=rules.create_rm_overlay_bed.output,
+        bed=ancient(rules.make_complete_cens_bed.output.cen_bed),
         ignore_bed=(
             config["nucflag"]["ignore_regions"]
             if config["nucflag"].get("ignore_regions")
@@ -131,10 +130,10 @@ rule format_rm_nucflag_ignore_bed:
     output:
         join(
             NUCFLAG_OUTDIR,
-            "{sm}_correct_ALR_regions.rm.simple.bed",
+            "{sm}_ignore_non_asat.bed",
         ),
     params:
-        script=workflow.source_path("../scripts/simplify_rm_coords.py"),
+        script=workflow.source_path("../scripts/create_rm_nucflag_ignore_bed.py"),
         # Concatenate ignore bed.
         ignore_bed=lambda wc, input: (
             f"| cat - {input.ignore_bed}" if input.ignore_bed else ""
@@ -142,16 +141,16 @@ rule format_rm_nucflag_ignore_bed:
     conda:
         "../envs/py.yaml"
     log:
-        join(NUCFLAG_LOGDIR, "simplify_rm_overlay_bed_{sm}.log"),
+        join(NUCFLAG_LOGDIR, "create_rm_nucflag_ignore_bed_{sm}.log"),
     shell:
         """
-        python {params.script} -i {input.bed} {params.ignore_bed} > {output} 2> {log}
+        python {params.script} -i {input.rm} -r {input.bed} {params.ignore_bed} > {output} 2> {log}
         """
 
 
 # Create bedfile that only looks at live HOR and ignores everything else.
 # Also add ignore bed if provided.
-rule format_stv_nucflag_ignore_bed:
+rule create_stv_nucflag_ignore_bed:
     input:
         stv=lambda wc: humas_annot_sm_outputs(wc) if config.get("humas_annot") else [],
         bed=ancient(rules.make_complete_cens_bed.output.cen_bed),
@@ -163,7 +162,7 @@ rule format_stv_nucflag_ignore_bed:
     output:
         join(
             NUCFLAG_OUTDIR,
-            "{sm}_ignore_stv_row.bed",
+            "{sm}_ignore_non_live_asat.bed",
         ),
     params:
         bp_annot_gap_thr=1,
@@ -171,6 +170,7 @@ rule format_stv_nucflag_ignore_bed:
         ignore_bed=lambda wc, input: (
             f"| cat - {input.ignore_bed}" if input.ignore_bed else ""
         ),
+        stv=lambda wc, input: input.stv if input.stv else '<(echo "")',
     conda:
         "../envs/tools.yaml"
     log:
@@ -181,7 +181,7 @@ rule format_stv_nucflag_ignore_bed:
         # Include annotation gaps greater than {params.bp_annot_gap_thr} bp.
         {{ bedtools subtract \
         -a {input.bed} \
-        -b <(cat {input.stv}) | \
+        -b <(cat {params.stv}) | \
         awk -v OFS="\\t" '{{
             len=$3-$2;
             if (len > {params.bp_annot_gap_thr}) {{
@@ -192,15 +192,12 @@ rule format_stv_nucflag_ignore_bed:
 
 
 IGNORE_TYPE = config["nucflag"].get("ignore_type")
-if IGNORE_TYPE == "asat":
-    ignore_regions = str(rules.format_rm_nucflag_ignore_bed.output)
-    overlay_beds = [str(rules.format_repeatmasker_to_overlay_bed.output)]
-elif config.get("humas_annot") and IGNORE_TYPE == "live_asat":
-    ignore_regions = [str(rules.format_stv_nucflag_ignore_bed.output)]
-    overlay_beds = [str(rules.format_stv_to_overlay_bed.output)]
+if config.get("humas_annot") and IGNORE_TYPE == "live_asat":
+    ignore_regions = [str(rules.create_stv_nucflag_ignore_bed.output)]
+    overlay_beds = [str(rules.create_stv_overlay_bed.output)]
 else:
-    ignore_regions = str(rules.format_rm_nucflag_ignore_bed.output)
-    overlay_beds = [str(rules.format_repeatmasker_to_overlay_bed.output)]
+    ignore_regions = str(rules.create_rm_nucflag_ignore_bed.output)
+    overlay_beds = [str(rules.create_rm_overlay_bed.output)]
 
 NUCFLAG_CFG = {
     "samples": [

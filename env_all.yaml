@@ -21,7 +21,7 @@ dependencies:
 - stringdecomposer
 - pip:
   - snakemake==9.5.0
-  - cenplot==0.1.3
+  - cenplot==0.1.4
   - censtats==0.0.13
   - git+https://github.com/marbl/ModDotPlot.git@v0.8.4
   - intervaltree

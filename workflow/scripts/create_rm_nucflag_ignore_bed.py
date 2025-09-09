@@ -5,7 +5,8 @@ import polars as pl
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("-i", "--input", default=sys.stdin, type=argparse.FileType("rb"))
+    ap.add_argument("-i", "--input", required=True, type=argparse.FileType("rb"))
+    ap.add_argument("-r", "--regions", required=True, type=argparse.FileType("rb"))
     ap.add_argument("-o", "--output", default=sys.stdout, type=argparse.FileType("wt"))
 
     args = ap.parse_args()
@@ -15,10 +16,36 @@ def main():
         has_header=False,
         separator="\t",
     )
+    df_regions = pl.read_csv(
+        args.regions,
+        new_columns=["name", "start", "stop"],
+        columns=[0, 1, 2],
+        has_header=False,
+        separator="\t",
+    )
 
     dfs = []
     for name, df_grp in df.group_by(["name"]):
         name = name[0]
+
+        # Get whole region
+        region_name, region_st, region_stop = df_regions.filter(
+            pl.col("name") == name
+        ).row(0)
+        # Get annotated region
+        annotated_st, annotated_stop = df_grp["start"].min(), df_grp["stop"].max()
+
+        edge_rows = []
+        if annotated_st > region_st:
+            edge_rows.append(
+                (region_name, region_st, annotated_st, "Other", "ignore:absolute")
+            )
+        if region_stop > annotated_stop:
+            edge_rows.append(
+                (region_name, annotated_stop, region_stop, "Other", "ignore:absolute")
+            )
+
+        # Ignore unannotated regions. This should be okay because scaffolded contigs will be removed by sh entropy step.
         df_grp = (
             df_grp.with_columns(
                 pl.when(pl.col("rtype") == "ALR/Alpha")
@@ -54,26 +81,11 @@ def main():
                 .then(pl.col("action").str.replace("ignore:absolute", "", literal=True))
                 .otherwise(pl.col("action"))
             )
+            .filter(pl.col("action") != "")
             .drop("rle_id", "len")
         )
-        # Fill in gaps with no annotation with nulls.
-        df_no_annotation = (
-            df_grp.with_columns(diff=pl.col("start").shift(-1) - pl.col("stop"))
-            .select(
-                name=pl.lit(name),
-                # Any set of rows where diff from first and second row is greater than 1 bp.
-                start=pl.when(pl.col("diff") > 1)
-                .then(pl.col("stop") + 1)
-                .otherwise(None),
-                stop=pl.when(pl.col("diff") > 1)
-                .then(pl.col("start").shift(-1) - 1)
-                .otherwise(None),
-                rtype=pl.lit(None),
-                action=pl.lit(None),
-            )
-            .drop_nulls()
-        )
-        dfs.append(pl.concat([df_grp, df_no_annotation]).sort(by="start"))
+        df_unannotated = pl.DataFrame(edge_rows, schema=df_grp.schema, orient="row")
+        dfs.append(pl.concat([df_grp, df_unannotated]).sort(by="start"))
 
     df_group_merged = pl.concat(dfs)
     df_group_merged.write_csv(args.output, separator="\t", include_header=False)

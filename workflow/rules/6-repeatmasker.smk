@@ -272,6 +272,8 @@ rule plot_og_rm_bed_by_chr:
         output_prefix=lambda wc, output: os.path.splitext(output.plots[0])[0],
         json_file_str=lambda wc, input: json.dumps(dict(input)),
         options="",
+        omit_if_empty="",
+        ref_ax_idx="--ref_ax_idx 0",
     log:
         join(RM_LOGDIR, "plot_og_rm_bed_{chr}.log"),
     conda:

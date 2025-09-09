@@ -41,7 +41,7 @@ A centromere mapping and annotation pipeline for T2T human and primate genome as
   </tr>
 </table>
 
-### [Usage](https://github.com/logsdon-lab/CenMAP/wiki/4.-Usage)
+### [Quickstart](https://github.com/logsdon-lab/CenMAP/wiki/4.-Usage)
 
 ```bash
 conda install bioconda::cenmap
@@ -51,8 +51,8 @@ For a single assembly:
 ```bash
 # Find centromeres in human samples.
 cenmap -i asm*.fa.gz -s HG002
-# Find centromeres in primate samples.
-cenmap -i asm*.fa.gz -s mPanTro3 --mode primate
+# Find centromeres in non-human primate samples.
+cenmap -i asm*.fa.gz -s mPanTro3 --mode nhp
 # Find centromeres and validate with nucflag.
 cenmap -i asm*.fa.gz -s HG002 --hifi hifi*.fq.gz
 # Find centromeres and determine centromere dip regions.
@@ -66,6 +66,8 @@ For multiple assemblies:
 # Create new config.
 cenmap --generate-config > example.yaml
 # Modify config parameters and include multiple samples.
+# ...
+# Then run.
 cenmap --config example.yaml
 ```
 

@@ -1,4 +1,4 @@
-.PHONY: conda update_submodules docker_local singularity_local docker_local_upload dockerfile
+.PHONY: conda conda_all update_submodules docker_local singularity_local docker_local_upload dockerfile
 
 ORG := "logsdonlab"
 PROJECT_NAME := "cenmap"

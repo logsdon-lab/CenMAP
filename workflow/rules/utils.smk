@@ -31,7 +31,7 @@ shell_plot_multiple_cen = """
     -i '{params.json_file_str}' \
     -t {params.plot_layout} \
     -o {params.output_prefix} \
-    {params.options} || true ;}} 2> {log}
+    {params.options} {params.omit_if_empty} {params.ref_ax_idx} || true ;}} 2> {log}
     touch {output.plots}
 """
 

@@ -79,15 +79,15 @@ def make_config(args: argparse.Namespace, template_config: str) -> str:
     if hifi_files:
         hifi_dir = os.path.join(data_dir, "hifi")
         hifi_fofn = os.path.join(hifi_dir, f"{sample}.fofn")
-        symlink_files(hifi_files, hifi_dir, hifi_fofn)
+        symlink_files(hifi_files, os.path.join(hifi_dir, sample), hifi_fofn)
         cfg["nucflag"]["input_hifi_reads_fofn_dir"] = hifi_dir
     else:
         cfg.pop("nucflag")
 
     # cdr_finder
     if ont_files:
-        ont_dir = os.path.join(data_dir, "ont", sample)
-        symlink_files(ont_files, ont_dir)
+        ont_dir = os.path.join(data_dir, "ont")
+        symlink_files(ont_files, os.path.join(ont_dir, sample))
         cfg["cdr_finder"]["input_bam_dir"] = ont_dir
     else:
         cfg.pop("cdr_finder")
@@ -118,10 +118,14 @@ def make_config(args: argparse.Namespace, template_config: str) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(
-        description="Centromere mapping and annotation pipeline."
+        description="(Cen)tromere (M)apping and (A)nnotation (P)ipeline."
     )
-    group = ap.add_mutually_exclusive_group(required=True)
-    group.add_argument(
+    group_data = ap.add_argument_group(
+        title="Data", description="Input data arguments."
+    )
+
+    group_infiles = group_data.add_mutually_exclusive_group(required=True)
+    group_infiles.add_argument(
         "-i",
         "--infiles",
         type=str,
@@ -129,57 +133,81 @@ def main() -> int:
         nargs="+",
         help="Input assembly files for one sample. Supports fasta, fasta.gz, fa, or fa.gz.",
     )
-    group.add_argument(
+    group_infiles.add_argument(
         "-c",
         "--config",
         type=str,
         help="Input configfile. If provided, other arguments are ignored. Allows submission of multiple samples or parameter tuning.",
     )
-    group.add_argument(
+    group_infiles.add_argument(
         "-g",
         "--generate-config",
         dest="generate_config",
         action="store_true",
         help="Generate template configfile.",
     )
-    ap.add_argument(
+    group_data.add_argument(
         "--hifi",
         type=str,
         nargs="*",
-        help="Input PacBio HiFi reads for assembly evaluation with NucFlag. Supports BAM, CRAM, gzipped fastq/fasta.",
+        help="Input PacBio HiFi reads for assembly evaluation with NucFlag. Supports BAM, CRAM, or gzipped/gunzipped fastq/fasta files.",
     )
-    ap.add_argument(
+    group_data.add_argument(
         "--ont",
         type=str,
         nargs="*",
         help="Input ONT reads with MM and ML tags for CDR detection. Supports BAM only.",
     )
-    ap.add_argument("-s", "--sample", type=str, default=None, help="Sample name.")
-    ap.add_argument(
+
+    group_config = ap.add_argument_group(
+        title="Configuration", description="Configuration arguments."
+    )
+    group_config.add_argument(
+        "-s", "--sample", type=str, default=None, help="Sample name."
+    )
+    group_config.add_argument(
         "--chromosomes",
         type=str,
         nargs="+",
         default=CHRS,
         help="Chromosomes to aggregate outputs. Format: chr[0-9XY]+",
     )
-    ap.add_argument(
+    group_config.add_argument(
+        "-m",
+        "--mode",
+        default="human",
+        choices=["human", "nhp"],
+        help="Species of sample. Either 'human' or non-human primate ('nhp').",
+    )
+    group_config.add_argument(
         "--output-dir", dest="output_dir", default="results", help="Output directory."
     )
-    ap.add_argument("--log-dir", dest="log_dir", default="logs", help="Log directory.")
-    ap.add_argument(
+    group_config.add_argument(
+        "--log-dir", dest="log_dir", default="logs", help="Log directory."
+    )
+    group_config.add_argument(
         "--benchmark-dir",
         dest="benchmark_dir",
         default="benchmarks",
         help="Benchmark directory.",
     )
-    ap.add_argument(
-        "--mode",
-        default="human",
-        choices=["human", "primate"],
-        help="Species of sample.",
+    group_processes = group_config.add_mutually_exclusive_group(required=True)
+    group_processes.add_argument(
+        "-p", "--processes", help="Number of processes to run."
     )
-    ap.add_argument("-p", "--processes", default=32, help="Number of processes to run.")
-    ap.add_argument(
+    group_processes.add_argument(
+        "-j",
+        "--jobs",
+        help="Number of jobs to run. Requires setting --workflow-profile and one of the snakemake cluster plugins.",
+    )
+
+    group_config.add_argument(
+        "--workflow-profile",
+        dest="workflow_profile",
+        default=None,
+        help="Custom workflow profile for snakemake.",
+    )
+    group_config.add_argument(
         "--snake-opts",
         dest="snake_opts",
         default=None,
@@ -220,21 +248,38 @@ def main() -> int:
         new_config = make_config(args, CFG)
         print(f"Generated configfile:\n\t{new_config}", file=sys.stderr)
 
-    profile = os.path.join(WD, "workflow/profiles/all")
+    if not args.workflow_profile:
+        profile = os.path.join(WD, "workflow/profiles/all")
+    else:
+        profile = args.workflow_profile
+
+    if args.processes:
+        process_args = ["-c", str(args.processes)]
+    else:
+        assert args.workflow_profile is not None, (
+            "Flag --workflow-profile is required to run on a cluster."
+        )
+        process_args = ["-j", str(args.jobs)]
+
     cmd = [
         "snakemake",
         "--configfile",
         new_config,
-        "-c",
-        str(args.processes),
+        *process_args,
         "--workflow-profile",
         profile,
     ]
     if args.snake_opts:
-        cmd.append(args.snake_opts)
+        cmd.extend(args.snake_opts.split(" "))
 
     print(f"Running command:\n\t{' '.join(cmd)}", file=sys.stderr)
     subprocess.run(cmd, check=True)
+
+    print("Cleaning up temp files.", file=sys.stderr)
+    subprocess.run(
+        ["snakemake", "--configfile", new_config, "--delete-temp-output"],
+        check=True,
+    )
 
     print("Finished!", file=sys.stderr)
     return 0

@@ -49,6 +49,11 @@ def main():
         default=None,
     )
     ap.add_argument(
+        "--omit_if_any_empty",
+        action="store_true",
+        help="Omit track if any file is empty.",
+    )
+    ap.add_argument(
         "--keep_tempfiles",
         action="store_true",
         help="Keep files used to generate config.",
@@ -76,20 +81,47 @@ def main():
         else:
             raise ValueError(f"Unexpected type for {files}")
         for file in files:
-            df = pl.read_csv(file, separator="\t", has_header=False)
+            try:
+                df = pl.read_csv(file, separator="\t", has_header=False)
+            except pl.exceptions.NoDataError:
+                continue
             for prt, df_chrom in df.partition_by(["column_1"], as_dict=True).items():
                 chrom = prt[0]
                 fpath = os.path.join(outdir, f"{chrom}_{dtype}.bed")
                 df_chrom.write_csv(fpath, separator="\t", include_header=False)
                 bed_files[chrom][dtype] = fpath
 
+    spacer_track = {
+        "position": "relative",
+        "proportion": 0.01,
+        "type": "spacer",
+    }
+
+    idx = 0
     tracks = []
+    ref_indices = []
+    missing_chroms = set()
     for chrom, dtype_bedfiles in bed_files.items():
-        for trk in track_format["tracks"]:
+        for i, trk in enumerate(track_format["tracks"]):
             dtype = trk["path"]
             bed_file = dtype_bedfiles.get(dtype)
-            if not isinstance(bed_file, str):
-                print(f"No data for {dtype}.", file=sys.stderr)
+            takes_space = trk.get("proportion")
+            has_data = isinstance(bed_file, str)
+
+            if takes_space:
+                if i == args.ref_ax_idx:
+                    ref_indices.append(idx)
+                idx += 1
+
+            if not has_data:
+                print(f"No data for {chrom} {dtype}.", file=sys.stderr)
+                # Add spacer if data not present.
+                if takes_space:
+                    spacer = copy.deepcopy(spacer_track)
+                    spacer["proportion"] = trk["proportion"]
+                    tracks.append(spacer)
+
+                missing_chroms.add(chrom)
                 continue
 
             new_trk = copy.deepcopy(trk)
@@ -108,16 +140,11 @@ def main():
         "type": "position",
         "options": {"hide_x": False},
     }
-    spacer_track = {
-        "position": "relative",
-        "proportion": 0.01,
-        "type": "spacer",
-    }
     legend_track = {
         "position": "relative",
         "proportion": 0.25,
         "type": "legend",
-        "options": {"index": args.ref_ax_idx, "legend_ncols": 10},
+        "options": {"index": ref_indices, "legend_ncols": 10},
     }
     tracks.append(position_track)
     tracks.append(copy.deepcopy(spacer_track))
@@ -136,15 +163,24 @@ def main():
 
     with open(cfg, "rb") as fh:
         tracks, settings = read_tracks(fh)
+        final_tracks = []
         for track in tracks.tracks:
-            if track.data.is_empty():
-                continue
-            # Update legend title.
-            chrom = track.data["chrom"].first()
-            if hasattr(track.options, "legend_title"):
-                track.options.legend_title = chrom
+            if not track.data.is_empty():
+                # Update legend title.
+                chrom = track.data["chrom"].first()
+                if chrom in missing_chroms and args.omit_if_any_empty:
+                    continue
+
+                if hasattr(track.options, "legend_title"):
+                    track.options.legend_title = chrom
+
+            final_tracks.append(track)
+
+        if not final_tracks:
+            raise RuntimeError("No tracks to plot.")
+
         _ = plot_tracks(
-            tracks=tracks.tracks, settings=settings, outdir=outdir, chrom=bname
+            tracks=final_tracks, settings=settings, outdir=outdir, chrom=bname
         )
 
     if not args.keep_tempfiles:

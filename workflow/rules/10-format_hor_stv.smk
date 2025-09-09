@@ -16,6 +16,8 @@ checkpoint aggregate_format_all_stv_row:
         join(FMT_HOR_STV_LOGDIR, "aggregate_format_all_stv_row_{chr}.log"),
     conda:
         "../envs/tools.yaml"
+    params:
+        inputs=lambda wc, input: input if input else '<(echo "")',
     shell:
         """
         {{ awk -v OFS="\\t" '{{
@@ -31,7 +33,7 @@ checkpoint aggregate_format_all_stv_row:
             $7=$7+starts[1];
             $8=$8+starts[1];
             print
-        }}' {input} | \
+        }}' {params.inputs} | \
         grep -P "{wildcards.chr}[_:-]" || true ;}} > {output} 2> {log}
         """
 

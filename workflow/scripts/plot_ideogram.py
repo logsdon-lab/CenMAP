@@ -79,6 +79,11 @@ def main():
         help="Width of plot",
     )
     ap.add_argument("--legend_prop", type=float, default=0.1, help="Legend proportion.")
+    ap.add_argument(
+        "--use_renamed_reoriented",
+        action="store_true",
+        help="Reorient relative to reference.",
+    )
     args = ap.parse_args()
 
     try:
@@ -110,9 +115,18 @@ def main():
             print(f"Missing {contig} in genome sizes. Skipping.", file=sys.stderr)
             continue
 
+        if args.use_renamed_reoriented:
+            added_cmds = {
+                "chrom_st": pl.col("chrom_tst"),
+                "chrom_end": pl.col("chrom_tend"),
+            }
+            contig = df_grp["name"].first()
+        else:
+            added_cmds = {}
+
         # Set color to red.
         # item_rgb doesn't get set unless map_value_colors is called.
-        df_grp = df_grp.with_columns(color=pl.lit(args.color_cen))
+        df_grp = df_grp.with_columns(color=pl.lit(args.color_cen), **added_cmds)
 
         # Make row for whole contig.
         row_ctg = df_grp.row(0, named=True)
