@@ -7,6 +7,7 @@ import argparse
 import subprocess
 from typing import Any, Iterable
 
+__version__ = "1.0.0"
 
 WD = os.path.dirname(__file__)
 CFG = os.path.join(WD, "config", "config_template.yaml")
@@ -124,10 +125,10 @@ def main() -> int:
         title="Data", description="Input data arguments."
     )
 
-    group_infiles = group_data.add_mutually_exclusive_group(required=True)
+    group_infiles = group_data.add_mutually_exclusive_group()
     group_infiles.add_argument(
         "-i",
-        "--infiles",
+        "--input-asm",
         type=str,
         dest="input_asm",
         nargs="+",
@@ -139,12 +140,12 @@ def main() -> int:
         type=str,
         help="Input configfile. If provided, other arguments are ignored. Allows submission of multiple samples or parameter tuning.",
     )
-    group_infiles.add_argument(
+    ap.add_argument(
         "-g",
         "--generate-config",
         dest="generate_config",
         action="store_true",
-        help="Generate template configfile.",
+        help="Generate template configfile for --config.",
     )
     group_data.add_argument(
         "--hifi",
@@ -157,6 +158,16 @@ def main() -> int:
         type=str,
         nargs="*",
         help="Input ONT reads with MM and ML tags for CDR detection. Supports BAM only.",
+    )
+    group_data.add_argument(
+        "--reference",
+        type=str,
+        default=None,
+        help=(
+            "Path to reference assembly used to rename and reorient contigs. "
+            "Defaults to CHM13 v2.0 and assumes contig names are exact matches to --chromosomes. "
+            "Avoid changing unless you know what you're doing."
+        ),
     )
 
     group_config = ap.add_argument_group(
@@ -179,39 +190,50 @@ def main() -> int:
         choices=["human", "nhp"],
         help="Species of sample. Either 'human' or non-human primate ('nhp').",
     )
-    group_config.add_argument(
+    wf_config = ap.add_argument_group(
+        title="Workflow", description="Workflow configuration arguments."
+    )
+    wf_config.add_argument(
         "--output-dir", dest="output_dir", default="results", help="Output directory."
     )
-    group_config.add_argument(
+    wf_config.add_argument(
         "--log-dir", dest="log_dir", default="logs", help="Log directory."
     )
-    group_config.add_argument(
+    wf_config.add_argument(
         "--benchmark-dir",
         dest="benchmark_dir",
         default="benchmarks",
         help="Benchmark directory.",
     )
-    group_processes = group_config.add_mutually_exclusive_group(required=True)
+    group_processes = wf_config.add_mutually_exclusive_group()
     group_processes.add_argument(
-        "-p", "--processes", help="Number of processes to run."
+        "-p", "--processes", default=24, help="Number of processes to run."
     )
     group_processes.add_argument(
         "-j",
         "--jobs",
+        default=24,
         help="Number of jobs to run. Requires setting --workflow-profile and one of the snakemake cluster plugins.",
     )
 
-    group_config.add_argument(
+    wf_config.add_argument(
         "--workflow-profile",
         dest="workflow_profile",
         default=None,
         help="Custom workflow profile for snakemake.",
     )
-    group_config.add_argument(
+    wf_config.add_argument(
         "--snake-opts",
         dest="snake_opts",
         default=None,
         help="Additional snakemake options.",
+    )
+    ap.add_argument(
+        "-v",
+        "--version",
+        action="version",
+        help="Show version and exit.",
+        version=f"{__version__}",
     )
     args = ap.parse_args()
 

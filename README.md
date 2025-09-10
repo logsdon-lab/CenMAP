@@ -24,7 +24,7 @@ A centromere mapping and annotation pipeline for T2T human and primate genome as
     </td>
     <td rowspan="2">
       <figure>
-        <img src="docs/ideogram.png" width="80%">
+        <img src="docs/ideogram.png" height="100%">
         <br>
         <figcaption>Ideogram</figcaption>
       </figure>
@@ -78,8 +78,8 @@ cenmap --config example.yaml
 
 ### [Output](https://github.com/logsdon-lab/CenMAP/wiki/5.-Output)
 * Complete and correctly assembled centromere sequences and their regions validated by [`NucFlag`](https://github.com/logsdon-lab/NucFlag).
-* Centromere alpha-satellite higher order repeat (HOR) array lengths via [`censtats`](https://github.com/logsdon-lab/CenStats).
-* [`RepeatMasker`](https://www.repeatmasker.org/) and [`HumAS-SD`](https://github.com/logsdon-lab/Snakemake-HumAS-SD) alpha-satellite HOR monomer annotations and plots.
+* Centromere α-satellite higher order repeat (HOR) array lengths via [`censtats`](https://github.com/logsdon-lab/CenStats).
+* [`RepeatMasker`](https://www.repeatmasker.org/) and [`HumAS-SD`](https://github.com/logsdon-lab/Snakemake-HumAS-SD) α-satellite HOR monomer of SF annotations and plots.
 * [`ModDotPlot`](https://github.com/marbl/ModDotPlot) sequence identity plots.
 * Combined sequence identity and HOR array structure plots via [`cenplot`](https://github.com/logsdon-lab/cenplot).
 * (Optional) Centromere dip region (CDRs) with [`CDR-Finder`](https://github.com/koisland/CDR-Finder)
