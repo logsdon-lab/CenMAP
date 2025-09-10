@@ -50,7 +50,12 @@ def main():
     ax.set_ylim(0, 100)
 
     # Mean
-    mean_perc = round(df_plot["perc"].mean())
+    mean_perc = df_plot["perc"].mean()
+    if mean_perc:
+        mean_perc = round(mean_perc)
+    else:
+        mean_perc = 0.0
+
     ax.axhline(mean_perc, linestyle="dotted", color="black")
     yticks, ytick_labels = ax.get_yticks(), ax.get_yticklabels()
     # Add mean ytick.

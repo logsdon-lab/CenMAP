@@ -211,7 +211,7 @@ rule create_ref_rm_bed:
             "rm_ref.bed",
         ),
     params:
-        chr_rgx="{chr}[:_]",
+        chr_rgx="{chr}[:_-]",
         color_mapping=config["repeatmasker"]["repeat_colors"],
         script=workflow.source_path("../scripts/create_rm_bed.py"),
         to_abs="--to_abs",
@@ -234,7 +234,7 @@ rule create_sm_rm_bed:
             "rm_sm.bed",
         ),
     params:
-        chr_rgx="{chr}[:_]",
+        chr_rgx="{chr}[:_-]",
         color_mapping=config["repeatmasker"]["repeat_colors"],
         script=workflow.source_path("../scripts/create_rm_bed.py"),
         to_abs="--to_abs",

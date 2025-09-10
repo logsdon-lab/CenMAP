@@ -10,44 +10,11 @@ jobs:
         shell: bash -el {0}
     steps:
     # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
-    - name: Delete huge unnecessary tools folder
-      run: rm -rf /opt/hostedtoolcache
-
-    - name: Checkout directory.
-      uses: actions/checkout@v3
+    - name: Setup env.
+      uses: ./.github/workflows/setup_conda.yml
       with:
-        submodules: 'recursive'
-        lfs: 'true'
-
-    - name: Setup Miniforge.
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        miniforge-version: latest
-        activate-environment: dev
-
-    - name: Get date.
-      id: get-date
-      run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
-      shell: bash
-
-    - name: Cache conda env.
-      uses: actions/cache@v3
-      with:
-        path: ${{ env.CONDA }}/envs
-        key:
-          conda-${{ runner.os }}--${{ runner.arch }}--${{
-          steps.get-date.outputs.today }}-${{
-          hashFiles('test/env_dev.yaml') }}-${{ env.CACHE_NUMBER }}
-      env:
-        # Increase this value to reset cache if etc/example-environment.yml has not changed
-        CACHE_NUMBER: 0
-      id: cache
-
-    - name: Update environment.
-      run:
-        conda env update -n dev -f test/env_dev.yaml
-      if: steps.cache.outputs.cache-hit != 'true'
-
+          env-name: dev
+          env-file: test/env_dev.yaml
     - name: Test scripts.
       run: |
         pytest test/ -vvv
@@ -68,6 +35,18 @@ jobs:
         --workflow-profile none \
         --configfile test/config/config_primates.yaml
 
+  test_workflow_chm13_chrY:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+    # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
+    - name: Setup env.
+      uses: ./.github/workflows/setup_conda.yml
+      with:
+          env-name: dev
+          env-file: test/env_dev.yaml
     - name: Test chrY workflow.
       run: |
         snakemake -c 4 -p \
@@ -77,50 +56,40 @@ jobs:
         --show-failed-logs \
         --conda-cleanup-pkgs cache \
         --conda-frontend conda
-  test_wrapper:
+
+  test_workflow_mGorGor1:
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash -el {0}
     steps:
     # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
-    - name: Delete huge unnecessary tools folder
-      run: rm -rf /opt/hostedtoolcache
-
-    - name: Checkout directory.
-      uses: actions/checkout@v3
+    - name: Setup env.
+      uses: ./.github/workflows/setup_conda.yml
       with:
-        submodules: 'recursive'
-        lfs: 'true'
+          env-name: dev
+          env-file: test/env_dev.yaml
+    - name: Test chrY workflow.
+      run: |
+        snakemake -c 4 -p \
+        --workflow-profile none \
+        --configfile test/config/config_mGorGor1.yaml \
+        --sdm conda \
+        --show-failed-logs \
+        --conda-cleanup-pkgs cache \
+        --conda-frontend conda
 
-    - name: Setup Miniforge.
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        miniforge-version: latest
-        activate-environment: cenmap
-
-    - name: Get date.
-      id: get-date
-      run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
-      shell: bash
-
-    - name: Cache conda env.
-      uses: actions/cache@v3
-      with:
-        path: ${{ env.CONDA }}/envs
-        key:
-          conda-${{ runner.os }}--${{ runner.arch }}--${{
-          steps.get-date.outputs.today }}-${{
-          hashFiles('env_all.yaml') }}-${{ env.CACHE_NUMBER }}
-      env:
-        # Increase this value to reset cache if etc/example-environment.yml has not changed
-        CACHE_NUMBER: 0
-      id: cache
-
-    - name: Update environment.
+  test_wrapper:
+    runs-on: ubuntu-latest
+    defaults:
       run:
-        conda env update -n cenmap -f env_all.yaml
-      if: steps.cache.outputs.cache-hit != 'true'
+        shell: bash -el {0}
+    steps:
+    - name: Setup env.
+      uses: ./.github/workflows/setup_conda.yml
+      with:
+          env-name: cenmap
+          env-file: test/env_all.yaml
 
     - name: Test chrY workflow.
       # TODO: Change to bioconda script later.

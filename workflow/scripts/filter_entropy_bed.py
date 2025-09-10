@@ -170,7 +170,7 @@ def main():
                 valid_length += end - st
 
         if total_length > 0 and ((valid_length / total_length) > thr_valid_prop):
-            chrom, coords = chrom.split(":")
+            chrom, coords = chrom.rsplit(":", 1)
             st, end = coords.split("-")
             # Trim to repeats. Should be slopped afterwards.
             if args.trim_to_repeats:

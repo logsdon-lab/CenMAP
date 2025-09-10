@@ -70,6 +70,9 @@ def make_config(args: argparse.Namespace, template_config: str) -> str:
 
     update_relative_to_wd(cfg)
 
+    if args.reference:
+        cfg["ident_cen_ctgs"]["reference"] = args.reference
+
     # Symlink fasta, hifi, and ont files
     # concat_asm
     asm_dir = os.path.join(data_dir, "asm", sample)
@@ -295,7 +298,11 @@ def main() -> int:
         cmd.extend(args.snake_opts.split(" "))
 
     print(f"Running command:\n\t{' '.join(cmd)}", file=sys.stderr)
-    subprocess.run(cmd, check=True)
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError:
+        subprocess.run([*cmd, "--unlock"], check=True)
+        return -1
 
     print("Cleaning up temp files.", file=sys.stderr)
     subprocess.run(

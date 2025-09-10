@@ -18,6 +18,7 @@ checkpoint aggregate_format_all_stv_row:
         "../envs/tools.yaml"
     params:
         inputs=lambda wc, input: input if input else '<(echo "")',
+        chr_rgx="{chr}[:_-]",
     shell:
         """
         {{ awk -v OFS="\\t" '{{
@@ -34,7 +35,7 @@ checkpoint aggregate_format_all_stv_row:
             $8=$8+starts[1];
             print
         }}' {params.inputs} | \
-        grep -P "{wildcards.chr}[_:-]" || true ;}} > {output} 2> {log}
+        grep -P "{params.chr_rgx}" || true ;}} > {output} 2> {log}
         """
 
 
