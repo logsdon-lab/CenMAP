@@ -2,33 +2,44 @@ name: CI
 
 on: [push, pull_request]
 
+env:
+  ENV_DEV: test/env_dev.yaml
+  ENV_WRAPPER: env_all.yaml
+
 jobs:
-  test:
+  test_scripts_and_workflow_logic:
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash -el {0}
     steps:
-    # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
-    - name: Setup env.
-      uses: ./.github/workflows/setup_conda.yml
+    - name: Checkout directory.
+      uses: actions/checkout@v3
       with:
-          env-name: dev
-          env-file: test/env_dev.yaml
+        submodules: 'recursive'
+        lfs: 'true'
+    # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
+    - name: Delete huge unnecessary tools folder
+      run: rm -rf /opt/hostedtoolcache
+    - name: Setup Miniforge.
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        miniforge-version: latest
+        activate-environment: dev
+    - name: Update environment.
+      run:
+        conda env update -n dev -f ${{ env.ENV_DEV }}
     - name: Test scripts.
       run: |
         pytest test/ -vvv
-
     - name: Test can generate Dockerfile.
       run: |
         make dockerfile
-
     - name: Test dry-run workflow.
       run: |
         snakemake -c 2 -np \
         --workflow-profile none \
         --configfile test/config/config.yaml
-
     - name: Test primate SF workflow.
       run: |
         snakemake -c 2 -np \
@@ -41,12 +52,22 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-    # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
-    - name: Setup env.
-      uses: ./.github/workflows/setup_conda.yml
+    - name: Checkout directory.
+      uses: actions/checkout@v3
       with:
-          env-name: dev
-          env-file: test/env_dev.yaml
+        submodules: 'recursive'
+        lfs: 'true'
+    # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
+    - name: Delete huge unnecessary tools folder
+      run: rm -rf /opt/hostedtoolcache
+    - name: Setup Miniforge.
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        miniforge-version: latest
+        activate-environment: dev
+    - name: Update environment.
+      run:
+        conda env update -n dev -f ${{env.ENV_DEV }}
     - name: Test chrY workflow.
       run: |
         snakemake -c 4 -p \
@@ -57,18 +78,28 @@ jobs:
         --conda-cleanup-pkgs cache \
         --conda-frontend conda
 
-  test_workflow_mGorGor1:
+  test_workflow_mGorGor1_chr16:
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash -el {0}
     steps:
-    # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
-    - name: Setup env.
-      uses: ./.github/workflows/setup_conda.yml
+    - name: Checkout directory.
+      uses: actions/checkout@v3
       with:
-          env-name: dev
-          env-file: test/env_dev.yaml
+        submodules: 'recursive'
+        lfs: 'true'
+    # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
+    - name: Delete huge unnecessary tools folder
+      run: rm -rf /opt/hostedtoolcache
+    - name: Setup Miniforge.
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        miniforge-version: latest
+        activate-environment: dev
+    - name: Update environment.
+      run:
+        conda env update -n dev -f ${{ env.ENV_DEV }}
     - name: Test chrY workflow.
       run: |
         snakemake -c 4 -p \
@@ -79,18 +110,28 @@ jobs:
         --conda-cleanup-pkgs cache \
         --conda-frontend conda
 
-  test_wrapper:
+  test_workflow_wrapper:
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash -el {0}
     steps:
-    - name: Setup env.
-      uses: ./.github/workflows/setup_conda.yml
+    - name: Checkout directory.
+      uses: actions/checkout@v3
       with:
-          env-name: cenmap
-          env-file: test/env_all.yaml
-
+        submodules: 'recursive'
+        lfs: 'true'
+    # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
+    - name: Delete huge unnecessary tools folder
+      run: rm -rf /opt/hostedtoolcache
+    - name: Setup Miniforge.
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        miniforge-version: latest
+        activate-environment: cenmap
+    - name: Update environment.
+      run:
+        conda env update -n cenmap -f ${{ env.ENV_WRAPPER }}
     - name: Test chrY workflow.
       # TODO: Change to bioconda script later.
       run: |
