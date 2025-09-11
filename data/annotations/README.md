@@ -1,24 +1,24 @@
 # Annotations
 
-### Identification
-* `chm13_v2.0_monomeric_p-qarm_only.bed`
-    * Monomeric alpha-satellite regions in the p and q-arm of CHM13's centromere that uniquely map to a chromosome.
-    * If replacing CHM13 as the reference, one should align CHM13 to their new reference and liftover these coordinates to the new ref.
-
-### HumAS-HMMER
+### HumAS StV
 * `AS-HOR-vs-chm1_cens_v21.stv_row.all.bed`
     * HumAS-HMMER based stv annotations on chm1 reference.
-* `AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed`
+* `AS-HOR-vs-chm13_cens_v18.stv_row.all.bed`
     * HumAS-HMMER based stv annotations on chm13 reference.
 
+> Can be passed to `config["plot_hor_stv"]["ref_stv"]` for visualization.
+
 ### RepeatMasker
-* `cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out`
-    * RepeatMasker output of chm13 chrY.
 * `chm13_chm1_cens_v21.trimmed.fa.noheader.out`
-    * RepeatMasker output of chm1 and chm13 chromosomes.
-    * Missing chrY.
+    * RepeatMasker output of chm1 and chm13 chromosomes. Includes chrY.
     * No header.
 
-### Lengths
-* `chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed`
-    * chm13 HOR full array length with 500kbp added to ends.
+> Can be passed to `config["repeatmasker"]["ref_repeatmasker_output"]` for visualization.
+
+### Alpha-satellite HOR array lengths
+* `chm1_hor_length.tsv`
+    * chm1 reference alpha-satellite HOR lengths.
+* `chm13_hor_length.tsv`
+    * chm13 reference alpha-satellite HOR lengths.
+
+> Can be passed to `config["calculate_hor_length"]["ref_hor_lengths"]` for visualization.

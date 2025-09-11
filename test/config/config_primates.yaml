@@ -31,7 +31,6 @@ nucflag:
 repeatmasker:
   ref_repeatmasker_output:
   - data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
-  - data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   threads: 40
   repeat_colors: "config/repeatmasker_colors.json"
 

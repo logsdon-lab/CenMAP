@@ -185,12 +185,8 @@ properties:
         items:
           type: string
         description: >-
-          Path of repeatmasker outputs from reference assemblies.
-          Expected to be trimmed within 0.5-1 Mbp of bounds of alpha-satellite HOR array
-          and oriented from p arm to q arm.
-          Currently, only CHM13 is supported.
+          Path of repeatmasker outputs from reference assemblies. Used for visualization.
         default: [
-          data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out,
           data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
         ]
       bp_shannon_window:
@@ -247,7 +243,7 @@ properties:
         description: Path to reference HOR stv annotations to plot.
         default: [
           data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed,
-          data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed
+          data/annotations/AS-HOR-vs-chm13_cens_v18.stv_row.all.bed
         ]
       sat_annot_colors:
         type: string
