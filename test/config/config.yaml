@@ -38,7 +38,7 @@ repeatmasker:
 humas_annot:
   mode: "sd"
   threads: 4
-  hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
+  hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm.gz"
 
 plot_hor_stv:
   ref_stv:

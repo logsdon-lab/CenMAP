@@ -100,7 +100,7 @@ def make_config(args: argparse.Namespace, template_config: str) -> str:
     if mode == "human":
         cfg["humas_annot"]["mode"] = "sd"
         cfg["humas_annot"]["hmm_profile"] = os.path.join(
-            WD, "data/models/AS-HORs-hmmer3.4-071024.hmm"
+            WD, "data/models/AS-HORs-hmmer3.4-071024.hmm.gz"
         )
     else:
         cfg["humas_annot"]["mode"] = "sf"

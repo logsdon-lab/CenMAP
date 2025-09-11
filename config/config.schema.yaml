@@ -234,7 +234,7 @@ properties:
         default: 30GB
       hmm_profile:
         type: string
-        default: data/models/AS-HORs-hmmer3.4-071024.hmm
+        default: data/models/AS-HORs-hmmer3.4-071024.hmm.gz
         description: Path to hidden markov model profile used with HumAS-HMMER to use as HOR variant database.
   plot_hor_stv:
     type: object
