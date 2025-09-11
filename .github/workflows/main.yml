@@ -100,7 +100,7 @@ jobs:
     - name: Update environment.
       run:
         conda env update -n dev -f ${{ env.ENV_DEV }}
-    - name: Test chrY workflow.
+    - name: Test mGorGor1 chr16_hsa15 workflow.
       run: |
         snakemake -c 4 -p \
         --workflow-profile none \
@@ -132,7 +132,7 @@ jobs:
     - name: Update environment.
       run:
         conda env update -n cenmap -f ${{ env.ENV_WRAPPER }}
-    - name: Test chrY workflow.
+    - name: Test chrY workflow via cenmap wrapper script.
       # TODO: Change to bioconda script later.
       run: |
         ./cenmap \
