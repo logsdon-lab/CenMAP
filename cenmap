@@ -1,0 +1,318 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import yaml
+import argparse
+import subprocess
+from typing import Any, Iterable
+
+__version__ = "1.0.0"
+
+WD = os.path.dirname(__file__)
+CFG = os.path.join(WD, "config", "config_template.yaml")
+CHRS = [f"chr{c}" for c in [*range(1, 23), "X", "Y"]]
+
+
+def symlink_files(
+    files: Iterable[str], output_dir: str, output_fofn: str | None = None
+) -> None:
+    os.makedirs(output_dir, exist_ok=True)
+    symlinked_files = []
+    for file in files:
+        bname = os.path.basename(file)
+        symlinked_file = os.path.join(output_dir, bname)
+        try:
+            os.symlink(os.path.abspath(file), symlinked_file)
+        except FileExistsError:
+            pass
+        symlinked_file = os.path.join(output_dir, bname)
+        symlinked_files.append(symlinked_file)
+
+    if output_fofn:
+        with open(output_fofn, "wt") as fh:
+            for file in symlinked_files:
+                print(file, file=fh)
+
+
+def update_relative_to_wd(cfg: dict[str, Any]) -> None:
+    # Go through top-level paths and ensure relative to script.
+    for _, v in cfg.items():
+        if isinstance(v, dict):
+            for k2, v2 in v.items():
+                if isinstance(v2, str) and "/" in v2:
+                    v[k2] = os.path.join(WD, v2)
+
+
+def make_config(args: argparse.Namespace, template_config: str) -> str:
+    sample = args.sample
+    if not args.sample:
+        raise ValueError("Sample name is required.")
+
+    fasta_files = args.input_asm
+    ont_files = args.ont
+    hifi_files = args.hifi
+    chroms = args.chromosomes
+    mode = args.mode
+    output_dir = os.path.join(args.output_dir, sample)
+    data_dir = os.path.join(args.output_dir, sample, "0-symlink_inputs")
+    benchmark_dir = os.path.join(args.benchmark_dir, sample)
+    log_dir = os.path.join(args.log_dir, sample)
+    new_cfg = os.path.join(args.output_dir, sample, "config.yaml")
+    # Don't overwrite if exists.
+    if os.path.exists(new_cfg) and os.stat(new_cfg).st_size != 0:
+        return new_cfg
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    with open(template_config, "rt") as fh:
+        cfg: dict[str, Any] = yaml.safe_load(fh)
+
+    update_relative_to_wd(cfg)
+
+    if args.reference:
+        cfg["ident_cen_ctgs"]["reference"] = args.reference
+
+    # Symlink fasta, hifi, and ont files
+    # concat_asm
+    asm_dir = os.path.join(data_dir, "asm", sample)
+    symlink_files(fasta_files, asm_dir)
+    cfg["concat_asm"]["input_dir"] = os.path.dirname(asm_dir)
+
+    # nucflag
+    if hifi_files:
+        hifi_dir = os.path.join(data_dir, "hifi")
+        hifi_fofn = os.path.join(hifi_dir, f"{sample}.fofn")
+        symlink_files(hifi_files, os.path.join(hifi_dir, sample), hifi_fofn)
+        cfg["nucflag"]["input_hifi_reads_fofn_dir"] = hifi_dir
+    else:
+        cfg.pop("nucflag")
+
+    # cdr_finder
+    if ont_files:
+        ont_dir = os.path.join(data_dir, "ont")
+        symlink_files(ont_files, os.path.join(ont_dir, sample))
+        cfg["cdr_finder"]["input_bam_dir"] = ont_dir
+    else:
+        cfg.pop("cdr_finder")
+
+    # humas_annot
+    if mode == "human":
+        cfg["humas_annot"]["mode"] = "sd"
+        cfg["humas_annot"]["hmm_profile"] = os.path.join(
+            WD, "data/models/AS-HORs-hmmer3.4-071024.hmm.gz"
+        )
+    else:
+        cfg["humas_annot"]["mode"] = "sf"
+        cfg["humas_annot"]["hmm_profile"] = os.path.join(
+            WD, "data/models/AS-SFs-hmmer3.0.290621.hmm.gz"
+        )
+
+    # Create new config.
+    with open(new_cfg, "wt") as ofh:
+        cfg["output_dir"] = output_dir
+        cfg["log_dir"] = log_dir
+        cfg["benchmark_dir"] = benchmark_dir
+        cfg["samples"] = [sample]
+        cfg["chromosomes"] = chroms
+        yaml.safe_dump(cfg, ofh)
+
+    return new_cfg
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(
+        description="(Cen)tromere (M)apping and (A)nnotation (P)ipeline."
+    )
+    group_data = ap.add_argument_group(
+        title="Data", description="Input data arguments."
+    )
+
+    group_infiles = group_data.add_mutually_exclusive_group()
+    group_infiles.add_argument(
+        "-i",
+        "--input-asm",
+        type=str,
+        dest="input_asm",
+        nargs="+",
+        help="Input assembly files for one sample. Supports fasta, fasta.gz, fa, or fa.gz.",
+    )
+    group_infiles.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        help="Input configfile. If provided, other arguments are ignored. Allows submission of multiple samples or parameter tuning.",
+    )
+    ap.add_argument(
+        "-g",
+        "--generate-config",
+        dest="generate_config",
+        action="store_true",
+        help="Generate template configfile for --config.",
+    )
+    group_data.add_argument(
+        "--hifi",
+        type=str,
+        nargs="*",
+        help="Input PacBio HiFi reads for assembly evaluation with NucFlag. Supports BAM, CRAM, or gzipped/gunzipped fastq/fasta files.",
+    )
+    group_data.add_argument(
+        "--ont",
+        type=str,
+        nargs="*",
+        help="Input ONT reads with MM and ML tags for CDR detection. Supports BAM only.",
+    )
+    group_data.add_argument(
+        "--reference",
+        type=str,
+        default=None,
+        help=(
+            "Path to reference assembly used to rename and reorient contigs. "
+            "Defaults to CHM13 v2.0 and assumes contig names are exact matches to --chromosomes. "
+            "Avoid changing unless you know what you're doing."
+        ),
+    )
+
+    group_config = ap.add_argument_group(
+        title="Configuration", description="Configuration arguments."
+    )
+    group_config.add_argument(
+        "-s", "--sample", type=str, default=None, help="Sample name."
+    )
+    group_config.add_argument(
+        "--chromosomes",
+        type=str,
+        nargs="+",
+        default=CHRS,
+        help="Chromosomes to aggregate outputs. Format: chr[0-9XY]+",
+    )
+    group_config.add_argument(
+        "-m",
+        "--mode",
+        default="human",
+        choices=["human", "nhp"],
+        help="Species of sample. Either 'human' or non-human primate ('nhp').",
+    )
+    wf_config = ap.add_argument_group(
+        title="Workflow", description="Workflow configuration arguments."
+    )
+    wf_config.add_argument(
+        "--output-dir", dest="output_dir", default="results", help="Output directory."
+    )
+    wf_config.add_argument(
+        "--log-dir", dest="log_dir", default="logs", help="Log directory."
+    )
+    wf_config.add_argument(
+        "--benchmark-dir",
+        dest="benchmark_dir",
+        default="benchmarks",
+        help="Benchmark directory.",
+    )
+    group_processes = wf_config.add_mutually_exclusive_group()
+    group_processes.add_argument(
+        "-p", "--processes", default=24, help="Number of processes to run."
+    )
+    group_processes.add_argument(
+        "-j",
+        "--jobs",
+        default=24,
+        help="Number of jobs to run. Requires setting --workflow-profile and one of the snakemake cluster plugins.",
+    )
+
+    wf_config.add_argument(
+        "--workflow-profile",
+        dest="workflow_profile",
+        default=None,
+        help="Custom workflow profile for snakemake.",
+    )
+    wf_config.add_argument(
+        "--snake-opts",
+        dest="snake_opts",
+        default=None,
+        help="Additional snakemake options.",
+    )
+    ap.add_argument(
+        "-v",
+        "--version",
+        action="version",
+        help="Show version and exit.",
+        version=f"{__version__}",
+    )
+    args = ap.parse_args()
+
+    if args.config:
+        new_config = args.config
+        print(f"Using existing configfile:\n\t{new_config}", file=sys.stderr)
+    elif args.generate_config:
+        with open(CFG, "rt") as fh:
+            cfg: dict[str, Any] = yaml.safe_load(fh)
+            update_relative_to_wd(cfg)
+            cfg["samples"] = []
+            yaml.safe_dump(cfg, sys.stdout)
+            print(
+                "Printed template config to stdout! Update the following fields, comment optional blocks if desired, and add data before running:\n",
+                "1. concat_asm.input_dir\n",
+                " * REQUIRED\n",
+                " * ex. data/asm\n",
+                " * data: {concat_asm.input_dir}/{sm}/{asm}.[fa|fasta|fa.gz|fasta.gz])\n",
+                "2. samples\n",
+                " * REQUIRED\n",
+                " * ex. [HG002]\n",
+                "3. nucflag.input_hifi_reads_fofn_dir\n",
+                " * OPTIONAL\n",
+                " * ex. data/hifi\n",
+                " * data: {nucflag.input_hifi_reads_fofn_dir}/{sm}.fofn\n",
+                "4. cdr_finder.input_bam_dir\n",
+                " * OPTIONAL\n",
+                " * ex. data/ont/{sm}/{read}.bam\n",
+                " * data: {cdr_finder.input_bam_dir}/{sm}.fofn",
+                file=sys.stderr,
+            )
+            return 0
+    else:
+        new_config = make_config(args, CFG)
+        print(f"Generated configfile:\n\t{new_config}", file=sys.stderr)
+
+    if not args.workflow_profile:
+        profile = os.path.join(WD, "workflow/profiles/all")
+    else:
+        profile = args.workflow_profile
+
+    if args.processes:
+        process_args = ["-c", str(args.processes)]
+    else:
+        assert args.workflow_profile is not None, (
+            "Flag --workflow-profile is required to run on a cluster."
+        )
+        process_args = ["-j", str(args.jobs)]
+
+    cmd = [
+        "snakemake",
+        "--configfile",
+        new_config,
+        *process_args,
+        "--workflow-profile",
+        profile,
+    ]
+    if args.snake_opts:
+        cmd.extend(args.snake_opts.split(" "))
+
+    print(f"Running command:\n\t{' '.join(cmd)}", file=sys.stderr)
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError:
+        subprocess.run([*cmd, "--unlock"], check=True)
+        return -1
+
+    print("Cleaning up temp files.", file=sys.stderr)
+    subprocess.run(
+        ["snakemake", "--configfile", new_config, "--delete-temp-output"],
+        check=True,
+    )
+
+    print("Finished!", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

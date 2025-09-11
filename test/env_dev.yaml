@@ -6,6 +6,9 @@ dependencies:
   # Singularity removed for CI.
   - pip
   - pip:
-    - polars
+    - polars>=1.31.0
+    - intervaltree
+    - scipy
     - pytest
-    - snakemake==8.18.2
+    - snakemake==9.5.0
+    - conda-merge

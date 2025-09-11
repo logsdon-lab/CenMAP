@@ -19,7 +19,7 @@
         ```
 
 * `models/`
-    * Model for `dna-brnn`
+    * Model for `humas_annot`
 * `raw_data/`
     * Raw sequencing data for ONT/HIFI.
 * `reference/`

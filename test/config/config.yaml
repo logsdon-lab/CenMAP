@@ -4,26 +4,17 @@ samples:
 chromosomes:
   - "chr1"
 
-align_asm_to_ref:
-  reference: "data/reference/T2T-CHM13.fa.gz"
-  threads: 4
-  mem: 60GB
-
 concat_asm:
   input_dir: "test/data/assemblies"
 
-extract_ref_hor_arrays:
-  added_bases: 0
-
 ident_cen_ctgs:
-  ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
-  ref_cens_unique_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
-
-dna_brnn:
-  # https://github.com/lh3/dna-nn/tree/master/models
-  model: "data/models/attcc-alpha.knm"
-  threads: 12
-  thr_file: "config/dnabrnn_thresholds.json"
+  threads_srf: 24
+  mem_srf: 40GB
+  threads_aln: 16
+  mem_aln: 150GB
+  bp_merge: 2500000
+  bp_slop: 1000000
+  perc_multi_chrom: 5.0
 
 nucflag:
   input_hifi_reads_dir: "test/data/raw_data"
@@ -40,20 +31,18 @@ nucflag:
 repeatmasker:
   ref_repeatmasker_output:
   - data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
-  - data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   threads: 40
   repeat_colors: "config/repeatmasker_colors.json"
-  config_censtats_status: "config/censtats.json"
 
 humas_annot:
   mode: "sd"
   threads: 4
-  hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
+  hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm.gz"
 
 plot_hor_stv:
   ref_stv:
   - "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
-  - "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
+  - "data/annotations/AS-HOR-vs-chm13_cens_v18.stv_row.all.bed"
   sat_annot_colors: "config/repeatmasker_sat_annot_colors.json"
   stv_annot_colors: "config/stv_annot_colors.tsv"
 
@@ -68,6 +57,11 @@ moddotplot:
   mem: 10GB
   ident_thr: 70.0
   window: 5000
+
+ideogram:
+  title: "{sm}"
+  height: 15
+  width: 5
 
 cdr_finder:
   aligner: minimap2

@@ -10,15 +10,21 @@ rule calculate_as_hor_length:
     input:
         stv_row_bed=rules.filter_complete_correct_stv_row.output,
     output:
-        stv_row_live_bed=join(
+        stv_row_strand_bed=join(
             HOR_ARR_LEN_OUTDIR,
             "bed",
-            "{chr}_AS-HOR_stv_row.live.bed",
+            "{chr}_AS-HOR_strand.bed",
         ),
         arr_lens_bed=join(
             HOR_ARR_LEN_OUTDIR,
             "bed",
             "{chr}_AS-HOR_lengths.bed",
+        ),
+    params:
+        length_params=(
+            "--allow_nonlive -mu 100000 -mb 100000 -ua 0 -ub 0 -fp 0.0 -fl 0"
+            if config["humas_annot"]["mode"] not in ["sd", "hmmer"]
+            else ""
         ),
     conda:
         "../envs/py.yaml"
@@ -26,9 +32,8 @@ rule calculate_as_hor_length:
         join(HOR_ARR_LEN_LOGDIR, "calculate_{chr}_as_hor_length.log"),
     shell:
         """
-        # Save live output.
-        awk -v OFS="\\t" '$4 ~ "L"' {input.stv_row_bed} > {output.stv_row_live_bed}
-        {{ censtats length -i {output.stv_row_live_bed} || true ;}} > {output.arr_lens_bed} 2> {log}
+        {{ censtats length -i {input.stv_row_bed} -s {output.stv_row_strand_bed} {params.length_params} || true ;}} > {output.arr_lens_bed} 2> {log}
+        touch {output}
         """
 
 
@@ -66,7 +71,6 @@ def args_ref_hor_lengths(wc, input) -> str:
 
 rule plot_as_hor_length:
     input:
-        script=workflow.source_path("../scripts/plot_hor_length.py"),
         ref_hor_lengths=[
             ref["path"]
             for ref in config["calculate_hor_length"].get("ref_hor_lengths", [])
@@ -79,9 +83,12 @@ rule plot_as_hor_length:
             "all_AS-HOR_lengths.png",
         ),
     params:
+        script=workflow.source_path("../scripts/plot_hor_length.py"),
         # Random colors given for each ref.
         # Run separately to get desired colors.
         args_added_lengths=args_ref_hor_lengths,
+        chroms=CHROMOSOMES,
+        chrom_colors=config["calculate_hor_length"]["chromosome_colors"],
     log:
         join(HOR_ARR_LEN_LOGDIR, "plot_all_as_hor_length.log"),
     conda:
@@ -89,9 +96,11 @@ rule plot_as_hor_length:
     shell:
         """
         if [ -s {input.lengths} ]; then
-            python {input.script} \
+            python {params.script} \
             -i {input.lengths} \
-            -o {output} {params.args_added_lengths} 2> {log}
+            -o {output} {params.args_added_lengths} \
+            -c {params.chroms} \
+            --chrom_colors {params.chrom_colors} 2> {log}
         else
             touch {output}
         fi

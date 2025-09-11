@@ -1,10 +1,12 @@
+import math
 import argparse
 import polars as pl
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 DEF_COLS = ["sample", "cnt", "perc"]
-NUM_CHRS = 46
+DEF_CHRS = list(reversed([f"chr{i}" for i in [*range(1, 23), "X", "Y"]]))
+DEF_N_CHR = (len(DEF_CHRS) * 2) - 2
 
 
 def main():
@@ -18,8 +20,23 @@ def main():
         type=argparse.FileType("rb"),
     )
     ap.add_argument("-o", "--output", help="Output plot file.", type=str, required=True)
+    ap.add_argument(
+        "-c",
+        "--chroms",
+        default=DEF_CHRS,
+        type=str,
+        nargs="+",
+        help="Chromosome names.",
+    )
+    ap.add_argument(
+        "-n",
+        "--n_chroms",
+        default=DEF_N_CHR,
+        help="Number of chromosomes in diploid organism.",
+    )
 
     args = ap.parse_args()
+    n_chroms = args.n_chroms
 
     df_cnts = pl.read_csv(
         args.infile, separator="\t", has_header=False, new_columns=DEF_COLS
@@ -33,7 +50,12 @@ def main():
     ax.set_ylim(0, 100)
 
     # Mean
-    mean_perc = round(df_plot["perc"].mean())
+    mean_perc = df_plot["perc"].mean()
+    if mean_perc:
+        mean_perc = round(mean_perc)
+    else:
+        mean_perc = 0.0
+
     ax.axhline(mean_perc, linestyle="dotted", color="black")
     yticks, ytick_labels = ax.get_yticks(), ax.get_yticklabels()
     # Add mean ytick.
@@ -41,10 +63,10 @@ def main():
     ax.set_ylabel(r"% of centromeres completely and accurately assembled")
 
     # Add secondary axis for percent correctly annotated.
-    new_yticks = [*range(0, 50, 10), NUM_CHRS]
+    new_yticks = [*range(0, math.ceil(n_chroms / 10), 10), n_chroms]
     ax_2 = ax.secondary_yaxis(location="right")
     ax_2.set_yticks(
-        [round((ytick_lbl / NUM_CHRS) * 100) for ytick_lbl in new_yticks],
+        [round((ytick_lbl / n_chroms) * 100) for ytick_lbl in new_yticks],
         [str(ytick_lbl) for ytick_lbl in new_yticks],
     )
     ax_2.set_ylabel("# of centromeres completely and accurately assembled")

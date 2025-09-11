@@ -9,13 +9,16 @@ FMT_HOR_STV_LOGDIR = join(LOG_DIR, "10-format_hor_stv")
 
 checkpoint aggregate_format_all_stv_row:
     input:
-        unpack(humas_annot_chr_outputs),
+        humas_annot_chr_outputs,
     output:
         join(FMT_HOR_STV_OUTDIR, "bed", "{chr}", "stv_all.bed"),
     log:
         join(FMT_HOR_STV_LOGDIR, "aggregate_format_all_stv_row_{chr}.log"),
     conda:
         "../envs/tools.yaml"
+    params:
+        inputs=lambda wc, input: input if input else '<(echo "")',
+        chr_rgx="{chr}[:_-]",
     shell:
         """
         {{ awk -v OFS="\\t" '{{
@@ -31,8 +34,8 @@ checkpoint aggregate_format_all_stv_row:
             $7=$7+starts[1];
             $8=$8+starts[1];
             print
-        }}' {input} | \
-        grep -P "{wildcards.chr}[_:]" || true ;}} > {output} 2> {log}
+        }}' {params.inputs} | \
+        grep -P "{params.chr_rgx}" || true ;}} > {output} 2> {log}
         """
 
 
@@ -66,3 +69,4 @@ rule format_hor_stv_all:
             rules.filter_complete_correct_stv_row.output,
             chr=CHROMOSOMES,
         ),
+    default_target: True

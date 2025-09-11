@@ -1,6 +1,6 @@
 include: "common.smk"
 include: "utils.smk"
-include: "1-concat_asm.smk"
+include: "5-ident_cen_ctgs.smk"
 include: "7-fix_cens_w_repeatmasker.smk"
 
 
@@ -41,7 +41,7 @@ CDR_ALIGN_CFG = {
     "samples": [
         {
             "name": sm,
-            "asm_fa": expand(rules.concat_asm.output.fa, sm=sm),
+            "asm_fa": expand(rules.rename_reort_asm.output.fa, sm=sm)[0],
             "read_dir": join(config["cdr_finder"]["input_bam_dir"], sm),
             "read_rgx": config["cdr_finder"]["bam_rgx"],
         }
@@ -68,48 +68,6 @@ module CDR_Align:
 use rule * from CDR_Align as cdr_aln_*
 
 
-rule get_original_coords:
-    input:
-        # (sample_chr_ctg, st, end, is-misassembled)
-        bed=ancient(rules.make_complete_cens_bed.output),
-        asm_faidx=rules.concat_asm.output.idx,
-    output:
-        og_coords=join(
-            CDR_FINDER_OUTDIR,
-            "bed",
-            "{sm}_complete_correct_ALR_regions.og_coords.bed",
-        ),
-        og_coords_key=join(
-            CDR_FINDER_OUTDIR,
-            "bed",
-            "{sm}_complete_correct_ALR_regions.og_coords.key.bed",
-        ),
-    log:
-        join(CDR_FINDER_LOGDIR, "get_original_coords_{sm}.log"),
-    conda:
-        "../envs/tools.yaml"
-    shell:
-        """
-        {{ join -1 1 -2 1 \
-            <(sort -k 5 {input.bed} | awk -v OFS="\\t" '{{print $5, $2, $3, $1}}') \
-            <(cut -f 1,2 {input.asm_faidx} | sort -k 1) | \
-        awk -v OFS="\\t" '{{
-            ctg=$1
-            final_ctg=$4
-            len=$5
-            is_reversed=($4 ~ "rc")
-            start=$2; end=$3;
-            adj_start=$2; adj_end=$3;
-            if (is_reversed) {{
-                adj_start=len-end
-                adj_end=len-start
-            }}
-            print ctg, adj_start, adj_end > "{output.og_coords}"
-            print ctg, adj_start, adj_end, final_ctg, start, end, len
-        }}';}} > {output.og_coords_key} 2> {log}
-        """
-
-
 # Pass CDR config here.
 CDR_FINDER_CONFIG = {
     "output_dir": CDR_FINDER_OUTDIR,
@@ -118,8 +76,8 @@ CDR_FINDER_CONFIG = {
     "restrict_alr": True,
     "samples": {
         sm: {
-            "fasta": expand(rules.concat_asm.output.fa, sm=sm),
-            "regions": expand(rules.get_original_coords.output.og_coords, sm=sm),
+            "fasta": expand(rules.rename_reort_asm.output.fa, sm=sm),
+            "regions": expand(rules.make_complete_cens_bed.output.cen_bed, sm=sm),
             "bam": expand(
                 rules.cdr_aln_merge_read_asm_alignments.output.alignment, sm=sm
             ),
@@ -130,7 +88,6 @@ CDR_FINDER_CONFIG = {
 }
 
 
-# Avoid using github() due to Snakemake caching causing reruns.
 module CDR_Finder:
     snakefile:
         "CDR-Finder/workflow/Snakefile"
@@ -141,61 +98,14 @@ module CDR_Finder:
 use rule * from CDR_Finder as cdr_*
 
 
-use rule calc_windows from CDR_Finder as cdr_calc_windows with:
-    resources:
-        mem=30,
-        hrs=1,
-
-
-use rule reorient_bed as reorient_cdr_bed with:
-    input:
-        bed=lambda wc: expand(rules.cdr_call_cdrs.output, sample=wc.sm),
-        og_coords_key=rules.get_original_coords.output.og_coords_key,
-    output:
-        join(
-            CDR_FINDER_OUTDIR,
-            "bed",
-            "{sm}_cdr_final.bed",
-        ),
-    log:
-        join(CDR_FINDER_LOGDIR, "reorient_cdr_bed_{sm}.log"),
-    params:
-        legend_col_chrom_og="$1",
-        legend_col_chrom_new='$4":"$5"-"$6',
-        legend_col_chrom_len="$7",
-        additional_cols="",
-
-
-use rule reorient_bed as reorient_binned_methyl_bed with:
-    input:
-        bed=lambda wc: expand(
-            rules.cdr_add_target_bed_coords_windows.output, sample=wc.sm
-        ),
-        og_coords_key=rules.get_original_coords.output.og_coords_key,
-    output:
-        temp(
-            join(
-                CDR_FINDER_OUTDIR,
-                "bed",
-                "{sm}_binned_freq_adj_final.bed",
-            )
-        ),
-    log:
-        join(CDR_FINDER_LOGDIR, "reorient_binned_methyl_bed_{sm}.log"),
-    params:
-        legend_col_chrom_og="$1",
-        legend_col_chrom_new='$4":"$5"-"$6',
-        legend_col_chrom_len="$7",
-        additional_cols=", $4",
-
-
 rule merge_cdr_beds:
     input:
-        reorient_cdr_output=expand(
-            rules.reorient_cdr_bed.output, sm=SAMPLE_NAMES_INTERSECTION
+        bed=expand(
+            rules.make_complete_cens_bed.output.cen_bed, sm=SAMPLE_NAMES_INTERSECTION
         ),
-        reorient_methyl_cdr_output=expand(
-            rules.reorient_binned_methyl_bed.output, sm=SAMPLE_NAMES_INTERSECTION
+        cdr_output=expand(rules.cdr_call_cdrs.output, sample=SAMPLE_NAMES_INTERSECTION),
+        methyl_cdr_output=expand(
+            rules.cdr_calc_windows.output, sample=SAMPLE_NAMES_INTERSECTION
         ),
     output:
         reorient_cdr_output=join(
@@ -210,13 +120,25 @@ rule merge_cdr_beds:
         ),
     shell:
         """
-        cat {input.reorient_cdr_output} > {output.reorient_cdr_output}
-        cat {input.reorient_methyl_cdr_output} > {output.reorient_methyl_cdr_output}
+        sort -k1,1 {input.cdr_output} | \
+        join - <(cat {input.bed} | sort -k1,1) | \
+        awk -v OFS="\\t" '{{
+            if ($2 >= $4 && $3 <= $5) {{
+                print $1":"$4+1"-"$5, $2,$3
+            }}
+        }}' > {output.reorient_cdr_output}
+        sort -k1,1 {input.methyl_cdr_output}  | \
+        join - <(cat {input.bed} | sort -k1,1) | \
+        awk -v OFS="\\t" '{{
+            if ($2 >= $6 && $3 <= $7) {{
+                print $1":"$6+1"-"$7,$2,$3,$4,$5
+            }}
+        }}' > {output.reorient_methyl_cdr_output}
         """
 
 
 rule cdr_finder_all:
     input:
-        expand(rules.get_original_coords.output, sm=SAMPLE_NAMES_INTERSECTION),
+        expand(rules.cdr_cdr_plots.output, sample=SAMPLE_NAMES_INTERSECTION),
         rules.merge_cdr_beds.output,
     default_target: True

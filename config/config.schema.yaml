@@ -1,5 +1,14 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 properties:
+  output_dir:
+    type: string
+    default: results
+  log_dir:
+    type: string
+    default: logs
+  benchmark_dir:
+    type: string
+    default: benchmarks
   chromosomes:
     type: array
     items:
@@ -35,7 +44,9 @@ properties:
     type: array
     items:
       type: string
+      # pattern: "^[^_]*$"
     description: Sample names.
+    # description: Sample names. Must not contain '_' in name.
   container:
     type: string
     description: Container for workflow if using singularity.
@@ -53,7 +64,7 @@ properties:
         default: 20GB
     required:
       - input_dir
-  align_asm_to_ref:
+  ident_cen_ctgs:
     type: object
     additionalProperties: false
     properties:
@@ -62,59 +73,59 @@ properties:
         description: >-
           Path to reference assembly.
           Will download CHM13v2.0 if not specified.
-          Only applicable if user has CHM13v2.0 on cluster and wants to avoid redownloading the assembly.
         default: null
-      threads:
+      threads_srf:
         type: integer
-        default: 4
-      mem:
+        default: 16
+      mem_srf:
         type: string
         pattern: "\\d+GB"
-        default: 30GB
-  extract_ref_hor_arrays:
-    type: object
-    additionalProperties: false
-    properties:
-      added_bases:
+        default: 12GB
+      threads_aln:
         type: integer
-        description: Add bp to extend edges of HOR array for alignment. In addition to default 500kbp.
+        default: 8
+      mem_aln:
+        type: string
+        pattern: "\\d+GB"
+        default: 20GB
+      monomer_periods:
+        type: array
+        items:
+          type: integer
+        description: Monomer periods to search for. Smallest period is used as kmer size.
+        default: [170, 340, 510, 680, 850, 1020]
+      exclude_kmers_lt_n:
+        type: integer
+        description: >-
+          Filter kmers occuring less than n times. Corresponds to kmc's ci parameter.
+          Smaller value will pick up smaller, infrequent HORs at the cost of mapping runtime.
+        default: 10
+      bp_min_length:
+        type: integer
+        description: >-
+          Minimum length of satellite repeat groups.
+          Occurs after grouping but before merging.
+          Allows removing small false-positive TRs matching required 171/42 bp periods.
+        default: 30000
+      bp_merge:
+        type: integer
+        description: >-
+          Merge grouped satellite repeat blocks n base pairs.
+          Smaller values will reduce the length of p-arms of the acrocentric chromosomes but at the risk of considering a p-arm as a correct centromere.
+          The repeatmasker.bp_shannon_window parameter should be increased as well to prevent this.
+        default: 100000
+      bp_slop:
+        type: integer
+        description: Add n base pairs to extend edges of query HOR array.
         default: 1000000
-  ident_cen_ctgs:
-    type: object
-    additionalProperties: false
-    properties:
-      ref_cens_regions:
-        type: string
-        description: Path to BED file with reference centromere regions.
-        default: data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed
-      ref_cens_unique_regions:
-        type: string
-        description: >-
-          Path to BED file with reference centromere regions that are used for contig mapping.
-          These must be unique (not in SDs, include TEs) regions.
-          Currently, only CHM13 is supported.
-        default: data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed
-  dna_brnn:
-    type: object
-    additionalProperties: false
-    properties:
-      model:
-        type: string
-        description: Path to model used to train dna-brnn.
-        default: data/models/attcc-alpha.knm
-      threads:
-        type: integer
-        default: 12
-      mem:
-        type: string
-        pattern: "\\d+GB"
-        default: 8GB
-      thr_file:
-        type: string
-        description: >-
-          Path to file of chromosome specific thresholds
-          for filtering and trimming dna-brnn output.
-        default: config/dnabrnn_thresholds.json
+      perc_mon_len_diff:
+        type: number
+        description: "Percent difference in monomer length to allow motif based on: 100 * ((motif_len % monomer_length) / monomer_length)"
+        default: 2.0
+      perc_multi_chrom:
+        type: number
+        description: Percent of mapped reference chromosome required to add to name.
+        default: 5.0
   nucflag:
     type: object
     additionalProperties: false
@@ -174,36 +185,42 @@ properties:
         items:
           type: string
         description: >-
-          Path of repeatmasker outputs from reference assemblies.
-          Expected to be trimmed within 0.5-1 Mbp of bounds of alpha-satellite HOR array
-          and oriented from p arm to q arm.
-          Currently, only CHM13 is supported.
+          Path of repeatmasker outputs from reference assemblies. Used for visualization.
         default: [
-          data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out,
           data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
         ]
-      config_censtats_status:
-        type: string
-        description: Path to JSON configuration for censtats status.
-        default: config/censtats.json
+      bp_shannon_window:
+        type: integer
+        description: >-
+          Window size to use in calculating shannon index for region filtering.
+          Smaller windows may allow smaller centromeres but will increase the number of false-positives (ex. p-arms of acrocentric chromosomes).
+        default: 250000
+      trim_to_repeats:
+        type: array
+        items:
+          type: string
+        description: Trim centromeric regions to the largest block of these RepeatMasker repeat annotations.
+        default: ["ALR/Alpha", "SAR"]
       repeat_colors:
         type: string
         description: Path to JSON file of repeat colors.
         default: config/repeatmasker_colors.json
+      species:
+        type: string
+        description: Repeatmasker species.
+        default: human
       threads:
         type: integer
         default: 12
-
-    required:
-      - config_censtats_status
   humas_annot:
     type: object
     additionalProperties: false
     properties:
       mode:
         type: string
-        enum: ["sd", "hmmer"]
+        enum: ["sd", "hmmer", "srf-n-trf", "sf"]
         default: sd
+        description: Annotate centromere by reference-based approaches (sd, hmmer, sf) or the monomers found from srf/trf.
       threads:
         type: integer
         default: 6
@@ -213,7 +230,7 @@ properties:
         default: 30GB
       hmm_profile:
         type: string
-        default: data/models/AS-HORs-hmmer3.4-071024.hmm
+        default: data/models/AS-HORs-hmmer3.4-071024.hmm.gz
         description: Path to hidden markov model profile used with HumAS-HMMER to use as HOR variant database.
   plot_hor_stv:
     type: object
@@ -226,7 +243,7 @@ properties:
         description: Path to reference HOR stv annotations to plot.
         default: [
           data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed,
-          data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed
+          data/annotations/AS-HOR-vs-chm13_cens_v18.stv_row.all.bed
         ]
       sat_annot_colors:
         type: string
@@ -236,6 +253,10 @@ properties:
         type: string
         description: Path to mapping file of HOR stv monomer numbers to colors.
         default: config/stv_annot_colors.tsv
+      sf_annot_colors:
+        type: string
+        description: Path to mapping file of HOR stv monomer numbers to colors.
+        default: config/sf_annot_colors.tsv
   calculate_hor_length:
     type: object
     additionalProperties: false
@@ -258,6 +279,10 @@ properties:
           required:
             - name
             - path
+      chromosome_colors:
+        type: string
+        description: Path to mapping file of chromosome names to colors.
+        default: config/chrom_colors.tsv
   moddotplot:
     type: object
     additionalProperties: false
@@ -274,6 +299,30 @@ properties:
         type: integer
         default: 5000
         description: Window size passed to ModDotPlot
+  ideogram:
+    type: object
+    additionalProperties: false
+    properties:
+      title:
+        type: string
+        default: "{sm}"
+        description: Plot title. If "{sm}" is present, replaced with sample name.
+      height:
+        type: integer
+        default: 15
+        description: Plot height.
+      width:
+        type: integer
+        default: 5
+        description: Plot width.
+      legend_prop:
+        type: number
+        default: 0.1
+        description: Legend proportion of plot. Increase if contig names long.
+      use_renamed_reoriented:
+        type: boolean
+        default: true
+        description: Use renamed and reoriented coordinates.
   cdr_finder:
     type: object
     additionalProperties: false
@@ -333,8 +382,5 @@ required:
   - samples
   - chromosomes
   - concat_asm
-  - align_asm_to_ref
-  - extract_ref_hor_arrays
   - ident_cen_ctgs
-  - dna_brnn
   - repeatmasker

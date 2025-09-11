@@ -6,10 +6,12 @@ dependencies:
   - pip:
     - matplotlib
     - numpy
+    - pyyaml
     - seaborn
     - polars
-    - editdistance
     - scipy
-    - censtats==0.0.10
-    - cenplot==0.0.10
+    - pyarrow
+    - intervaltree
+    - censtats==0.0.13
+    - cenplot==0.1.4
     - git+https://github.com/marbl/ModDotPlot.git@v0.8.4

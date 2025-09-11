@@ -1,0 +1,33 @@
+
+name: Release
+
+# https://stackoverflow.com/a/67833464
+on:
+  pull_request:
+    branches:
+      - main
+    types: [closed]
+
+jobs:
+  # https://github.com/qmonnet/git-archive-all-action
+  create-release:
+    if: ${{ github.event.pull_request.merged }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout project source code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Package source code including submodules
+        uses: qmonnet/git-archive-all-action@v1
+        with:
+          output-files: srcs-full-${{ github.event.repository.name }}.tar.gz srcs-full-${{ github.event.repository.name }}.zip
+
+      - name: Create draft release and add artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          files: srcs-full-*

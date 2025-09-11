@@ -25,40 +25,28 @@ chromosomes:
   - "chrY"
 
 samples:
-  - HG00171
+  - HG002
 
 # Specify container to run workflow if using singularity.
 # Optional
 container: "docker://logsdonlab/cenmap:latest"
 
 concat_asm:
-  input_dir: "data/assemblies"
+  input_dir: "data/asm"
   mem: 20GB
 
-align_asm_to_ref:
-  # reference: "data/reference/T2T-CHM13v2.fasta.gz"
-  threads: 8
-  mem: 120GB
-
-extract_ref_hor_arrays:
-  # Add bp to extend edges of HOR array for alignment. In addition to default 500kbp.
-  added_bases: 1_000_000
-
 ident_cen_ctgs:
-  ref_cens_regions: "data/annotations/chm13_v2.0_cenSat_Annotations_HORs.maxmin.500kbp.bed"
-  ref_cens_unique_regions: "data/annotations/chm13_v2.0_monomeric_p-qarm_only.bed"
-
-dna_brnn:
-  # https://github.com/lh3/dna-nn/tree/master/models
-  model: "data/models/attcc-alpha.knm"
-  threads: 12
-  mem: 8GB
-  thr_file: "config/dnabrnn_thresholds.json"
+  threads_srf: 32
+  mem_srf: 50GB
+  threads_aln: 8
+  mem_aln: 150GB
+  bp_merge: 2500000
+  bp_slop: 1000000
 
 nucflag:
-  input_hifi_reads_fofn_dir: "data/hifi"
-  # input_hifi_reads_dir: "data/hifi"
-  # reads_rgx: ".*\\.fastq.gz$"
+  # input_hifi_reads_fofn_dir: "data/hifi"
+  input_hifi_reads_dir: "data/hifi"
+  reads_rgx: ".*\\.bam$"
   config_nucflag: "config/nucflag.toml"
   threads_aln: 24
   processes_nucflag: 12
@@ -70,22 +58,21 @@ nucflag:
 
 repeatmasker:
   ref_repeatmasker_output:
-  - data/annotations/cenSat_Annotations_HORs.maxmin.v2.0.chrY.500kbp.fa.out
   - data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
-  config_censtats_status: "config/censtats.json"
   repeat_colors: "config/repeatmasker_colors.json"
+  bp_shannon_window: 250000
   threads: 12
 
 humas_annot:
   mode: "sd" # or "hmmer"
   threads: 6
   mem: 30GB
-  hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm"
+  hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm.gz"
 
 plot_hor_stv:
   ref_stv:
   - "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
-  - "data/annotations/AS-HOR-vs-chm13_cens_v18.correctcoords.stv_row.all.bed"
+  - "data/annotations/AS-HOR-vs-chm13_cens_v18.stv_row.all.bed"
   sat_annot_colors: "config/repeatmasker_sat_annot_colors.json"
   stv_annot_colors: "config/stv_annot_colors.tsv"
 
@@ -103,6 +90,11 @@ moddotplot:
   ident_thr: 70.0
   window: 5000
 
+ideogram:
+  title: "{sm}"
+  height: 15
+  width: 5
+
 cdr_finder:
   # Either minimap2 or winnowmap
   # Use aligner_opts to override defaults.
@@ -112,7 +104,7 @@ cdr_finder:
   # Expects sample subdir in input_dir.
   # Uses find and file pattern to merge bam.
   input_bam_dir: "data/ont"
-  bam_rgx: ".*prom_pass.bam$"
+  bam_rgx: ".*\\.bam$"
   aln_mem: 50GB
   aln_threads: 24
   window_size: 5000

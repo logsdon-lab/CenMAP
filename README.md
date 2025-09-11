@@ -2,7 +2,7 @@
 [![CI](https://github.com/logsdon-lab/hgsvc3/actions/workflows/main.yml/badge.svg)](https://github.com/logsdon-lab/hgsvc3/actions/workflows/main.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/logsdon-lab/CenMAP)](https://github.com/logsdon-lab/CenMAP/releases)
 
-A centromere mapping and annotation pipeline for T2T human genome assemblies implemented in [`Snakemake`](https://snakemake.github.io/).
+A centromere mapping and annotation pipeline for T2T human and primate genome assemblies implemented in [`Snakemake`](https://snakemake.github.io/).
 
 <table>
   <tr>
@@ -22,6 +22,13 @@ A centromere mapping and annotation pipeline for T2T human genome assemblies imp
         <figcaption>Chr12 α-satellite HOR arrays</figcaption>
       </figure>
     </td>
+    <td rowspan="2">
+      <figure>
+        <img src="docs/ideogram.png" height="100%">
+        <br>
+        <figcaption>Ideogram</figcaption>
+      </figure>
+    </td>
   </tr>
   <tr>
     <td>
@@ -34,16 +41,45 @@ A centromere mapping and annotation pipeline for T2T human genome assemblies imp
   </tr>
 </table>
 
+### [Quickstart](https://github.com/logsdon-lab/CenMAP/wiki/4.-Usage)
+
+```bash
+conda install bioconda::cenmap
+```
+
+For a single assembly:
+```bash
+# Find centromeres in human samples.
+cenmap -i asm*.fa.gz -s HG002
+# Find centromeres in non-human primate samples.
+cenmap -i asm*.fa.gz -s mPanTro3 --mode nhp
+# Find centromeres and validate with nucflag.
+cenmap -i asm*.fa.gz -s HG002 --hifi hifi*.fq.gz
+# Find centromeres and determine centromere dip regions.
+cenmap -i asm*.fa.gz -s HG002 --ont ont*.bam
+# Find centromeres, validate with nucflag, and determine centromere dip regions.
+cenmap -i asm*.fa.gz -s HG002 --hifi hifi*.fq.gz --ont ont*.bam
+```
+
+For multiple assemblies:
+```bash
+# Create new config.
+cenmap --generate-config > example.yaml
+# Modify config parameters and include multiple samples.
+# ...
+# Then run.
+cenmap --config example.yaml
+```
+
 ### [Input](https://github.com/logsdon-lab/CenMAP/wiki/2.-Getting-Started#data)
 * [`Verkko`](https://github.com/marbl/verkko) or [`hifiasm`](https://github.com/chhylp123/hifiasm) human genome assemblies
 * PacBio HiFi reads used in the assemblies
-* [`CHM13`](https://github.com/marbl/CHM13) reference genome assembly
 * (Optional) Unaligned BAM files with 5mC modifications at CpG sites.
 
 ### [Output](https://github.com/logsdon-lab/CenMAP/wiki/5.-Output)
 * Complete and correctly assembled centromere sequences and their regions validated by [`NucFlag`](https://github.com/logsdon-lab/NucFlag).
-* Centromere alpha-satellite higher order repeat (HOR) array lengths via [`censtats`](https://github.com/logsdon-lab/CenStats).
-* [`RepeatMasker`](https://www.repeatmasker.org/) and [`HumAS-SD`](https://github.com/logsdon-lab/Snakemake-HumAS-SD) alpha-satellite HOR monomer annotations and plots.
+* Centromere α-satellite higher order repeat (HOR) array lengths via [`censtats`](https://github.com/logsdon-lab/CenStats).
+* [`RepeatMasker`](https://www.repeatmasker.org/) and [`HumAS-SD`](https://github.com/logsdon-lab/Snakemake-HumAS-SD) α-satellite HOR monomer of SF annotations and plots.
 * [`ModDotPlot`](https://github.com/marbl/ModDotPlot) sequence identity plots.
 * Combined sequence identity and HOR array structure plots via [`cenplot`](https://github.com/logsdon-lab/cenplot).
 * (Optional) Centromere dip region (CDRs) with [`CDR-Finder`](https://github.com/koisland/CDR-Finder)

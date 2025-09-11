@@ -1,18 +1,29 @@
-[submodule "workflow/rules/CDR-Finder"]
-	path = workflow/rules/CDR-Finder
-	url = https://github.com/koisland/CDR-Finder.git
 [submodule "workflow/rules/Snakemake-HumAS-SD"]
 	path = workflow/rules/Snakemake-HumAS-SD
 	url = https://github.com/logsdon-lab/Snakemake-HumAS-SD.git
+	branch = feature/multi-chr-lib
+	ignore = dirty
 [submodule "workflow/rules/Snakemake-HumAS-HMMER"]
 	path = workflow/rules/Snakemake-HumAS-HMMER
 	url = https://github.com/logsdon-lab/Snakemake-HumAS-HMMER
+	ignore = dirty
 [submodule "workflow/rules/asm-to-reference-alignment"]
 	path = workflow/rules/asm-to-reference-alignment
 	url = https://github.com/koisland/asm-to-reference-alignment.git
+	ignore = dirty
 [submodule "workflow/rules/Snakemake-Aligner"]
 	path = workflow/rules/Snakemake-Aligner
 	url = https://github.com/logsdon-lab/Snakemake-Aligner.git
+	ignore = dirty
 [submodule "workflow/rules/Snakemake-NucFlag"]
 	path = workflow/rules/Snakemake-NucFlag
 	url = https://github.com/logsdon-lab/Snakemake-NucFlag.git
+	ignore = dirty
+[submodule "workflow/rules/Snakemake-srf"]
+	path = workflow/rules/Snakemake-srf
+	url = https://github.com/logsdon-lab/Snakemake-srf.git
+	ignore = dirty
+[submodule "workflow/rules/CDR-Finder"]
+	path = workflow/rules/CDR-Finder
+	url = https://github.com/koisland/CDR-Finder.git
+	ignore = dirty

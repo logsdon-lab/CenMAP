@@ -16,42 +16,35 @@ containerized: CONTAINER
 # Main workflow.
 module download_ref:
     snakefile:
-        "rules/0-download_ref.smk"
+        "rules/1-download_ref.smk"
     config:
         config
 
 
 module concat_asm:
     snakefile:
-        "rules/1-concat_asm.smk"
+        "rules/2-concat_asm.smk"
     config:
         config
 
 
-module extract_ref_hor_arrays:
+module srf:
     snakefile:
-        "rules/2-extract_ref_hor_arrays.smk"
+        "rules/3-srf.smk"
     config:
         config
 
 
 module align_asm_to_ref:
     snakefile:
-        "rules/3-align_asm_to_ref.smk"
+        "rules/4-align_asm_to_ref.smk"
     config:
         config
 
 
 module ident_cen_ctgs:
     snakefile:
-        "rules/4-ident_cen_ctgs.smk"
-    config:
-        config
-
-
-module dna_brnn:
-    snakefile:
-        "rules/5-dna_brnn.smk"
+        "rules/5-ident_cen_ctgs.smk"
     config:
         config
 
@@ -140,22 +133,26 @@ module count_complete_cens:
         config
 
 
+module plot_ideogram:
+    snakefile:
+        "rules/13-plot_ideogram.smk"
+    config:
+        config
+
+
 use rule * from download_ref
 
 
 use rule * from concat_asm
 
 
-use rule * from extract_ref_hor_arrays
+use rule * from srf
 
 
 use rule * from align_asm_to_ref
 
 
 use rule * from ident_cen_ctgs
-
-
-use rule * from dna_brnn
 
 
 use rule * from repeatmasker
@@ -170,24 +167,17 @@ use rule * from format_repeatmasker_sat_annot
 use rule * from get_complete_correct_cens
 
 
-rule extract_cens_all:
-    input:
-        rules.extract_ref_hor_arrays_all.input,
-        rules.align_asm_ref_all.input,
-        rules.ident_cen_ctgs_all.input,
-
-
 output = [
     # Required output.
-    rules.extract_cens_all.input,
-    rules.dna_brnn_all.input,
+    rules.srf_all.input,
+    rules.ident_cen_ctgs_all.input,
     rules.repeatmasker_all.input,
     rules.fix_cens_w_repeatmasker_all.input,
     rules.get_complete_correct_cens_all.input,
 ]
 
 # Download T2T-CHM13 reference assembly if existing path not provided.
-if not config["align_asm_to_ref"].get("reference"):
+if not config["ident_cen_ctgs"].get("reference"):
     output.append(rules.download_ref_asm.output)
 
 
@@ -244,6 +234,13 @@ if config.get("humas_annot") and config.get("calculate_hor_length"):
             rules.count_complete_cens_all.input,
         ]
     )
+
+
+if config.get("ideogram"):
+
+    use rule * from plot_ideogram
+
+    output.append(rules.plot_ideogram_all.input)
 
 
 if config.get("cdr_finder"):

@@ -3,15 +3,15 @@ import numpy as np
 import polars as pl
 import seaborn as sns
 import matplotlib.pyplot as plt
-
+from matplotlib.patches import Patch
 from collections import OrderedDict
 
 
-DEF_COLS = ["chrom", "chrom_st", "chrom_end", "length"]
-CHR_ORDER = [f"chr{i}" for i in (*range(1, 23), "X", "Y")]
-CHR_COLORS = dict(
+DEF_COLS = ("chrom", "chrom_st", "chrom_end", "length")
+DEF_CHR_ORDER = [f"chr{i}" for i in (*range(1, 23), "X", "Y")]
+DEF_CHR_COLORS = dict(
     zip(
-        CHR_ORDER,
+        DEF_CHR_ORDER,
         (
             "#403E80",
             "#2C477D",
@@ -55,7 +55,7 @@ def main():
     ap.add_argument(
         "-a",
         "--added_inputs",
-        help="Additional centromere HOR array lengths.",
+        help="Additional centromere HOR array lengths. First column should be be a subset of --chroms",
         nargs="*",
         metavar="{lbl}={path}={color}",
         type=str,
@@ -68,17 +68,52 @@ def main():
         default="total",
         help="Plotting mode. Either total live array length (total) or live array length (arr).",
     )
+    ap.add_argument(
+        "-c",
+        "--chroms",
+        nargs="*",
+        default=DEF_CHR_ORDER,
+        help="Chromosome names.",
+    )
+    ap.add_argument(
+        "--chrom_colors",
+        default=None,
+        help="Chromosome colors as TSV file with chrom to color mapping.",
+    )
     ap.add_argument("-o", "--output", help="Output plot file.", required=True, type=str)
-
     args = ap.parse_args()
 
-    df_lengths = pl.read_csv(
-        args.infile,
-        has_header=False,
-        separator="\t",
-        columns=[0, 1, 2, 3],
-        new_columns=DEF_COLS,
-    ).with_columns(source=pl.lit("samples"))
+    # Reverse to prevent matching chr1 with both chr1 and chr11
+    rgx_chrom = "|".join([*reversed(sorted(args.chroms)), "-"])
+    rgx_name_groups = r"^.*?_(?<chrom_name>(" + rgx_chrom + r")*)_.*?$"
+
+    if args.chrom_colors:
+        _chroms = set(args.chroms)
+        with open(args.chrom_colors) as fh:
+            chrom_colors = {}
+            for line in fh:
+                chrom, color = line.strip().split("\t")
+                if chrom not in _chroms:
+                    continue
+                chrom_colors[chrom] = color
+    else:
+        chrom_colors = DEF_CHR_COLORS
+
+    df_lengths = (
+        pl.read_csv(
+            args.infile,
+            has_header=False,
+            separator="\t",
+            columns=[0, 1, 2, 3],
+            new_columns=DEF_COLS,
+        )
+        .with_columns(
+            source=pl.lit("samples"),
+            mtch_chrom=pl.col("chrom").str.extract_groups(rgx_name_groups),
+        )
+        .unnest("mtch_chrom")
+        .drop("2")
+    )
 
     added_palettes = OrderedDict()
     dfs_added_lengths = []
@@ -98,15 +133,16 @@ def main():
                 separator="\t",
                 columns=[0, 1, 2, 3],
                 new_columns=DEF_COLS,
-            ).with_columns(source=pl.lit(lbl))
+            ).with_columns(
+                source=pl.lit(lbl),
+                chrom_name=pl.col("chrom").str.extract(f"^({rgx_chrom})$"),
+            )
             added_palettes[lbl] = color
             dfs_added_lengths.append(df)
 
     df_all_lengths: pl.DataFrame = pl.concat([df_lengths, *dfs_added_lengths])
     df_all_lengths = df_all_lengths.with_columns(
-        chrom_name=pl.col("chrom")
-        .str.extract(r"(chr\d+|chrX|chrY)")
-        .cast(pl.Enum(CHR_ORDER))
+        pl.col("chrom_name").cast(pl.Enum(args.chroms))
     )
 
     # Merge asat HOR array lengths
@@ -126,13 +162,13 @@ def main():
         .then(pl.col("source"))
         .otherwise(pl.col("chrom_name"))
     )
-
-    palettes = CHR_COLORS | added_palettes
+    palettes = chrom_colors | added_palettes
+    df_all_lengths_pd = df_all_lengths.to_pandas()
     sns.violinplot(
         x="chrom_name",
         y="length",
         hue="chrom_name",
-        data=df_all_lengths,
+        data=df_all_lengths_pd,
         palette=palettes,
         inner="quart",
         cut=0.75,
@@ -140,7 +176,7 @@ def main():
     sns.swarmplot(
         x="chrom_name",
         y="length",
-        data=df_all_lengths,
+        data=df_all_lengths_pd,
         hue="color_key",
         linewidth=0.5,
         edgecolor="black",
@@ -149,26 +185,32 @@ def main():
     )
 
     ax = plt.gca()
-
-    # Sort legend elements
-    legend_elem_order = {
-        elem: i for i, elem in enumerate([*CHR_ORDER, *added_palettes.keys()])
-    }
-    handles_labels = ax.get_legend_handles_labels()
-    handles, labels = zip(
-        *sorted(zip(*handles_labels), key=lambda x: legend_elem_order[x[1]])
-    )
-
-    # Place outside of figure.
-    ax.legend(
-        handles,
-        labels,
+    legend_kwargs = dict(
         loc="center left",
         bbox_to_anchor=(1, 0.5),
         title="Source",
         alignment="left",
         frameon=False,
     )
+    try:
+        # Sort legend elements
+        legend_elem_order = {
+            elem: i for i, elem in enumerate([*args.chroms, *added_palettes.keys()])
+        }
+        handles_labels = ax.get_legend_handles_labels()
+        handles, labels = zip(
+            *sorted(zip(*handles_labels), key=lambda x: legend_elem_order[x[1]])
+        )
+
+        # Place outside of figure.
+        ax.legend(handles, labels, **legend_kwargs)
+    except ValueError:
+        ax.legend(
+            handles=[
+                Patch(color=color, label=chrom) for chrom, color in chrom_colors.items()
+            ],
+            **legend_kwargs,
+        )
 
     # Hide spines
     for spine in ["top", "right"]:

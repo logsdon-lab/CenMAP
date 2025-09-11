@@ -25,3 +25,4 @@ renv/
 renv.lock
 Rplots.pdf
 progress
+run.sh
