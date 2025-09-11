@@ -1,0 +1,16 @@
+{
+    "pull_request": {
+        "branches": ["main"],
+        "head": {
+            "ref": "sample-head-ref"
+        },
+        "base": {
+            "ref": "sample-base-ref"
+        },
+        "merged": true
+    },
+    "repository": {
+        "name": "CenMAP"
+    },
+    "type": ["closed"]
+}

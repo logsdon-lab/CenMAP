@@ -1,4 +1,4 @@
-.PHONY: conda conda_all update_submodules docker_local singularity_local docker_local_upload dockerfile
+.PHONY: conda conda_all test_scripts test_ci_release update_submodules docker_local singularity_local docker_local_upload dockerfile
 
 ORG := "logsdonlab"
 PROJECT_NAME := "cenmap"
@@ -14,6 +14,14 @@ conda:
 # Need to manually clean.
 conda_all:
 	bash workflow/scripts/make_env_all.sh
+
+test_scripts:
+	pytest -vvv test
+
+# Test release using act.
+# The last step will not work.
+test_ci_release:
+	act --bind -W .github/workflows/release.yaml -v -e .github/workflows/test_event.json
 
 update_submodules:
 	git submodule init
