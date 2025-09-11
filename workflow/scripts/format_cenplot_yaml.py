@@ -50,13 +50,18 @@ def format_yaml_path(
             new_path = os.path.abspath(infiles[path])
         except KeyError:
             print(
-                f"Invalid format key in path {path} from cenplot track file, {input_plot_layout.name}.",
+                f"Missing dtype ({path}) from cenplot track file, {input_plot_layout.name}. Skipping.",
                 file=sys.stderr,
             )
+            number_skipped += 1
             continue
 
         # Skip if empty.
         if os.stat(new_path).st_size == 0:
+            print(
+                f"Skipping empty file: {new_path}",
+                file=sys.stderr,
+            )
             number_skipped += 1
             continue
 
