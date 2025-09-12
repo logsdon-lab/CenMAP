@@ -22,8 +22,7 @@ dependencies:
 - pip:
   - snakemake==9.5.0
   - cenplot==0.1.4
-  - censtats==0.0.13
-  - git+https://github.com/marbl/ModDotPlot.git@v0.8.4
+  - censtats==0.1.0
   - intervaltree
   - matplotlib
   - nucflag==0.3.7
