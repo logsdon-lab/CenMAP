@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Iterable
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 # Follow symlinks to install dir.
 WD = Path(__file__).resolve().parent
