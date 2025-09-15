@@ -12,6 +12,19 @@ from collections import defaultdict
 from cenplot import plot_tracks, read_tracks
 
 
+def cleanup(cfg: str, bed_files: defaultdict[str, dict[str, str]]):
+    try:
+        os.remove(cfg)
+    except FileNotFoundError:
+        pass
+    for chrom, dtype_bedfiles in bed_files.items():
+        for dtype, file in dtype_bedfiles.items():
+            try:
+                os.remove(file)
+            except FileNotFoundError:
+                pass
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Draw centromere tracks for multiple centromeres.",
@@ -91,6 +104,7 @@ def main():
                 df_chrom.write_csv(fpath, separator="\t", include_header=False)
                 bed_files[chrom][dtype] = fpath
 
+    dtypes = set(infiles.keys())
     spacer_track = {
         "position": "relative",
         "proportion": 0.01,
@@ -121,7 +135,9 @@ def main():
                     spacer["proportion"] = trk["proportion"]
                     tracks.append(spacer)
 
-                missing_chroms.add(chrom)
+                # Has no data and is an input file.
+                if dtype in dtypes:
+                    missing_chroms.add(chrom)
                 continue
 
             new_trk = copy.deepcopy(trk)
@@ -162,38 +178,33 @@ def main():
         yaml.safe_dump(track_format, fh, allow_unicode=True)
 
     with open(cfg, "rb") as fh:
-        tracks, settings = read_tracks(fh)
-        final_tracks = []
-        for track in tracks.tracks:
-            if not track.data.is_empty():
-                # Update legend title.
-                chrom = track.data["chrom"].first()
-                if chrom in missing_chroms and args.omit_if_any_empty:
-                    continue
+        try:
+            tracks, settings = read_tracks(fh)
+        except Exception as err:
+            os.remove(cfg)
+            raise RuntimeError(f"Failed to read tracks. {err}")
 
-                if hasattr(track.options, "legend_title"):
-                    track.options.legend_title = chrom
+    final_tracks = []
+    for track in tracks.tracks:
+        if not track.data.is_empty():
+            # Update legend title.
+            chrom = track.data["chrom"].first()
+            if chrom in missing_chroms and args.omit_if_any_empty:
+                continue
 
-            final_tracks.append(track)
+            if hasattr(track.options, "legend_title"):
+                track.options.legend_title = chrom
 
-        if not final_tracks:
-            raise RuntimeError("No tracks to plot.")
+        final_tracks.append(track)
 
-        _ = plot_tracks(
-            tracks=final_tracks, settings=settings, outdir=outdir, chrom=bname
-        )
+    if not final_tracks:
+        os.remove(cfg)
+        raise RuntimeError("No tracks to plot.")
+
+    _ = plot_tracks(tracks=final_tracks, settings=settings, outdir=outdir, chrom=bname)
 
     if not args.keep_tempfiles:
-        try:
-            os.remove(cfg)
-        except FileNotFoundError:
-            pass
-        for chrom, dtype_bedfiles in bed_files.items():
-            for dtype, file in dtype_bedfiles.items():
-                try:
-                    os.remove(file)
-                except FileNotFoundError:
-                    pass
+        cleanup(cfg, bed_files)
 
 
 if __name__ == "__main__":

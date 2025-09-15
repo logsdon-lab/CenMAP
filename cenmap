@@ -8,12 +8,14 @@ import argparse
 import subprocess
 from pathlib import Path
 from typing import Any, Iterable
+from snakemake.utils import validate
 
 __version__ = "1.0.1"
 
 # Follow symlinks to install dir.
 WD = Path(__file__).resolve().parent
 CFG = WD.joinpath("config", "config_template.yaml")
+CFG_SCHEMA = WD.joinpath("config", "config.schema.yaml")
 CHRS = [f"chr{c}" for c in [*range(1, 23), "X", "Y"]]
 CFG_DIR = Path("config")
 DATA_DIR = Path("0-symlink_inputs")
@@ -61,7 +63,7 @@ def symlink_files(
         try:
             symlinked_file.symlink_to(os.path.abspath(file))
         except FileExistsError:
-            print("File exists: {file}", file=sys.stderr)
+            print(f"File exists: {file}", file=sys.stderr)
 
         symlinked_file = output_dir.joinpath(bname)
         symlinked_files.append(symlinked_file)
@@ -87,15 +89,12 @@ def update_relative_to_wd(
                     continue
 
                 bname = os.path.basename(v2)
-                dname = os.path.dirname(v2)
-                working_dir.joinpath(dname).mkdir(exist_ok=True, parents=True)
-
                 # Make relative path for snakemake
                 new_rel_path = config_dir.joinpath(bname)
                 # The others are for transferring from script working dir.
                 new_path_dir = working_dir.joinpath(config_dir)
-                new_path_dir.mkdir(exist_ok=True, parents=True)
                 new_path = working_dir.joinpath(new_rel_path)
+                new_path_dir.mkdir(exist_ok=True, parents=True)
                 shutil.copy(cfg_str, new_path)
                 v[k2] = str(new_rel_path)
 
@@ -128,7 +127,19 @@ def make_config(
     with open(template_config, "rt") as fh:
         cfg: dict[str, Any] = yaml.safe_load(fh)
 
+    # Validate and fill config.
+    validate(cfg, schema=CFG_SCHEMA, set_default=True)
+
+    # humas_annot
+    if mode == "human":
+        cfg["humas_annot"]["mode"] = "sd"
+        cfg["humas_annot"]["hmm_profile"] = "data/models/AS-HORs-hmmer3.4-071024.hmm.gz"
+    else:
+        cfg["humas_annot"]["mode"] = "sf"
+        cfg["humas_annot"]["hmm_profile"] = "data/models/AS-SFs-hmmer3.0.290621.hmm.gz"
+
     update_relative_to_wd(cfg=cfg, working_dir=output_dir, config_dir=CFG_DIR)
+
     if args.reference:
         cfg["ident_cen_ctgs"]["reference"] = args.reference
 
@@ -157,18 +168,6 @@ def make_config(
     else:
         cfg.pop("cdr_finder")
 
-    # humas_annot
-    if mode == "human":
-        cfg["humas_annot"]["mode"] = "sd"
-        cfg["humas_annot"]["hmm_profile"] = str(
-            CFG_DIR.joinpath("AS-HORs-hmmer3.4-071024.hmm.gz")
-        )
-    else:
-        cfg["humas_annot"]["mode"] = "sf"
-        cfg["humas_annot"]["hmm_profile"] = str(
-            CFG_DIR.joinpath("AS-SFs-hmmer3.0.290621.hmm.gz")
-        )
-
     # Create new config.
     with open(new_cfg, "wt") as ofh:
         # Snakemake runs in results dir.
@@ -181,7 +180,7 @@ def make_config(
 
 
 def main() -> int:
-    print(ASCII_ART, file=sys.stderr)
+    print(f"\033[31m{ASCII_ART}\033[0m", file=sys.stderr)
     ap = argparse.ArgumentParser(
         description="(Cen)tromere (M)apping and (A)nnotation (P)ipeline."
     )
@@ -302,11 +301,16 @@ def main() -> int:
     cwd = os.getcwd()
 
     if args.config:
-        new_config = Path(args.config)
+        new_config = Path(args.config).resolve()
         print(f"Using existing configfile:\n\t{new_config}", file=sys.stderr)
+        with open(new_config, "rt") as fh:
+            cfg: dict[str, Any] = yaml.safe_load(fh)
+            output_dir = Path(cfg.get("output_dir", args.output_dir))
+            samples = cfg.get("samples", [])
+            assert len(samples) != 0, "No sample provided."
     elif args.generate_config:
         with open(CFG, "rt") as fh:
-            cfg: dict[str, Any] = yaml.safe_load(fh)
+            cfg = yaml.safe_load(fh)
             # Transfer config to working dir
             update_relative_to_wd(
                 cfg=cfg, working_dir=Path(args.output_dir), config_dir=CFG_DIR
@@ -334,10 +338,11 @@ def main() -> int:
             )
             return 0
     else:
-        new_config = make_config(args, working_dir=cwd, template_config=CFG)
+        new_config = make_config(args, working_dir=cwd, template_config=CFG).absolute()
+        samples = [args.sample]
         print(f"Generated configfile:\n\t{new_config}", file=sys.stderr)
+        output_dir = Path(args.output_dir, args.sample)
 
-    output_dir = Path(args.output_dir, args.sample)
     output_dir.mkdir(exist_ok=True, parents=True)
 
     # Symlink workflow directory to results.
@@ -364,7 +369,7 @@ def main() -> int:
     cmd = [
         "snakemake",
         "--configfile",
-        new_config.name,
+        new_config.as_posix(),
         *process_args,
         "--workflow-profile",
         profile,
@@ -373,6 +378,11 @@ def main() -> int:
         cmd.extend(args.snake_opts.split(" "))
 
     print(f"Running command:\n\t{' '.join(cmd)}", file=sys.stderr)
+    print(f"Output dir:\n\t{output_dir}", file=sys.stderr)
+    print(
+        f"With sample(s):\n\t{'\n\t'.join(samples)}",
+        file=sys.stderr,
+    )
     try:
         subprocess.run(cmd, check=True, cwd=output_dir)
     except subprocess.CalledProcessError:
@@ -381,7 +391,7 @@ def main() -> int:
 
     print("Cleaning up temp files.", file=sys.stderr)
     subprocess.run(
-        ["snakemake", "--configfile", new_config.name, "--delete-temp-output"],
+        ["snakemake", "--configfile", new_config.as_posix(), "--delete-temp-output"],
         check=True,
         cwd=output_dir,
     )
