@@ -181,7 +181,7 @@ def make_config(
 
 
 def main() -> int:
-    print(ASCII_ART)
+    print(ASCII_ART, file=sys.stderr)
     ap = argparse.ArgumentParser(
         description="(Cen)tromere (M)apping and (A)nnotation (P)ipeline."
     )
