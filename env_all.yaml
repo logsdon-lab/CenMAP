@@ -7,6 +7,7 @@ dependencies:
 - kmc==3.2.4
 - srf-n-trf==0.1.1
 - make
+- gcc
 # humas-hmmer
 - bedops
 - bedtools
@@ -22,10 +23,13 @@ dependencies:
 - pbmm2==1.17.0
 # repeatmasker/others
 - python==3.12.0
-- repeatmasker==4.1.0
+- repeatmasker ==4.1.7p1 # Last release before conda releases break and doesn't break with rmblast install.
 - samtools>=1.13
 - seqkit
 - seqtk
+- findutils
+- coreutils
+- gzip
 - pip
 - pip:
   - snakemake==9.5.0

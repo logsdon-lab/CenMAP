@@ -258,6 +258,7 @@ def main() -> int:
         title="Workflow", description="Workflow configuration arguments."
     )
     wf_config.add_argument(
+        "-o",
         "--output-dir",
         dest="output_dir",
         default="results",
