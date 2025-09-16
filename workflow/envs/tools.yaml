@@ -7,5 +7,5 @@ dependencies:
   - samtools
   - seqkit
   - gawk
-  - repeatmasker==4.1.0
+  - repeatmasker==4.1.7p1
   - srf-n-trf==0.1.1

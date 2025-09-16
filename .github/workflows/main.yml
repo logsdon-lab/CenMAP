@@ -133,7 +133,6 @@ jobs:
       run:
         conda env update -n cenmap -f ${{ env.ENV_WRAPPER }}
     - name: Test chrY workflow via cenmap wrapper script.
-      # TODO: Change to bioconda script later.
       run: |
         ./cenmap \
         -i test/data/assemblies/HG00731/*.fasta.gz \
