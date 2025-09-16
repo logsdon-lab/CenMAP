@@ -15,29 +15,19 @@ MODDOTPLOT_OUTDIR_DATA = join(MODDOTPLOT_OUTDIR, "combined", "bed")
 MODDOTPLOT_OUTDIR_PLOT = join(MODDOTPLOT_OUTDIR, "combined", "plots")
 
 
+# Use ModDotPlot's ANI algorithm to assess self-identity.
+# I would use ModDotPlot but no conda support, large dependencies, and pysam issues forces me to use my own implementation.
 rule run_moddotplot:
     input:
         fasta=join(HUMAS_CENS_SPLIT_DIR, "{fname}.fa"),
     output:
-        plots=expand(
-            join(
-                MODDOTPLOT_OUTDIR_OG,
-                "{{chr}}",
-                "{{fname}}",
-                "{{fname}}_{otype}.{ext}",
-            ),
-            otype=["FULL", "HIST", "TRI"],
-            ext=["png"],
-        ),
-        bed=join(MODDOTPLOT_OUTDIR_OG, "{chr}", "{fname}", "{fname}.bed"),
+        bedpe=join(MODDOTPLOT_OUTDIR_OG, "{chr}", "{fname}", "{fname}.bed"),
     conda:
         "../envs/py.yaml"
-    # singularity:
-    #     "/project/logsdon_shared/tools/moddotplot.sif"
     params:
         window=config["moddotplot"]["window"],
         ident_thr=config["moddotplot"]["ident_thr"],
-        outdir=lambda wc, output: os.path.dirname(output.bed),
+        outdir=lambda wc, output: os.path.dirname(output.bedpe),
     resources:
         mem=config["moddotplot"]["mem"],
     log:
@@ -46,7 +36,7 @@ rule run_moddotplot:
         join(MODDOTPLOT_BMKDIR, "moddotplot_{chr}_{fname}.tsv")
     shell:
         """
-        moddotplot static -f {input.fasta} -w {params.window} -o {params.outdir} -id {params.ident_thr} &> {log}
+        censtats self-ident -i {input.fasta} -x 2D -w {params.window} -o {params.outdir} -t {params.ident_thr} &> {log}
         """
 
 
@@ -74,10 +64,10 @@ rule filter_annotations_moddotplot:
             if config.get("cdr_finder")
             else []
         ),
-        ident_bed=rules.run_moddotplot.output.bed,
+        ident_bedpe=rules.run_moddotplot.output.bedpe,
     output:
         sat_annot_bed=join(MODDOTPLOT_OUTDIR_DATA, "{chr}", "{fname}", "sat_annot.bed"),
-        ident_bed=join(MODDOTPLOT_OUTDIR_DATA, "{chr}", "{fname}", "ident.bed"),
+        ident_bedpe=join(MODDOTPLOT_OUTDIR_DATA, "{chr}", "{fname}", "ident.bedpe"),
         stv_row_bed=join(
             MODDOTPLOT_OUTDIR_DATA,
             "{chr}",
@@ -103,7 +93,7 @@ rule filter_annotations_moddotplot:
         ( grep '{wildcards.fname}' {input.all_sat_annot_bed} || true ) > {output.sat_annot_bed}
         ( grep '{wildcards.fname}' {input.chr_stv_row_bed} || true ) > {output.stv_row_bed}
         # Remove header.
-        tail -n+2 {input.ident_bed} > {output.ident_bed}
+        ln -s $(realpath {input.ident_bedpe}) {output.ident_bedpe}
         if [ "{params.cdr_output}" != "False" ]; then
             ( grep '{wildcards.fname}' {input.all_cdr_bed} || true ) > {output.cdr_bed}
             ( grep '{wildcards.fname}' {input.all_binned_methyl_bed} || true ) > {output.binned_methyl_bed}
@@ -122,7 +112,7 @@ rule modify_moddotplot_cenplot_tracks:
             else {}
         ),
         rm=rules.filter_annotations_moddotplot.output.sat_annot_bed,
-        ident=rules.filter_annotations_moddotplot.output.ident_bed,
+        ident=rules.filter_annotations_moddotplot.output.ident_bedpe,
         stv=rules.filter_annotations_moddotplot.output.stv_row_bed,
         methyl=rules.filter_annotations_moddotplot.output.binned_methyl_bed,
     output:

@@ -73,6 +73,7 @@ plot_hor_stv:
 
 calculate_hor_length:
   ref_hor_lengths: []
+  chromosome_colors: "config/chrom_colors.tsv"
 
 moddotplot:
   mem: 10GB

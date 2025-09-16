@@ -141,9 +141,6 @@ def main():
             dfs_added_lengths.append(df)
 
     df_all_lengths: pl.DataFrame = pl.concat([df_lengths, *dfs_added_lengths])
-    df_all_lengths = df_all_lengths.with_columns(
-        pl.col("chrom_name").cast(pl.Enum(args.chroms))
-    )
 
     # Merge asat HOR array lengths
     if args.mode == "total":
@@ -163,6 +160,12 @@ def main():
         .otherwise(pl.col("chrom_name"))
     )
     palettes = chrom_colors | added_palettes
+    # Add remaining chroms to plot if multi-chroms.
+    uncovered_chroms = set(df_all_lengths["chrom_name"].unique()).difference(
+        palettes.keys()
+    )
+    palettes = palettes | {chrom: "#FFFFFF" for chrom in uncovered_chroms}
+
     df_all_lengths_pd = df_all_lengths.to_pandas()
     sns.violinplot(
         x="chrom_name",

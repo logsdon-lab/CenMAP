@@ -162,8 +162,4 @@ rule ident_cen_ctgs_all:
             rules.rename_reort_asm.output,
             sm=SAMPLE_NAMES,
         ),
-        expand(
-            rules.extract_cens_regions.output,
-            sm=SAMPLE_NAMES,
-        ),
     default_target: True

@@ -3,116 +3,175 @@
 import os
 import sys
 import yaml
+import shutil
 import argparse
 import subprocess
+from pathlib import Path
 from typing import Any, Iterable
+from snakemake.utils import validate
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
-WD = os.path.dirname(__file__)
-CFG = os.path.join(WD, "config", "config_template.yaml")
+# Follow symlinks to install dir.
+WD = Path(__file__).resolve().parent
+CFG = WD.joinpath("config", "config_template.yaml")
+CFG_SCHEMA = WD.joinpath("config", "config.schema.yaml")
 CHRS = [f"chr{c}" for c in [*range(1, 23), "X", "Y"]]
+CFG_DIR = Path("config")
+DATA_DIR = Path("0-symlink_inputs")
+
+# https://manytools.org/hacker-tools/ascii-banner/
+"""
+Colossal.flf (Jonathon - jon@mq.edu.au)
+8 June 1994
+
+Explanation of first line:
+flf2 - "magic number" for file identification
+a    - should always be `a', for now
+$    - the "hardblank" -- prints as a blank, but can't be smushed
+11   - height of a character
+8    - height of a character, not including descenders
+20   - max line length (excluding comment lines) + a fudge factor
+32   - default smushmode for this font
+13   - number of comment lines
+
+---
+
+Font modified June 17, 2007 by patorjk
+This was to widen the space character.
+"""
+ASCII_ART = """
+ .d8888b.                    888b     d888        d8888 8888888b.
+d88P  Y88b                   8888b   d8888       d88888 888   Y88b
+888    888                   88888b.d88888      d88P888 888    888
+888         .d88b.  88888b.  888Y88888P888     d88P 888 888   d88P
+888        d8P  Y8b 888 "88b 888 Y888P 888    d88P  888 8888888P"
+888    888 88888888 888  888 888  Y8P  888   d88P   888 888
+Y88b  d88P Y8b.     888  888 888   "   888  d8888888888 888
+ "Y8888P"   "Y8888  888  888 888       888 d88P     888 888
+"""
 
 
 def symlink_files(
-    files: Iterable[str], output_dir: str, output_fofn: str | None = None
+    files: Iterable[str], output_dir: Path, output_fofn: Path | None = None
 ) -> None:
     os.makedirs(output_dir, exist_ok=True)
-    symlinked_files = []
+    symlinked_files: list[Path] = []
     for file in files:
         bname = os.path.basename(file)
-        symlinked_file = os.path.join(output_dir, bname)
+        symlinked_file = output_dir.joinpath(bname)
         try:
-            os.symlink(os.path.abspath(file), symlinked_file)
+            symlinked_file.symlink_to(os.path.abspath(file))
         except FileExistsError:
-            pass
-        symlinked_file = os.path.join(output_dir, bname)
+            print(f"File exists: {file}", file=sys.stderr)
+
+        symlinked_file = output_dir.joinpath(bname)
         symlinked_files.append(symlinked_file)
 
     if output_fofn:
         with open(output_fofn, "wt") as fh:
-            for file in symlinked_files:
-                print(file, file=fh)
+            for symlinked_file in symlinked_files:
+                print(str(symlinked_file), file=fh)
 
 
-def update_relative_to_wd(cfg: dict[str, Any]) -> None:
+def update_relative_to_wd(
+    cfg: dict[str, Any], working_dir: Path, config_dir: Path
+) -> None:
     # Go through top-level paths and ensure relative to script.
     for _, v in cfg.items():
         if isinstance(v, dict):
             for k2, v2 in v.items():
-                if isinstance(v2, str) and "/" in v2:
-                    v[k2] = os.path.join(WD, v2)
+                if not isinstance(v2, str):
+                    continue
+
+                cfg_str = WD.joinpath(v2)
+                if not cfg_str.is_file():
+                    continue
+
+                bname = os.path.basename(v2)
+                # Make relative path for snakemake
+                new_rel_path = config_dir.joinpath(bname)
+                # The others are for transferring from script working dir.
+                new_path_dir = working_dir.joinpath(config_dir)
+                new_path = working_dir.joinpath(new_rel_path)
+                new_path_dir.mkdir(exist_ok=True, parents=True)
+                shutil.copy(cfg_str, new_path)
+                v[k2] = str(new_rel_path)
 
 
-def make_config(args: argparse.Namespace, template_config: str) -> str:
+def make_config(
+    args: argparse.Namespace, working_dir: str, template_config: Path
+) -> Path:
     sample = args.sample
     if not args.sample:
         raise ValueError("Sample name is required.")
 
-    fasta_files = args.input_asm
-    ont_files = args.ont
-    hifi_files = args.hifi
+    fasta_files: list[str] | None = args.input_asm
+    if not fasta_files:
+        raise RuntimeError("No assembly files provided.")
+
+    ont_files: list[str] | None = args.ont
+    hifi_files: list[str] | None = args.hifi
     chroms = args.chromosomes
     mode = args.mode
-    output_dir = os.path.join(args.output_dir, sample)
-    data_dir = os.path.join(args.output_dir, sample, "0-symlink_inputs")
-    benchmark_dir = os.path.join(args.benchmark_dir, sample)
-    log_dir = os.path.join(args.log_dir, sample)
-    new_cfg = os.path.join(args.output_dir, sample, "config.yaml")
+    output_dir = Path(working_dir, args.output_dir, sample)
+    data_dir = output_dir.joinpath("data")
+    new_cfg = output_dir.joinpath("config.yaml")
+
     # Don't overwrite if exists.
-    if os.path.exists(new_cfg) and os.stat(new_cfg).st_size != 0:
+    if new_cfg.exists() and new_cfg.stat().st_size != 0:
         return new_cfg
 
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir.mkdir(exist_ok=True, parents=True)
 
     with open(template_config, "rt") as fh:
         cfg: dict[str, Any] = yaml.safe_load(fh)
 
-    update_relative_to_wd(cfg)
+    # Validate and fill config.
+    validate(cfg, schema=CFG_SCHEMA, set_default=True)
+
+    # humas_annot
+    if mode == "human":
+        cfg["humas_annot"]["mode"] = "sd"
+        cfg["humas_annot"]["hmm_profile"] = "data/models/AS-HORs-hmmer3.4-071024.hmm.gz"
+    else:
+        cfg["humas_annot"]["mode"] = "sf"
+        cfg["humas_annot"]["hmm_profile"] = "data/models/AS-SFs-hmmer3.0.290621.hmm.gz"
+
+    update_relative_to_wd(cfg=cfg, working_dir=output_dir, config_dir=CFG_DIR)
 
     if args.reference:
         cfg["ident_cen_ctgs"]["reference"] = args.reference
 
     # Symlink fasta, hifi, and ont files
     # concat_asm
-    asm_dir = os.path.join(data_dir, "asm", sample)
+    asm_dir = data_dir.joinpath("asm", sample)
     symlink_files(fasta_files, asm_dir)
-    cfg["concat_asm"]["input_dir"] = os.path.dirname(asm_dir)
+    cfg["concat_asm"]["input_dir"] = os.path.join(*asm_dir.parts[-3:-1])
 
     # nucflag
     if hifi_files:
-        hifi_dir = os.path.join(data_dir, "hifi")
-        hifi_fofn = os.path.join(hifi_dir, f"{sample}.fofn")
-        symlink_files(hifi_files, os.path.join(hifi_dir, sample), hifi_fofn)
-        cfg["nucflag"]["input_hifi_reads_fofn_dir"] = hifi_dir
+        hifi_dir = data_dir.joinpath("hifi", sample)
+        hifi_fofn = Path(f"{hifi_dir}.fofn")
+        symlink_files(hifi_files, hifi_dir, hifi_fofn)
+        cfg["nucflag"]["input_hifi_reads_fofn_dir"] = os.path.join(
+            *hifi_dir.parts[-3:-1]
+        )
     else:
         cfg.pop("nucflag")
 
     # cdr_finder
     if ont_files:
-        ont_dir = os.path.join(data_dir, "ont")
-        symlink_files(ont_files, os.path.join(ont_dir, sample))
-        cfg["cdr_finder"]["input_bam_dir"] = ont_dir
+        ont_dir = data_dir.joinpath("ont", sample)
+        symlink_files(ont_files, ont_dir)
+        cfg["cdr_finder"]["input_bam_dir"] = os.path.join(*ont_dir.parts[-3:-1])
     else:
         cfg.pop("cdr_finder")
 
-    # humas_annot
-    if mode == "human":
-        cfg["humas_annot"]["mode"] = "sd"
-        cfg["humas_annot"]["hmm_profile"] = os.path.join(
-            WD, "data/models/AS-HORs-hmmer3.4-071024.hmm.gz"
-        )
-    else:
-        cfg["humas_annot"]["mode"] = "sf"
-        cfg["humas_annot"]["hmm_profile"] = os.path.join(
-            WD, "data/models/AS-SFs-hmmer3.0.290621.hmm.gz"
-        )
-
     # Create new config.
     with open(new_cfg, "wt") as ofh:
-        cfg["output_dir"] = output_dir
-        cfg["log_dir"] = log_dir
-        cfg["benchmark_dir"] = benchmark_dir
+        # Snakemake runs in results dir.
+        cfg["output_dir"] = "results"
         cfg["samples"] = [sample]
         cfg["chromosomes"] = chroms
         yaml.safe_dump(cfg, ofh)
@@ -121,6 +180,7 @@ def make_config(args: argparse.Namespace, template_config: str) -> str:
 
 
 def main() -> int:
+    print(f"\033[31m{ASCII_ART}\033[0m", file=sys.stderr)
     ap = argparse.ArgumentParser(
         description="(Cen)tromere (M)apping and (A)nnotation (P)ipeline."
     )
@@ -189,6 +249,7 @@ def main() -> int:
     group_config.add_argument(
         "-m",
         "--mode",
+        type=str,
         default="human",
         choices=["human", "nhp"],
         help="Species of sample. Either 'human' or non-human primate ('nhp').",
@@ -197,24 +258,20 @@ def main() -> int:
         title="Workflow", description="Workflow configuration arguments."
     )
     wf_config.add_argument(
-        "--output-dir", dest="output_dir", default="results", help="Output directory."
-    )
-    wf_config.add_argument(
-        "--log-dir", dest="log_dir", default="logs", help="Log directory."
-    )
-    wf_config.add_argument(
-        "--benchmark-dir",
-        dest="benchmark_dir",
-        default="benchmarks",
-        help="Benchmark directory.",
+        "--output-dir",
+        dest="output_dir",
+        default="results",
+        type=str,
+        help="Output directory.",
     )
     group_processes = wf_config.add_mutually_exclusive_group()
     group_processes.add_argument(
-        "-p", "--processes", default=24, help="Number of processes to run."
+        "-p", "--processes", type=int, default=24, help="Number of processes to run."
     )
     group_processes.add_argument(
         "-j",
         "--jobs",
+        type=int,
         default=24,
         help="Number of jobs to run. Requires setting --workflow-profile and one of the snakemake cluster plugins.",
     )
@@ -222,12 +279,14 @@ def main() -> int:
     wf_config.add_argument(
         "--workflow-profile",
         dest="workflow_profile",
+        type=str,
         default=None,
         help="Custom workflow profile for snakemake.",
     )
     wf_config.add_argument(
         "--snake-opts",
         dest="snake_opts",
+        type=str,
         default=None,
         help="Additional snakemake options.",
     )
@@ -239,14 +298,23 @@ def main() -> int:
         version=f"{__version__}",
     )
     args = ap.parse_args()
+    cwd = os.getcwd()
 
     if args.config:
-        new_config = args.config
+        new_config = Path(args.config).resolve()
         print(f"Using existing configfile:\n\t{new_config}", file=sys.stderr)
+        with open(new_config, "rt") as fh:
+            cfg: dict[str, Any] = yaml.safe_load(fh)
+            output_dir = Path(cfg.get("output_dir", args.output_dir))
+            samples = cfg.get("samples", [])
+            assert len(samples) != 0, "No sample provided."
     elif args.generate_config:
         with open(CFG, "rt") as fh:
-            cfg: dict[str, Any] = yaml.safe_load(fh)
-            update_relative_to_wd(cfg)
+            cfg = yaml.safe_load(fh)
+            # Transfer config to working dir
+            update_relative_to_wd(
+                cfg=cfg, working_dir=Path(args.output_dir), config_dir=CFG_DIR
+            )
             cfg["samples"] = []
             yaml.safe_dump(cfg, sys.stdout)
             print(
@@ -270,11 +338,23 @@ def main() -> int:
             )
             return 0
     else:
-        new_config = make_config(args, CFG)
+        new_config = make_config(args, working_dir=cwd, template_config=CFG).absolute()
+        samples = [args.sample]
         print(f"Generated configfile:\n\t{new_config}", file=sys.stderr)
+        output_dir = Path(args.output_dir, args.sample)
+
+    output_dir.mkdir(exist_ok=True, parents=True)
+
+    # Symlink workflow directory to results.
+    try:
+        output_dir.joinpath("workflow").symlink_to(
+            WD.joinpath("workflow"), target_is_directory=True
+        )
+    except FileExistsError:
+        pass
 
     if not args.workflow_profile:
-        profile = os.path.join(WD, "workflow/profiles/all")
+        profile = "workflow/profiles/all"
     else:
         profile = args.workflow_profile
 
@@ -289,7 +369,7 @@ def main() -> int:
     cmd = [
         "snakemake",
         "--configfile",
-        new_config,
+        new_config.as_posix(),
         *process_args,
         "--workflow-profile",
         profile,
@@ -298,16 +378,22 @@ def main() -> int:
         cmd.extend(args.snake_opts.split(" "))
 
     print(f"Running command:\n\t{' '.join(cmd)}", file=sys.stderr)
+    print(f"Output dir:\n\t{output_dir}", file=sys.stderr)
+    print(
+        f"With sample(s):\n\t{'\n\t'.join(samples)}",
+        file=sys.stderr,
+    )
     try:
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, cwd=output_dir)
     except subprocess.CalledProcessError:
-        subprocess.run([*cmd, "--unlock"], check=True)
+        subprocess.run([*cmd, "--unlock"], check=True, cwd=output_dir)
         return -1
 
     print("Cleaning up temp files.", file=sys.stderr)
     subprocess.run(
-        ["snakemake", "--configfile", new_config, "--delete-temp-output"],
+        ["snakemake", "--configfile", new_config.as_posix(), "--delete-temp-output"],
         check=True,
+        cwd=output_dir,
     )
 
     print("Finished!", file=sys.stderr)
