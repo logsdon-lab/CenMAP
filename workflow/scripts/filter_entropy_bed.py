@@ -109,28 +109,32 @@ def main():
         new_columns=["chrom", "st", "end", "rtype"],
     )
 
+    df_entropy = pl.read_csv(
+        bed,
+        separator="\t",
+        has_header=False,
+        new_columns=[
+            "chrom",
+            "st",
+            "end",
+            "name",
+            "score",
+            "strand",
+            "tst",
+            "tend",
+            "item_rgb",
+        ],
+        raise_if_empty=False,
+    )
+    if df_entropy.is_empty():
+        return
+
     itree_rm = defaultdict(it.IntervalTree)
     for chrom, st, end, _ in df_rm.filter(pl.col("rtype") == "ALR/Alpha").iter_rows():
         itree_rm[chrom].add(it.Interval(st, end))
 
     df_entropy = (
-        pl.read_csv(
-            bed,
-            separator="\t",
-            has_header=False,
-            new_columns=[
-                "chrom",
-                "st",
-                "end",
-                "name",
-                "score",
-                "strand",
-                "tst",
-                "tend",
-                "item_rgb",
-            ],
-        )
-        .sort(by=["chrom", "st"])
+        df_entropy.sort(by=["chrom", "st"])
         # Minmax regions of same entropy so peak calling easier.
         .with_columns(rle_score=pl.col("score").rle_id().over("chrom"))
         .group_by(["chrom", "rle_score"])
