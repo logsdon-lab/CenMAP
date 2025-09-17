@@ -23,7 +23,7 @@ rule calculate_entropy:
     params:
         outdir=lambda wc, output: os.path.dirname(output[0]),
         window=config["repeatmasker"]["bp_shannon_window"],
-        omit_plot="--omit_plot",
+        omit_plot="--omit_plot" if config["repeatmasker"]["omit_shannon_plots"] else "",
     log:
         join(FIX_RM_LOGDIR, "calculate_entropy_{sm}_{fname}.log"),
     conda:
