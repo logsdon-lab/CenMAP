@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 from snakemake.utils import validate
 
-__version__ = "1.0.1"
+__version__ = "1.0.3"
 
 # Follow symlinks to install dir.
 WD = Path(__file__).resolve().parent
@@ -359,13 +359,10 @@ def main() -> int:
     else:
         profile = args.workflow_profile
 
-    if args.processes:
-        process_args = ["-c", str(args.processes)]
-    else:
-        assert args.workflow_profile is not None, (
-            "Flag --workflow-profile is required to run on a cluster."
-        )
+    if args.workflow_profile and args.jobs:
         process_args = ["-j", str(args.jobs)]
+    else:
+        process_args = ["-c", str(args.processes)]
 
     cmd = [
         "snakemake",
