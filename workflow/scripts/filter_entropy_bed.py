@@ -101,6 +101,26 @@ def main():
     # bed = "/project/logsdon_shared/projects/GIAB_HG008_TN/exp_plot/HG008-N_rc-chr14_haplotype2-0000120:4461582-6946730.bed"
     thr_valid_prop = args.prop_valid
 
+    try:
+        df_entropy = pl.read_csv(
+            bed,
+            separator="\t",
+            has_header=False,
+            new_columns=[
+                "chrom",
+                "st",
+                "end",
+                "name",
+                "score",
+                "strand",
+                "tst",
+                "tend",
+                "item_rgb",
+            ],
+        )
+    except pl.exceptions.NoDataError:
+        return
+
     df_rm = pl.read_csv(
         rm,
         separator="\t",
@@ -108,26 +128,6 @@ def main():
         columns=[4, 5, 6, 9],
         new_columns=["chrom", "st", "end", "rtype"],
     )
-
-    df_entropy = pl.read_csv(
-        bed,
-        separator="\t",
-        has_header=False,
-        new_columns=[
-            "chrom",
-            "st",
-            "end",
-            "name",
-            "score",
-            "strand",
-            "tst",
-            "tend",
-            "item_rgb",
-        ],
-        raise_if_empty=False,
-    )
-    if df_entropy.is_empty():
-        return
 
     itree_rm = defaultdict(it.IntervalTree)
     for chrom, st, end, _ in df_rm.filter(pl.col("rtype") == "ALR/Alpha").iter_rows():

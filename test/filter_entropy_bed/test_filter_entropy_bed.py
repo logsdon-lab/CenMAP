@@ -18,7 +18,7 @@ WD = os.path.dirname(__file__)
         # HG02059 - chr20 ALR fragment (Zero entropy, no dip)
         # HG02818 - chr2 complete centromere
         # HG00513 - chr20 partial centromere
-        for sm in ["HG00358", "HG02059", "HG02818", "HG00513"]
+        for sm in ["HG00358", "HG02059", "HG02818", "HG00513", "empty"]
     ],
 )
 def test_filter_srf_bed(input_entropy: str, input_rm: str, expected: str):
