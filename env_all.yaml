@@ -4,8 +4,9 @@ channels:
 - defaults
 dependencies:
 # srf
-- kmc==3.2.4
-- srf-n-trf==0.1.1
+- kmc>=3.2.4
+- srf-n-trf>=0.1.1
+# Needed to compile srf/trf and only if installed locally. Not included in bioconda recipe.
 - make
 - gcc
 # humas-hmmer
@@ -18,11 +19,11 @@ dependencies:
 # asm-to-ref
 - rustybam
 # cdr-finder/nucflag
-- minimap2==2.29
-- ont-modkit==0.3.2
-- pbmm2==1.17.0
+- minimap2>=2.29
+- ont-modkit>=0.3.2
+- pbmm2>=1.17.0
 # repeatmasker/others
-- python==3.12.0
+- python>=3.12.0
 - repeatmasker ==4.1.7p1 # Last release before conda releases break and doesn't break with rmblast install.
 - samtools>=1.13
 - seqkit
@@ -30,17 +31,16 @@ dependencies:
 - findutils
 - coreutils
 - gzip
-- pip
-- pip:
-  - snakemake==9.5.0
-  - cenplot==0.1.4
-  - censtats==0.1.0
-  - intervaltree
-  - matplotlib
-  - nucflag==0.3.7
-  - numpy
-  - polars
-  - pyarrow
-  - pyyaml
-  - scipy
-  - seaborn
+# Python
+- snakemake>=9.5.0
+- cenplot>=0.1.4
+- censtats>=0.1.0
+- nucflag>=0.3.7
+- intervaltree
+- matplotlib-base
+- numpy
+- polars
+- pyarrow
+- pyyaml
+- scipy
+- seaborn
