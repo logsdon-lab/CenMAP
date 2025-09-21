@@ -32,7 +32,9 @@ dependencies:
 - coreutils
 - gzip
 # Python
-- snakemake>=9.5.0
+# Before 9.11.4. Breaks rule inheritance/naming.
+# https://github.com/snakemake/snakemake/pull/3714
+- snakemake>=8.24.0,<9.11.4
 - cenplot>=0.1.4
 - censtats>=0.1.0
 - nucflag>=0.3.7
