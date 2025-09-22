@@ -41,6 +41,8 @@ rule get_complete_correct_cens_bed:
     shell:
         """
         {{ {params.infile_stream} | \
+        sort -k1,1 -k2,2n | \
+        uniq | \
         awk -v OFS="\\t" '{{
             adj_name=$1;
             adj_st=$2; adj_end=$3;
