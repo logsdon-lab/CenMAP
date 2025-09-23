@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 from snakemake.utils import validate
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 # Follow symlinks to install dir.
 WD = Path(__file__).resolve().parent

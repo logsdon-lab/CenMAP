@@ -15,7 +15,7 @@ def main():
         new_columns=["name", "start", "stop", "rtype", "action"],
         has_header=False,
         separator="\t",
-    )
+    ).sort(by=["name", "start"])
     df_regions = pl.read_csv(
         args.regions,
         new_columns=["name", "start", "stop"],
