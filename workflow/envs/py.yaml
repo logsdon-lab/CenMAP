@@ -1,16 +1,15 @@
 channels:
   - conda-forge
+  - bioconda
 dependencies:
-  - python==3.12.0
-  - pip
-  - pip:
-    - matplotlib
-    - numpy
-    - pyyaml
-    - seaborn
-    - polars
-    - scipy
-    - pyarrow
-    - intervaltree
-    - censtats==0.1.0
-    - cenplot==0.1.4
+  - python>=3.12.0
+  - censtats>=0.1.0
+  - cenplot>=0.1.4
+  - intervaltree
+  - matplotlib-base
+  - numpy
+  - polars
+  - pyarrow
+  - pyyaml
+  - scipy
+  - seaborn

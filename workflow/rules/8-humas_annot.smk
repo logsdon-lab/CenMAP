@@ -278,17 +278,27 @@ def humas_annot_chr_outputs(wc):
 
 # Force including conda so --containerize includes.
 # Must be done since Snakemake won't know rule metadata until runtime.
-rule _force_humas_annot_env_inclusion:
+rule _force_humas_sd_env_inclusion:
     output:
-        plots=touch("conda_humas_annot.done"),
+        plots=touch("conda_humas_sd.done"),
     conda:
-        humas_env
+        "Snakemake-HumAS-SD/workflow/envs/env.yaml"
+    shell:
+        "echo ''"
+
+
+rule _force_humas_hmmer_env_inclusion:
+    output:
+        plots=touch("conda_humas_hmmer.done"),
+    conda:
+        "Snakemake-HumAS-HMMER/workflow/envs/env.yaml"
     shell:
         "echo ''"
 
 
 rule humas_annot_all:
     input:
-        rules._force_humas_annot_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
+        rules._force_humas_sd_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
+        rules._force_humas_hmmer_env_inclusion.output if IS_CONTAINERIZE_CMD else [],
         expand(rules.run_humas_annot.output, sm=SAMPLE_NAMES),
     default_target: True
