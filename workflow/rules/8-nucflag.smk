@@ -233,7 +233,7 @@ NUCFLAG_CFG = {
 module NucFlag:
     snakefile:
         github(
-            "logsdon-lab/Snakemake-NucFlag", path="workflow/Snakefile", tag="v0.2.3"
+            "logsdon-lab/Snakemake-NucFlag", path="workflow/Snakefile", tag="v0.2.3.1"
         )
     config:
         NUCFLAG_CFG
