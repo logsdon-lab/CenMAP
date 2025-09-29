@@ -30,7 +30,8 @@ module align_asm_to_ref:
         github(
             "koisland/asm-to-reference-alignment",
             path="workflow/Snakefile",
-            branch="minimal",
+            # Minimal branch
+            commit="d3610a8f8c4a3fddedb7b64078ffb65fe0853573",
         )
     config:
         ALN_CFG
