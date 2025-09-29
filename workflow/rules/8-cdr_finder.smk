@@ -41,7 +41,7 @@ CDR_ALIGN_CFG = {
     "samples": [
         {
             "name": sm,
-            "asm_fa": expand(rules.concat_asm.output.fa, sm=sm),
+            "asm_fa": expand(rules.concat_asm.output.fa, sm=sm)[0],
             "read_dir": join(config["cdr_finder"]["input_bam_dir"], sm),
             "read_rgx": config["cdr_finder"]["bam_rgx"],
         }
