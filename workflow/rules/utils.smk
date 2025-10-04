@@ -21,7 +21,7 @@ shell_extract_and_index_fa = """
 shell_create_rm_bed = """
     python {params.script} \
     -i <(awk -v OFS="\\t" '{{$1=$1; print}}' {input.rm_out} | cut -f1-15) \
-    -c {params.chr_rgx} \
+    {params.chr_rgx} \
     -m {params.color_mapping} {params.to_abs} > {output.rm_bed} 2> {log}
 """
 

@@ -52,7 +52,7 @@ rule filter_annotations_hor_stv:
             "cdr.bed",
         ),
     params:
-        rgx_chr=lambda wc: f"{wc.chr}[_:-]",
+        rgx_chr=lambda wc: f"{wc.chr}[_:-]" if wc.chr != "all" else "",
         cdr_output=bool(config.get("cdr_finder", False)),
     log:
         join(PLT_HOR_STV_LOGDIR, "filter_annotations_{chr}_hor_stv.log"),
@@ -60,14 +60,32 @@ rule filter_annotations_hor_stv:
         "../envs/tools.yaml"
     shell:
         """
-        if [ ! "{params.cdr_output}" == "False" ]; then
-            {{ grep '{params.rgx_chr}' {input.all_cdr_bed} || true ;}} > {output.cdr_bed}
+        if [ -z "{params.rgx_chr}" ]; then
+            if [ ! "{params.cdr_output}" == "False" ]; then
+                ln -sf {input.all_cdr_bed} {output.cdr_bed}
+            fi
+            ln -sf $(realpath {input.all_stv_bed}) {output.all_stv_bed}
+            ln -sf $(realpath {input.complete_stv_bed}) {output.complete_stv_bed}
+            ln -sf $(realpath {input.all_rm_sat_bed}) {output.rm_bed}
+        else
+            if [ ! "{params.cdr_output}" == "False" ]; then
+                {{ grep '{params.rgx_chr}' {input.all_cdr_bed} || true ;}} > {output.cdr_bed}
+            fi
+            {{ grep '{params.rgx_chr}' {input.all_stv_bed} || true ;}} > {output.all_stv_bed}
+            {{ grep '{params.rgx_chr}' {input.complete_stv_bed} || true ;}} > {output.complete_stv_bed}
+            {{ grep '{params.rgx_chr}' {input.all_rm_sat_bed} || true ;}} > {output.rm_bed}
         fi
-        {{ grep '{params.rgx_chr}' {input.all_stv_bed} || true ;}} > {output.all_stv_bed}
-        {{ grep '{params.rgx_chr}' {input.complete_stv_bed} || true ;}} > {output.complete_stv_bed}
-        {{ grep '{params.rgx_chr}' {input.all_rm_sat_bed} || true ;}} > {output.rm_bed}
         touch {output}
         """
+
+
+def get_hor_stv_plot_layout(wc) -> str:
+    if config["humas_annot"]["mode"] == "sf":
+        return workflow.source_path("../scripts/cenplot_sf_plot.yaml")
+    elif config["humas_annot"]["mode"] == "srf-n-trf":
+        return workflow.source_path("../scripts/cenplot_srf-n-trf_plot.yaml")
+    else:
+        return workflow.source_path("../scripts/cenplot_hor_stv_plot.yaml")
 
 
 rule plot_hor_stv:
@@ -95,11 +113,7 @@ rule plot_hor_stv:
         ),
     params:
         script=workflow.source_path("../scripts/plot_multiple_cen.py"),
-        plot_layout=(
-            workflow.source_path("../scripts/cenplot_hor_stv_plot.yaml")
-            if config["humas_annot"]["mode"] != "sf"
-            else workflow.source_path("../scripts/cenplot_sf_plot.yaml")
-        ),
+        plot_layout=get_hor_stv_plot_layout,
         output_prefix=lambda wc, output: os.path.splitext(output.plots[0])[0],
         json_file_str=lambda wc, input: json.dumps(dict(input)),
         options=lambda wc: f"--options '{json.dumps({"hor":{"color_map_file": os.path.abspath(config["plot_hor_stv"]["stv_annot_colors"])}})}'",
@@ -115,5 +129,9 @@ rule plot_hor_stv:
 
 rule plot_hor_stv_all:
     input:
-        expand(rules.plot_hor_stv.output, chr=CHROMOSOMES, typ=["complete", "all"]),
+        expand(
+            rules.plot_hor_stv.output,
+            chr=CHROMOSOMES if CHROMOSOMES else ["all"],
+            typ=["complete", "all"],
+        ),
     default_target: True

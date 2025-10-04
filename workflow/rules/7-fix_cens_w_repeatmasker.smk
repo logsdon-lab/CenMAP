@@ -90,8 +90,8 @@ rule make_complete_cens_bed:
         # (sm_ctg, st, end, old_sm_ctg)
         beds=ancient(valid_beds_by_cen_entropy),
         # (ctg, sm_ctg, ctg_len)
-        rename_key=rules.map_chroms.output,
-        idx=rules.rename_reort_asm.output.idx,
+        rename_key=rules.create_rename_key.output,
+        idx=rules.create_final_asm.output.idx,
     output:
         # (sm_ctg, st, end, ctg, ctg_len)
         cen_bed=join(
@@ -178,7 +178,7 @@ rule create_fixed_rm_bed:
             "rm.bed",
         ),
     params:
-        chr_rgx="{chr}[:_-]",
+        chr_rgx=lambda wc: f"-c {wc.chr}[:_-]" if wc.chr != "all" else "",
         color_mapping=config["repeatmasker"]["repeat_colors"],
         script=workflow.source_path("../scripts/create_rm_bed.py"),
         to_abs="",
@@ -228,5 +228,8 @@ rule plot_fixed_rm_bed_by_chr:
 
 rule fix_cens_w_repeatmasker_all:
     input:
-        expand(rules.plot_fixed_rm_bed_by_chr.output, chr=CHROMOSOMES),
+        expand(
+            rules.plot_fixed_rm_bed_by_chr.output,
+            chr=CHROMOSOMES if CHROMOSOMES else ["all"],
+        ),
     default_target: True

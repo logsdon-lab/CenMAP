@@ -203,7 +203,7 @@ NUCFLAG_CFG = {
     "samples": [
         {
             "name": sm,
-            "asm_fa": rules.rename_reort_asm.output.fa,
+            "asm_fa": rules.create_final_asm.output.fa,
             # Switch between fofn dir or read dir + ext.
             **(
                 {

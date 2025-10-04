@@ -149,9 +149,6 @@ use rule * from concat_asm
 use rule * from srf
 
 
-use rule * from align_asm_to_ref
-
-
 use rule * from ident_cen_ctgs
 
 
@@ -170,16 +167,29 @@ use rule * from get_complete_correct_cens
 output = [
     # Required output.
     rules.srf_all.input,
-    rules.ident_cen_ctgs_all.input,
     rules.repeatmasker_all.input,
     rules.fix_cens_w_repeatmasker_all.input,
     rules.get_complete_correct_cens_all.input,
 ]
 
-# Download T2T-CHM13 reference assembly if existing path not provided.
-if not config["ident_cen_ctgs"].get("reference"):
-    output.append(rules.download_ref_asm.output)
+if config["ident_cen_ctgs"].get("reference") or config.get("chromosomes"):
 
+    use rule * from align_asm_to_ref
+
+
+if config["ident_cen_ctgs"].get("reference") and config.get("chromosomes"):
+    # Use reference and chromosomes. Don't download
+    output.append(rules.ident_cen_ctgs_all.input)
+elif not config["ident_cen_ctgs"].get("reference") and config.get("chromosomes"):
+    # Chromosomes but no reference.
+    # Download T2T-CHM13 reference assembly if existing path not provided.
+    output.extend([rules.download_ref_asm.output, rules.ident_cen_ctgs_all.input])
+else:
+    # Otherwise don't remap contig names.
+    print(
+        "No reference or chromosomes. Not assigning chromosome name to assembly.",
+        file=sys.stderr,
+    )
 
 if config.get("humas_annot"):
 

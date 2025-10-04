@@ -111,7 +111,7 @@ properties:
         type: integer
         description: >-
           Merge grouped satellite repeat blocks n base pairs.
-          Smaller values will reduce the length of p-arms of the acrocentric chromosomes but at the risk of considering a p-arm as a correct centromere.
+          Smaller values will reduce the length of p-arms of the acrocentric chromosomes but at the risk of considering monomeric/divergent HORs in p-arm acrocentric chromosomes as a correct centromere.
           The repeatmasker.bp_shannon_window parameter should be increased as well to prevent this.
         default: 100000
       bp_slop:
@@ -384,7 +384,6 @@ properties:
       - bam_rgx
 required:
   - samples
-  - chromosomes
   - concat_asm
   - ident_cen_ctgs
   - repeatmasker

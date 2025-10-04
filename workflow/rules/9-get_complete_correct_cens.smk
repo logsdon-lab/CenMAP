@@ -68,7 +68,7 @@ rule get_complete_correct_cens_bed:
 rule get_complete_correct_cens_fa:
     input:
         # assembly reoriented fasta
-        fa=rules.rename_reort_asm.output.fa,
+        fa=rules.create_final_asm.output.fa,
         # (name, st, end)
         bed=rules.get_complete_correct_cens_bed.output,
     output:

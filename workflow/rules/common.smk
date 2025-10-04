@@ -7,13 +7,84 @@ import yaml
 
 from os.path import join, dirname, basename, splitext
 from collections import defaultdict, Counter
-from typing import Any
+from typing import Any, NamedTuple
 from snakemake.settings.types import DeploymentMethod
 from snakemake.utils import validate
 
 
 # Validate and fill defaults.
 validate(config, "../../config/config.schema.yaml")
+
+
+def chrom_coord_to_tsv(chrom_coord: str) -> str:
+    chrom, coords = chrom_coord.rsplit(":", 1)
+    st, end = coords.split("-")
+    return f"{chrom}\\t{st}\\t{end}\\n"
+
+
+class SplitFilename(NamedTuple):
+    sm: str
+    chrom: str | None
+    ctg: str
+    coord: str
+
+    def __str__(self):
+        if self.chrom:
+            return f"{self.sm}_{self.chrom}_{self.ctg}:{self.coord}"
+        else:
+            return f"{self.sm}_{self.ctg}:{self.coord}"
+
+
+def get_valid_fnames(
+    fastas: list[str], *, filter_chrom: str | None
+) -> list[SplitFilename]:
+    fname_elems = []
+    for fasta in fastas:
+        bname, _ = splitext(basename(fasta))
+        fname, coord = bname.rsplit(":", 1)
+        if filter_chrom:
+            sm, chrom, ctg = fname.split("_", 2)
+        else:
+            sm, ctg = fname.split("_", 1)
+            chrom = None
+        if chrom:
+            elems = (sm, chrom, ctg, coord)
+        else:
+            elems = (sm, ctg, coord)
+        fname_elems.append(elems)
+
+    fnames = []
+    sort_key = lambda x: (x[1], x[2], x[3]) if filter_chrom else (x[1], x[2])
+    # Sort by coords so if multiple chr, chr position in name (chr3-chr21) matches.
+    sorted_wcs = sorted(
+        fname_elems,
+        key=sort_key,
+        reverse=True,
+    )
+
+    # Store index of chrom per contig.
+    # In cases of dicentric contigs (chr3-chr21). Don't want to include twice.
+    ctg_counter = Counter()
+    for elems in sorted_wcs:
+        if filter_chrom:
+            sm, chrom, ctg, coord = elems
+            chrom_names: list[str] = chrom.replace("rc-", "").split("-")
+        else:
+            sm, ctg, coord = elems
+            chrom = None
+            chrom_names = []
+
+        if filter_chrom and not filter_chrom in chrom_names:
+            continue
+
+        ctg_id = (sm, chrom, ctg, coord)
+        idx = ctg_counter[ctg_id]
+        ctg_counter[ctg_id] += 1
+        if filter_chrom and filter_chrom != chrom_names[idx]:
+            continue
+        fnames.append(SplitFilename(sm=sm, chrom=chrom, ctg=ctg, coord=coord))
+
+    return fnames
 
 
 # Include contants so can run individual smk files without main Snakefile.

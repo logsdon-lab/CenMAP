@@ -117,7 +117,7 @@ def main():
     missing_chroms = set()
     for chrom, dtype_bedfiles in bed_files.items():
         for i, trk in enumerate(track_format["tracks"]):
-            dtype = trk["path"]
+            dtype = trk.get("path")
             bed_file = dtype_bedfiles.get(dtype)
             takes_space = trk.get("proportion")
             has_data = isinstance(bed_file, str)

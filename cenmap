@@ -112,7 +112,6 @@ def make_config(
 
     ont_files: list[str] | None = args.ont
     hifi_files: list[str] | None = args.hifi
-    chroms = args.chromosomes
     mode = args.mode
     output_dir = Path(working_dir, args.output_dir, sample)
     data_dir = output_dir.joinpath("data")
@@ -138,8 +137,17 @@ def make_config(
         cfg["humas_annot"]["mode"] = "sf"
         cfg["humas_annot"]["hmm_profile"] = "data/models/AS-SFs-hmmer3.0.290621.hmm.gz"
 
+    # Set to no chromosomes.
+    if "none" in args.chromosomes:
+        chroms = []
+        cfg["humas_annot"]["mode"] = "srf-n-trf"
+    else:
+        chroms = args.chromosomes
+
     update_relative_to_wd(cfg=cfg, working_dir=output_dir, config_dir=CFG_DIR)
 
+    # Set reference.
+    # If no reference and chromosomes is []. No reference alignment is performed.
     if args.reference:
         cfg["ident_cen_ctgs"]["reference"] = args.reference
 
@@ -229,6 +237,7 @@ def main() -> int:
         help=(
             "Path to reference assembly used to rename and reorient contigs. "
             "Defaults to CHM13 v2.0 and assumes contig names are exact matches to --chromosomes. "
+            "If not provided and --chromosomes set to 'none', no reference chromosome mapping is performed. "
             "Avoid changing unless you know what you're doing."
         ),
     )
@@ -244,7 +253,7 @@ def main() -> int:
         type=str,
         nargs="+",
         default=CHRS,
-        help="Chromosomes to aggregate outputs. Format: chr[0-9XY]+",
+        help="Chromosomes to partition outputs. Specifying 'none' will not partition output. Format: 'chr[0-9XY]+|none'",
     )
     group_config.add_argument(
         "-m",
@@ -386,6 +395,10 @@ def main() -> int:
     except subprocess.CalledProcessError:
         subprocess.run([*cmd, "--unlock"], check=True, cwd=output_dir)
         return -1
+
+    # Don't delete temp files if dry-run.
+    if args.snake_opts and "-n" in args.snake_opts:
+        return 0
 
     print("Cleaning up temp files.", file=sys.stderr)
     subprocess.run(

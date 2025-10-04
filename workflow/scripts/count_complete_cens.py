@@ -46,13 +46,17 @@ def main():
     args = ap.parse_args()
     chroms = args.chroms
     n_chroms = args.n_chroms
+    no_chrom = "all" in args.chroms
 
     # Include rc- in pattern
-    chroms.extend([f"rc-{chrom}" for chrom in chroms])
-    rgx_chrom = "|".join([*chroms, "-"])
-    rgx_name_groups = (
-        r"^(?<sample>.*?)_(?<chr>(" + rgx_chrom + r")*)_(?<contig_name>.*?)$"
-    )
+    if not no_chrom:
+        chroms.extend([f"rc-{chrom}" for chrom in chroms])
+        rgx_chrom = "|".join([*chroms, "-"])
+        rgx_name_groups = (
+            r"^(?<sample>.*?)_(?<chr>(" + rgx_chrom + r")*)_(?<contig_name>.*?)$"
+        )
+    else:
+        rgx_name_groups = r"^(?<sample>.*?)_(?<contig_name>.*?)$"
     df = (
         pl.read_csv(
             args.input,
@@ -64,7 +68,6 @@ def main():
         .agg(pl.sum("length").alias("length"))
         .with_columns(mtch_ctg=pl.col("ctg").str.extract_groups(rgx_name_groups))
         .unnest("mtch_ctg")
-        .drop("3")
     )
 
     df_cnts = (
@@ -86,7 +89,7 @@ def main():
                 schema=DEF_OUT_SCHEMA,
             ),
         ]
-    )
+    ).select(DEF_OUT_SCHEMA.keys())
     df_cnts.write_csv(args.output, separator="\t", include_header=False)
 
 

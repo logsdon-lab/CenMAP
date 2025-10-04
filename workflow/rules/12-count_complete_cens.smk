@@ -17,7 +17,7 @@ rule count_complete_cens:
         ),
     params:
         script=workflow.source_path("../scripts/count_complete_cens.py"),
-        chroms=CHROMOSOMES,
+        chroms=CHROMOSOMES if CHROMOSOMES else "all",
     log:
         join(CNT_CENS_LOGDIR, "count_complete_cens.log"),
     conda:
@@ -38,7 +38,6 @@ rule plot_complete_cen_counts:
         ),
     params:
         script=workflow.source_path("../scripts/plot_complete_cen_counts.py"),
-        chroms=CHROMOSOMES,
     log:
         join(CNT_CENS_LOGDIR, "plot_complete_cen_counts.log"),
     conda:
@@ -46,7 +45,7 @@ rule plot_complete_cen_counts:
     shell:
         """
         if [ -s {input.cmp_cnts} ]; then
-            python {params.script} -i {input.cmp_cnts} -c {params.chroms} -o {output} 2> {log}
+            python {params.script} -i {input.cmp_cnts} -o {output} 2> {log}
         else
             touch {output}
         fi

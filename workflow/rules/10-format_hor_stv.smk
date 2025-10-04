@@ -18,10 +18,14 @@ checkpoint aggregate_format_all_stv_row:
         "../envs/tools.yaml"
     params:
         inputs=lambda wc, input: input if input else '<(echo "")',
-        chr_rgx="{chr}[:_-]",
+        grep_chr=lambda wc: (
+            f"| grep -P '{wc.chr}[:_-]' || true" if wc.chr != "all" else ""
+        ),
     shell:
         """
         {{ awk -v OFS="\\t" '{{
+            # Exit if empty.
+            if (NF == 0) {{ next; }}
             # Find start in contig name.
             match($1, ":(.+)-", starts);
             if ($2 > $3) {{
@@ -34,8 +38,7 @@ checkpoint aggregate_format_all_stv_row:
             $7=$7+starts[1];
             $8=$8+starts[1];
             print
-        }}' {params.inputs} | \
-        grep -P "{params.chr_rgx}" || true ;}} > {output} 2> {log}
+        }}' {params.inputs} {params.grep_chr} ;}} > {output} 2> {log}
         """
 
 
@@ -63,10 +66,10 @@ rule format_hor_stv_all:
     input:
         expand(
             rules.aggregate_format_all_stv_row.output,
-            chr=CHROMOSOMES,
+            chr=CHROMOSOMES if CHROMOSOMES else ["all"],
         ),
         expand(
             rules.filter_complete_correct_stv_row.output,
-            chr=CHROMOSOMES,
+            chr=CHROMOSOMES if CHROMOSOMES else ["all"],
         ),
     default_target: True

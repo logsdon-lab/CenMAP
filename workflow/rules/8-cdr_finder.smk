@@ -41,7 +41,7 @@ CDR_ALIGN_CFG = {
     "samples": [
         {
             "name": sm,
-            "asm_fa": expand(rules.rename_reort_asm.output.fa, sm=sm)[0],
+            "asm_fa": expand(rules.create_final_asm.output.fa, sm=sm)[0],
             "read_dir": join(config["cdr_finder"]["input_bam_dir"], sm),
             "read_rgx": config["cdr_finder"]["bam_rgx"],
         }
@@ -76,7 +76,7 @@ CDR_FINDER_CONFIG = {
     "restrict_alr": True,
     "samples": {
         sm: {
-            "fasta": expand(rules.rename_reort_asm.output.fa, sm=sm),
+            "fasta": expand(rules.create_final_asm.output.fa, sm=sm),
             "regions": expand(rules.make_complete_cens_bed.output.cen_bed, sm=sm),
             "bam": expand(
                 rules.cdr_aln_merge_read_asm_alignments.output.alignment, sm=sm
