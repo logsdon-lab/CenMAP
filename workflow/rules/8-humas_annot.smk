@@ -229,7 +229,7 @@ def humas_annot_sm_outputs(wc):
         return expand(rules.format_monomer_sf_classes.output, fname=fnames)
     else:
         assert (
-            chrs and config["humas_annot"]["mode"] != "sd"
+            chrs and config["humas_annot"]["mode"] == "sd"
         ), "Invalid option for humas_annot. Chromosomes needed."
         return expand(rules.cens_generate_stv.output, zip, fname=fnames, chr=chrs)
 
@@ -268,7 +268,7 @@ def humas_annot_chr_outputs(wc):
         )
     else:
         assert (
-            wc.chr != "all" and config["humas_annot"]["mode"] != "sd"
+            wc.chr != "all" and config["humas_annot"]["mode"] == "sd"
         ), "Chromosomes needed for HumAS-SD."
         outputs.extend(expand(rules.cens_generate_stv.output, fname=fnames, chr=wc.chr))
 

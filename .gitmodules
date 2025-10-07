@@ -25,5 +25,5 @@
 	ignore = dirty
 [submodule "workflow/rules/CDR-Finder"]
 	path = workflow/rules/CDR-Finder
-	url = https://github.com/koisland/CDR-Finder.git
+	url = https://github.com/logsdon-lab/CDR-Finder.git
 	ignore = dirty

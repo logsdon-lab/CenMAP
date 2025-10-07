@@ -90,7 +90,7 @@ rule plot_as_hor_length:
         # Random colors given for each ref.
         # Run separately to get desired colors.
         args_added_lengths=args_ref_hor_lengths,
-        chroms=f"-c {CHROMOSOMES}" if CHROMOSOMES else "-c all",
+        chroms=f"-c {' '.join(CHROMOSOMES)}" if CHROMOSOMES else "-c all",
         chrom_colors=config["calculate_hor_length"]["chromosome_colors"],
     log:
         join(HOR_ARR_LEN_LOGDIR, "plot_all_as_hor_length.log"),

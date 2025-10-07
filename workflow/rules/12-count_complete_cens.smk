@@ -17,7 +17,7 @@ rule count_complete_cens:
         ),
     params:
         script=workflow.source_path("../scripts/count_complete_cens.py"),
-        chroms=CHROMOSOMES if CHROMOSOMES else "all",
+        chroms=" ".join(CHROMOSOMES) if CHROMOSOMES else "all",
     log:
         join(CNT_CENS_LOGDIR, "count_complete_cens.log"),
     conda:
