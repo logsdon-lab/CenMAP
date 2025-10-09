@@ -68,6 +68,28 @@ module CDR_Align:
 use rule * from CDR_Align as cdr_aln_*
 
 
+# Avoid running RM again.
+rule cdr_make_repeatmasker_bed:
+    input:
+        rules.fix_cens_rm_out.output,
+    output:
+        # [chrom_w_no_coords, st_abs, end_abs, repeat_type]
+        rm_bed=temp(
+            join(
+                CDR_FINDER_OUTDIR,
+                "bed",
+                "{sm}_rm.bed",
+            )
+        ),
+    shell:
+        """
+        awk -v OFS="\\t" '{{
+            match($5, "^(.+):", chrom);
+            print chrom[1], $6, $7, $10
+        }}' {input} > {output}
+        """
+
+
 # Pass CDR config here.
 CDR_FINDER_CONFIG = {
     "output_dir": CDR_FINDER_OUTDIR,
@@ -80,6 +102,9 @@ CDR_FINDER_CONFIG = {
             "regions": expand(rules.make_complete_cens_bed.output.cen_bed, sm=sm),
             "bam": expand(
                 rules.cdr_aln_merge_read_asm_alignments.output.alignment, sm=sm
+            ),
+            "repeatmasker": expand(
+                rules.cdr_make_repeatmasker_bed.output.rm_bed, sm=sm
             ),
         }
         for sm in SAMPLE_NAMES_INTERSECTION
