@@ -105,7 +105,8 @@ rule merge_cdr_beds:
         ),
         cdr_output=expand(rules.cdr_call_cdrs.output, sample=SAMPLE_NAMES_INTERSECTION),
         methyl_cdr_output=expand(
-            rules.cdr_calc_windows.output, sample=SAMPLE_NAMES_INTERSECTION
+            rules.cdr_aggregate_bed_files.output.methyl_bed_all,
+            sample=SAMPLE_NAMES_INTERSECTION,
         ),
     output:
         reorient_cdr_output=join(
