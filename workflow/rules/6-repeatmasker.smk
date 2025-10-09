@@ -133,6 +133,7 @@ rule run_repeatmasker:
             -engine {params.engine} \
             -species {params.species} \
             -dir {params.output_dir} \
+            -qq \
             -pa {threads} \
             {input.seq} &> {log}
         else
