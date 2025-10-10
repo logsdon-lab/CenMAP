@@ -362,7 +362,7 @@ properties:
       bp_alr_merge:
         type: integer
         description: Merge distance of alpha-satellite repeats.
-        default: 1000
+        default: 8000
       bp_edge:
         type: integer
         description: Number of base pairs at edges adjacent to CDR to estimate height.
