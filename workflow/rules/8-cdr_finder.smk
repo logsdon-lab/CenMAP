@@ -146,7 +146,8 @@ rule merge_cdr_beds:
         ),
     shell:
         """
-        sort -k1,1 {input.cdr_output} | \
+        cut -f1-3 {input.cdr_output} | \
+        sort -k1,1 | \
         join - <(cat {input.bed} | sort -k1,1) | \
         awk -v OFS="\\t" '{{
             if ($2 >= $4 && $3 <= $5) {{
