@@ -126,6 +126,10 @@ properties:
         type: number
         description: Percent of mapped reference chromosome required to add to name.
         default: 5.0
+      paf2bed_min_ident:
+        type: number
+        description: Minimum identity (-d) for srfutils.js paf2bed.
+        default: 85.0
   nucflag:
     type: object
     additionalProperties: false
@@ -204,7 +208,8 @@ properties:
         items:
           type: string
         description: Trim centromeric regions to the largest block of these RepeatMasker repeat annotations.
-        default: ["ALR/Alpha", "SAR"]
+        default: []
+        # default: ["ALR/Alpha", "SAR"]
       repeat_colors:
         type: string
         description: Path to JSON file of repeat colors.

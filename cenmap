@@ -138,9 +138,11 @@ def make_config(
         cfg["humas_annot"]["hmm_profile"] = "data/models/AS-SFs-hmmer3.0.290621.hmm.gz"
 
     # Set to no chromosomes.
+    # Use SF instead of srf-n-trf
     if "none" in args.chromosomes:
         chroms = []
-        cfg["humas_annot"]["mode"] = "srf-n-trf"
+        cfg["humas_annot"]["mode"] = "sf"
+        cfg["humas_annot"]["hmm_profile"] = "data/models/AS-SFs-hmmer3.0.290621.hmm.gz"
     else:
         chroms = args.chromosomes
 

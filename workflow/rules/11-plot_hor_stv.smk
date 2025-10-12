@@ -62,11 +62,11 @@ rule filter_annotations_hor_stv:
         """
         if [ -z "{params.rgx_chr}" ]; then
             if [ ! "{params.cdr_output}" == "False" ]; then
-                ln -sf {input.all_cdr_bed} {output.cdr_bed}
+                cp {input.all_cdr_bed} {output.cdr_bed}
             fi
-            ln -sf $(realpath {input.all_stv_bed}) {output.all_stv_bed}
-            ln -sf $(realpath {input.complete_stv_bed}) {output.complete_stv_bed}
-            ln -sf $(realpath {input.all_rm_sat_bed}) {output.rm_bed}
+            cp {input.all_stv_bed} {output.all_stv_bed}
+            cp {input.complete_stv_bed} {output.complete_stv_bed}
+            cp {input.all_rm_sat_bed} {output.rm_bed}
         else
             if [ ! "{params.cdr_output}" == "False" ]; then
                 {{ grep '{params.rgx_chr}' {input.all_cdr_bed} || true ;}} > {output.cdr_bed}

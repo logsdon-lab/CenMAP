@@ -35,6 +35,10 @@ module srf_sm:
                             "perc_mon_len_diff"
                         ]
                         / 100.0,
+                        "paf2bed_min_ident": config["ident_cen_ctgs"][
+                            "paf2bed_min_ident"
+                        ]
+                        / 100.0,
                     },
                 }
                 for sm in SAMPLE_NAMES

@@ -137,7 +137,9 @@ rule format_srf_trf_annot:
                 st=$2;
                 end=$3;
             }}
-            print new_name, st, end, $4, $5, ".", st, end, "0,0,0"
+            # prefix#circ126-3075
+            match($4, "-([0-9]+)$", motif_lengths);
+            print new_name, st, end, "circ-"motif_lengths[1], $5, ".", st, end, "0,0,0"
         }}' ;}} > {output} 2> {log}
         """
 
