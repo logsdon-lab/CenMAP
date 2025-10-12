@@ -16,6 +16,8 @@ __version__ = "1.0.5"
 WD = Path(__file__).resolve().parent
 CFG = WD.joinpath("config", "config_template.yaml")
 CFG_SCHEMA = WD.joinpath("config", "config.schema.yaml")
+HMM_PROFILE_SF = WD.joinpath("data", "models", "AS-SFs-hmmer3.0.290621.hmm.gz")
+HMM_PROFILE_HOR = WD.joinpath("data", "models", "AS-HORs-hmmer3.4-071024.hmm.gz")
 CHRS = [f"chr{c}" for c in [*range(1, 23), "X", "Y"]]
 CFG_DIR = Path("config")
 DATA_DIR = Path("0-symlink_inputs")
@@ -77,26 +79,21 @@ def symlink_files(
 def update_relative_to_wd(
     cfg: dict[str, Any], working_dir: Path, config_dir: Path
 ) -> None:
+    # Make config dir.
+    new_dir = working_dir.joinpath(config_dir)
+    new_dir.mkdir(exist_ok=True, parents=True)
     # Go through top-level paths and ensure relative to script.
     for _, v in cfg.items():
         if isinstance(v, dict):
             for k2, v2 in v.items():
                 if not isinstance(v2, str):
                     continue
-
                 cfg_str = WD.joinpath(v2)
                 if not cfg_str.is_file():
                     continue
-
-                bname = os.path.basename(v2)
-                # Make relative path for snakemake
-                new_rel_path = config_dir.joinpath(bname)
-                # The others are for transferring from script working dir.
-                new_path_dir = working_dir.joinpath(config_dir)
-                new_path = working_dir.joinpath(new_rel_path)
-                new_path_dir.mkdir(exist_ok=True, parents=True)
+                new_path = new_dir.joinpath(os.path.basename(v2)).resolve()
                 shutil.copy(cfg_str, new_path)
-                v[k2] = str(new_rel_path)
+                v[k2] = str(new_path)
 
 
 def make_config(
@@ -132,17 +129,17 @@ def make_config(
     # humas_annot
     if mode == "human":
         cfg["humas_annot"]["mode"] = "sd"
-        cfg["humas_annot"]["hmm_profile"] = "data/models/AS-HORs-hmmer3.4-071024.hmm.gz"
+        cfg["humas_annot"]["hmm_profile"] = str(HMM_PROFILE_HOR)
     else:
         cfg["humas_annot"]["mode"] = "sf"
-        cfg["humas_annot"]["hmm_profile"] = "data/models/AS-SFs-hmmer3.0.290621.hmm.gz"
+        cfg["humas_annot"]["hmm_profile"] = str(HMM_PROFILE_SF)
 
     # Set to no chromosomes.
     # Use SF instead of srf-n-trf
     if "none" in args.chromosomes:
         chroms = []
         cfg["humas_annot"]["mode"] = "sf"
-        cfg["humas_annot"]["hmm_profile"] = "data/models/AS-SFs-hmmer3.0.290621.hmm.gz"
+        cfg["humas_annot"]["hmm_profile"] = str(HMM_PROFILE_SF)
     else:
         chroms = args.chromosomes
 
@@ -323,10 +320,17 @@ def main() -> int:
     elif args.generate_config:
         with open(CFG, "rt") as fh:
             cfg = yaml.safe_load(fh)
+            output_dir = Path(args.output_dir)
             # Transfer config to working dir
-            update_relative_to_wd(
-                cfg=cfg, working_dir=Path(args.output_dir), config_dir=CFG_DIR
-            )
+            update_relative_to_wd(cfg=cfg, working_dir=output_dir, config_dir=CFG_DIR)
+            # Copy both profiles so user
+            for file in (HMM_PROFILE_HOR, HMM_PROFILE_SF):
+                bname = os.path.basename(file)
+                outfile = output_dir.joinpath(CFG_DIR, bname)
+                if output_dir.joinpath(CFG_DIR, bname).exists():
+                    continue
+                shutil.copy(file, outfile)
+            # No samples
             cfg["samples"] = []
             yaml.safe_dump(cfg, sys.stdout)
             print(
