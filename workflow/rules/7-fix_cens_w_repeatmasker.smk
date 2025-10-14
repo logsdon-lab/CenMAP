@@ -30,11 +30,14 @@ rule calculate_entropy:
         "../envs/py.yaml"
     shell:
         """
-        censtats entropy \
-        -i <(awk -v OFS="\\t" '{{ print $5, $6, $7, $10, $9 }}' {input.rm_out}) \
-        -w {params.window} \
-        -o {params.outdir} \
-        {params.omit_plot} 2> {log}
+        if [ -s {input.rm_out} ]; then
+            censtats entropy \
+            -i <(awk -v OFS="\\t" '{{ print $5, $6, $7, $10, $9 }}' {input.rm_out}) \
+            -w {params.window} \
+            -o {params.outdir} \
+            {params.omit_plot} 2> {log}
+        fi
+        touch {output}
         """
 
 
@@ -112,7 +115,11 @@ rule make_complete_cens_bed:
     conda:
         "../envs/tools.yaml"
     params:
-        bp_slop=config["ident_cen_ctgs"]["bp_slop"],
+        bp_slop=(
+            config["ident_cen_ctgs"]["bp_slop"]
+            if config["repeatmasker"]["trim_to_repeats"]
+            else 0
+        ),
     shell:
         """
         sort -k1,1 -k 2,2n {input.beds}  | \
