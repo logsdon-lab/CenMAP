@@ -131,6 +131,7 @@ def make_config(
         cfg["humas_annot"]["mode"] = "sd"
         cfg["humas_annot"]["hmm_profile"] = str(HMM_PROFILE_HOR)
     else:
+        cfg["repeatmasker"]["species"] = "primates"
         cfg["humas_annot"]["mode"] = "sf"
         cfg["humas_annot"]["hmm_profile"] = str(HMM_PROFILE_SF)
 
