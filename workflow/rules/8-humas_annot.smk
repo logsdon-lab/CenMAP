@@ -36,7 +36,7 @@ rule extract_cens_for_humas_annot:
         join(HUMAS_ANNOT_LOGDIR, "extract_cens_for_humas_annot_{sm}.log"),
     params:
         bed=lambda wc, input: input.bed,
-        added_cmds="| seqkit seq --upper-case",
+        added_cmds=f"| {cmd_filter_fa_chrom("seqkit seq --upper-case")}",
     shell:
         shell_extract_and_index_fa
 
@@ -230,9 +230,8 @@ def humas_annot_sm_outputs(wc):
     elif config["humas_annot"]["mode"] == "sf":
         return expand(rules.format_monomer_sf_classes.output, fname=fnames)
     else:
-        assert (
-            chrs and config["humas_annot"]["mode"] == "sd"
-        ), "Invalid option for humas_annot. Chromosomes needed."
+        if not chrs and config["humas_annot"]["mode"] == "sd":
+            return []
         return expand(rules.cens_generate_stv.output, zip, fname=fnames, chr=chrs)
 
 

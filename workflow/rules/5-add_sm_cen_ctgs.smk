@@ -16,7 +16,7 @@ rule create_rename_key:
     output:
         # (old_name, new_name, length)
         rename_key=join(
-            IDENT_CEN_CTGS_LOGDIR,
+            IDENT_CEN_CTGS_OUTDIR,
             "bed",
             "{sm}_rename_key.tsv",
         ),
@@ -68,7 +68,7 @@ rule create_final_satellite_bed:
         bed=rules.merge_slop_region_bed.output,
     output:
         bed=join(
-            IDENT_CEN_CTGS_LOGDIR,
+            IDENT_CEN_CTGS_OUTDIR,
             "bed",
             "{sm}.bed",
         ),
@@ -90,20 +90,21 @@ rule extract_cens_regions:
     output:
         seq=temp(
             join(
-                IDENT_CEN_CTGS_LOGDIR,
+                IDENT_CEN_CTGS_OUTDIR,
                 "seq",
                 "{sm}_satellite_regions.fa",
             )
         ),
         idx=temp(
             join(
-                IDENT_CEN_CTGS_LOGDIR,
+                IDENT_CEN_CTGS_OUTDIR,
                 "seq",
                 "{sm}_satellite_regions.fa.fai",
             )
         ),
     params:
-        **params_shell_extract_and_index_fa,
+        bed=lambda wc, input: input.bed,
+        added_cmds="",
     log:
         join(IDENT_CEN_CTGS_LOGDIR, "extract_regions_{sm}.log"),
     conda:

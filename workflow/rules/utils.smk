@@ -1,20 +1,14 @@
 # Rule inheritance breaks in modules
 # https://github.com/snakemake/snakemake/issues/1757
 
-params_shell_extract_and_index_fa = {
-    "bed": lambda wc, input: input.bed,
-    "added_cmds": "",
-}
-
 
 shell_extract_and_index_fa = """
     seqtk subseq {input.fa} {params.bed} {params.added_cmds} > {output.seq} 2> {log}
     # Check if empty before attempting to index. Always create index file.
     if [ -s {output.seq} ]; then
-        samtools faidx {output.seq} &> {log}
-    else
-        touch {output.idx}
+        samtools faidx {output.seq} 2>> {log}
     fi
+    touch {output}
 """
 
 

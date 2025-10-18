@@ -142,7 +142,9 @@ rule extract_cens_regions:
             )
         ),
     params:
-        **params_shell_extract_and_index_fa,
+        bed=lambda wc, input: input.bed,
+        # Filter by chromosome and covert to upper-case
+        added_cmds=f"| {cmd_filter_fa_chrom("seqkit seq --upper-case")}",
     log:
         join(IDENT_CEN_CTGS_LOGDIR, "extract_regions_{sm}.log"),
     conda:

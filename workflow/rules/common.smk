@@ -87,5 +87,40 @@ def get_valid_fnames(
     return fnames
 
 
+def sort_chrom_order(chromosomes: list[str]) -> list[str]:
+    if not chromosomes:
+        return []
+
+    chroms_sex = []
+    for chrom in ("chrX", "chrY"):
+        try:
+            chromosomes.remove(chrom)
+            chroms_sex.append(chrom)
+        except ValueError:
+            pass
+
+    chroms_numbers = sorted(int(chrom.replace("chr", "")) for chrom in chromosomes)
+    chroms_final = [f"chr{chrom}" for chrom in chroms_numbers]
+    chroms_final.extend(chroms_sex)
+    return chroms_final
+
+
 # Include contants so can run individual smk files without main Snakefile.
 include: "constants.smk"
+
+
+def cmd_filter_fa_chrom(*added_cmds) -> str:
+    if not CHROMOSOMES:
+        return ""
+
+    # Sort in reverse order so chr12 matched first and not chr1.
+    sorted_chroms = sort_chrom_order(CHROMOSOMES.copy())
+    sorted_chroms.reverse()
+
+    rgx_chrom = "|".join(sorted_chroms)
+    rgx_chrom = f"[_-]{rgx_chrom}[_-]"
+    # "[_-](chr12|chr11|chr1)[_-]"
+    cmd = f"seqkit grep -r -p '{rgx_chrom}'"
+    for acmd in added_cmds:
+        cmd += f" | {acmd}"
+    return cmd
