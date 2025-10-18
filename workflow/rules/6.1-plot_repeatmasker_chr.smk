@@ -6,7 +6,7 @@ rule create_ref_rm_bed_by_chr:
         rm_bed=join(
             RM_OUTDIR,
             "bed",
-            "chr_ref_{chr}_og.bed",
+            "chr_{chr}_og_ref.bed",
         ),
     params:
         chr_rgx=lambda wc: f"-c {wc.chr}[:_-]" if wc.chr != "all" else "",
