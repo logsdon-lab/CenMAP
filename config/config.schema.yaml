@@ -221,6 +221,13 @@ properties:
       threads:
         type: integer
         default: 12
+      partition_by:
+        type: array
+        items:
+          type: string
+          enum: [chromosome, sample]
+        description: Partition data to visualize by chromosome or sample.
+        default: [chromosome]
   humas_annot:
     type: object
     additionalProperties: false
@@ -266,6 +273,13 @@ properties:
         type: string
         description: Path to mapping file of HOR stv monomer numbers to colors.
         default: config/sf_annot_colors.tsv
+      partition_by:
+        type: array
+        items:
+          type: string
+          enum: [chromosome, sample]
+        description: Partition data to visualize by chromosome or sample.
+        default: [chromosome]
   calculate_hor_length:
     type: object
     additionalProperties: false

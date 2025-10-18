@@ -201,92 +201,28 @@ rule format_repeatmasker_output:
         """
 
 
-rule create_ref_rm_bed:
-    input:
-        rm_out=config["repeatmasker"]["ref_repeatmasker_output"],
-    output:
-        rm_bed=join(
-            RM_OUTDIR,
-            "bed",
-            "{chr}_og",
-            "rm_ref.bed",
-        ),
-    params:
-        chr_rgx=lambda wc: f"-c {wc.chr}[:_-]" if wc.chr != "all" else "",
-        color_mapping=config["repeatmasker"]["repeat_colors"],
-        script=workflow.source_path("../scripts/create_rm_bed.py"),
-        to_abs="--to_abs",
-    log:
-        join(RM_LOGDIR, "create_ref_rm_bed_{chr}.log"),
-    conda:
-        "../envs/py.yaml"
-    shell:
-        shell_create_rm_bed
+include: "6.1-plot_repeatmasker_chr.smk"
+include: "6.1-plot_repeatmasker_sm.smk"
 
 
-rule create_sm_rm_bed:
-    input:
-        rm_out=expand(rules.format_repeatmasker_output.output, sm=SAMPLE_NAMES),
-    output:
-        rm_bed=join(
-            RM_OUTDIR,
-            "bed",
-            "{chr}_og",
-            "rm_sm.bed",
-        ),
-    params:
-        chr_rgx=lambda wc: f"-c {wc.chr}[:_-]" if wc.chr != "all" else "",
-        color_mapping=config["repeatmasker"]["repeat_colors"],
-        script=workflow.source_path("../scripts/create_rm_bed.py"),
-        to_abs="--to_abs",
-    log:
-        join(RM_LOGDIR, "create_og_rm_bed_{chr}.log"),
-    conda:
-        "../envs/py.yaml"
-    shell:
-        shell_create_rm_bed
-
-
-rule plot_og_rm_bed_by_chr:
-    input:
-        rm=[
-            (
-                rules.create_ref_rm_bed.output
-                if config["repeatmasker"]["ref_repeatmasker_output"]
-                else []
-            ),
-            rules.create_sm_rm_bed.output,
-        ],
-    output:
-        plots=multiext(
-            join(
-                RM_OUTDIR,
-                "plots",
-                "{chr}_cens_og",
-            ),
-            ".pdf",
-            ".png",
-        ),
-    params:
-        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
-        plot_layout=workflow.source_path("../scripts/cenplot_repeatmasker_plot.yaml"),
-        output_prefix=lambda wc, output: os.path.splitext(output.plots[0])[0],
-        json_file_str=lambda wc, input: json.dumps(dict(input)),
-        options="",
-        omit_if_empty="",
-        ref_ax_idx="--ref_ax_idx 0",
-    log:
-        join(RM_LOGDIR, "plot_og_rm_bed_{chr}.log"),
-    conda:
-        "../envs/py.yaml"
-    shell:
-        shell_plot_multiple_cen
+RM_OUTPUTS = []
+if "chromosome" in config["repeatmasker"].get("partition_by", []):
+    RM_OUTPUTS.extend(
+        expand(
+            rules.plot_og_rm_bed_by_chr.output,
+            chr=CHROMOSOMES if CHROMOSOMES else ["all"],
+        )
+    )
+if "sample" in config["repeatmasker"].get("partition_by", []):
+    RM_OUTPUTS.extend(
+        expand(
+            rules.plot_og_rm_bed_by_sm.output,
+            sm=SAMPLE_NAMES,
+        )
+    )
 
 
 rule repeatmasker_all:
     input:
-        expand(
-            rules.plot_og_rm_bed_by_chr.output,
-            chr=CHROMOSOMES if CHROMOSOMES else ["all"],
-        ),
+        RM_OUTPUTS,
     default_target: True

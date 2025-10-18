@@ -107,7 +107,7 @@ rule cdr_make_srf_putative_alr_regions:
         alr_threshold=config.get("cdr_finder", {}).get("alr_threshold"),
         bp_alr_merge=config.get("cdr_finder", {}).get("bp_alr_merge"),
         format_cmd=lambda wc, input: (
-            f"""join - <(sort -k1,1 {input.rename_key}) | \             awk -v OFS="\\t" '{{{{                 if ($4 ~ "rc-chr") {{{{ st=$5-$3; end=$5-$2; }}}} else {{{{ st=$2; end=$3; }}}};                 print $4, st, end, "ALR/Alpha"             }}}}' | sort | uniq"""
+            f"""join - <(sort -k1,1 {input.rename_key}) | awk -v OFS="\\t" '{{{{ if ($4 ~ "rc-chr") {{{{ st=$5-$3; end=$5-$2; }}}} else {{{{ st=$2; end=$3; }}}}; print $4, st, end, "ALR/Alpha" }}}}' | sort | uniq"""
             if input.rename_key
             else f"""awk -v OFS="\\t" '{{{{ $1="{wc.sm}_"$1; print $1, $2, $3, "ALR/Alpha" }}}}'"""
         ),
