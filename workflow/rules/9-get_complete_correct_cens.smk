@@ -88,7 +88,7 @@ rule get_complete_correct_cens_fa:
         join(COMPLETE_CORRECT_CENS_LOGDIR, "get_complete_correct_cens_fa_{sm}.log"),
     params:
         bed=lambda wc, input: f"""<(awk -v OFS="\\t" '{{new_len=$7-1; print $4, (new_len < 0) ? 0 : new_len, $8}}' {input.bed})""",
-        added_cmds=f"| {cmd_filter_fa_chrom()}",
+        added_cmds=f"| {cmd_filter_fa_chrom()}" if CHROMOSOMES else "",
     shell:
         shell_extract_and_index_fa
 

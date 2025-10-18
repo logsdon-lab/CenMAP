@@ -111,7 +111,7 @@ include: "constants.smk"
 
 def cmd_filter_fa_chrom(*added_cmds) -> str:
     if not CHROMOSOMES:
-        return ""
+        return " | ".join(added_cmds)
 
     # Sort in reverse order so chr12 matched first and not chr1.
     sorted_chroms = sort_chrom_order(CHROMOSOMES.copy())
