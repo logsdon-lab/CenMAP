@@ -384,6 +384,16 @@ properties:
         type: integer
         description: Extend CDRs along edges as long as height is less than mean + set standard deviation value.
         default: -1
+      baseline_avg_methyl:
+        type: number
+        description: Baseline expected average methylation. Scales thresholds if average methylation is below value, reducing false positives.
+        default: 0.4
+      use_srf_regions:
+        type: boolean
+        description: >-
+          Use srf-n-trf regions instead of RepeatMasker output as putative alpha-satellite region.
+          Merge based on bp_alr_merge and region minimum size based on alr_threshold.
+        default: false
     required:
       - input_bam_dir
       - bam_rgx

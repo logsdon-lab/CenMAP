@@ -81,12 +81,48 @@ rule cdr_make_repeatmasker_bed:
                 "{sm}_rm.bed",
             )
         ),
+    conda:
+        "../envs/tools.yaml"
     shell:
         """
         awk -v OFS="\\t" '{{
             match($5, "^(.+):", chrom);
             print chrom[1], $6, $7, $10
         }}' {input} > {output}
+        """
+
+
+# Use SRF regions as putative alpha-satellite regions.
+rule cdr_make_srf_putative_alr_regions:
+    input:
+        bed=rules.extract_filter_monomers.output.bed_mon,
+        rename_key=rules.create_rename_key.output if CHROMOSOMES else [],
+    output:
+        join(
+            CDR_FINDER_OUTDIR,
+            "bed",
+            "{sm}_region.bed",
+        ),
+    params:
+        alr_threshold=config.get("cdr_finder", {}).get("alr_threshold"),
+        bp_alr_merge=config.get("cdr_finder", {}).get("bp_alr_merge"),
+        format_cmd=lambda wc, input: (
+            f"""join - <(sort -k1,1 {input.rename_key}) | \             awk -v OFS="\\t" '{{{{                 if ($4 ~ "rc-chr") {{{{ st=$5-$3; end=$5-$2; }}}} else {{{{ st=$2; end=$3; }}}};                 print $4, st, end, "ALR/Alpha"             }}}}' | sort | uniq"""
+            if input.rename_key
+            else f"""awk -v OFS="\\t" '{{{{ $1="{wc.sm}_"$1; print $1, $2, $3, "ALR/Alpha" }}}}'"""
+        ),
+    log:
+        join(CDR_FINDER_LOGDIR, "create_srf_cdr_finder_regions_{sm}.log"),
+    conda:
+        "../envs/tools.yaml"
+    shell:
+        """
+        {{ srf-n-trf regions \
+        -b {input.bed} \
+        -d {params.bp_alr_merge} \
+        -m {params.alr_threshold} | \
+        sort -k1,1 | \
+        {params.format_cmd} ;}} > {output} 2> {log}
         """
 
 
@@ -104,7 +140,12 @@ CDR_FINDER_CONFIG = {
                 rules.cdr_aln_merge_read_asm_alignments.output.alignment, sm=sm
             ),
             "repeatmasker": expand(
-                rules.cdr_make_repeatmasker_bed.output.rm_bed, sm=sm
+                (
+                    rules.cdr_make_srf_putative_alr_regions.output
+                    if config["cdr_finder"].get("use_srf_regions")
+                    else rules.cdr_make_repeatmasker_bed.output.rm_bed
+                ),
+                sm=sm,
             ),
         }
         for sm in SAMPLE_NAMES_INTERSECTION
