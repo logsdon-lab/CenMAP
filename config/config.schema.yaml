@@ -221,6 +221,9 @@ properties:
       threads:
         type: integer
         default: 12
+      bp_slop:
+        type: integer
+        description: Distance to add to region after trimming. If none, defaults to ident_cen_ctgs.bp_slop.
       partition_by:
         type: array
         items:

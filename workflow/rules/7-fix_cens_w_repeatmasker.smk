@@ -115,8 +115,10 @@ rule make_complete_cens_bed:
     conda:
         "../envs/tools.yaml"
     params:
+        # Can be None.
+        # We use a second value as we want to annotate as large a region as possible. Then trim down.
         bp_slop=(
-            config["ident_cen_ctgs"]["bp_slop"]
+            config["repeatmasker"].get("bp_slop", config["ident_cen_ctgs"]["bp_slop"])
             if config["repeatmasker"]["trim_to_repeats"]
             else 0
         ),
