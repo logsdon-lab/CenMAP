@@ -77,6 +77,7 @@ jobs:
         --show-failed-logs \
         --conda-cleanup-pkgs cache \
         --conda-frontend conda
+        rm -rf results logs benchmarks .snakemake/metadata
     - name: Test chrY workflow but with no reference.
       run: |
         snakemake -c 4 -p \
