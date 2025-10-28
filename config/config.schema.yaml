@@ -44,9 +44,7 @@ properties:
     type: array
     items:
       type: string
-      # pattern: "^[^_]*$"
     description: Sample names.
-    # description: Sample names. Must not contain '_' in name.
   container:
     type: string
     description: Container for workflow if using singularity.

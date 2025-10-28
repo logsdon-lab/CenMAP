@@ -43,9 +43,9 @@ def get_valid_fnames(
         bname, _ = splitext(basename(fasta))
         fname, coord = bname.rsplit(":", 1)
         if filter_chrom:
-            sm, chrom, ctg = fname.split("_", 2)
+            sm, chrom, ctg = RGX_SM_CHR_CTG.search(fname).groups()
         else:
-            sm, ctg = fname.split("_", 1)
+            sm, ctg = RGX_SM_CTG.search(fname).groups()
             chrom = None
         if chrom:
             elems = (sm, chrom, ctg, coord)
