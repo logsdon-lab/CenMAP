@@ -127,7 +127,7 @@ properties:
       paf2bed_min_ident:
         type: number
         description: Minimum identity (-d) for srfutils.js paf2bed.
-        default: 85.0
+        default: 70.0
   nucflag:
     type: object
     additionalProperties: false

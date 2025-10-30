@@ -388,8 +388,10 @@ def main() -> int:
         "--workflow-profile",
         profile,
     ]
+    snake_opts = []
     if args.snake_opts:
-        cmd.extend(args.snake_opts.split(" "))
+        snake_opts = args.snake_opts.split(" ")
+        cmd.extend(snake_opts)
 
     print(f"Running command:\n\t{' '.join(cmd)}", file=sys.stderr)
     print(f"Output dir:\n\t{output_dir}", file=sys.stderr)
@@ -404,7 +406,12 @@ def main() -> int:
         return -1
 
     # Don't delete temp files if dry-run.
-    if args.snake_opts and "-n" in args.snake_opts:
+    is_dryrun = (
+        any("n" in opt for opt in snake_opts if opt.count("-") == 1)
+        or "--dry-run" in snake_opts
+        or "--dryrun" in snake_opts
+    )
+    if is_dryrun:
         return 0
 
     print("Cleaning up temp files.", file=sys.stderr)
