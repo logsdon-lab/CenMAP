@@ -71,13 +71,13 @@ checkpoint extract_filter_monomers:
         "../envs/tools.yaml"
     shell:
         """
-        srf-n-trf monomers \
+        {{ srf-n-trf monomers \
         -p <(zcat {input.paf}) \
         -m {input.monomers} \
         -s {params.mon_periods} \
         -d {params.perc_mon_len_diff} \
         --max-seq-div {params.max_seq_div} | \
-        gzip > {output.bed_mon} 2> {log}
+        gzip ;}} > {output.bed_mon} 2> {log}
         """
 
 
