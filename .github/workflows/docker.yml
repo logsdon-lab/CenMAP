@@ -50,7 +50,7 @@ jobs:
 
       - name: Install Snakemake
         run: |
-          pip install -r <(yq -r '.dependencies[] | select(type == "!!map") | to_entries[].value[]' test/env_dev.yaml | grep snakemake)
+          pip install snakemake
 
       - name: Generate Dockerfile
         id: dockerfile
