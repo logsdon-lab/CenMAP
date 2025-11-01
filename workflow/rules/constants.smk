@@ -11,13 +11,31 @@ HUMAS_CENS_SPLIT_DIR = join(OUTPUT_DIR, "8-humas_annot", "seq")
 FINAL_OUTPUT_DIR = join(OUTPUT_DIR, "final")
 
 # Reference genome.
-REF_NAME = "T2T-CHM13"
-REF_URL = "https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/analysis_set/chm13v2.0.fa.gz"
-REF_FA = join(OUTPUT_DIR, "1-download_ref", f"{REF_NAME}.fa.gz")
+CHROMOSOMES = config.get("chromosomes", [])
+if config["ident_cen_ctgs"].get("reference"):
+    REF_NAME, _, _ = os.path.splitext(
+        os.path.basename(config["ident_cen_ctgs"]["reference"])
+    )[0].partition(".")
+    REF_URL = None
+    REF_FA = config["ident_cen_ctgs"]["reference"]
+# No reference at all. Don't stratify output by chromosomes.
+elif not CHROMOSOMES:
+    REF_NAME = None
+    REF_URL = None
+    REF_FA = []
+else:
+    REF_NAME = "T2T-CHM13"
+    REF_URL = "https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/analysis_set/chm13v2.0.fa.gz"
+    REF_FA = join(OUTPUT_DIR, "1-download_ref", f"{REF_NAME}.fa.gz")
 
 SAMPLE_NAMES = config["samples"]
-CHROMOSOMES = config["chromosomes"]
 RGX_CHR = re.compile(r"(chr[0-9XY]+)")
+RGX_SM_CTG = re.compile(r"^(.+)_(.+)$")
+# This monstrosity matches the expected patterns.
+# https://regex101.com/r/qmBC6h/1
+RGX_SM_CHR_CTG = re.compile(
+    r"^(.+)_((?:(?:(?:chr|rc-chr)[0-9XY]+)-)*(?:(?:chr|rc-chr)[0-9XY]+))_(.+)$"
+)
 
 # Check if command is to containerize workflow.
 ARGUMENTS = set(sys.argv)

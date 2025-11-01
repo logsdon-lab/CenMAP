@@ -39,7 +39,10 @@ rule calculate_as_hor_length:
 
 rule aggregate_as_hor_length:
     input:
-        expand(rules.calculate_as_hor_length.output.arr_lens_bed, chr=CHROMOSOMES),
+        expand(
+            rules.calculate_as_hor_length.output.arr_lens_bed,
+            chr=CHROMOSOMES if CHROMOSOMES else ["all"],
+        ),
     output:
         join(
             FINAL_OUTPUT_DIR,
@@ -87,7 +90,7 @@ rule plot_as_hor_length:
         # Random colors given for each ref.
         # Run separately to get desired colors.
         args_added_lengths=args_ref_hor_lengths,
-        chroms=CHROMOSOMES,
+        chroms=f"-c {' '.join(CHROMOSOMES)}" if CHROMOSOMES else "-c all",
         chrom_colors=config["calculate_hor_length"]["chromosome_colors"],
     log:
         join(HOR_ARR_LEN_LOGDIR, "plot_all_as_hor_length.log"),
@@ -99,7 +102,7 @@ rule plot_as_hor_length:
             python {params.script} \
             -i {input.lengths} \
             -o {output} {params.args_added_lengths} \
-            -c {params.chroms} \
+            {params.chroms} \
             --chrom_colors {params.chrom_colors} 2> {log}
         else
             touch {output}

@@ -1,0 +1,59 @@
+samples:
+- HG00731
+
+concat_asm:
+  input_dir: "test/data/assemblies"
+
+ident_cen_ctgs:
+  threads_srf: 24
+  mem_srf: 40GB
+  threads_aln: 16
+  mem_aln: 150GB
+  bp_merge: 2500000
+  bp_slop: 1000000
+  perc_multi_chrom: 5.0
+
+nucflag:
+  input_hifi_reads_dir: "test/data/raw_data"
+  reads_rgx: ".*\\.fastq.gz$"
+  config_nucflag: "test/config/nucflag.toml"
+  ignore_regions: "config/nucflag_ignore.bed"
+  threads_aln: 4
+  mem_nucflag: 4GB
+  mem_aln: 4GB
+  processes_nucflag: 2
+  samtools_view_flag: 2308
+
+repeatmasker:
+  ref_repeatmasker_output:
+  - data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
+  threads: 4
+  repeat_colors: "config/repeatmasker_colors.json"
+
+humas_annot:
+  mode: "sd"
+  hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm.gz"
+  threads: 4
+
+plot_hor_stv:
+  ref_stv:
+  - "data/annotations/AS-HOR-vs-chm1_cens_v21.stv_row.all.bed"
+  - "data/annotations/AS-HOR-vs-chm13_cens_v18.stv_row.all.bed"
+  sat_annot_colors: "config/repeatmasker_sat_annot_colors.json"
+  stv_annot_colors: "config/stv_annot_colors.tsv"
+
+calculate_hor_length:
+  ref_hor_lengths:
+    - name: CHM1
+      path: "data/annotations/chm1_hor_length.tsv"
+    - name: CHM13
+      path: "data/annotations/chm13_hor_length.tsv"
+
+moddotplot:
+  mem: 4GB
+  window: 5000
+
+ideogram:
+  title: "{sm}"
+  height: 15
+  width: 5

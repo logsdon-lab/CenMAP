@@ -77,6 +77,16 @@ jobs:
         --show-failed-logs \
         --conda-cleanup-pkgs cache \
         --conda-frontend conda
+        rm -rf results logs benchmarks .snakemake/metadata
+    - name: Test chrY workflow but with no reference.
+      run: |
+        snakemake -c 4 -p \
+        --workflow-profile none \
+        --configfile test/config/config_HG00731_no_ref.yaml \
+        --sdm conda \
+        --show-failed-logs \
+        --conda-cleanup-pkgs cache \
+        --conda-frontend conda
 
   test_workflow_mGorGor1_chr16:
     runs-on: ubuntu-latest
@@ -140,3 +150,11 @@ jobs:
         -s HG00731 \
         -p 4 \
         --chromosomes chrY
+    - name: Test chrY workflow with no reference via cenmap wrapper script.
+      run: |
+        ./cenmap \
+        -i test/data/assemblies/HG00731/*.fasta.gz \
+        --hifi test/data/raw_data/HG00731/*.fastq.gz \
+        -s HG00731 \
+        -p 4 \
+        --chromosomes none

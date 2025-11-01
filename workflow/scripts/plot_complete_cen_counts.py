@@ -21,14 +21,6 @@ def main():
     )
     ap.add_argument("-o", "--output", help="Output plot file.", type=str, required=True)
     ap.add_argument(
-        "-c",
-        "--chroms",
-        default=DEF_CHRS,
-        type=str,
-        nargs="+",
-        help="Chromosome names.",
-    )
-    ap.add_argument(
         "-n",
         "--n_chroms",
         default=DEF_N_CHR,

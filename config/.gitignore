@@ -4,3 +4,4 @@
 !config_tumor.yaml
 !config.schema.yaml
 !config_template.yaml
+!config_no_ref.yaml

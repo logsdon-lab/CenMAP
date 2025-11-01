@@ -44,9 +44,7 @@ properties:
     type: array
     items:
       type: string
-      # pattern: "^[^_]*$"
     description: Sample names.
-    # description: Sample names. Must not contain '_' in name.
   container:
     type: string
     description: Container for workflow if using singularity.
@@ -111,7 +109,7 @@ properties:
         type: integer
         description: >-
           Merge grouped satellite repeat blocks n base pairs.
-          Smaller values will reduce the length of p-arms of the acrocentric chromosomes but at the risk of considering a p-arm as a correct centromere.
+          Smaller values will reduce the length of p-arms of the acrocentric chromosomes but at the risk of considering monomeric/divergent HORs in p-arm acrocentric chromosomes as a correct centromere.
           The repeatmasker.bp_shannon_window parameter should be increased as well to prevent this.
         default: 100000
       bp_slop:
@@ -126,6 +124,10 @@ properties:
         type: number
         description: Percent of mapped reference chromosome required to add to name.
         default: 5.0
+      paf2bed_min_ident:
+        type: number
+        description: Minimum identity (-d) for srfutils.js paf2bed.
+        default: 70.0
   nucflag:
     type: object
     additionalProperties: false
@@ -204,7 +206,8 @@ properties:
         items:
           type: string
         description: Trim centromeric regions to the largest block of these RepeatMasker repeat annotations.
-        default: ["ALR/Alpha", "SAR"]
+        default: []
+        # default: ["ALR/Alpha", "SAR"]
       repeat_colors:
         type: string
         description: Path to JSON file of repeat colors.
@@ -216,6 +219,16 @@ properties:
       threads:
         type: integer
         default: 12
+      bp_slop:
+        type: integer
+        description: Distance to add to region after trimming. If none, defaults to ident_cen_ctgs.bp_slop.
+      partition_by:
+        type: array
+        items:
+          type: string
+          enum: [chromosome, sample]
+        description: Partition data to visualize by chromosome or sample.
+        default: [chromosome]
   humas_annot:
     type: object
     additionalProperties: false
@@ -261,6 +274,13 @@ properties:
         type: string
         description: Path to mapping file of HOR stv monomer numbers to colors.
         default: config/sf_annot_colors.tsv
+      partition_by:
+        type: array
+        items:
+          type: string
+          enum: [chromosome, sample]
+        description: Partition data to visualize by chromosome or sample.
+        default: [chromosome]
   calculate_hor_length:
     type: object
     additionalProperties: false
@@ -362,7 +382,7 @@ properties:
       bp_alr_merge:
         type: integer
         description: Merge distance of alpha-satellite repeats.
-        default: 1000
+        default: 8000
       bp_edge:
         type: integer
         description: Number of base pairs at edges adjacent to CDR to estimate height.
@@ -379,12 +399,21 @@ properties:
         type: integer
         description: Extend CDRs along edges as long as height is less than mean + set standard deviation value.
         default: -1
+      baseline_avg_methyl:
+        type: number
+        description: Baseline expected average methylation. Scales thresholds if average methylation is below value, reducing false positives.
+        default: 0.4
+      use_srf_regions:
+        type: boolean
+        description: >-
+          Use srf-n-trf regions instead of RepeatMasker output as putative alpha-satellite region.
+          Merge based on bp_alr_merge and region minimum size based on alr_threshold.
+        default: false
     required:
       - input_bam_dir
       - bam_rgx
 required:
   - samples
-  - chromosomes
   - concat_asm
   - ident_cen_ctgs
   - repeatmasker

@@ -30,11 +30,14 @@ rule calculate_entropy:
         "../envs/py.yaml"
     shell:
         """
-        censtats entropy \
-        -i <(awk -v OFS="\\t" '{{ print $5, $6, $7, $10, $9 }}' {input.rm_out}) \
-        -w {params.window} \
-        -o {params.outdir} \
-        {params.omit_plot} 2> {log}
+        if [ -s {input.rm_out} ]; then
+            censtats entropy \
+            -i <(awk -v OFS="\\t" '{{ print $5, $6, $7, $10, $9 }}' {input.rm_out}) \
+            -w {params.window} \
+            -o {params.outdir} \
+            {params.omit_plot} 2> {log}
+        fi
+        touch {output}
         """
 
 
@@ -84,35 +87,41 @@ def valid_beds_by_cen_entropy(wc):
     return expand(rules.filter_entropy_bed.output, sm=wc.sm, fname=fnames)
 
 
-# Merge valid cens coordinates.
+# Merge complete centromere coordinates. Prior to running NucFlag.
 rule make_complete_cens_bed:
     input:
         # (sm_ctg, st, end, old_sm_ctg)
         beds=ancient(valid_beds_by_cen_entropy),
         # (ctg, sm_ctg, ctg_len)
-        rename_key=rules.map_chroms.output,
-        idx=rules.rename_reort_asm.output.idx,
+        rename_key=rules.create_rename_key.output,
+        idx=rules.create_final_asm.output.idx,
     output:
         # (sm_ctg, st, end, ctg, ctg_len)
         cen_bed=join(
-            FIX_RM_OUTDIR,
+            OUTPUT_DIR,
+            "final",
             "bed",
-            "interm",
             "{sm}_complete_cens.bed",
         ),
         # (old_sm_ctg, sm_ctg)
         rename_key=temp(
             join(
-                FIX_RM_OUTDIR,
+                OUTPUT_DIR,
+                "final",
                 "bed",
-                "interm",
                 "{sm}_complete_cens_rename_key.tsv",
             )
         ),
     conda:
         "../envs/tools.yaml"
     params:
-        bp_slop=config["ident_cen_ctgs"]["bp_slop"],
+        # Can be None.
+        # We use a second value as we want to annotate as large a region as possible. Then trim down.
+        bp_slop=(
+            config["repeatmasker"].get("bp_slop", config["ident_cen_ctgs"]["bp_slop"])
+            if config["repeatmasker"]["trim_to_repeats"]
+            else 0
+        ),
     shell:
         """
         sort -k1,1 -k 2,2n {input.beds}  | \
@@ -167,66 +176,28 @@ rule fix_cens_rm_out:
         """
 
 
-rule create_fixed_rm_bed:
-    input:
-        rm_out=expand(rules.fix_cens_rm_out.output, sm=SAMPLE_NAMES),
-    output:
-        rm_bed=join(
-            FIX_RM_OUTDIR,
-            "bed",
-            "{chr}",
-            "rm.bed",
-        ),
-    params:
-        chr_rgx="{chr}[:_-]",
-        color_mapping=config["repeatmasker"]["repeat_colors"],
-        script=workflow.source_path("../scripts/create_rm_bed.py"),
-        to_abs="",
-    log:
-        join(FIX_RM_LOGDIR, "create_fixed_rm_bed_{chr}.log"),
-    conda:
-        "../envs/py.yaml"
-    shell:
-        shell_create_rm_bed
+include: "7.1-plot_fix_cens_w_repeatmasker_chr.smk"
+include: "7.1-plot_fix_cens_w_repeatmasker_sm.smk"
 
 
-rule plot_fixed_rm_bed_by_chr:
-    input:
-        rm=[
-            (
-                rules.create_ref_rm_bed.output
-                if config["repeatmasker"]["ref_repeatmasker_output"]
-                else []
-            ),
-            rules.create_fixed_rm_bed.output,
-        ],
-    output:
-        plots=multiext(
-            join(
-                FIX_RM_OUTDIR,
-                "plots",
-                "{chr}_cens",
-            ),
-            ".pdf",
-            ".png",
-        ),
-    params:
-        script=workflow.source_path("../scripts/plot_multiple_cen.py"),
-        plot_layout=workflow.source_path("../scripts/cenplot_repeatmasker_plot.yaml"),
-        output_prefix=lambda wc, output: os.path.splitext(output.plots[0])[0],
-        json_file_str=lambda wc, input: json.dumps(dict(input)),
-        options="",
-        omit_if_empty="",
-        ref_ax_idx="--ref_ax_idx 0",
-    log:
-        join(FIX_RM_LOGDIR, "plot_fixed_rm_bed_{chr}.log"),
-    conda:
-        "../envs/py.yaml"
-    shell:
-        shell_plot_multiple_cen
+FIX_RM_OUTPUTS = []
+if "chromosome" in config["repeatmasker"].get("partition_by", []):
+    FIX_RM_OUTPUTS.extend(
+        expand(
+            rules.plot_fixed_rm_bed_by_chr.output,
+            chr=CHROMOSOMES if CHROMOSOMES else ["all"],
+        )
+    )
+if "sample" in config["repeatmasker"].get("partition_by", []):
+    FIX_RM_OUTPUTS.extend(
+        expand(
+            rules.plot_fixed_rm_bed_by_sm.output,
+            sm=SAMPLE_NAMES,
+        )
+    )
 
 
 rule fix_cens_w_repeatmasker_all:
     input:
-        expand(rules.plot_fixed_rm_bed_by_chr.output, chr=CHROMOSOMES),
+        FIX_RM_OUTPUTS,
     default_target: True

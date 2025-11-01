@@ -35,6 +35,10 @@ module srf_sm:
                             "perc_mon_len_diff"
                         ]
                         / 100.0,
+                        "paf2bed_min_ident": config["ident_cen_ctgs"][
+                            "paf2bed_min_ident"
+                        ]
+                        / 100.0,
                     },
                 }
                 for sm in SAMPLE_NAMES
@@ -54,23 +58,26 @@ checkpoint extract_filter_monomers:
         bed_mon=join(
             SRF_OUTDIR,
             "bed",
-            "{sm}_monomers_filtered.bed",
+            "{sm}_monomers_filtered.bed.gz",
         ),
     params:
         # Look for alpha-sat and hsat-1a
         mon_periods=" ".join(str(e) for e in [*MONOMER_PERIODS, 42]),
         perc_mon_len_diff=config["ident_cen_ctgs"]["perc_mon_len_diff"] / 100.0,
+        max_seq_div=(100.0 - config["ident_cen_ctgs"]["paf2bed_min_ident"]) / 100.0,
     log:
         join(SRF_LOGDIR, "create_region_bed_{sm}.log"),
     conda:
         "../envs/tools.yaml"
     shell:
         """
-        srf-n-trf monomers \
+        {{ srf-n-trf monomers \
         -p <(zcat {input.paf}) \
         -m {input.monomers} \
         -s {params.mon_periods} \
-        -d {params.perc_mon_len_diff} > {output.bed_mon} 2> {log}
+        -d {params.perc_mon_len_diff} \
+        --max-seq-div {params.max_seq_div} | \
+        gzip ;}} > {output.bed_mon} 2> {log}
         """
 
 

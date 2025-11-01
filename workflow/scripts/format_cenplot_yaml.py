@@ -40,7 +40,14 @@ def format_yaml_path(
             if trk["type"] == "legend":
                 original_idx = trk.get("options", {}).get("index")
                 if original_idx:
-                    new_trk["options"]["index"] = max(0, original_idx - number_skipped)
+                    if isinstance(original_idx, list):
+                        new_trk["options"]["index"] = [
+                            max(0, idx - number_skipped) for idx in original_idx
+                        ]
+                    else:
+                        new_trk["options"]["index"] = max(
+                            0, original_idx - number_skipped
+                        )
             else:
                 new_trk = trk
 

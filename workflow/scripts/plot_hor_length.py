@@ -71,7 +71,7 @@ def main():
     ap.add_argument(
         "-c",
         "--chroms",
-        nargs="*",
+        nargs="+",
         default=DEF_CHR_ORDER,
         help="Chromosome names.",
     )
@@ -86,6 +86,7 @@ def main():
     # Reverse to prevent matching chr1 with both chr1 and chr11
     rgx_chrom = "|".join([*reversed(sorted(args.chroms)), "-"])
     rgx_name_groups = r"^.*?_(?<chrom_name>(" + rgx_chrom + r")*)_.*?$"
+    plot_all = "all" in args.chroms
 
     if args.chrom_colors:
         _chroms = set(args.chroms)
@@ -99,21 +100,26 @@ def main():
     else:
         chrom_colors = DEF_CHR_COLORS
 
-    df_lengths = (
-        pl.read_csv(
-            args.infile,
-            has_header=False,
-            separator="\t",
-            columns=[0, 1, 2, 3],
-            new_columns=DEF_COLS,
+    if "all" not in chrom_colors:
+        chrom_colors["all"] = "#808080"
+
+    df_lengths = pl.read_csv(
+        args.infile,
+        has_header=False,
+        separator="\t",
+        columns=[0, 1, 2, 3],
+        new_columns=DEF_COLS,
+    ).with_columns(source=pl.lit("samples"))
+    if plot_all:
+        df_lengths = df_lengths.with_columns(chrom_name=pl.lit("all"))
+    else:
+        df_lengths = (
+            df_lengths.with_columns(
+                mtch_chrom=pl.col("chrom").str.extract_groups(rgx_name_groups),
+            )
+            .unnest("mtch_chrom")
+            .drop("2")
         )
-        .with_columns(
-            source=pl.lit("samples"),
-            mtch_chrom=pl.col("chrom").str.extract_groups(rgx_name_groups),
-        )
-        .unnest("mtch_chrom")
-        .drop("2")
-    )
 
     added_palettes = OrderedDict()
     dfs_added_lengths = []
@@ -133,10 +139,15 @@ def main():
                 separator="\t",
                 columns=[0, 1, 2, 3],
                 new_columns=DEF_COLS,
-            ).with_columns(
-                source=pl.lit(lbl),
-                chrom_name=pl.col("chrom").str.extract(f"^({rgx_chrom})$"),
-            )
+            ).with_columns(source=pl.lit(lbl))
+
+            if plot_all:
+                df = df.with_columns(chrom_name=pl.lit("all"))
+            else:
+                df = df.with_columns(
+                    chrom_name=pl.col("chrom").str.extract(f"^({rgx_chrom})$")
+                )
+
             added_palettes[lbl] = color
             dfs_added_lengths.append(df)
 

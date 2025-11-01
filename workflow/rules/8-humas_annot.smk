@@ -13,20 +13,20 @@ HUMAS_ANNOT_BMKDIR = join(BMK_DIR, "8-humas_annot")
 
 rule extract_cens_for_humas_annot:
     input:
-        fa=rules.rename_reort_asm.output.fa,
+        fa=rules.create_final_asm.output.fa,
         bed=ancient(rules.make_complete_cens_bed.output.cen_bed),
     output:
-        seq=temp(
+        seq=pipe(
             join(
                 HUMAS_ANNOT_OUTDIR,
-                "temp",
+                "seq",
                 "{sm}_cens.fa",
             )
         ),
-        idx=temp(
+        idx=pipe(
             join(
                 HUMAS_ANNOT_OUTDIR,
-                "temp",
+                "seq",
                 "{sm}_cens.fa.fai",
             )
         ),
@@ -36,7 +36,11 @@ rule extract_cens_for_humas_annot:
         join(HUMAS_ANNOT_LOGDIR, "extract_cens_for_humas_annot_{sm}.log"),
     params:
         bed=lambda wc, input: input.bed,
-        added_cmds="| seqkit seq --upper-case",
+        added_cmds=(
+            f"| {cmd_filter_fa_chrom("seqkit seq --upper-case")}"
+            if CHROMOSOMES
+            else "| seqkit seq --upper-case"
+        ),
     shell:
         shell_extract_and_index_fa
 
@@ -44,12 +48,11 @@ rule extract_cens_for_humas_annot:
 checkpoint split_cens_for_humas_annot:
     input:
         fa=rules.extract_cens_for_humas_annot.output.seq,
+        idx=rules.extract_cens_for_humas_annot.output.idx,
     output:
-        touch(
-            join(
-                HUMAS_ANNOT_OUTDIR,
-                "split_cens_for_humas_annot_{sm}.done",
-            )
+        fofn=join(
+            HUMAS_ANNOT_OUTDIR,
+            "split_cens_for_humas_annot_{sm}.fofn",
         ),
     log:
         join(HUMAS_ANNOT_LOGDIR, "split_{sm}_cens_for_humas_annot.log"),
@@ -64,41 +67,10 @@ checkpoint split_cens_for_humas_annot:
         awk '{{
             if (substr($0, 1, 1)==">") {{
                 filename=("{params.split_dir}/" substr($0,2) ".fa")
+                print filename >> "{output.fofn}"
             }}
             print $0 > filename
         }}' {input.fa} 2> {log}
-        """
-
-
-checkpoint split_srf_trf_monomers:
-    input:
-        beds=expand(rules.merge_slop_region_bed.output, sm=SAMPLE_NAMES),
-    output:
-        join(HUMAS_ANNOT_OUTDIR, "srf_monomers", "{fname}.fa"),
-    conda:
-        "../envs/tools.yaml"
-    params:
-        output_dir=lambda wc, output: dirname(output[0]),
-        # Can't use sample wildcard so figure out from fname.
-        sample=lambda wc: wc.fname.split("_")[0],
-        contig=lambda wc: wc.fname.split("_", 2)[2].split(":", 1)[0],
-    log:
-        join(HUMAS_ANNOT_LOGDIR, "split_srf_trf_monomers_{fname}.log"),
-    shell:
-        """
-        mkdir -p {params.output_dir}
-        {{ awk -v OFS="\\t" '{{
-            if ($1 != "{params.contig}") {{ next; }}
-            split($4, monomers, ",");
-            out_fa="{params.output_dir}/{wildcards.fname}.tmp_fa"
-            for (i in monomers) {{
-                print ">monomer" >> out_fa
-                print monomers[i] >> out_fa
-            }};
-            print out_fa
-        }}' $(find {input.beds} -name "{params.sample}.bed") | \
-        xargs -I {{}} \
-        bash -c 'seqkit rmdup -s {{}} 2>> {log} | seqkit rename 2>> {log} > {params.output_dir}/{wildcards.fname}.fa && rm -f {{}}' ;}} 2> {log}
         """
 
 
@@ -107,13 +79,6 @@ added_as_cfg = {}
 if config["humas_annot"]["mode"] == "sd":
     humas_module_smk = "Snakemake-HumAS-SD/workflow/Snakefile"
     humas_env = "Snakemake-HumAS-SD/workflow/envs/env.yaml"
-elif config["humas_annot"]["mode"] == "srf-n-trf":
-    humas_module_smk = "Snakemake-HumAS-SD/workflow/Snakefile"
-    humas_env = "Snakemake-HumAS-SD/workflow/envs/env.yaml"
-    added_as_cfg["run_stv"] = False
-    added_as_cfg["monomer_dir"] = dirname(rules.split_srf_trf_monomers.output[0])
-    # Remove hmm profile if added.
-    config["humas_annot"].pop("hmm_profile")
 else:
     humas_module_smk = "Snakemake-HumAS-HMMER/workflow/Snakefile"
     humas_env = "Snakemake-HumAS-HMMER/workflow/envs/env.yaml"
@@ -141,22 +106,76 @@ module HumAS_Annot:
 use rule * from HumAS_Annot as cens_*
 
 
-rule format_filter_srf_trf_annot:
+rule format_srf_trf_annot:
     input:
-        rules.cens_convert_to_bed9.output
-        if config["humas_annot"]["mode"] == "srf-n-trf"
-        else [],
+        srf_bed=(
+            rules.srf_paf2bed.output
+            if config["humas_annot"]["mode"] == "srf-n-trf"
+            else []
+        ),
+        rename_key=rules.create_rename_key.output,
+    output:
+        # BED9:
+        # new_name, st, end, srf_motif, srf_weighted_identity, ".", st, end, "0,0,0"
+        join(
+            HUMAS_ANNOT_OUTDIR,
+            "{sm}",
+            "stv_hor.bed",
+        ),
+    log:
+        join(HUMAS_ANNOT_LOGDIR, "format_srf_trf_annot_{sm}.log"),
+    conda:
+        "../envs/tools.yaml"
+    shell:
+        """
+        {{ cut -f1-5 {input.srf_bed} |
+        sort -k1,1 | \
+        join - <(sort -k1,1 {input.rename_key}) | \
+        awk -v OFS="\\t" '{{
+            new_name=$6;
+            ctg_len=$7;
+            if (new_name ~ "rc-chr") {{
+                st=ctg_len-$3;
+                end=ctg_len-$2;
+            }} else {{
+                st=$2;
+                end=$3;
+            }}
+            # prefix#circ126-3075
+            match($4, "-([0-9]+)$", motif_lengths);
+            print new_name, st, end, "circ-"motif_lengths[1], $5, ".", st, end, "0,0,0"
+        }}' ;}} > {output} 2> {log}
+        """
+
+
+rule filter_srf_trf_annot:
+    input:
+        rules.format_srf_trf_annot.output,
     output:
         join(
             HUMAS_ANNOT_OUTDIR,
-            "{fname}",
-            "stv_mon.bed",
+            "{sm}",
+            "{fname}.bed",
         ),
+    log:
+        join(HUMAS_ANNOT_LOGDIR, "filter_srf_trf_annot_{sm}_{fname}.log"),
+    conda:
+        "../envs/tools.yaml"
     params:
-        thr_ident=70.0,
+        coords_tsv=lambda wc: f"<(printf '{chrom_coord_to_tsv(wc.fname)}')",
     shell:
         """
-        awk -v OFS="\\t" -v THR_IDENT={params.thr_ident} '$5 >= THR_IDENT' {input} > {output}
+        {{ bedtools intersect -a {input} -b {params.coords_tsv} | \
+        awk -v OFS="\\t" '{{
+            $1="{wildcards.fname}";
+            # Make relative coordinates
+            match($1, ":(.+)-", starts);
+            $2=$2-starts[1];
+            $3=$3-starts[1];
+            $7=$7-starts[1];
+            $8=$8-starts[1];
+            print
+        }}' ;}} > {output} 2> {log}
         """
 
 
@@ -177,6 +196,8 @@ rule format_monomer_sf_classes:
             HUMAS_ANNOT_OUTDIR,
             "{fname}_sf_colored.bed",
         ),
+    conda:
+        "../envs/tools.yaml"
     shell:
         """
         awk -v OFS="\\t" '{{
@@ -197,27 +218,34 @@ rule format_monomer_sf_classes:
 # https://stackoverflow.com/a/63040288
 def humas_annot_sm_outputs(wc):
     _ = checkpoints.split_cens_for_humas_annot.get(**wc).output
-    wcs = glob_wildcards(
-        join(HUMAS_CENS_SPLIT_DIR, wc.sm + "_{chrom}_{ctg}.fa"),
-    )
-    fnames = [f"{wc.sm}_{chrom}_{ctg}" for chrom, ctg in zip(wcs.chrom, wcs.ctg)]
-    chrs = wcs.chrom
+    if CHROMOSOMES:
+        wcs = glob_wildcards(
+            join(HUMAS_CENS_SPLIT_DIR, wc.sm + "_{chrom}_{ctg}.fa"),
+        )
+        fnames = [f"{wc.sm}_{chrom}_{ctg}" for chrom, ctg in zip(wcs.chrom, wcs.ctg)]
+        chrs = wcs.chrom
+    else:
+        wcs = glob_wildcards(join(HUMAS_CENS_SPLIT_DIR, wc.sm + "_{ctg}.fa"))
+        fnames = [f"{wc.sm}_{ctg}" for ctg in wcs.ctg]
+        chrs = []
 
     if config["humas_annot"]["mode"] == "srf-n-trf":
-        _ = [
-            checkpoints.split_srf_trf_monomers.get(fname=fname).output
-            for fname in fnames
-        ]
-        return expand(rules.format_filter_srf_trf_annot.output, fname=fnames)
+        return expand(rules.filter_srf_trf_annot.output, sm=wc.sm, fname=fnames)
     elif config["humas_annot"]["mode"] == "sf":
         return expand(rules.format_monomer_sf_classes.output, fname=fnames)
     else:
+        if not chrs and config["humas_annot"]["mode"] == "sd":
+            return []
         return expand(rules.cens_generate_stv.output, zip, fname=fnames, chr=chrs)
 
 
 checkpoint run_humas_annot:
     input:
-        expand(rules.split_cens_for_humas_annot.output, sm=SAMPLE_NAMES),
+        (
+            expand(rules.split_cens_for_humas_annot.output, sm=SAMPLE_NAMES)
+            if config["humas_annot"]["mode"] != "srf-n-trf"
+            else []
+        ),
         humas_annot_sm_outputs,
     output:
         touch(join(HUMAS_ANNOT_OUTDIR, "humas_annot_{sm}.done")),
@@ -227,50 +255,25 @@ checkpoint run_humas_annot:
 def humas_annot_chr_outputs(wc):
     _ = [checkpoints.run_humas_annot.get(sm=sm).output for sm in SAMPLE_NAMES]
     fastas = glob.glob(join(HUMAS_CENS_SPLIT_DIR, "*.fa"))
-    sms, chroms, ctgs, coords = [], [], [], []
-    for fasta in fastas:
-        bname, _ = splitext(basename(fasta))
-        fname, coord = bname.rsplit(":", 1)
-        sm, chrom, ctg = fname.split("_", 2)
-        sms.append(sm)
-        chroms.append(chrom)
-        ctgs.append(ctg)
-        coords.append(coord)
-
-    fnames = []
-    # Sort by coords so if multiple chr, chr position in name (chr3-chr21) matches.
-    sorted_wcs = sorted(
-        zip(sms, chroms, ctgs, coords),
-        key=lambda x: (x[1], x[2], x[3]),
-        reverse=True,
-    )
-
-    # Store index of chrom per contig.
-    # In cases of dicentric contigs (chr3-chr21). Don't want to include twice.
-    ctg_counter = Counter()
-    for sm, chrom, ctg, coord in sorted_wcs:
-        chrom_names: list[str] = chrom.replace("rc-", "").split("-")
-        if not wc.chr in chrom_names:
-            continue
-        ctg_id = (sm, chrom, ctg, coord)
-        idx = ctg_counter[ctg_id]
-        ctg_counter[ctg_id] += 1
-        if wc.chr != chrom_names[idx]:
-            continue
-        fnames.append(f"{sm}_{chrom}_{ctg}:{coord}")
+    fnames = get_valid_fnames(fastas, filter_chrom=wc.chr if wc.chr != "all" else None)
 
     outputs = config.get("plot_hor_stv", {}).get("ref_stv", [])
     if config["humas_annot"]["mode"] == "srf-n-trf":
-        _ = [
-            checkpoints.split_srf_trf_monomers.get(fname=fname).output
-            for fname in fnames
-        ]
-        outputs.extend(expand(rules.format_filter_srf_trf_annot.output, fname=fnames))
+        outputs.extend(
+            expand(
+                rules.filter_srf_trf_annot.output,
+                zip,
+                sm=[fname.sm for fname in fnames],
+                fname=fnames,
+            )
+        )
     elif config["humas_annot"]["mode"] == "sf":
         outputs.extend(
             expand(rules.format_monomer_sf_classes.output, fname=fnames, mode="sf")
         )
     else:
+        if wc.chr == "all" and config["humas_annot"]["mode"] == "sd":
+            return []
         outputs.extend(expand(rules.cens_generate_stv.output, fname=fnames, chr=wc.chr))
 
     return outputs

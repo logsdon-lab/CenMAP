@@ -10,12 +10,14 @@ from pathlib import Path
 from typing import Any, Iterable
 from snakemake.utils import validate
 
-__version__ = "1.0.5"
+__version__ = "1.1.0"
 
 # Follow symlinks to install dir.
 WD = Path(__file__).resolve().parent
 CFG = WD.joinpath("config", "config_template.yaml")
 CFG_SCHEMA = WD.joinpath("config", "config.schema.yaml")
+HMM_PROFILE_SF = WD.joinpath("data", "models", "AS-SFs-hmmer3.0.290621.hmm.gz")
+HMM_PROFILE_HOR = WD.joinpath("data", "models", "AS-HORs-hmmer3.4-071024.hmm.gz")
 CHRS = [f"chr{c}" for c in [*range(1, 23), "X", "Y"]]
 CFG_DIR = Path("config")
 DATA_DIR = Path("0-symlink_inputs")
@@ -77,26 +79,21 @@ def symlink_files(
 def update_relative_to_wd(
     cfg: dict[str, Any], working_dir: Path, config_dir: Path
 ) -> None:
+    # Make config dir.
+    new_dir = working_dir.joinpath(config_dir)
+    new_dir.mkdir(exist_ok=True, parents=True)
     # Go through top-level paths and ensure relative to script.
     for _, v in cfg.items():
         if isinstance(v, dict):
             for k2, v2 in v.items():
                 if not isinstance(v2, str):
                     continue
-
                 cfg_str = WD.joinpath(v2)
                 if not cfg_str.is_file():
                     continue
-
-                bname = os.path.basename(v2)
-                # Make relative path for snakemake
-                new_rel_path = config_dir.joinpath(bname)
-                # The others are for transferring from script working dir.
-                new_path_dir = working_dir.joinpath(config_dir)
-                new_path = working_dir.joinpath(new_rel_path)
-                new_path_dir.mkdir(exist_ok=True, parents=True)
+                new_path = new_dir.joinpath(os.path.basename(v2)).resolve()
                 shutil.copy(cfg_str, new_path)
-                v[k2] = str(new_rel_path)
+                v[k2] = str(new_path)
 
 
 def make_config(
@@ -112,7 +109,6 @@ def make_config(
 
     ont_files: list[str] | None = args.ont
     hifi_files: list[str] | None = args.hifi
-    chroms = args.chromosomes
     mode = args.mode
     output_dir = Path(working_dir, args.output_dir, sample)
     data_dir = output_dir.joinpath("data")
@@ -133,13 +129,25 @@ def make_config(
     # humas_annot
     if mode == "human":
         cfg["humas_annot"]["mode"] = "sd"
-        cfg["humas_annot"]["hmm_profile"] = "data/models/AS-HORs-hmmer3.4-071024.hmm.gz"
+        cfg["humas_annot"]["hmm_profile"] = str(HMM_PROFILE_HOR)
     else:
+        cfg["repeatmasker"]["species"] = "primates"
         cfg["humas_annot"]["mode"] = "sf"
-        cfg["humas_annot"]["hmm_profile"] = "data/models/AS-SFs-hmmer3.0.290621.hmm.gz"
+        cfg["humas_annot"]["hmm_profile"] = str(HMM_PROFILE_SF)
+
+    # Set to no chromosomes.
+    # Use SF instead of srf-n-trf
+    if "none" in args.chromosomes:
+        chroms = []
+        cfg["humas_annot"]["mode"] = "sf"
+        cfg["humas_annot"]["hmm_profile"] = str(HMM_PROFILE_SF)
+    else:
+        chroms = args.chromosomes
 
     update_relative_to_wd(cfg=cfg, working_dir=output_dir, config_dir=CFG_DIR)
 
+    # Set reference.
+    # If no reference and chromosomes is []. No reference alignment is performed.
     if args.reference:
         cfg["ident_cen_ctgs"]["reference"] = args.reference
 
@@ -229,6 +237,7 @@ def main() -> int:
         help=(
             "Path to reference assembly used to rename and reorient contigs. "
             "Defaults to CHM13 v2.0 and assumes contig names are exact matches to --chromosomes. "
+            "If not provided and --chromosomes set to 'none', no reference chromosome mapping is performed. "
             "Avoid changing unless you know what you're doing."
         ),
     )
@@ -244,7 +253,7 @@ def main() -> int:
         type=str,
         nargs="+",
         default=CHRS,
-        help="Chromosomes to aggregate outputs. Format: chr[0-9XY]+",
+        help="Chromosomes to partition outputs. Specifying 'none' will not partition output. Format: 'chr[0-9XY]+|none'",
     )
     group_config.add_argument(
         "-m",
@@ -312,10 +321,17 @@ def main() -> int:
     elif args.generate_config:
         with open(CFG, "rt") as fh:
             cfg = yaml.safe_load(fh)
+            output_dir = Path(args.output_dir)
             # Transfer config to working dir
-            update_relative_to_wd(
-                cfg=cfg, working_dir=Path(args.output_dir), config_dir=CFG_DIR
-            )
+            update_relative_to_wd(cfg=cfg, working_dir=output_dir, config_dir=CFG_DIR)
+            # Copy both profiles so user
+            for file in (HMM_PROFILE_HOR, HMM_PROFILE_SF):
+                bname = os.path.basename(file)
+                outfile = output_dir.joinpath(CFG_DIR, bname)
+                if output_dir.joinpath(CFG_DIR, bname).exists():
+                    continue
+                shutil.copy(file, outfile)
+            # No samples
             cfg["samples"] = []
             yaml.safe_dump(cfg, sys.stdout)
             print(
@@ -372,8 +388,10 @@ def main() -> int:
         "--workflow-profile",
         profile,
     ]
+    snake_opts = []
     if args.snake_opts:
-        cmd.extend(args.snake_opts.split(" "))
+        snake_opts = args.snake_opts.split(" ")
+        cmd.extend(snake_opts)
 
     print(f"Running command:\n\t{' '.join(cmd)}", file=sys.stderr)
     print(f"Output dir:\n\t{output_dir}", file=sys.stderr)
@@ -386,6 +404,15 @@ def main() -> int:
     except subprocess.CalledProcessError:
         subprocess.run([*cmd, "--unlock"], check=True, cwd=output_dir)
         return -1
+
+    # Don't delete temp files if dry-run.
+    is_dryrun = (
+        any("n" in opt for opt in snake_opts if opt.count("-") == 1)
+        or "--dry-run" in snake_opts
+        or "--dryrun" in snake_opts
+    )
+    if is_dryrun:
+        return 0
 
     print("Cleaning up temp files.", file=sys.stderr)
     subprocess.run(
