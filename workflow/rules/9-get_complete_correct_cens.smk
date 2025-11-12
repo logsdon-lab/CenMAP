@@ -61,7 +61,10 @@ rule get_complete_correct_cens_bed:
                 next;
             }};
             print ctg_name, ctg_st, ctg_end, adj_name, 0, ort, adj_st, adj_end, "0,0,0"
-        }}' ;}} > {output} 2> {log}
+        }}' ;}} | \
+        sort -k1,1 -k2,2n | \
+        uniq \
+        > {output} 2> {log}
         """
 
 
