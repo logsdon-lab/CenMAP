@@ -1,7 +1,7 @@
 include: "common.smk"
 include: "utils.smk"
 include: "7-fix_cens_w_repeatmasker.smk"
-
+include: "8-humas_annot.smk"
 
 COMPLETE_CORRECT_CENS_LOGDIR = join(LOG_DIR, "9-get_complete_correct_cens")
 
@@ -11,7 +11,7 @@ if config.get("nucflag"):
     include: "8-nucflag.smk"
 
 
-rule get_complete_correct_cens_bed:
+rule get_complete_correct_cens_bed_unfiltered:
     input:
         # (name, st, end, ctg_name, ctg_len)
         interm_bed=ancient(rules.make_complete_cens_bed.output.cen_bed),
@@ -22,11 +22,11 @@ rule get_complete_correct_cens_bed:
     output:
         # BED9
         # (name, st, end, adj_name, score, ort, adj_st, adj_end, rgb)
-        bed=join(
+        bed=temp(join(
             FINAL_OUTPUT_DIR,
             "bed",
-            "{sm}_complete_correct_cens.bed",
-        ),
+            "{sm}_complete_correct_cens.unfiltered.bed",
+        )),
     params:
         # Allow not running nucflag.
         infile_stream=lambda wc, input: (
@@ -35,7 +35,7 @@ rule get_complete_correct_cens_bed:
             else f"cat {input.interm_bed}"
         ),
     log:
-        join(COMPLETE_CORRECT_CENS_LOGDIR, "get_complete_correct_bed_{sm}.log"),
+        join(COMPLETE_CORRECT_CENS_LOGDIR, "get_complete_correct_bed_unfiltered_{sm}.log"),
     conda:
         "../envs/tools.yaml"
     shell:
@@ -67,6 +67,92 @@ rule get_complete_correct_cens_bed:
         > {output} 2> {log}
         """
 
+# Could not reuse the rule from 10-format_hor_stv.smk due to circular import issues.
+def humas_annot_all_outputs(wc):
+    _ = [checkpoints.run_humas_annot.get(sm=sm).output for sm in SAMPLE_NAMES]
+    fastas = glob.glob(join(HUMAS_CENS_SPLIT_DIR, "*.fa"))
+    fnames = get_valid_fnames(fastas, filter_chrom = None)
+    outputs = config.get("plot_hor_stv", {}).get("ref_stv", [])
+    if config["humas_annot"]["mode"] == "srf-n-trf":
+        outputs.extend(
+            expand(
+                rules.filter_srf_trf_annot.output,
+                zip,
+                sm=[fname.sm for fname in fnames],
+                fname=fnames,
+            )
+        )
+    elif config["humas_annot"]["mode"] == "sf":
+        outputs.extend(
+            expand(rules.format_monomer_sf_classes.output, fname=fnames, mode="sf")
+        )
+    else:
+        if config["humas_annot"]["mode"] == "sd":
+            return []
+        outputs.extend(expand(rules.cens_generate_stv.output, fname=fnames, chr=wc.chr))
+
+    return outputs
+
+rule merge_all_stv_bed:
+    input:
+        humas_annot_all_outputs,
+    output:
+        merged_stv=temp(join(
+            FINAL_OUTPUT_DIR,
+            "bed",
+            "all_stv_merged.bed",
+        )),
+    log:
+        join(COMPLETE_CORRECT_CENS_LOGDIR, "merge_all_stv_bed.log"),
+    conda:
+        "../envs/tools.yaml"
+    params:
+        inputs=lambda wc, input: input if input else '<(echo "")',
+    shell:
+        """
+        {{ awk -v OFS="\\t" '{{
+            # Exit if empty.
+            if (NF == 0) {{ next; }}
+            # Find start in contig name.
+            match($1, ":(.+)-", starts);
+            if ($2 > $3) {{
+                print "Invalid row at " NR, $0 > "/dev/stderr"
+                next;
+            }}
+            # Update start and end
+            $2=$2+starts[1];
+            $3=$3+starts[1];
+            $7=$7+starts[1];
+            $8=$8+starts[1];
+            print
+        }}' {params.inputs} ;}} > {output.merged_stv} 2> {log}
+        """
+
+rule get_complete_correct_cens_bed:
+    input:
+        cens_bed_unfiltered = rules.get_complete_correct_cens_bed_unfiltered.output,
+        merged_stv_bed = rules.merge_all_stv_bed.output.merged_stv if config.get("get_complete_correct_cens", {}).get("filter_by_hor", True) else "", 
+    output:
+        # BED9
+        # (name, st, end, adj_name, score, ort, adj_st, adj_end, rgb)
+        bed=join(
+            FINAL_OUTPUT_DIR,
+            "bed",
+            "{sm}_complete_correct_cens.bed",
+        ),
+    log:
+        join(COMPLETE_CORRECT_CENS_LOGDIR, "get_complete_correct_bed_{sm}.log"),
+    conda:
+        "../envs/tools.yaml"
+    shell:
+        """
+        if [ "{input.merged_stv_bed}" != "" ] && [ -s "{input.merged_stv_bed}" ]; then
+            bedtools intersect -a {input.cens_bed_unfiltered} -b {input.merged_stv_bed} -wa -u > {output.bed}
+        else
+            cp {input.cens_bed_unfiltered} {output.bed}
+        fi
+        2> {log}
+        """
 
 rule get_complete_correct_cens_fa:
     input:

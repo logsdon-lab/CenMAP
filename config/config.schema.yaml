@@ -412,6 +412,14 @@ properties:
     required:
       - input_bam_dir
       - bam_rgx
+  complete_correct_cens:
+    type: object
+    additionalProperties: false
+    properties:
+      filter_by_hor:
+        type: boolean
+        description: Use HOR annotation to filter out incomplete centromeres.
+        default: true
 required:
   - samples
   - concat_asm
