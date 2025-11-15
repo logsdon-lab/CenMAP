@@ -87,9 +87,7 @@ def humas_annot_all_outputs(wc):
             expand(rules.format_monomer_sf_classes.output, fname=fnames, mode="sf")
         )
     else:
-        if config["humas_annot"]["mode"] == "sd":
-            return []
-        outputs.extend(expand(rules.cens_generate_stv.output, fname=fnames, chr=wc.chr))
+        return expand(rules.cens_generate_stv.output, zip, fname=fnames, chr=CHROMOSOMES if CHROMOSOMES else ["all"])
 
     return outputs
 
@@ -106,26 +104,13 @@ rule merge_all_stv_bed:
         join(COMPLETE_CORRECT_CENS_LOGDIR, "merge_all_stv_bed.log"),
     conda:
         "../envs/tools.yaml"
-    params:
-        inputs=lambda wc, input: input if input else '<(echo "")',
     shell:
         """
-        {{ awk -v OFS="\\t" '{{
-            # Exit if empty.
-            if (NF == 0) {{ next; }}
-            # Find start in contig name.
-            match($1, ":(.+)-", starts);
-            if ($2 > $3) {{
-                print "Invalid row at " NR, $0 > "/dev/stderr"
-                next;
-            }}
-            # Update start and end
-            $2=$2+starts[1];
-            $3=$3+starts[1];
-            $7=$7+starts[1];
-            $8=$8+starts[1];
-            print
-        }}' {params.inputs} ;}} > {output.merged_stv} 2> {log}
+        cat {input} \
+        | cut -f1 \
+        | sort \
+        | uniq \
+         > {output.merged_stv} 2> {log}
         """
 
 rule get_complete_correct_cens_bed:
@@ -146,11 +131,18 @@ rule get_complete_correct_cens_bed:
         "../envs/tools.yaml"
     shell:
         """
-        if [ "{input.merged_stv_bed}" != "" ] && [ -s "{input.merged_stv_bed}" ]; then
-            bedtools intersect -a {input.cens_bed_unfiltered} -b {input.merged_stv_bed} -wa -u > {output.bed}
-        else
-            cp {input.cens_bed_unfiltered} {output.bed}
-        fi
+        # Filter cens_bed_unfiltered by matching col1:col2-col3 against patterns
+        awk -v OFS="\\t" '
+        NR==FNR {{
+            patterns[$1] = 1;
+            next;
+        }}
+        {{
+            key = $4 ":" ($7+1) "-" $8;
+            if (key in patterns) {{
+                print $0;
+            }}
+        }}' <(cat {input.merged_stv_bed} | grep "^{wildcards.sm}_") {input.cens_bed_unfiltered} > {output.bed}
         2> {log}
         """
 
