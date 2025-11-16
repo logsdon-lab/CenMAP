@@ -279,7 +279,7 @@ checkpoint run_humas_annot:
             else []
         ),
         humas_annot_sm_outputs,
-        rules.sm_stv.output,
+        rules.sm_stv.output if IS_HUMAN_ANNOT else [],
     output:
         touch(join(HUMAS_ANNOT_OUTDIR, "humas_annot_{sm}.done")),
 
