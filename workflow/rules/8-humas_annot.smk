@@ -14,7 +14,7 @@ HUMAS_ANNOT_BMKDIR = join(BMK_DIR, "8-humas_annot")
 rule extract_cens_for_humas_annot:
     input:
         fa=rules.create_final_asm.output.fa,
-        bed=ancient(rules.make_complete_cens_bed.output.cen_bed),
+        bed=rules.make_complete_cens_bed.output.cen_bed,
     output:
         seq=pipe(
             join(
@@ -239,6 +239,37 @@ def humas_annot_sm_outputs(wc):
         return expand(rules.cens_generate_stv.output, zip, fname=fnames, chr=chrs)
 
 
+rule sm_stv:
+    input:
+        humas_annot_sm_outputs,
+    output:
+        join(HUMAS_ANNOT_OUTDIR, "{sm}_stv.bed"),
+    conda:
+        "../envs/tools.yaml"
+    shell:
+        """
+        awk -v OFS="\\t" '{{
+            match($1, "^(.+):(.+)-", mtches);
+            $1=mtches[1];
+            $2=$2+mtches[2];
+            $3=$3+mtches[2];
+            $7=$7+mtches[2];
+            $8=$8+mtches[2];
+            print
+        }}' {input} > {output}
+        """
+
+
+def cmd_intersect_live(wc) -> str:
+    if not IS_HUMAN_ANNOT:
+        return ""
+    all_live_hor = expand(rules.sm_stv.output, sm=wc.sm)[0]
+    assert len(all_live_hor) != 0, "No live HOR to intersect against bed file."
+    # With previous BED file, only report lines that intersect live asat.
+    # This is ensured by sd and hmmer options. (Human only)
+    return f"| bedtools intersect -u -a - -b {all_live_hor}"
+
+
 checkpoint run_humas_annot:
     input:
         (
@@ -247,6 +278,7 @@ checkpoint run_humas_annot:
             else []
         ),
         humas_annot_sm_outputs,
+        rules.sm_stv.output,
     output:
         touch(join(HUMAS_ANNOT_OUTDIR, "humas_annot_{sm}.done")),
 

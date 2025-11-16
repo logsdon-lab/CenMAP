@@ -195,8 +195,9 @@ properties:
         type: integer
         description: >-
           Window size to use in calculating shannon index for region filtering.
-          Smaller windows may allow smaller centromeres but will increase the number of false-positives (ex. p-arms of acrocentric chromosomes).
-        default: 250000
+          Smaller windows allow smaller centromeres but may increase the number of false-positives.
+          (ex. monomeric/divergent alpha-satellite or p-arm fragments of acrocentric chromosomes)
+        default: 5000
       omit_shannon_plots:
         type: boolean
         description: Omit entropy plots.
@@ -409,16 +410,24 @@ properties:
           Use srf-n-trf regions instead of RepeatMasker output as putative alpha-satellite region.
           Merge based on bp_alr_merge and region minimum size based on alr_threshold.
         default: false
+      filter_by_live_hor:
+        type: boolean
+        description: >-
+          Use HOR annotation to filter CDRs.
+          Only applied to human annotation modes, sd and hmmer.
+        default: true
     required:
       - input_bam_dir
       - bam_rgx
-  complete_correct_cens:
+  get_complete_correct_cens:
     type: object
     additionalProperties: false
     properties:
-      filter_by_hor:
+      filter_by_live_hor:
         type: boolean
-        description: Use HOR annotation to filter out incomplete centromeres.
+        description: >-
+          Use HOR annotation to filter out non-live alpha-satellite HOR centromeres.
+          Only applied to human annotation modes, sd and hmmer.
         default: true
 required:
   - samples
