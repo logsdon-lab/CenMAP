@@ -243,12 +243,13 @@ rule sm_stv:
     input:
         humas_annot_sm_outputs,
     output:
-        join(HUMAS_ANNOT_OUTDIR, "{sm}_stv.bed"),
+        join(HUMAS_ANNOT_OUTDIR, "{sm}_live_stv.bed"),
     conda:
         "../envs/tools.yaml"
     shell:
         """
         awk -v OFS="\\t" '{{
+            if ($4 !~ "L") {{ next }}
             match($1, "^(.+):(.+)-", mtches);
             $1=mtches[1];
             $2=$2+mtches[2];
