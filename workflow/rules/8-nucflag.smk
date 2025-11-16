@@ -121,7 +121,7 @@ rule create_stv_overlay_bed:
 rule create_rm_nucflag_ignore_bed:
     input:
         rm=rules.create_rm_overlay_bed.output,
-        bed=ancient(rules.make_complete_cens_bed.output.cen_bed),
+        bed=rules.make_complete_cens_bed.output.cen_bed,
         ignore_bed=(
             config["nucflag"]["ignore_regions"]
             if config["nucflag"].get("ignore_regions")
@@ -153,7 +153,7 @@ rule create_rm_nucflag_ignore_bed:
 rule create_stv_nucflag_ignore_bed:
     input:
         stv=lambda wc: humas_annot_sm_outputs(wc) if config.get("humas_annot") else [],
-        bed=ancient(rules.make_complete_cens_bed.output.cen_bed),
+        bed=rules.make_complete_cens_bed.output.cen_bed,
         ignore_bed=(
             config["nucflag"]["ignore_regions"]
             if config["nucflag"].get("ignore_regions")
@@ -218,7 +218,7 @@ NUCFLAG_CFG = {
                 }
             ),
             "config": config["nucflag"]["config_nucflag"],
-            "region_bed": ancient(rules.make_complete_cens_bed.output.cen_bed),
+            "region_bed": rules.make_complete_cens_bed.output.cen_bed,
             # Ignore regions.
             "ignore_bed": ignore_regions,
             "overlay_beds": overlay_beds,

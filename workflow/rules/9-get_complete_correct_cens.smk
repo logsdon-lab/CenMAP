@@ -11,7 +11,7 @@ if config.get("nucflag"):
     include: "8-nucflag.smk"
 
 
-if config.get("humas_annot"):
+if IS_HUMAN_ANNOT:
 
     include: "8-humas_annot.smk"
 
@@ -19,12 +19,12 @@ if config.get("humas_annot"):
 rule get_complete_correct_cens_bed:
     input:
         # (name, st, end, ctg_name, ctg_len)
-        interm_bed=ancient(rules.make_complete_cens_bed.output.cen_bed),
+        interm_bed=rules.make_complete_cens_bed.output.cen_bed,
         # (name, st, end, status)
         nucflag_bed=(
             rules.check_asm_nucflag.output.asm_status if config.get("nucflag") else []
         ),
-        stv_chkpt=(humas_annot_sm_outputs if config.get("humas_annot") else []),
+        stv_chkpt=humas_annot_sm_outputs if IS_HUMAN_ANNOT else [],
     output:
         # BED9
         # (name, st, end, adj_name, score, ort, adj_st, adj_end, rgb)
@@ -36,7 +36,7 @@ rule get_complete_correct_cens_bed:
     params:
         # Allow not running nucflag.
         infile_stream=lambda wc, input: (
-            f"join <(sort -k1 {input.interm_bed}) <(sort -k1 {input.nucflag_bed})"
+            f"join -t \"$(printf '\\t')\" <(sort -k1 {input.interm_bed}) <(sort -k1 {input.nucflag_bed})"
             if input.nucflag_bed
             else f"cat {input.interm_bed}"
         ),

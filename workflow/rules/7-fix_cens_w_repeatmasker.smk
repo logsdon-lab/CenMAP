@@ -91,7 +91,7 @@ def valid_beds_by_cen_entropy(wc):
 rule make_complete_cens_bed:
     input:
         # (sm_ctg, st, end, old_sm_ctg)
-        beds=ancient(valid_beds_by_cen_entropy),
+        beds=valid_beds_by_cen_entropy,
         # (ctg, sm_ctg, ctg_len)
         rename_key=rules.create_rename_key.output,
         idx=rules.create_final_asm.output.idx,
