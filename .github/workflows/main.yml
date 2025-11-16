@@ -150,6 +150,7 @@ jobs:
         -s HG00731 \
         -p 4 \
         --chromosomes chrY
+        rm -rf results logs benchmarks .snakemake/metadata
     - name: Test chrY workflow with no reference via cenmap wrapper script.
       run: |
         ./cenmap \
