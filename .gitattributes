@@ -1,6 +1,9 @@
 test/data/assemblies/HG00731/HG00731_chrY_h2tg000043l.fasta.gz filter=lfs diff=lfs merge=lfs -text
 test/data/assemblies/mGorGor1/chr16_mat_hsa15.fasta.gz filter=lfs diff=lfs merge=lfs -text
+test/data/assemblies/HG002/HG002_chr2_PATERNAL.fa.gz filter=lfs diff=lfs merge=lfs -text
 test/data/raw_data/HG00731/HG00731_chrY_h2tg000043l_reads.fastq.gz filter=lfs diff=lfs merge=lfs -text
+test/data/reference/T2T-CHM13v2_chrY.fasta.gz filter=lfs diff=lfs merge=lfs -text
+test/data/reference/T2T-CHM13v2_chr2.fasta.gz filter=lfs diff=lfs merge=lfs -text
 test/data/raw_data/mGorGor1/reads.bam filter=lfs diff=lfs merge=lfs -text
 test/data/reference/T2T-CHM13v2_chrY.fasta.gz filter=lfs diff=lfs merge=lfs -text
 test/format_rm_sat_annot/input/HG00731_correct_ALR_regions.fa.reformatted.out filter=lfs diff=lfs merge=lfs -text

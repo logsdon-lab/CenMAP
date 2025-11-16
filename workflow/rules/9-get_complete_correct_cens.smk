@@ -11,14 +11,20 @@ if config.get("nucflag"):
     include: "8-nucflag.smk"
 
 
+if IS_HUMAN_ANNOT:
+
+    include: "8-humas_annot.smk"
+
+
 rule get_complete_correct_cens_bed:
     input:
         # (name, st, end, ctg_name, ctg_len)
-        interm_bed=ancient(rules.make_complete_cens_bed.output.cen_bed),
+        interm_bed=rules.make_complete_cens_bed.output.cen_bed,
         # (name, st, end, status)
         nucflag_bed=(
             rules.check_asm_nucflag.output.asm_status if config.get("nucflag") else []
         ),
+        stv_chkpt=rules.sm_stv.output if IS_HUMAN_ANNOT else [],
     output:
         # BED9
         # (name, st, end, adj_name, score, ort, adj_st, adj_end, rgb)
@@ -30,19 +36,28 @@ rule get_complete_correct_cens_bed:
     params:
         # Allow not running nucflag.
         infile_stream=lambda wc, input: (
-            f"join <(sort -k1 {input.interm_bed}) <(sort -k1 {input.nucflag_bed})"
+            f"join -t \"$(printf '\\t')\" <(sort -k1 {input.interm_bed}) <(sort -k1 {input.nucflag_bed})"
             if input.nucflag_bed
             else f"cat {input.interm_bed}"
         ),
+        cmd_intersect=lambda wc: (
+            cmd_intersect_live(wc)
+            if config.get("get_complete_correct_cens", {}).get("filter_by_hor", True)
+            and "cmd_intersect_live" in globals()
+            else ""
+        ),
     log:
-        join(COMPLETE_CORRECT_CENS_LOGDIR, "get_complete_correct_bed_{sm}.log"),
+        join(
+            COMPLETE_CORRECT_CENS_LOGDIR,
+            "get_complete_correct_bed_{sm}.log",
+        ),
     conda:
         "../envs/tools.yaml"
     shell:
         """
         {{ {params.infile_stream} | \
-        sort -k1,1 -k2,2n | \
-        uniq | \
+        sort -k1,1 -k2,2n -u \
+        {params.cmd_intersect} | \
         awk -v OFS="\\t" '{{
             adj_name=$1;
             adj_st=$2; adj_end=$3;

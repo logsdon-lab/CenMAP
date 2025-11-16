@@ -1,0 +1,30 @@
+chromosomes:
+- chr2
+
+samples:
+- HG002
+
+concat_asm:
+  input_dir: "test/data/assemblies"
+
+ident_cen_ctgs:
+  reference: "test/data/reference/T2T-CHM13v2_chr2.fasta.gz"
+  threads_srf: 8
+  mem_srf: 40GB
+  threads_aln: 8
+  mem_aln: 150GB
+  bp_merge: 2500000
+  bp_slop: 1000000
+  perc_multi_chrom: 5.0
+
+repeatmasker:
+  ref_repeatmasker_output:
+  - data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
+  threads: 4
+  repeat_colors: "config/repeatmasker_colors.json"
+  bp_shannon_window: 5000
+
+humas_annot:
+  mode: "sd"
+  hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm.gz"
+  threads: 4

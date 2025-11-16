@@ -10,7 +10,7 @@ from collections import defaultdict, Counter
 from typing import Any, NamedTuple
 from snakemake.settings.types import DeploymentMethod
 from snakemake.utils import validate
-
+from snakemake.io import Wildcards
 
 # Validate and fill defaults.
 validate(config, "../../config/config.schema.yaml")
