@@ -4,6 +4,11 @@ include: "5-ident_cen_ctgs.smk"
 include: "7-fix_cens_w_repeatmasker.smk"
 
 
+if IS_HUMAN_ANNOT:
+
+    include: "8-humas_annot.smk"
+
+
 # Get sample names with subdirs in cdr_finder.input_bam_dir
 SAMPLE_NAMES_BAM = set(
     glob_wildcards(join(config["cdr_finder"]["input_bam_dir"], "{sm}")).sm
@@ -164,12 +169,48 @@ module CDR_Finder:
 use rule * from CDR_Finder as cdr_*
 
 
+rule intersect_cdr_w_live:
+    input:
+        cdr_output=rules.cdr_call_cdrs.output,
+        # Require stv annot
+        stv_chkpt=lambda wc: (
+            expand(rules.sm_stv.output, sm=wc.sample) if IS_HUMAN_ANNOT else []
+        ),
+    output:
+        join(
+            CDR_FINDER_OUTDIR,
+            "bed",
+            "{sample}_CDR.live.bed",
+        ),
+    params:
+        # Then filter based on intersect with live HOR if either stringdecomposer of humas_hmmer. i.e. human
+        cmd_intersect=lambda wc: (
+            cmd_intersect_live(Wildcards(fromdict=dict(sm=wc.sample)))
+            if "cmd_intersect_live" in globals()
+            else ""
+        ),
+    conda:
+        "../envs/tools.yaml"
+    shell:
+        """
+        cat {input.cdr_output} {params.cmd_intersect} > {output}
+        """
+
+
 rule merge_cdr_beds:
     input:
         bed=expand(
             rules.make_complete_cens_bed.output.cen_bed, sm=SAMPLE_NAMES_INTERSECTION
         ),
-        cdr_output=expand(rules.cdr_call_cdrs.output, sample=SAMPLE_NAMES_INTERSECTION),
+        cdr_output=expand(
+            (
+                rules.intersect_cdr_w_live.output
+                if config["cdr_finder"].get("filter_by_live_hor", True)
+                and IS_HUMAN_ANNOT
+                else rules.cdr_call_cdrs.output
+            ),
+            sample=SAMPLE_NAMES_INTERSECTION,
+        ),
         methyl_cdr_output=expand(
             rules.cdr_aggregate_bed_files.output.methyl_bed_all,
             sample=SAMPLE_NAMES_INTERSECTION,
@@ -185,6 +226,8 @@ rule merge_cdr_beds:
             "bed",
             "all_binned_freq.bed",
         ),
+    conda:
+        "../envs/tools.yaml"
     shell:
         """
         cut -f1-3 {input.cdr_output} | \
