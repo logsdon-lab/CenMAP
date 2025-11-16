@@ -174,9 +174,7 @@ rule intersect_cdr_w_live:
         cdr_output=rules.cdr_call_cdrs.output,
         # Require stv annot
         stv_chkpt=lambda wc: (
-            humas_annot_sm_outputs(Wildcards(fromdict=dict(sm=wc.sample)))
-            if IS_HUMAN_ANNOT
-            else []
+            expand(rules.sm_stv.output, sm=wc.sample) if IS_HUMAN_ANNOT else []
         ),
     output:
         join(

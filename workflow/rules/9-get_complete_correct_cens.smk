@@ -24,7 +24,7 @@ rule get_complete_correct_cens_bed:
         nucflag_bed=(
             rules.check_asm_nucflag.output.asm_status if config.get("nucflag") else []
         ),
-        stv_chkpt=humas_annot_sm_outputs if IS_HUMAN_ANNOT else [],
+        stv_chkpt=rules.sm_stv.output if IS_HUMAN_ANNOT else [],
     output:
         # BED9
         # (name, st, end, adj_name, score, ort, adj_st, adj_end, rgb)
