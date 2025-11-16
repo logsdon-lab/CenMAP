@@ -11,6 +11,11 @@ if config.get("nucflag"):
     include: "8-nucflag.smk"
 
 
+if config.get("humas_annot"):
+
+    include: "8-humas_annot.smk"
+
+
 rule get_complete_correct_cens_bed:
     input:
         # (name, st, end, ctg_name, ctg_len)
@@ -19,6 +24,7 @@ rule get_complete_correct_cens_bed:
         nucflag_bed=(
             rules.check_asm_nucflag.output.asm_status if config.get("nucflag") else []
         ),
+        stv_chkpt=(humas_annot_sm_outputs if config.get("humas_annot") else []),
     output:
         # BED9
         # (name, st, end, adj_name, score, ort, adj_st, adj_end, rgb)
@@ -34,6 +40,9 @@ rule get_complete_correct_cens_bed:
             if input.nucflag_bed
             else f"cat {input.interm_bed}"
         ),
+        cmd_intersect=lambda wc: (
+            cmd_intersect_live(wc) if "cmd_intersect_live" in globals() else ""
+        ),
     log:
         join(COMPLETE_CORRECT_CENS_LOGDIR, "get_complete_correct_bed_{sm}.log"),
     conda:
@@ -41,8 +50,8 @@ rule get_complete_correct_cens_bed:
     shell:
         """
         {{ {params.infile_stream} | \
-        sort -k1,1 -k2,2n | \
-        uniq | \
+        sort -k1,1 -k2,2n -u \
+        {params.cmd_intersect} | \
         awk -v OFS="\\t" '{{
             adj_name=$1;
             adj_st=$2; adj_end=$3;

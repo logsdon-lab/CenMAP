@@ -195,8 +195,9 @@ properties:
         type: integer
         description: >-
           Window size to use in calculating shannon index for region filtering.
-          Smaller windows may allow smaller centromeres but will increase the number of false-positives (ex. p-arms of acrocentric chromosomes).
-        default: 250000
+          Smaller windows allow smaller centromeres but may increase the number of false-positives.
+          (ex. monomeric/divergent alpha-satellite or p-arm fragments of acrocentric chromosomes)
+        default: 5000
       omit_shannon_plots:
         type: boolean
         description: Omit entropy plots.

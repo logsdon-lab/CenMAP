@@ -60,7 +60,7 @@ repeatmasker:
   ref_repeatmasker_output:
   - data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
   repeat_colors: "config/repeatmasker_colors.json"
-  bp_shannon_window: 250000
+  bp_shannon_window: 5000
   threads: 12
 
 humas_annot:
