@@ -186,7 +186,9 @@ rule intersect_cdr_w_live:
         # Then filter based on intersect with live HOR if either stringdecomposer of humas_hmmer. i.e. human
         # Require CDR to have 90% overlap with live HOR annotation.
         cmd_intersect=lambda wc: (
-            cmd_intersect_live(Wildcards(fromdict=dict(sm=wc.sample)), ovl_frac=0.9)
+            cmd_intersect_live(
+                Wildcards(fromdict=dict(sm=wc.sample)), bp_merge=1, ovl_frac=0.9
+            )
             if "cmd_intersect_live" in globals()
             else ""
         ),
