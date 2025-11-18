@@ -52,8 +52,8 @@ use rule * from srf_sm as srf_*
 
 checkpoint extract_filter_monomers:
     input:
-        paf=rules.srf_map_motifs.output,
-        monomers=rules.srf_get_monomers.output,
+        paf=ancient(rules.srf_map_motifs.output),
+        monomers=ancient(rules.srf_get_monomers.output),
     output:
         bed_mon=join(
             SRF_OUTDIR,

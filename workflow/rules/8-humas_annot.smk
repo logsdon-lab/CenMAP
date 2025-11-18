@@ -37,7 +37,7 @@ rule extract_cens_for_humas_annot:
     params:
         bed=lambda wc, input: input.bed,
         added_cmds=(
-            f"| {cmd_filter_fa_chrom("seqkit seq --upper-case")}"
+            f"| {cmd_filter_fa_chrom('seqkit seq --upper-case')}"
             if CHROMOSOMES
             else "| seqkit seq --upper-case"
         ),
@@ -261,14 +261,18 @@ rule sm_stv:
         """
 
 
-def cmd_intersect_live(wc) -> str:
+def cmd_intersect_live(wc, ovl_frac: float | None = None) -> str:
     if not IS_HUMAN_ANNOT:
         return ""
     all_live_hor = expand(rules.sm_stv.output, sm=wc.sm)[0]
     assert len(all_live_hor) != 0, "No live HOR to intersect against bed file."
     # With previous BED file, only report lines that intersect live asat.
     # This is ensured by sd and hmmer options. (Human only)
-    return f"| bedtools intersect -u -a - -b {all_live_hor}"
+    # Also merge and require overlap fraction.
+    cmd = f"| bedtools intersect -u -a - -b <(bedtools merge -i {all_live_hor} -d 1)"
+    if ovl_frac:
+        cmd += f" -f {ovl_frac}"
+    return cmd
 
 
 checkpoint run_humas_annot:
