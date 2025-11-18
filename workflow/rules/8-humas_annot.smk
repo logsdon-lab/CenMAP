@@ -257,7 +257,7 @@ rule sm_stv:
             $7=$7+mtches[2];
             $8=$8+mtches[2];
             print
-        }}' {input} > {output}
+        }}' {input} | sort -k1,1 -k2,2n > {output}
         """
 
 
