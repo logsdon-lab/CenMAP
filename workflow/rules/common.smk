@@ -38,6 +38,16 @@ class SplitFilename(NamedTuple):
 def get_valid_fnames(
     fastas: list[str], *, filter_chrom: str | None
 ) -> list[SplitFilename]:
+    """
+    Extract wildcards and filter fasta list for chrom.
+
+    # Args
+    * fastas - list of fasta files. must have file extension. ex. {fname}.fa
+    * filter_chrom - chrom to filter for.
+
+    # Returns
+    * list of SplitFilenames
+    """
     fnames = []
     for fasta in fastas:
         bname, _ = splitext(basename(fasta))
