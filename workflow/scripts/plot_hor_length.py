@@ -213,7 +213,7 @@ def main():
         }
         handles_labels = ax.get_legend_handles_labels()
         handles, labels = zip(
-            *sorted(zip(*handles_labels), key=lambda x: legend_elem_order[x[1]])
+            *sorted(zip(*handles_labels), key=lambda x: legend_elem_order.get(x[1], -1))
         )
 
         # Place outside of figure.
