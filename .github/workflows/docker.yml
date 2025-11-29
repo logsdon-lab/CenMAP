@@ -50,7 +50,7 @@ jobs:
 
       - name: Install Snakemake
         run: |
-          pip install snakemake
+          pip install "snakemake>=8.24.0,<9.11.4"
 
       - name: Generate Dockerfile
         id: dockerfile
