@@ -177,14 +177,9 @@ rule plot_cen_moddotplot:
 # https://stackoverflow.com/a/63040288
 def moddotplot_outputs(wc):
     # Wait until done.
-    try:
-        _ = checkpoints.aggregate_format_all_stv_row.get(**wc).output
-    except AttributeError:
-        pass
-
+    _ = checkpoints.aggregate_format_all_stv_row.get(**wc).output
     fastas = glob.glob(join(HUMAS_CENS_SPLIT_DIR, "*.fa"))
     fnames = get_valid_fnames(fastas, filter_chrom=wc.chr if wc.chr != "all" else None)
-
     return dict(
         moddotplot=expand(rules.run_moddotplot.output, chr=wc.chr, fname=fnames),
         cen_moddoplot=expand(

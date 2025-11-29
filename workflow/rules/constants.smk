@@ -33,9 +33,9 @@ IS_HUMAN_ANNOT = config.get("humas_annot", {}).get("mode") in ("sd", "hmmer")
 RGX_CHR = re.compile(r"(chr[0-9XY]+)")
 RGX_SM_CTG = re.compile(r"^(.+)_(.+)$")
 # This monstrosity matches the expected patterns.
-# https://regex101.com/r/qmBC6h/1
+# https://regex101.com/r/u4A2Xj/1
 RGX_SM_CHR_CTG = re.compile(
-    r"^(.+)_((?:(?:(?:chr|rc-chr)[0-9XY]+)-)*(?:(?:chr|rc-chr)[0-9XY]+))_(.+)$"
+    r"^(.*?)_((?:(?:(?:chr|rc-chr)[0-9XY]+)-)*(?:(?:chr|rc-chr)[0-9XY]+))_(.+)$"
 )
 
 # Check if command is to containerize workflow.
