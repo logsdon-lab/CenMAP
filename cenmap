@@ -360,10 +360,15 @@ def main() -> int:
 
     output_dir.mkdir(exist_ok=True, parents=True)
 
-    # Symlink workflow directory to results.
+    # Copy workflow directory to results.
     try:
-        output_dir.joinpath("workflow").symlink_to(
-            WD.joinpath("workflow"), target_is_directory=True
+        shutil.copy(
+            src=WD.joinpath("config", "config.schema.yaml"),
+            dst=output_dir.joinpath("config", "config.schema.yaml")
+        )
+        shutil.copytree(
+            src=WD.joinpath("workflow"),
+            dst=output_dir.joinpath("workflow"),
         )
     except FileExistsError:
         pass
