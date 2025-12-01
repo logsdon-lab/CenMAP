@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 from snakemake.utils import validate
 
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 
 # Follow symlinks to install dir.
 WD = Path(__file__).resolve().parent
@@ -110,7 +110,7 @@ def make_config(
     ont_files: list[str] | None = args.ont
     hifi_files: list[str] | None = args.hifi
     mode = args.mode
-    output_dir = Path(working_dir, args.output_dir, sample)
+    output_dir = Path(working_dir, args.output_dir, sample).resolve()
     data_dir = output_dir.joinpath("data")
     new_cfg = output_dir.joinpath("config.yaml")
 
@@ -155,16 +155,14 @@ def make_config(
     # concat_asm
     asm_dir = data_dir.joinpath("asm", sample)
     symlink_files(fasta_files, asm_dir)
-    cfg["concat_asm"]["input_dir"] = os.path.join(*asm_dir.parts[-3:-1])
+    cfg["concat_asm"]["input_dir"] = asm_dir.parent.as_posix()
 
     # nucflag
     if hifi_files:
         hifi_dir = data_dir.joinpath("hifi", sample)
         hifi_fofn = Path(f"{hifi_dir}.fofn")
         symlink_files(hifi_files, hifi_dir, hifi_fofn)
-        cfg["nucflag"]["input_hifi_reads_fofn_dir"] = os.path.join(
-            *hifi_dir.parts[-3:-1]
-        )
+        cfg["nucflag"]["input_hifi_reads_fofn_dir"] = hifi_fofn.parent.as_posix()
     else:
         cfg.pop("nucflag")
 
@@ -172,7 +170,7 @@ def make_config(
     if ont_files:
         ont_dir = data_dir.joinpath("ont", sample)
         symlink_files(ont_files, ont_dir)
-        cfg["cdr_finder"]["input_bam_dir"] = os.path.join(*ont_dir.parts[-3:-1])
+        cfg["cdr_finder"]["input_bam_dir"] = ont_dir.parent.as_posix()
     else:
         cfg.pop("cdr_finder")
 
