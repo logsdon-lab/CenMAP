@@ -208,8 +208,9 @@ def make_config(
     # cdr_finder
     if ont_files:
         ont_dir = data_dir.joinpath("ont", sample)
-        symlink_files(ont_files, ont_dir)
-        cfg["cdr_finder"]["input_bam_dir"] = ont_dir.parent.as_posix()
+        ont_fofn = Path(f"{ont_dir}.fofn")
+        symlink_files(ont_files, ont_dir, ont_fofn)
+        cfg["cdr_finder"]["input_bam_fofn_dir"] = ont_fofn.parent.as_posix()
     else:
         cfg.pop("cdr_finder")
 

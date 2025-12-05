@@ -47,8 +47,18 @@ CDR_ALIGN_CFG = {
         {
             "name": sm,
             "asm_fa": expand(rules.create_final_asm.output.fa, sm=sm)[0],
-            "read_dir": join(config["cdr_finder"]["input_bam_dir"], sm),
-            "read_rgx": config["cdr_finder"]["bam_rgx"],
+            **(
+                {
+                    "read_fofn": join(
+                        config["cdr_finder"]["input_bam_fofn_dir"], f"{sm}.fofn"
+                    ),
+                }
+                if config["cdr_finder"].get("input_bam_fofn_dir")
+                else {
+                    "read_dir": join(config["cdr_finder"]["input_bam_dir"], sm),
+                    "read_rgx": config["cdr_finder"]["bam_rgx"],
+                }
+            ),
         }
         for sm in SAMPLE_NAMES_INTERSECTION
     ],

@@ -355,12 +355,19 @@ properties:
       aligner:
         type: string
         enum: ["minimap2", "winnowmap"]
+      input_bam_fofn_dir:
+        type: string
+        description: >-
+          Directory of read fofn files.
+          Each file in this directory is named "{sample}.fofn".
       input_bam_dir:
         type: string
         description: Path to directory with methyl BAM files. Searches recursively for files matching bam_rgx.
       bam_rgx:
         type: string
-        description: Regular expression to search input_bam_dir for methyl BAM files.
+        description: >-
+          Regular expression to search input_bam_dir for methyl BAM files.
+          Despite the name, also supports gzipped fastq files if MM and ML tags are in name.
       aln_mem:
         type: string
         pattern: "\\d+GB"
