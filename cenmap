@@ -96,6 +96,45 @@ def update_relative_to_wd(
                 v[k2] = str(new_path)
 
 
+def generate_default_config(output_dir: str) -> None:
+    with open(CFG, "rt") as fh:
+        cfg = yaml.safe_load(fh)
+        output_dir = Path(output_dir)
+        validate(cfg, schema=CFG_SCHEMA, set_default=True)
+        # Transfer config to working dir
+        print("Copying files...", file=sys.stderr)
+        update_relative_to_wd(cfg=cfg, working_dir=output_dir, config_dir=CFG_DIR)
+        # Copy both profiles for user choice.
+        for file in (HMM_PROFILE_HOR, HMM_PROFILE_SF):
+            bname = os.path.basename(file)
+            outfile = output_dir.joinpath(CFG_DIR, bname)
+            if output_dir.joinpath(CFG_DIR, bname).exists():
+                continue
+            shutil.copy(file, outfile)
+        # No samples
+        cfg["samples"] = []
+        yaml.safe_dump(cfg, sys.stdout)
+        print(
+            "Printed template config to stdout! Update the following fields, comment optional blocks if desired, and add data before running:\n",
+            "1. concat_asm.input_dir\n",
+            " * REQUIRED\n",
+            " * ex. data/asm\n",
+            " * data: {concat_asm.input_dir}/{sm}/{asm}.(fa|fasta|fa.gz|fasta.gz)\n",
+            "2. samples\n",
+            " * REQUIRED\n",
+            " * ex. [HG002]\n",
+            "3. nucflag.input_hifi_reads_fofn_dir\n",
+            " * OPTIONAL\n",
+            " * ex. data/hifi\n",
+            " * data: {nucflag.input_hifi_reads_fofn_dir}/{sm}.fofn\n",
+            "4. cdr_finder.input_bam_dir & cdr_finder.bam_rgx\n",
+            " * OPTIONAL\n",
+            " * ex. data/ont/{sm}/{read}.bam & '.*\\\\.bam'\n",
+            " * data: {cdr_finder.input_bam_dir}/{sm}/{cdr_finder.bam_rgx}",
+            file=sys.stderr,
+        )
+
+
 def make_config(
     args: argparse.Namespace, working_dir: str, template_config: Path
 ) -> Path:
@@ -317,41 +356,8 @@ def main() -> int:
             samples = cfg.get("samples", [])
             assert len(samples) != 0, "No sample provided."
     elif args.generate_config:
-        with open(CFG, "rt") as fh:
-            cfg = yaml.safe_load(fh)
-            output_dir = Path(args.output_dir)
-            # Transfer config to working dir
-            update_relative_to_wd(cfg=cfg, working_dir=output_dir, config_dir=CFG_DIR)
-            # Copy both profiles so user
-            for file in (HMM_PROFILE_HOR, HMM_PROFILE_SF):
-                bname = os.path.basename(file)
-                outfile = output_dir.joinpath(CFG_DIR, bname)
-                if output_dir.joinpath(CFG_DIR, bname).exists():
-                    continue
-                shutil.copy(file, outfile)
-            # No samples
-            cfg["samples"] = []
-            yaml.safe_dump(cfg, sys.stdout)
-            print(
-                "Printed template config to stdout! Update the following fields, comment optional blocks if desired, and add data before running:\n",
-                "1. concat_asm.input_dir\n",
-                " * REQUIRED\n",
-                " * ex. data/asm\n",
-                " * data: {concat_asm.input_dir}/{sm}/{asm}.[fa|fasta|fa.gz|fasta.gz])\n",
-                "2. samples\n",
-                " * REQUIRED\n",
-                " * ex. [HG002]\n",
-                "3. nucflag.input_hifi_reads_fofn_dir\n",
-                " * OPTIONAL\n",
-                " * ex. data/hifi\n",
-                " * data: {nucflag.input_hifi_reads_fofn_dir}/{sm}.fofn\n",
-                "4. cdr_finder.input_bam_dir\n",
-                " * OPTIONAL\n",
-                " * ex. data/ont/{sm}/{read}.bam\n",
-                " * data: {cdr_finder.input_bam_dir}/{sm}.fofn",
-                file=sys.stderr,
-            )
-            return 0
+        generate_default_config(args.output_dir)
+        return 0
     else:
         new_config = make_config(args, working_dir=cwd, template_config=CFG).absolute()
         samples = [args.sample]
@@ -364,7 +370,7 @@ def main() -> int:
     try:
         shutil.copy(
             src=WD.joinpath("config", "config.schema.yaml"),
-            dst=output_dir.joinpath("config", "config.schema.yaml")
+            dst=output_dir.joinpath("config", "config.schema.yaml"),
         )
         shutil.copytree(
             src=WD.joinpath("workflow"),
@@ -406,7 +412,7 @@ def main() -> int:
         subprocess.run(cmd, check=True, cwd=output_dir)
     except subprocess.CalledProcessError:
         subprocess.run([*cmd, "--unlock"], check=True, cwd=output_dir)
-        return -1
+        return 1
 
     # Don't delete temp files if dry-run.
     is_dryrun = (
