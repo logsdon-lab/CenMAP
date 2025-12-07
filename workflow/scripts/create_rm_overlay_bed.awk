@@ -11,10 +11,10 @@ BEGIN {
     # Split repeat class and replace specific repeat types.
     split(rClass, split_rClass, "/" );
     new_rClass=split_rClass[1];
-    if (rClass == "Satellite/centr" || rClass == "Satellite") {{
+    if (rClass == "Satellite/centr" || rClass == "Satellite") {
         new_rClass=rType
-    }}
-    switch (new_rClass) {{
+    }
+    switch (new_rClass) {
         case "SAR":
             new_rClass="HSat1A";
             break;
@@ -32,12 +32,12 @@ BEGIN {
             break;
         default:
             break;
-    }}
+    }
 
     # Set action for NucFlag
     action="plot"
-    if (new_rClass == "ALR/Alpha") {{
+    if (new_rClass == "ALR/Alpha") {
         action="plot:"ALR_COLOR
-    }}
+    }
     print ctg_name[1], start, end, new_rClass, action
 }
