@@ -3,7 +3,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/logsdon-lab/CenMAP)](https://github.com/logsdon-lab/CenMAP/releases)
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-orange.svg?style=flat)](http://bioconda.github.io/recipes/cenmap/README.html)
 
-A centromere mapping and annotation pipeline for T2T human and primate genome assemblies implemented in [`Snakemake`](https://snakemake.github.io/).
+A centromere mapping and annotation pipeline for T2T human and non-human primate genome assemblies implemented in [`Snakemake`](https://snakemake.github.io/).
 
 <table>
   <tr>
@@ -73,7 +73,7 @@ cenmap --config example.yaml
 ```
 
 ### [Input](https://github.com/logsdon-lab/CenMAP/wiki/2.-Getting-Started#data)
-* [`Verkko`](https://github.com/marbl/verkko) or [`hifiasm`](https://github.com/chhylp123/hifiasm) human genome assemblies
+* [`Verkko`](https://github.com/marbl/verkko) or [`hifiasm`](https://github.com/chhylp123/hifiasm) human or non-human primate genome assemblies
 * PacBio HiFi reads used in the assemblies
 * (Optional) Unaligned BAM files with 5mC modifications at CpG sites.
 

@@ -1,7 +1,7 @@
 include: "common.smk"
 include: "utils.smk"
 include: "5-ident_cen_ctgs.smk"
-include: "7-fix_cens_w_repeatmasker.smk"
+include: "7-finalize_cens.smk"
 
 
 if IS_HUMAN_ANNOT:
@@ -86,7 +86,7 @@ use rule * from CDR_Align as cdr_aln_*
 # Avoid running RM again.
 rule cdr_make_repeatmasker_bed:
     input:
-        rules.fix_cens_rm_out.output,
+        rules.fix_cens_rm_out.output if RUN_REPEATMASKER else [],
     output:
         # [chrom_w_no_coords, st_abs, end_abs, repeat_type]
         rm_bed=temp(
@@ -107,40 +107,6 @@ rule cdr_make_repeatmasker_bed:
         """
 
 
-# Use SRF regions as putative alpha-satellite regions.
-rule cdr_make_srf_putative_alr_regions:
-    input:
-        bed=rules.extract_filter_monomers.output.bed_mon,
-        rename_key=rules.create_rename_key.output if CHROMOSOMES else [],
-    output:
-        join(
-            CDR_FINDER_OUTDIR,
-            "bed",
-            "{sm}_region.bed",
-        ),
-    params:
-        alr_threshold=config.get("cdr_finder", {}).get("alr_threshold"),
-        bp_alr_merge=config.get("cdr_finder", {}).get("bp_alr_merge"),
-        format_cmd=lambda wc, input: (
-            f"""join - <(sort -k1,1 {input.rename_key}) | awk -v OFS="\\t" '{{{{ if ($4 ~ "rc-chr") {{{{ st=$5-$3; end=$5-$2; }}}} else {{{{ st=$2; end=$3; }}}}; print $4, st, end, "ALR/Alpha" }}}}' | sort | uniq"""
-            if input.rename_key
-            else f"""awk -v OFS="\\t" '{{{{ $1="{wc.sm}_"$1; print $1, $2, $3, "ALR/Alpha" }}}}'"""
-        ),
-    log:
-        join(CDR_FINDER_LOGDIR, "create_srf_cdr_finder_regions_{sm}.log"),
-    conda:
-        "../envs/tools.yaml"
-    shell:
-        """
-        {{ srf-n-trf regions \
-        -b {input.bed} \
-        -d {params.bp_alr_merge} \
-        -m {params.alr_threshold} | \
-        sort -k1,1 | \
-        {params.format_cmd} ;}} > {output} 2> {log}
-        """
-
-
 # Pass CDR config here.
 CDR_FINDER_CONFIG = {
     "output_dir": CDR_FINDER_OUTDIR,
@@ -156,8 +122,9 @@ CDR_FINDER_CONFIG = {
             ),
             "repeatmasker": expand(
                 (
-                    rules.cdr_make_srf_putative_alr_regions.output
+                    rules.make_srf_putative_alr_regions.output
                     if config["cdr_finder"].get("use_srf_regions")
+                    or not RUN_REPEATMASKER
                     else rules.cdr_make_repeatmasker_bed.output.rm_bed
                 ),
                 sm=sm,
@@ -194,7 +161,7 @@ rule intersect_cdr_w_live:
         ),
     params:
         # Then filter based on intersect with live HOR if either stringdecomposer of humas_hmmer. i.e. human
-        # Require CDR to have 90% overlap with live HOR annotation.
+        # Require CDR to have 50% overlap with live HOR annotation.
         cmd_intersect=lambda wc: (
             cmd_intersect_live(Wildcards(fromdict=dict(sm=wc.sample)), ovl_frac=0.5)
             if "cmd_intersect_live" in globals()

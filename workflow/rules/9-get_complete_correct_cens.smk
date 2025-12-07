@@ -1,6 +1,6 @@
 include: "common.smk"
 include: "utils.smk"
-include: "7-fix_cens_w_repeatmasker.smk"
+include: "7-finalize_cens.smk"
 
 
 COMPLETE_CORRECT_CENS_LOGDIR = join(LOG_DIR, "9-get_complete_correct_cens")

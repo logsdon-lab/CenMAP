@@ -32,3 +32,30 @@ def test_filter_srf_bed(input_entropy: str, input_rm: str, expected: str):
     ]
 
     run_integration_test(*args, expected_output=expected)
+
+
+@pytest.mark.parametrize(
+    ["input_entropy", "input_rm", "expected", "added_opts"],
+    [
+        (
+            f"{WD}/input/HG00731_entropy_kmer.bed",
+            f"{WD}/input/HG00731_rm.bed",
+            f"{WD}/expected/HG00731_kmer_based.bed",
+            [],
+        )
+    ],
+)
+def test_filter_srf_bed_kmers(
+    input_entropy: str, input_rm: str, expected: str, added_opts: list[str]
+):
+    args = [
+        "python",
+        "workflow/scripts/filter_entropy_bed_kmers.py",
+        "-i",
+        input_entropy,
+        "-b",
+        input_rm,
+        *added_opts,
+    ]
+
+    run_integration_test(*args, expected_output=expected)

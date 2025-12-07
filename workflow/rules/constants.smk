@@ -30,6 +30,8 @@ else:
 
 SAMPLE_NAMES = config["samples"]
 IS_HUMAN_ANNOT = config.get("humas_annot", {}).get("mode") in ("sd", "hmmer")
+RUN_REPEATMASKER = "repeatmasker" in config
+
 RGX_CHR = re.compile(r"(chr[0-9XY]+)")
 RGX_SM_CTG = re.compile(r"^(.+)_(.+)$")
 # This monstrosity matches the expected patterns.

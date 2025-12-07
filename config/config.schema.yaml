@@ -440,4 +440,3 @@ required:
   - samples
   - concat_asm
   - ident_cen_ctgs
-  - repeatmasker
