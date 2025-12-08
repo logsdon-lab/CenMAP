@@ -4,6 +4,7 @@ import polars as pl
 import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 from collections import OrderedDict
 
 
@@ -151,6 +152,12 @@ def main():
             added_palettes[lbl] = color
             dfs_added_lengths.append(df)
 
+    # Get order of chromosomes
+    palettes = chrom_colors | added_palettes
+    palette_order = {
+        elem: i for i, elem in enumerate([*args.chroms, *added_palettes.keys()])
+    }
+
     df_all_lengths: pl.DataFrame = pl.concat([df_lengths, *dfs_added_lengths])
 
     # Merge asat HOR array lengths
@@ -170,7 +177,6 @@ def main():
         .then(pl.col("source"))
         .otherwise(pl.col("chrom_name"))
     )
-    palettes = chrom_colors | added_palettes
     # Add remaining chroms to plot if multi-chroms.
     uncovered_chroms = set(df_all_lengths["chrom_name"].unique()).difference(
         palettes.keys()
@@ -184,8 +190,8 @@ def main():
         hue="chrom_name",
         data=df_all_lengths_pd,
         palette=palettes,
+        order=palette_order.keys(),
         inner="quart",
-        cut=0.75,
     )
     sns.swarmplot(
         x="chrom_name",
@@ -194,6 +200,7 @@ def main():
         hue="color_key",
         linewidth=0.5,
         edgecolor="black",
+        order=palette_order.keys(),
         palette=palettes,
         size=4,
     )
@@ -208,14 +215,18 @@ def main():
     )
     try:
         # Sort legend elements
-        legend_elem_order = {
-            elem: i for i, elem in enumerate([*args.chroms, *added_palettes.keys()])
-        }
         handles_labels = ax.get_legend_handles_labels()
+        # Only display dots.
         handles, labels = zip(
-            *sorted(zip(*handles_labels), key=lambda x: legend_elem_order.get(x[1], -1))
+            *sorted(
+                (
+                    (handle, length)
+                    for handle, length in zip(*handles_labels)
+                    if isinstance(handle, Line2D)
+                ),
+                key=lambda x: palette_order.get(x[1], -1),
+            )
         )
-
         # Place outside of figure.
         ax.legend(handles, labels, **legend_kwargs)
     except ValueError:
