@@ -16,6 +16,33 @@ if IS_HUMAN_ANNOT:
     include: "8-humas_annot.smk"
 
 
+def cmd_infile(wc, input):
+    cmd = []
+    if input.nucflag_bed:
+        cmd.extend(
+            [
+                "bedtools",
+                "intersect",
+                "-wa",
+                "-u",
+                "-a",
+                f"<(sort -k1,1 -k2,2n {input.interm_bed})",
+                "-b",
+                f"<(sort -k1,1 -k2,2n {input.nucflag_bed} | awk '$4 == \"good\"')",
+            ]
+        )
+    else:
+        cmd.extend(["cat", input.interm_bed])
+
+    if (
+        config.get("get_complete_correct_cens", {}).get("filter_by_hor", True)
+        and "cmd_intersect_live" in globals()
+    ):
+        pipe_intersect_live = cmd_intersect_live(wc)
+        cmd.append(pipe_intersect_live)
+    return " ".join(cmd)
+
+
 rule get_complete_correct_cens_bed:
     input:
         # (name, st, end, ctg_name, ctg_len)
@@ -35,17 +62,7 @@ rule get_complete_correct_cens_bed:
         ),
     params:
         # Allow not running nucflag.
-        infile_stream=lambda wc, input: (
-            f"bedtools intersect -wa -u <(sort -k1,1 -k2,2n {input.interm_bed}) <(sort -k1,1 -k2,2n {input.nucflag_bed} | awk '$4 == \"good\"')"
-            if input.nucflag_bed
-            else f"cat {input.interm_bed}"
-        ),
-        cmd_intersect=lambda wc: (
-            cmd_intersect_live(wc)
-            if config.get("get_complete_correct_cens", {}).get("filter_by_hor", True)
-            and "cmd_intersect_live" in globals()
-            else ""
-        ),
+        infile_stream=cmd_infile,
         cmd_into_bed9=cmd_complete_bed_as_bed9(),
     log:
         join(
@@ -57,7 +74,6 @@ rule get_complete_correct_cens_bed:
     shell:
         """
         {{ {params.infile_stream} | \
-        {params.cmd_intersect} | \
         {params.cmd_into_bed9} ;}} > {output} 2> {log}
         """
 
