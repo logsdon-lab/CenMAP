@@ -387,7 +387,7 @@ def main() -> int:
         print(f"Generated configfile:\n\t{new_config}", file=sys.stderr)
         output_dir = Path(args.output_dir, args.sample)
 
-    output_dir.mkdir(exist_ok=True, parents=True)
+    output_dir.joinpath("config").mkdir(exist_ok=True, parents=True)
 
     # Copy workflow directory to results.
     try:
