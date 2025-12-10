@@ -18,7 +18,7 @@ def cmd_complete_correct_bed(wc, input) -> str:
         "awk",
         "-v",
         "OFS='\\t'",
-        """{
+        """'{
             adj_name=$1;
             adj_st=$2;
             adj_end=$3;
@@ -33,7 +33,7 @@ def cmd_complete_correct_bed(wc, input) -> str:
                 ctg_end=new_ctg_end;
             };
             print ctg_name, ctg_st, ctg_end, adj_name, 0, ort, adj_st, adj_end, "0,0,0"
-        }""",
+        }'""",
         input.bed,
     ]
     return f"<({' '.join(cmd)})"
