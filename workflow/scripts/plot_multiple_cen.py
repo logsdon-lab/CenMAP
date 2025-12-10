@@ -6,7 +6,7 @@ import json
 import argparse
 import polars as pl
 
-from typing import Any
+from typing import Any, TextIO
 from collections import defaultdict
 
 from cenplot import plot_tracks, read_tracks
@@ -62,6 +62,12 @@ def main():
         default=None,
     )
     ap.add_argument(
+        "--sort_order",
+        help="Order to sort chroms as text file of chromosome names.",
+        type=argparse.FileType("rt"),
+        default=None,
+    )
+    ap.add_argument(
         "--omit_if_any_empty",
         action="store_true",
         help="Omit track if any file is empty.",
@@ -111,21 +117,35 @@ def main():
         "type": "spacer",
     }
 
+    # Sort by custom order.
+    if args.sort_order:
+        fh_sort_order: TextIO = args.sort_order
+        sort_order = {
+            line.strip(): i
+            for i, line in enumerate(reversed(fh_sort_order.readlines()), start=1)
+        }
+        # If not in list, use previous order.
+        sorted_bed_files = sorted(
+            bed_files.items(),
+            key=lambda chrom_files: sort_order.get(chrom_files[0], 0),
+            reverse=True,
+        )
+    else:
+        sorted_bed_files = list(bed_files.items())
+
     idx = 0
     tracks = []
     ref_indices = []
-    missing_chroms = set()
-    for chrom, dtype_bedfiles in bed_files.items():
+    for chrom, dtype_bedfiles in sorted_bed_files:
+        chrom_tracks = []
+        chrom_ref_indices = []
+        omit_chrom = False
+        idx_offset = 0
         for i, trk in enumerate(track_format["tracks"]):
             dtype = trk.get("path")
             bed_file = dtype_bedfiles.get(dtype)
             takes_space = trk.get("proportion")
             has_data = isinstance(bed_file, str)
-
-            if takes_space:
-                if i == args.ref_ax_idx:
-                    ref_indices.append(idx)
-                idx += 1
 
             if not has_data:
                 print(f"No data for {chrom} {dtype}.", file=sys.stderr)
@@ -133,22 +153,33 @@ def main():
                 if takes_space:
                     spacer = copy.deepcopy(spacer_track)
                     spacer["proportion"] = trk["proportion"]
-                    tracks.append(spacer)
+                    new_trk = spacer
 
                 # Has no data and is an input file.
-                if dtype in dtypes:
-                    missing_chroms.add(chrom)
-                continue
+                if dtype in dtypes and args.omit_if_any_empty:
+                    omit_chrom = True
+                    break
+            else:
+                new_trk = copy.deepcopy(trk)
+                # Update config.
+                added_options = options.get(trk["type"])
+                if added_options:
+                    for k, v in added_options.items():
+                        new_trk["options"][k] = v
 
-            new_trk = copy.deepcopy(trk)
-            # Update config.
-            added_options = options.get(trk["type"])
-            if added_options:
-                for k, v in added_options.items():
-                    new_trk["options"][k] = v
+                new_trk["path"] = bed_file
 
-            new_trk["path"] = bed_file
-            tracks.append(new_trk)
+            if takes_space:
+                if i == args.ref_ax_idx:
+                    chrom_ref_indices.append(idx + idx_offset)
+                idx_offset += 1
+
+            chrom_tracks.append(new_trk)
+
+        if not omit_chrom:
+            tracks.extend(chrom_tracks)
+            ref_indices.extend(chrom_ref_indices)
+            idx += idx_offset
 
     position_track = {
         "position": "relative",
@@ -189,9 +220,6 @@ def main():
         if not track.data.is_empty():
             # Update legend title.
             chrom = track.data["chrom"].first()
-            if chrom in missing_chroms and args.omit_if_any_empty:
-                continue
-
             if hasattr(track.options, "legend_title"):
                 track.options.legend_title = chrom
 

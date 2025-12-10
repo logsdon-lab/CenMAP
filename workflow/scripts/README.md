@@ -53,6 +53,8 @@ tracks:
 
 This script produces a number of temporary files and a config as input data is partitioned by name. To keep these use `--keep-tempfiles`.
 
+To sort output by chromosome, provide the `--sort_order` flag which takes a single file of chromosome names.
+
 ## `reformat_rm.py`
 `RepeatMasker` produces awful, non-machine-readable output so we have to clean it up.
 * Renaming sequences to their original name.

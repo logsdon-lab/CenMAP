@@ -39,6 +39,8 @@ tracks:
     type: horort
     path: "stv"
     options:
+      fwd_color: "blue"
+      rev_color: "red"
       legend: false
       hide_x: true
       scale: 10
