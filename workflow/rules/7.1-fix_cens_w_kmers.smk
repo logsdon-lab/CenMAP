@@ -66,7 +66,7 @@ rule filter_entropy_bed:
     shell:
         """
         python {params.script} \
-        -i {input.entropy_dir}/*.bed \
+        -i <(cat {input.entropy_dir}/*.bed) \
         -b {input.putative_alr_bed} \
         -d {params.bp_merge} > {output} 2> {log}
         """
