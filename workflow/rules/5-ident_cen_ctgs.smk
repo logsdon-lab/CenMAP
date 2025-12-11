@@ -34,8 +34,25 @@ rule make_srf_putative_alr_regions:
         # Strict merging (Only 1 LINE element) as we need this to be large blocks.
         bp_merge=8000,
         format_cmd=lambda wc, input: (
-            f"""join - <(sort -k1,1 {input.rename_key}) | awk -v OFS="\\t" '{{{{ if ($4 ~ "rc-chr") {{{{ st=$5-$3; end=$5-$2; }}}} else {{{{ st=$2; end=$3; }}}}; print $4, st, end, "ALR/Alpha" }}}}' | sort | uniq"""
-            if input.rename_key
+            " ".join(
+                    [
+                        "join",
+                        "-",
+                        f"<(sort -k1,1 {input.rename_key})",
+                        "|",
+                        "awk",
+                        "-v",
+                        "FS=' '",
+                        "-v",
+                        "OFS='\\t'",
+                        """'{{ if ($10 ~ "rc-chr") {{ st=$11-$3; end=$11-$2; }} else {{ st=$2; end=$3; }}; print $10, st, end, "ALR/Alpha" }}'""",
+                        "|",
+                        "sort",
+                        "|",
+                        "uniq",
+                    ]
+                )
+                if input.rename_key
             else f"""awk -v OFS="\\t" '{{{{ $1="{wc.sm}_"$1; print $1, $2, $3, "ALR/Alpha" }}}}'"""
         ),
     log:

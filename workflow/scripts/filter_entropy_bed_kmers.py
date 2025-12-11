@@ -140,7 +140,14 @@ def main():
 
     df_entropy = (
         df_entropy.sort(by=["chrom", "st"])
-        # Minmax regions of same entropy so peak calling easier.
+        # Regions with any drop in entropy are candidates.
+        # We'll intersect these with putative ALR regions (171 * n)
+        .with_columns(
+            score=pl.when(pl.col("score") < 1.0)
+            .then(pl.lit(0.0))
+            .otherwise(pl.lit(1.0))
+        )
+        # Get minimum and maximum position of zero regions.
         .with_columns(rle_score=pl.col("score").rle_id().over("chrom"))
         .group_by(["chrom", "rle_score", "chrom_st", "chrom_end"])
         .agg(
