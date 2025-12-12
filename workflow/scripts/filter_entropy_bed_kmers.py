@@ -173,24 +173,6 @@ def main():
         dips, _ = scipy.signal.find_peaks(-df_chrom_entropy["score"].to_numpy())
         df_dips = df_chrom_entropy.filter(pl.col("index").is_in(dips))
 
-        # Special case. If two dips separated by <dst, merge them.
-        # Kmer entropy dips are not as drastic so allow dip finding to be lenient.
-        df_dips = (
-            group_by_dst(df_dips, dst=args.dst, group_name="grp")
-            .group_by(["grp"])
-            .agg(
-                pl.col("chrom").first(),
-                pl.col("st").min(),
-                pl.col("end").max(),
-                pl.col("name").first(),
-                pl.col("score").first(),
-                pl.col("strand").first(),
-                pl.col("tst").min(),
-                pl.col("tend").max(),
-                pl.col("item_rgb").first(),
-            )
-        )
-
         # Get total length overlapping ALR and has entropy not equal to 1.0 in window.
         total_length = 0
         for st, end, score in df_chrom_entropy.select("st", "end", "score").iter_rows():
