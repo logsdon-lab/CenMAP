@@ -20,7 +20,7 @@ dependencies:
 - rustybam
 # cdr-finder/nucflag
 - minimap2>=2.29
-- ont-modkit>=0.3.2
+- ont-modkit>=0.6.0
 - pbmm2>=1.17.0
 # repeatmasker/others
 - python>=3.12.0
