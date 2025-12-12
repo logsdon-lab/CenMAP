@@ -3,7 +3,7 @@ include: "common.smk"
 include: "utils.smk"
 include: "3-srf.smk"
 include: "5-ident_cen_ctgs.smk"
-include: "7-fix_cens_w_repeatmasker.smk"
+include: "7-finalize_cens.smk"
 
 
 HUMAS_ANNOT_OUTDIR = join(OUTPUT_DIR, "8-humas_annot")

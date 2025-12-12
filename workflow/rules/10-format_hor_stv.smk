@@ -39,7 +39,8 @@ checkpoint aggregate_format_all_stv_row:
             $7=$7+starts[1];
             $8=$8+starts[1];
             print
-        }}' {params.inputs} {params.grep_chr} ;}} > {output} 2> {log}
+        }}' {params.inputs} {params.grep_chr} | \
+        sort -k 1,1 -k2,2n -u ;}} > {output} 2> {log}
         """
 
 
@@ -57,9 +58,14 @@ rule filter_complete_correct_stv_row:
             "{chr}",
             "stv_complete.bed",
         ),
+    conda:
+        "../envs/tools.yaml"
     shell:
         """
-        ( grep -f <(cut -f 4 {input.complete_cens_bed} | awk '{{ print "^"$1":" }}') {input.stv_row_bed} || true ) > {output}
+        bedtools intersect \
+        -a <(sort -k1,1 -k2,2n {input.stv_row_bed}) \
+        -b <(awk -v OFS="\\t" '{{ print $4":"$7+1"-"$8, $7, $8 }}' {input.complete_cens_bed} | sort -k1,1 -k2,2n) \
+        -wa -u > {output}
         """
 
 

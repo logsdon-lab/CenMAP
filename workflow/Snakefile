@@ -56,9 +56,9 @@ module repeatmasker:
         config
 
 
-module fix_cens_w_repeatmasker:
+module finalize_cens:
     snakefile:
-        "rules/7-fix_cens_w_repeatmasker.smk"
+        "rules/7-finalize_cens.smk"
     config:
         config
 
@@ -155,13 +155,7 @@ use rule * from align_asm_to_ref
 use rule * from ident_cen_ctgs
 
 
-use rule * from repeatmasker
-
-
-use rule * from fix_cens_w_repeatmasker
-
-
-use rule * from format_repeatmasker_sat_annot
+use rule * from finalize_cens
 
 
 use rule * from get_complete_correct_cens
@@ -170,8 +164,6 @@ use rule * from get_complete_correct_cens
 output = [
     # Required output.
     rules.srf_all.input,
-    rules.repeatmasker_all.input,
-    rules.fix_cens_w_repeatmasker_all.input,
     rules.get_complete_correct_cens_all.input,
 ]
 
@@ -188,6 +180,21 @@ else:
         "No reference or chromosomes. Not assigning chromosome name to assembly.",
         file=sys.stderr,
     )
+
+
+if config.get("repeatmasker"):
+
+    use rule * from repeatmasker
+
+    use rule * from format_repeatmasker_sat_annot
+
+    output.extend(
+        [
+            rules.repeatmasker_all.input,
+            rules.fix_cens_w_repeatmasker_all.input,
+        ]
+    )
+
 
 if config.get("humas_annot"):
 
@@ -213,7 +220,6 @@ if config.get("humas_annot") and config.get("plot_hor_stv"):
     output.extend(
         [
             rules.format_hor_stv_all.input,
-            rules.format_repeatmasker_sat_all.input,
             rules.plot_hor_stv_all.input,
         ]
     )

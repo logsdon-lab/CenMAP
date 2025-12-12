@@ -1,0 +1,53 @@
+samples:
+- mGorGor1
+
+concat_asm:
+  input_dir: "test/data/assemblies"
+
+ident_cen_ctgs:
+  threads_srf: 24
+  mem_srf: 40GB
+  threads_aln: 16
+  mem_aln: 150GB
+  bp_merge: 2500000
+  bp_slop: 1000000
+  perc_multi_chrom: 5.0
+  reference: null
+
+humas_annot:
+  mode: "sf"
+  hmm_profile: "data/models/AS-SFs-hmmer3.0.290621.hmm.gz"
+  threads: 4
+
+plot_hor_stv:
+  ref_stv: []
+  sat_annot_colors: "config/repeatmasker_sat_annot_colors.json"
+  stv_annot_colors: "config/stv_annot_colors.tsv"
+
+calculate_hor_length:
+  ref_hor_lengths: []
+
+moddotplot:
+  mem: 4GB
+  window: 5000
+
+ideogram:
+  title: "{sm}"
+  height: 15
+  width: 5
+
+cdr_finder:
+  aligner: minimap2
+  # Expects sample subdir in input_dir.
+  # Uses find and file pattern to merge bam.
+  input_bam_dir: "test/data/raw_data"
+  bam_rgx: ".*\\.bam$"
+  aln_mem: 50GB
+  aln_threads: 24
+  window_size: 5000
+  alr_threshold: 100000
+  bp_merge: 1
+  bp_alr_merge: 1000
+  bp_edge: 500_000
+  height_perc_valley_threshold: 0.34
+  prom_perc_valley_threshold: 0.3

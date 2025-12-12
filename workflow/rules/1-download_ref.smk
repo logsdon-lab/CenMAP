@@ -2,10 +2,14 @@ include: "utils.smk"
 include: "common.smk"
 
 
-use rule wget as download_ref_asm with:
+rule download_ref_asm:
     output:
         REF_FA,
     log:
         join(LOG_DIR, "1-download_ref", f"get_asm_{REF_NAME}.log"),
     params:
         url=REF_URL,
+    shell:
+        """
+        wget --no-verbose {params.url} -O {output} 2> {log}
+        """

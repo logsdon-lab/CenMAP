@@ -1,12 +1,10 @@
-include: "common.smk"
-include: "utils.smk"
-include: "5-ident_cen_ctgs.smk"
+
 include: "6-repeatmasker.smk"
 
 
-FIX_RM_OUTDIR = join(OUTPUT_DIR, "7-fix_cens_w_repeatmasker")
-FIX_RM_LOGDIR = join(LOG_DIR, "7-fix_cens_w_repeatmasker")
-FIX_RM_BMKDIR = join(BMK_DIR, "7-fix_cens_w_repeatmasker")
+FIX_RM_OUTDIR = join(OUTPUT_DIR, "7.1-fix_cens_w_repeatmasker")
+FIX_RM_LOGDIR = join(LOG_DIR, "7.1-fix_cens_w_repeatmasker")
+FIX_RM_BMKDIR = join(BMK_DIR, "7.1-fix_cens_w_repeatmasker")
 
 
 rule calculate_entropy:
@@ -176,8 +174,8 @@ rule fix_cens_rm_out:
         """
 
 
-include: "7.1-plot_fix_cens_w_repeatmasker_chr.smk"
-include: "7.1-plot_fix_cens_w_repeatmasker_sm.smk"
+include: "7.2-plot_fix_cens_w_repeatmasker_chr.smk"
+include: "7.2-plot_fix_cens_w_repeatmasker_sm.smk"
 
 
 FIX_RM_OUTPUTS = []

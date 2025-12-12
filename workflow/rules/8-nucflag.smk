@@ -1,6 +1,6 @@
 include: "common.smk"
 include: "5-ident_cen_ctgs.smk"
-include: "7-fix_cens_w_repeatmasker.smk"
+include: "7-finalize_cens.smk"
 
 
 NUCFLAG_OUTDIR = join(OUTPUT_DIR, "8-nucflag")
@@ -18,7 +18,11 @@ if config.get("humas_annot"):
 # Add color specific for alpha-satellite.
 rule create_rm_overlay_bed:
     input:
-        rm=rules.fix_cens_rm_out.output,
+        rm=(
+            rules.fix_cens_rm_out.output
+            if RUN_REPEATMASKER
+            else rules.make_srf_putative_alr_regions.output
+        ),
     output:
         # [ctg_name, st, end, desc, action]
         join(
@@ -28,50 +32,16 @@ rule create_rm_overlay_bed:
     log:
         join(NUCFLAG_LOGDIR, "create_rm_overlay_bed_{sm}.log"),
     params:
-        color_alr_alpha="#8B008B",
+        script=(
+            workflow.source_path("../scripts/create_rm_overlay_bed.awk")
+            if RUN_REPEATMASKER
+            else """<(printf '{{ OFS="\\t" }} {{ print $1, $2, $3, $4, "plot:#8B008B"}}')"""
+        ),
     conda:
         "../envs/tools.yaml"
     shell:
         """
-        awk -v OFS="\\t" '{{
-            name=$5; start=$6; end=$7; rType=$10; rClass=$11;
-
-            # Find contig coordinates
-            match(name, "^(.+):", ctg_name);
-
-            # Split repeat class and replace specific repeat types.
-            split(rClass, split_rClass, "/" );
-            new_rClass=split_rClass[1];
-            if (rClass == "Satellite/centr" || rClass == "Satellite") {{
-                new_rClass=rType
-            }}
-            switch (new_rClass) {{
-                case "SAR":
-                    new_rClass="HSat1A";
-                    break;
-                case "HSAT":
-                    new_rClass="HSat1B";
-                    break;
-                case "HSATII":
-                    new_rClass="HSat2";
-                    break;
-                case "(CATTC)n":
-                    new_rClass="HSat3";
-                    break;
-                case "(GAATG)n":
-                    new_rClass="HSat3";
-                    break;
-                default:
-                    break;
-            }}
-
-            # Set action for NucFlag
-            action="plot"
-            if (new_rClass == "ALR/Alpha") {{
-                action="plot:{params.color_alr_alpha}"
-            }}
-            print ctg_name[1], start, end, new_rClass, action
-        }}' {input.rm} > {output} 2> {log}
+        awk -f {params.script} {input.rm} > {output} 2> {log}
         """
 
 

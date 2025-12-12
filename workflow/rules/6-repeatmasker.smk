@@ -15,7 +15,7 @@ rule setup_repeatmasker:
         seq=join(RM_OUTDIR, "rm_setup.fa"),
         rm_dir=directory(join(RM_OUTDIR, "rm_setup")),
     params:
-        species="human",
+        species=config["repeatmasker"]["species"],
         engine="rmblast",
     threads: 1
     log:

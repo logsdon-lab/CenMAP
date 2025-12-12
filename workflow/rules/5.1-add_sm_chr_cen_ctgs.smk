@@ -9,11 +9,6 @@ include: "3-srf.smk"
 include: "4-align_asm_to_ref.smk"
 
 
-IDENT_CEN_CTGS_OUTDIR = join(OUTPUT_DIR, "5-ident_cen_ctgs")
-IDENT_CEN_CTGS_LOGDIR = join(LOG_DIR, "5-ident_cen_ctgs")
-IDENT_CEN_CTGS_BMKDIR = join(BMK_DIR, "5-ident_cen_ctgs")
-
-
 # Map each contig to a chromosome.
 rule create_rename_key:
     input:

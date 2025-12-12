@@ -1,0 +1,19 @@
+samples:
+  - HG002
+
+concat_asm:
+  input_dir: "data/asm"
+  mem: 20GB
+
+ident_cen_ctgs:
+  threads_srf: 32
+  mem_srf: 50GB
+  threads_aln: 8
+  mem_aln: 150GB
+  bp_merge: 2500000
+  bp_slop: 1000000
+
+ideogram:
+  title: "{sm}"
+  height: 15
+  width: 5

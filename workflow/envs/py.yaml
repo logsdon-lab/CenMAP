@@ -3,7 +3,7 @@ channels:
   - bioconda
 dependencies:
   - python>=3.12.0
-  - censtats>=0.1.0
+  - censtats>=0.1.3
   - cenplot>=0.1.4
   - intervaltree
   - matplotlib-base

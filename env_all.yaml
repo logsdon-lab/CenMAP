@@ -20,7 +20,7 @@ dependencies:
 - rustybam
 # cdr-finder/nucflag
 - minimap2>=2.29
-- ont-modkit>=0.3.2
+- ont-modkit>=0.6.0
 - pbmm2>=1.17.0
 # repeatmasker/others
 - python>=3.12.0
@@ -32,11 +32,13 @@ dependencies:
 - coreutils
 - gzip
 # Python
-# Before 9.11.4. Breaks rule inheritance/naming.
+# After 9.5.0 config defaults are not filled in. Fixed in 9.13.1 but cannot update.
+# https://github.com/snakemake/snakemake/issues/3648
+# Before 9.11.4. Breaks rule inheritance/naming. Would need major refactor to work.
 # https://github.com/snakemake/snakemake/pull/3714
-- snakemake>=8.24.0,<9.11.4
+- snakemake>=8.24.0,<=9.5.0
 - cenplot>=0.1.4
-- censtats>=0.1.0
+- censtats>=0.1.3
 - nucflag>=0.3.7
 - intervaltree
 - matplotlib-base
