@@ -157,7 +157,7 @@ rule fix_cens_rm_out:
             f"bedtools intersect -a - -b {input.bed} |" if wc.typ == "complete" else ""
         ),
         awk_print_all=lambda wc, input: (
-            "print ctg_name[1], $6, $7, $0" if wc.typ == "complete" else ""
+            "print ctg_name[1], $6, $7, $0" if wc.typ == "all" else ""
         ),
     conda:
         "../envs/tools.yaml"
@@ -171,8 +171,7 @@ rule fix_cens_rm_out:
             # Convert to absolute coordinates
             $6=$6+ctg_st[1];
             $7=$7+ctg_st[1];
-            # Make bed-like
-            # If no name in complete cen rename key, don't print. Only print if wc.typ != 'complete'
+            # Make bed-like. If no name in complete cen rename key, do not print. Only print if wc.typ not equal complete
             if (new_name) {{
                 $5=new_name;
                 print ctg_name[1], $6, $7, $0
