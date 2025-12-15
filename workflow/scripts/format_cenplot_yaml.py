@@ -72,11 +72,11 @@ def format_yaml_path(
             number_skipped += 1
             continue
 
-        # Check that if overlap, has something to overlap.
+        # Edge case where no overlap and starting track. Check that if overlap, has something to overlap.
         # TODO: cenplot should do this probably.
         try:
             if trk["position"] == "overlap":
-                _ = new_settings["tracks"][i - 1]
+                _ = new_settings["tracks"][-1]
         except IndexError:
             prop = settings["tracks"][i - 1]["proportion"]
             print(
