@@ -86,7 +86,9 @@ use rule * from CDR_Align as cdr_aln_*
 # Avoid running RM again.
 rule cdr_make_repeatmasker_bed:
     input:
-        rules.fix_cens_rm_out.output if RUN_REPEATMASKER else [],
+        expand(rules.fix_cens_rm_out.output, sm="{sm}", typ="all")
+        if RUN_REPEATMASKER
+        else [],
     output:
         # [chrom_w_no_coords, st_abs, end_abs, repeat_type]
         rm_bed=temp(

@@ -20,7 +20,7 @@ def format_yaml_path(
     new_settings = {"settings": settings["settings"], "tracks": []}
 
     number_skipped = 0
-    for trk in settings["tracks"]:
+    for i, trk in enumerate(settings["tracks"]):
         path = trk.get("path")
         new_trk = trk.copy()
 
@@ -71,6 +71,20 @@ def format_yaml_path(
             )
             number_skipped += 1
             continue
+
+        # Check that if overlap, has something to overlap.
+        # TODO: cenplot should do this probably.
+        try:
+            if trk["position"] == "overlap":
+                _ = new_settings["tracks"][i - 1]
+        except IndexError:
+            prop = settings["tracks"][i - 1]["proportion"]
+            print(
+                f"No overlapping track at index {i - 1} for {trk}. Changing position to relative and using proportion ({prop}) in template.",
+                file=sys.stderr,
+            )
+            trk["position"] = "relative"
+            trk["proportion"] = prop
 
         new_trk = trk.copy()
         # Pass params from snakemake

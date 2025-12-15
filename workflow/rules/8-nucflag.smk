@@ -19,7 +19,7 @@ if config.get("humas_annot"):
 rule create_rm_overlay_bed:
     input:
         rm=(
-            rules.fix_cens_rm_out.output
+            expand(rules.fix_cens_rm_out.output, sm="{sm}", typ="all")
             if RUN_REPEATMASKER
             else rules.make_srf_putative_alr_regions.output
         ),

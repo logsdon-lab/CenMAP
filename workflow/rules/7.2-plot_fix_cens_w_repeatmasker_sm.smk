@@ -2,7 +2,7 @@
 
 rule create_fixed_rm_bed_by_sm:
     input:
-        rm_out=rules.fix_cens_rm_out.output,
+        rm_out=expand(rules.fix_cens_rm_out.output, sm="{sm}", typ="complete"),
     output:
         rm_bed=join(
             FIX_RM_OUTDIR,

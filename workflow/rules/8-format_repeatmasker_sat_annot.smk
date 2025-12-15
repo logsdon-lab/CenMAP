@@ -44,6 +44,7 @@ rule create_rm_satellite_annotations:
                 expand(
                     rules.fix_cens_rm_out.output,
                     sm=SAMPLE_NAMES,
+                    typ="all",
                 ),
                 config["repeatmasker"]["ref_repeatmasker_output"],
             ]

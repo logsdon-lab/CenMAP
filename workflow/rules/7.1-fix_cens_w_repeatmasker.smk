@@ -147,10 +147,15 @@ rule fix_cens_rm_out:
             FIX_RM_OUTDIR,
             "repeats",
             "all",
-            "{sm}_cens.fa.out",
+            "{sm}_cens_{typ}.fa.out",
         ),
     log:
-        join(FIX_RM_LOGDIR, "fix_cens_{sm}_rm_out.log"),
+        join(FIX_RM_LOGDIR, "fix_cens_{sm}_{typ}_rm_out.log"),
+    params:
+        # We need all RM annotations otherwise the final 'all' plots have empty RM tracks.
+        cmd_intersect=lambda wc, input: (
+            f"bedtools intersect -a - -b {input.bed} |" if wc.typ == "complete" else ""
+        ),
     conda:
         "../envs/tools.yaml"
     shell:
@@ -168,8 +173,7 @@ rule fix_cens_rm_out:
                 $5=new_name;
                 print ctg_name[1], $6, $7, $0
             }}
-        }}' {input.rename_key} <(cut -f1-15 {input.rm_out}) | \
-        bedtools intersect -a - -b {input.bed} | \
+        }}' {input.rename_key} <(cut -f1-15 {input.rm_out}) | {params.cmd_intersect} \
         cut -f 4-18 ;}} > {output} 2> {log}
         """
 

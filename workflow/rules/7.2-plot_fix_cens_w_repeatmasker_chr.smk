@@ -1,7 +1,7 @@
 
 rule create_fixed_rm_bed_by_chr:
     input:
-        rm_out=expand(rules.fix_cens_rm_out.output, sm=SAMPLE_NAMES),
+        rm_out=expand(rules.fix_cens_rm_out.output, typ="complete", sm=SAMPLE_NAMES),
     output:
         rm_bed=join(
             FIX_RM_OUTDIR,
