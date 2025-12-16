@@ -156,8 +156,12 @@ rule fix_cens_rm_out:
         cmd_intersect=lambda wc, input: (
             f"bedtools intersect -a - -b {input.bed} |" if wc.typ == "complete" else ""
         ),
+        # Seqtk adds 1 to start.
+        # Need to always print 18 columns. The ones here are just to maintain colnum.
         awk_print_all=lambda wc, input: (
-            "print ctg_name[1], $6, $7, $0" if wc.typ == "all" else ""
+            '$5=ctg_name":"ctg_st + 1"-"ctg_end; print $5, $6, $7, $0;'
+            if wc.typ == "all"
+            else ""
         ),
     conda:
         "../envs/tools.yaml"
@@ -166,15 +170,18 @@ rule fix_cens_rm_out:
         {{ awk -v OFS="\\t" '{{
             if (FNR == NR) {{ kv[$1]=$2; next; }};
             new_name=kv[$5];
-            match($5, ":(.+)-", ctg_st);
-            match($5, "^(.+):", ctg_name);
+            match($5, "^(.*?):([0-9]+)-([0-9]+)$", ctg_mtches);
             # Convert to absolute coordinates
-            $6=$6+ctg_st[1];
-            $7=$7+ctg_st[1];
-            # Make bed-like. If no name in complete cen rename key, do not print. Only print if wc.typ not equal complete
+            ctg_name=ctg_mtches[1];
+            ctg_st=ctg_mtches[2];
+            ctg_end=ctg_mtches[3];
+            $6=$6+ctg_st;
+            $7=$7+ctg_st;
+            # Make bed-like if complete to intersect.
+            # But, if need all output, adjust name to match downstream files with +1 start. Noop otherwise.
             if (new_name) {{
                 $5=new_name;
-                print ctg_name[1], $6, $7, $0
+                print ctg_name, $6, $7, $0
             }} else {{
                 {params.awk_print_all}
             }}
