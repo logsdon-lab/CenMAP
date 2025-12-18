@@ -12,6 +12,10 @@ from collections import defaultdict
 from cenplot import plot_tracks, read_tracks
 
 
+# Don't copy references
+yaml.SafeDumper.ignore_aliases = lambda *args: True
+
+
 def cleanup(cfg: str, bed_files: defaultdict[str, dict[str, str]]):
     try:
         os.remove(cfg)
@@ -141,12 +145,15 @@ def main():
         chrom_ref_indices = []
         omit_chrom = False
         idx_offset = 0
+
+        new_trk: dict | None
         for i, trk in enumerate(track_format["tracks"]):
             dtype = trk.get("path")
             bed_file = dtype_bedfiles.get(dtype)
             takes_space = trk.get("proportion")
             has_data = isinstance(bed_file, str)
 
+            new_trk = None
             if not has_data:
                 print(f"No data for {chrom} {dtype}.", file=sys.stderr)
                 # Add spacer if data not present.
@@ -158,6 +165,7 @@ def main():
                 # Has no data and is an input file.
                 if dtype in dtypes and args.omit_if_any_empty:
                     omit_chrom = True
+                    new_trk = None
                     break
             else:
                 new_trk = copy.deepcopy(trk)
@@ -174,7 +182,8 @@ def main():
                     chrom_ref_indices.append(idx + idx_offset)
                 idx_offset += 1
 
-            chrom_tracks.append(new_trk)
+            if new_trk:
+                chrom_tracks.append(new_trk)
 
         if not omit_chrom:
             tracks.extend(chrom_tracks)
