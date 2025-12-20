@@ -140,6 +140,7 @@ def main():
     idx = 0
     tracks = []
     ref_indices = []
+    n_omitted = 0
     for chrom, dtype_bedfiles in sorted_bed_files:
         chrom_tracks = []
         chrom_ref_indices = []
@@ -189,6 +190,8 @@ def main():
             tracks.extend(chrom_tracks)
             ref_indices.extend(chrom_ref_indices)
             idx += idx_offset
+        else:
+            n_omitted += 1
 
     position_track = {
         "position": "relative",
@@ -210,7 +213,7 @@ def main():
     plot_settings = track_format.get("settings")
     track_format["settings"]["dim"] = [
         20,
-        (plot_settings["dim"][1] * len(bed_files.keys())) + 2,
+        (plot_settings["dim"][1] * len(bed_files.keys()) - n_omitted) + 2,
     ]
     track_format["tracks"] = tracks
     cfg = os.path.join(f"{output_prefix}.yaml")
