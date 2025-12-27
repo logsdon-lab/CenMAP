@@ -91,7 +91,7 @@ properties:
         items:
           type: integer
         description: Monomer periods to search for. Smallest period is used as kmer size.
-        default: [170, 340, 510, 680, 850, 1020]
+        default: [170, 340]
       exclude_kmers_lt_n:
         type: integer
         description: >-
