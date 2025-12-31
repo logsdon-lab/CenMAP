@@ -93,6 +93,12 @@ def main():
         default=None,
         help="Trim coordinates to boundaries contain the largest block of these repeats.",
     )
+    ap.add_argument(
+        "--eval_repeats",
+        nargs="+",
+        default=["ALR/Alpha", "SAR"],
+        help="Require that these repeats be complete.",
+    )
     args = ap.parse_args()
 
     rm = args.repeatmasker
@@ -130,7 +136,9 @@ def main():
     )
 
     itree_rm = defaultdict(it.IntervalTree)
-    for chrom, st, end, _ in df_rm.filter(pl.col("rtype") == "ALR/Alpha").iter_rows():
+    for chrom, st, end, _ in df_rm.filter(
+        pl.col("rtype").is_in(args.eval_repeats)
+    ).iter_rows():
         itree_rm[chrom].add(it.Interval(st, end))
 
     df_entropy = (
