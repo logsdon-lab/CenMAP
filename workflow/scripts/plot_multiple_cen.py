@@ -213,7 +213,7 @@ def main():
     plot_settings = track_format.get("settings")
     track_format["settings"]["dim"] = [
         20,
-        (plot_settings["dim"][1] * len(bed_files.keys()) - n_omitted) + 2,
+        (plot_settings["dim"][1] * (len(bed_files.keys()) - n_omitted)) + 2,
     ]
     track_format["tracks"] = tracks
     cfg = os.path.join(f"{output_prefix}.yaml")
