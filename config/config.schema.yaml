@@ -118,6 +118,7 @@ properties:
         default: 1000000
       perc_mon_len_diff:
         type: number
+        # TODO: Tune more (2.0 > 1.0). Some HSAT-1A contains trf monomers that are close (168).
         description: "Percent difference in monomer length to allow motif based on: 100 * ((motif_len % monomer_length) / monomer_length)"
         default: 2.0
       perc_multi_chrom:
