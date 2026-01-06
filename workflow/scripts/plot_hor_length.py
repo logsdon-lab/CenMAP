@@ -3,7 +3,6 @@ import numpy as np
 import polars as pl
 import seaborn as sns
 import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 from collections import OrderedDict
 
@@ -85,7 +84,9 @@ def main():
     args = ap.parse_args()
 
     # Reverse to prevent matching chr1 with both chr1 and chr11
-    rgx_chrom = "|".join([*reversed(sorted(args.chroms)), "-"])
+    chroms = list(reversed(sorted(args.chroms)))
+    chroms.extend([f"rc-{chrom}" for chrom in chroms])
+    rgx_chrom = "|".join([*chroms, "-"])
     rgx_name_groups = r"^.*?_(?<chrom_name>(" + rgx_chrom + r")*)_.*?$"
     plot_all = "all" in args.chroms
 
@@ -119,7 +120,7 @@ def main():
                 mtch_chrom=pl.col("chrom").str.extract_groups(rgx_name_groups),
             )
             .unnest("mtch_chrom")
-            .drop("2")
+            .with_columns(pl.col("chrom_name").str.extract("(chr[0-9XY]+)"))
         )
 
     added_palettes = OrderedDict()
@@ -193,7 +194,7 @@ def main():
         order=palette_order.keys(),
         inner="quart",
     )
-    sns.swarmplot(
+    sns.stripplot(
         x="chrom_name",
         y="length",
         data=df_all_lengths_pd,
@@ -203,6 +204,7 @@ def main():
         order=palette_order.keys(),
         palette=palettes,
         size=4,
+        legend="full",
     )
 
     ax = plt.gca()
@@ -213,29 +215,20 @@ def main():
         alignment="left",
         frameon=False,
     )
-    try:
-        # Sort legend elements
-        handles_labels = ax.get_legend_handles_labels()
-        # Only display dots.
-        handles, labels = zip(
-            *sorted(
-                (
-                    (handle, length)
-                    for handle, length in zip(*handles_labels)
-                    if isinstance(handle, Line2D)
-                ),
-                key=lambda x: palette_order.get(x[1], -1),
-            )
+    handles_labels = ax.get_legend_handles_labels()
+    # Only display dots.
+    handles, labels = zip(
+        *sorted(
+            (
+                (handle, length)
+                for handle, length in zip(*handles_labels)
+                if isinstance(handle, Line2D)
+            ),
+            key=lambda x: palette_order.get(x[1], -1),
         )
-        # Place outside of figure.
-        ax.legend(handles, labels, **legend_kwargs)
-    except ValueError:
-        ax.legend(
-            handles=[
-                Patch(color=color, label=chrom) for chrom, color in chrom_colors.items()
-            ],
-            **legend_kwargs,
-        )
+    )
+    # Place outside of figure.
+    ax.legend(handles, labels, **legend_kwargs)
 
     # Hide spines
     for spine in ["top", "right"]:
@@ -245,7 +238,7 @@ def main():
     ax.set_xlabel("Chromosome")
     # Remove chr from x-ticks
     xtick_labels = [lbl.get_text().replace("chr", "") for lbl in ax.get_xticklabels()]
-    ax.set_xticklabels(xtick_labels)
+    ax.set_xticks(ax.get_xticks(), xtick_labels)
 
     # Set units of y-axis
     ax.yaxis.minorticks_on()
