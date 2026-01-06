@@ -84,10 +84,11 @@ def main():
     args = ap.parse_args()
 
     # Reverse to prevent matching chr1 with both chr1 and chr11
+    # NOTE: This only takes the first chromosome.
     chroms = list(reversed(sorted(args.chroms)))
     chroms.extend([f"rc-{chrom}" for chrom in chroms])
-    rgx_chrom = "|".join([*chroms, "-"])
-    rgx_name_groups = r"^.*?_(?<chrom_name>(" + rgx_chrom + r")*)_.*?$"
+    rgx_chrom = "|".join(chroms)
+    rgx_name_groups = r"^.*?_(?<chrom_name>(" + rgx_chrom + r")*)[_-].*?$"
     plot_all = "all" in args.chroms
 
     if args.chrom_colors:
@@ -113,7 +114,9 @@ def main():
         new_columns=DEF_COLS,
     ).with_columns(source=pl.lit("samples"))
     if plot_all:
-        df_lengths = df_lengths.with_columns(chrom_name=pl.lit("all"))
+        df_lengths = df_lengths.with_columns(chrom_name=pl.lit("all")).select(
+            "chrom", "chrom_st", "chrom_end", "length", "source", "chrom_name"
+        )
     else:
         df_lengths = (
             df_lengths.with_columns(
@@ -121,6 +124,7 @@ def main():
             )
             .unnest("mtch_chrom")
             .with_columns(pl.col("chrom_name").str.extract("(chr[0-9XY]+)"))
+            .select("chrom", "chrom_st", "chrom_end", "length", "source", "chrom_name")
         )
 
     added_palettes = OrderedDict()
@@ -158,7 +162,6 @@ def main():
     palette_order = {
         elem: i for i, elem in enumerate([*args.chroms, *added_palettes.keys()])
     }
-
     df_all_lengths: pl.DataFrame = pl.concat([df_lengths, *dfs_added_lengths])
 
     # Merge asat HOR array lengths
@@ -216,19 +219,22 @@ def main():
         frameon=False,
     )
     handles_labels = ax.get_legend_handles_labels()
-    # Only display dots.
-    handles, labels = zip(
-        *sorted(
-            (
-                (handle, length)
-                for handle, length in zip(*handles_labels)
-                if isinstance(handle, Line2D)
-            ),
-            key=lambda x: palette_order.get(x[1], -1),
+    handles, labels = handles_labels
+
+    if handles:
+        # Only display dots.
+        handles, labels = zip(
+            *sorted(
+                (
+                    (handle, length)
+                    for handle, length in zip(*handles_labels)
+                    if isinstance(handle, Line2D)
+                ),
+                key=lambda x: palette_order.get(x[1], -1),
+            )
         )
-    )
-    # Place outside of figure.
-    ax.legend(handles, labels, **legend_kwargs)
+        # Place outside of figure.
+        ax.legend(handles, labels, **legend_kwargs)
 
     # Hide spines
     for spine in ["top", "right"]:
