@@ -1,42 +1,38 @@
 
-rule create_fixed_rm_bed_by_chr:
+
+rule create_fixed_rm_bed_by_sm:
     input:
-        rm_out=expand(rules.fix_cens_rm_out.output, sm=SAMPLE_NAMES),
+        rm_out=expand(rules.fix_cens_rm_out.output, sm="{sm}", typ="complete"),
     output:
         rm_bed=join(
             FIX_RM_OUTDIR,
             "bed",
-            "chr_{chr}.bed",
+            "sm_{sm}.bed",
         ),
     params:
-        chr_rgx=lambda wc: f"-c {wc.chr}[:_-]" if wc.chr != "all" else "",
+        chr_rgx="",
         color_mapping=config["repeatmasker"]["repeat_colors"],
         script=workflow.source_path("../scripts/create_rm_bed.py"),
         to_abs="",
     log:
-        join(FIX_RM_LOGDIR, "create_fixed_rm_bed_{chr}.log"),
+        join(FIX_RM_LOGDIR, "create_fixed_rm_bed_{sm}.log"),
     conda:
         "../envs/py.yaml"
     shell:
         shell_create_rm_bed
 
 
-rule plot_fixed_rm_bed_by_chr:
+rule plot_fixed_rm_bed_by_sm:
     input:
         rm=[
-            (
-                rules.create_ref_rm_bed_by_chr.output
-                if config["repeatmasker"]["ref_repeatmasker_output"]
-                else []
-            ),
-            rules.create_fixed_rm_bed_by_chr.output,
+            rules.create_fixed_rm_bed_by_sm.output,
         ],
     output:
         plots=multiext(
             join(
                 FIX_RM_OUTDIR,
                 "plots",
-                "chr_{chr}_cens",
+                "sm_{sm}_cens",
             ),
             ".pdf",
             ".png",
@@ -50,7 +46,7 @@ rule plot_fixed_rm_bed_by_chr:
         omit_if_empty="",
         ref_ax_idx="--ref_ax_idx 0",
     log:
-        join(FIX_RM_LOGDIR, "plot_fixed_rm_bed_{chr}.log"),
+        join(FIX_RM_LOGDIR, "plot_fixed_rm_bed_{sm}.log"),
     conda:
         "../envs/py.yaml"
     shell:

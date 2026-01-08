@@ -91,7 +91,7 @@ properties:
         items:
           type: integer
         description: Monomer periods to search for. Smallest period is used as kmer size.
-        default: [170, 340, 510, 680, 850, 1020]
+        default: [170, 340]
       exclude_kmers_lt_n:
         type: integer
         description: >-
@@ -118,6 +118,7 @@ properties:
         default: 1000000
       perc_mon_len_diff:
         type: number
+        # TODO: Tune more (2.0 > 1.0). Some HSAT-1A contains trf monomers that are close (168).
         description: "Percent difference in monomer length to allow motif based on: 100 * ((motif_len % monomer_length) / monomer_length)"
         default: 2.0
       perc_multi_chrom:
@@ -355,12 +356,19 @@ properties:
       aligner:
         type: string
         enum: ["minimap2", "winnowmap"]
+      input_bam_fofn_dir:
+        type: string
+        description: >-
+          Directory of read fofn files.
+          Each file in this directory is named "{sample}.fofn".
       input_bam_dir:
         type: string
         description: Path to directory with methyl BAM files. Searches recursively for files matching bam_rgx.
       bam_rgx:
         type: string
-        description: Regular expression to search input_bam_dir for methyl BAM files.
+        description: >-
+          Regular expression to search input_bam_dir for methyl BAM files.
+          Despite the name, also supports gzipped fastq files if MM and ML tags are in name.
       aln_mem:
         type: string
         pattern: "\\d+GB"
@@ -433,4 +441,3 @@ required:
   - samples
   - concat_asm
   - ident_cen_ctgs
-  - repeatmasker

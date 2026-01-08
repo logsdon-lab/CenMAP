@@ -83,7 +83,9 @@ def main():
         help="Input color mapping JSON.",
     )
     ap.add_argument("-c", "--chrom", default=None, help="Regex for chrom.")
-    ap.add_argument("--to_abs", action="store_true", help="Convert to absolute coordinates.")
+    ap.add_argument(
+        "--to_abs", action="store_true", help="Convert to absolute coordinates."
+    )
     args = ap.parse_args()
 
     df = pl.read_csv(
@@ -107,15 +109,12 @@ def main():
         df = df.filter(pl.col("chrom").str.contains(args.chrom, literal=False))
 
     if args.to_abs:
-        df = (
-            df.with_columns(
-                ctg_st=pl.col("chrom").str.extract(r":(\d+)-").fill_null(0).cast(pl.Int64),
-                ctg_end=pl.col("chrom").str.extract(r"-(\d+)$").fill_null(0).cast(pl.Int64),
-            )
-            .with_columns(
-                chrom_st=pl.col("chrom_st") + pl.col("ctg_st"),
-                chrom_end=pl.col("chrom_end") + pl.col("ctg_st"),
-            )
+        df = df.with_columns(
+            ctg_st=pl.col("chrom").str.extract(r":(\d+)-").fill_null(0).cast(pl.Int64),
+            ctg_end=pl.col("chrom").str.extract(r"-(\d+)$").fill_null(0).cast(pl.Int64),
+        ).with_columns(
+            chrom_st=pl.col("chrom_st") + pl.col("ctg_st"),
+            chrom_end=pl.col("chrom_end") + pl.col("ctg_st"),
         )
 
     df = (

@@ -3,7 +3,7 @@ import numpy as np
 import polars as pl
 import seaborn as sns
 import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 from collections import OrderedDict
 
 
@@ -84,8 +84,11 @@ def main():
     args = ap.parse_args()
 
     # Reverse to prevent matching chr1 with both chr1 and chr11
-    rgx_chrom = "|".join([*reversed(sorted(args.chroms)), "-"])
-    rgx_name_groups = r"^.*?_(?<chrom_name>(" + rgx_chrom + r")*)_.*?$"
+    # NOTE: This only takes the first chromosome.
+    chroms = list(reversed(sorted(args.chroms)))
+    chroms.extend([f"rc-{chrom}" for chrom in chroms])
+    rgx_chrom = "|".join(chroms)
+    rgx_name_groups = r"^.*?_(?<chrom_name>(" + rgx_chrom + r")*)[_-].*?$"
     plot_all = "all" in args.chroms
 
     if args.chrom_colors:
@@ -111,14 +114,17 @@ def main():
         new_columns=DEF_COLS,
     ).with_columns(source=pl.lit("samples"))
     if plot_all:
-        df_lengths = df_lengths.with_columns(chrom_name=pl.lit("all"))
+        df_lengths = df_lengths.with_columns(chrom_name=pl.lit("all")).select(
+            "chrom", "chrom_st", "chrom_end", "length", "source", "chrom_name"
+        )
     else:
         df_lengths = (
             df_lengths.with_columns(
                 mtch_chrom=pl.col("chrom").str.extract_groups(rgx_name_groups),
             )
             .unnest("mtch_chrom")
-            .drop("2")
+            .with_columns(pl.col("chrom_name").str.extract("(chr[0-9XY]+)"))
+            .select("chrom", "chrom_st", "chrom_end", "length", "source", "chrom_name")
         )
 
     added_palettes = OrderedDict()
@@ -151,6 +157,11 @@ def main():
             added_palettes[lbl] = color
             dfs_added_lengths.append(df)
 
+    # Get order of chromosomes
+    palettes = chrom_colors | added_palettes
+    palette_order = {
+        elem: i for i, elem in enumerate([*args.chroms, *added_palettes.keys()])
+    }
     df_all_lengths: pl.DataFrame = pl.concat([df_lengths, *dfs_added_lengths])
 
     # Merge asat HOR array lengths
@@ -170,7 +181,6 @@ def main():
         .then(pl.col("source"))
         .otherwise(pl.col("chrom_name"))
     )
-    palettes = chrom_colors | added_palettes
     # Add remaining chroms to plot if multi-chroms.
     uncovered_chroms = set(df_all_lengths["chrom_name"].unique()).difference(
         palettes.keys()
@@ -184,18 +194,20 @@ def main():
         hue="chrom_name",
         data=df_all_lengths_pd,
         palette=palettes,
+        order=palette_order.keys(),
         inner="quart",
-        cut=0.75,
     )
-    sns.swarmplot(
+    sns.stripplot(
         x="chrom_name",
         y="length",
         data=df_all_lengths_pd,
         hue="color_key",
         linewidth=0.5,
         edgecolor="black",
+        order=palette_order.keys(),
         palette=palettes,
         size=4,
+        legend="full",
     )
 
     ax = plt.gca()
@@ -206,25 +218,23 @@ def main():
         alignment="left",
         frameon=False,
     )
-    try:
-        # Sort legend elements
-        legend_elem_order = {
-            elem: i for i, elem in enumerate([*args.chroms, *added_palettes.keys()])
-        }
-        handles_labels = ax.get_legend_handles_labels()
-        handles, labels = zip(
-            *sorted(zip(*handles_labels), key=lambda x: legend_elem_order.get(x[1], -1))
-        )
+    handles_labels = ax.get_legend_handles_labels()
+    handles, labels = handles_labels
 
+    if handles:
+        # Only display dots.
+        handles, labels = zip(
+            *sorted(
+                (
+                    (handle, length)
+                    for handle, length in zip(*handles_labels)
+                    if isinstance(handle, Line2D)
+                ),
+                key=lambda x: palette_order.get(x[1], -1),
+            )
+        )
         # Place outside of figure.
         ax.legend(handles, labels, **legend_kwargs)
-    except ValueError:
-        ax.legend(
-            handles=[
-                Patch(color=color, label=chrom) for chrom, color in chrom_colors.items()
-            ],
-            **legend_kwargs,
-        )
 
     # Hide spines
     for spine in ["top", "right"]:
@@ -234,7 +244,7 @@ def main():
     ax.set_xlabel("Chromosome")
     # Remove chr from x-ticks
     xtick_labels = [lbl.get_text().replace("chr", "") for lbl in ax.get_xticklabels()]
-    ax.set_xticklabels(xtick_labels)
+    ax.set_xticks(ax.get_xticks(), xtick_labels)
 
     # Set units of y-axis
     ax.yaxis.minorticks_on()

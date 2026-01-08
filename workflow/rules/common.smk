@@ -105,3 +105,37 @@ def cmd_filter_fa_chrom(*added_cmds) -> str:
     for acmd in added_cmds:
         cmd += f" | {acmd}"
     return cmd
+
+
+def cmd_complete_bed_as_bed9(bed: str | None = None) -> str:
+    """
+    If bed, return as process substitution.
+    Otherwise, return just awk command.
+    """
+    # (name, st, end, ctg_name, ctg_len)
+    cmd = [
+        "awk",
+        "-v",
+        "OFS='\\t'",
+        """'{
+            adj_name=$1;
+            adj_st=$2;
+            adj_end=$3;
+            ctg_name=$4;
+            ctg_len=$5;
+            ort=($1 ~ "rc-") ? "-" : "+";
+            ctg_st=$2; ctg_end=$3;
+            if (ort == "-") {
+                new_ctg_st=ctg_len-ctg_end + 1;
+                new_ctg_end=ctg_len-ctg_st + 1;
+                ctg_st=new_ctg_st;
+                ctg_end=new_ctg_end;
+            };
+            print ctg_name, ctg_st, ctg_end, adj_name, 0, ort, adj_st, adj_end, "0,0,0"
+        }'""",
+    ]
+    if bed:
+        cmd.append(bed)
+        return f"<({' '.join(cmd)})"
+    else:
+        return " ".join(cmd)

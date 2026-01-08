@@ -58,6 +58,7 @@ rule filter_annotations_hor_stv_by_sm:
         {{ grep -P '{params.rgx}' {input.all_stv_bed} || true ;}} > {output.all_stv_bed}
         {{ grep -P '{params.rgx}' {input.complete_stv_bed} || true ;}} > {output.complete_stv_bed}
         {{ grep -P '{params.rgx}' {input.all_rm_sat_bed} || true ;}} > {output.rm_bed}
+        touch {output}
         """
 
 

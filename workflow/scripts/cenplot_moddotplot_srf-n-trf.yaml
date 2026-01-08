@@ -54,9 +54,12 @@ tracks:
     path: "ident"
     options:
       legend: true
-      hide_x: false
+      hide_x: true
       invert: true
       legend_asp_ratio: 1
+  - position: relative
+    type: position
+    proportion: 0.05
   - position: relative
     proportion: 0.1
     type: legend

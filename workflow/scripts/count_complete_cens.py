@@ -49,14 +49,13 @@ def main():
     no_chrom = "all" in args.chroms
 
     # Include rc- in pattern
+    # NOTE: This only takes the first chromosome.
     if not no_chrom:
         chroms.extend([f"rc-{chrom}" for chrom in chroms])
-        rgx_chrom = "|".join([*chroms, "-"])
-        rgx_name_groups = (
-            r"^(?<sample>.*?)_(?<chr>(" + rgx_chrom + r")*)_(?<contig_name>.*?)$"
-        )
+        rgx_chrom = "|".join(chroms)
+        rgx_name_groups = r"^(?<sample>.*?)_(?<chr>(" + rgx_chrom + r")*)[_-].*?$"
     else:
-        rgx_name_groups = r"^(?<sample>.*?)_(?<contig_name>.*?)$"
+        rgx_name_groups = r"^(?<sample>.*?)_.*?$"
     df = (
         pl.read_csv(
             args.input,

@@ -6,10 +6,14 @@ import json
 import argparse
 import polars as pl
 
-from typing import Any
+from typing import Any, TextIO
 from collections import defaultdict
 
 from cenplot import plot_tracks, read_tracks
+
+
+# Don't copy references
+yaml.SafeDumper.ignore_aliases = lambda *args: True
 
 
 def cleanup(cfg: str, bed_files: defaultdict[str, dict[str, str]]):
@@ -62,6 +66,12 @@ def main():
         default=None,
     )
     ap.add_argument(
+        "--sort_order",
+        help="Order to sort chroms as text file of chromosome names.",
+        type=argparse.FileType("rt"),
+        default=None,
+    )
+    ap.add_argument(
         "--omit_if_any_empty",
         action="store_true",
         help="Omit track if any file is empty.",
@@ -111,44 +121,77 @@ def main():
         "type": "spacer",
     }
 
+    # Sort by custom order.
+    if args.sort_order:
+        fh_sort_order: TextIO = args.sort_order
+        sort_order = {
+            line.strip(): i
+            for i, line in enumerate(reversed(fh_sort_order.readlines()), start=1)
+        }
+        # If not in list, use previous order.
+        sorted_bed_files = sorted(
+            bed_files.items(),
+            key=lambda chrom_files: sort_order.get(chrom_files[0], 0),
+            reverse=True,
+        )
+    else:
+        sorted_bed_files = list(bed_files.items())
+
     idx = 0
     tracks = []
     ref_indices = []
-    missing_chroms = set()
-    for chrom, dtype_bedfiles in bed_files.items():
+    n_omitted = 0
+    for chrom, dtype_bedfiles in sorted_bed_files:
+        chrom_tracks = []
+        chrom_ref_indices = []
+        omit_chrom = False
+        idx_offset = 0
+
+        new_trk: dict | None
         for i, trk in enumerate(track_format["tracks"]):
             dtype = trk.get("path")
             bed_file = dtype_bedfiles.get(dtype)
             takes_space = trk.get("proportion")
             has_data = isinstance(bed_file, str)
 
-            if takes_space:
-                if i == args.ref_ax_idx:
-                    ref_indices.append(idx)
-                idx += 1
-
+            new_trk = None
             if not has_data:
                 print(f"No data for {chrom} {dtype}.", file=sys.stderr)
                 # Add spacer if data not present.
                 if takes_space:
                     spacer = copy.deepcopy(spacer_track)
                     spacer["proportion"] = trk["proportion"]
-                    tracks.append(spacer)
+                    new_trk = spacer
 
                 # Has no data and is an input file.
-                if dtype in dtypes:
-                    missing_chroms.add(chrom)
-                continue
+                if dtype in dtypes and args.omit_if_any_empty:
+                    omit_chrom = True
+                    new_trk = None
+                    break
+            else:
+                new_trk = copy.deepcopy(trk)
+                # Update config.
+                added_options = options.get(trk["type"])
+                if added_options:
+                    for k, v in added_options.items():
+                        new_trk["options"][k] = v
 
-            new_trk = copy.deepcopy(trk)
-            # Update config.
-            added_options = options.get(trk["type"])
-            if added_options:
-                for k, v in added_options.items():
-                    new_trk["options"][k] = v
+                new_trk["path"] = bed_file
 
-            new_trk["path"] = bed_file
-            tracks.append(new_trk)
+            if takes_space:
+                if i == args.ref_ax_idx:
+                    chrom_ref_indices.append(idx + idx_offset)
+                idx_offset += 1
+
+            if new_trk:
+                chrom_tracks.append(new_trk)
+
+        if not omit_chrom:
+            tracks.extend(chrom_tracks)
+            ref_indices.extend(chrom_ref_indices)
+            idx += idx_offset
+        else:
+            n_omitted += 1
 
     position_track = {
         "position": "relative",
@@ -170,7 +213,7 @@ def main():
     plot_settings = track_format.get("settings")
     track_format["settings"]["dim"] = [
         20,
-        (plot_settings["dim"][1] * len(bed_files.keys())) + 2,
+        (plot_settings["dim"][1] * (len(bed_files.keys()) - n_omitted)) + 2,
     ]
     track_format["tracks"] = tracks
     cfg = os.path.join(f"{output_prefix}.yaml")
@@ -189,9 +232,6 @@ def main():
         if not track.data.is_empty():
             # Update legend title.
             chrom = track.data["chrom"].first()
-            if chrom in missing_chroms and args.omit_if_any_empty:
-                continue
-
             if hasattr(track.options, "legend_title"):
                 track.options.legend_title = chrom
 

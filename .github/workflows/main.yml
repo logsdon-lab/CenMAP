@@ -88,6 +88,48 @@ jobs:
         --conda-cleanup-pkgs cache \
         --conda-frontend conda
 
+  test_workflow_HG00731_mGorGor1_omit_rm:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+    - name: Checkout directory.
+      uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+        lfs: 'true'
+    # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
+    - name: Delete huge unnecessary tools folder
+      run: rm -rf /opt/hostedtoolcache
+    - name: Setup Miniforge.
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        miniforge-version: latest
+        activate-environment: dev
+    - name: Update environment.
+      run:
+        conda env update -n dev -f ${{env.ENV_DEV }}
+    - name: Test HG00731 workflow.
+      run: |
+        snakemake -c 4 -p \
+        --workflow-profile none \
+        --configfile test/config/config_HG00731_no_ref_no_rm.yaml \
+        --sdm conda \
+        --show-failed-logs \
+        --conda-cleanup-pkgs cache \
+        --conda-frontend conda
+        rm -rf results logs benchmarks .snakemake/metadata
+    - name: Test mGorGor1 chr16_hsa15 workflow.
+      run: |
+        snakemake -c 4 -p \
+        --workflow-profile none \
+        --configfile test/config/config_mGorGor1_no_ref_no_rm.yaml \
+        --sdm conda \
+        --show-failed-logs \
+        --conda-cleanup-pkgs cache \
+        --conda-frontend conda
+
   test_workflow_HG002_chr2_nonlive:
     runs-on: ubuntu-latest
     defaults:

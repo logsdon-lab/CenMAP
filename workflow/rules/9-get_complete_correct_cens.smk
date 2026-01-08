@@ -1,6 +1,6 @@
 include: "common.smk"
 include: "utils.smk"
-include: "7-fix_cens_w_repeatmasker.smk"
+include: "7-finalize_cens.smk"
 
 
 COMPLETE_CORRECT_CENS_LOGDIR = join(LOG_DIR, "9-get_complete_correct_cens")
@@ -14,6 +14,33 @@ if config.get("nucflag"):
 if IS_HUMAN_ANNOT:
 
     include: "8-humas_annot.smk"
+
+
+def cmd_infile(wc, input):
+    cmd = []
+    if input.nucflag_bed:
+        cmd.extend(
+            [
+                "bedtools",
+                "intersect",
+                "-wa",
+                "-u",
+                "-a",
+                f"<(sort -k1,1 -k2,2n {input.interm_bed})",
+                "-b",
+                f"<(sort -k1,1 -k2,2n {input.nucflag_bed} | awk '$4 == \"good\"')",
+            ]
+        )
+    else:
+        cmd.extend(["cat", input.interm_bed])
+
+    if (
+        config.get("get_complete_correct_cens", {}).get("filter_by_hor", True)
+        and "cmd_intersect_live" in globals()
+    ):
+        pipe_intersect_live = cmd_intersect_live(wc)
+        cmd.append(pipe_intersect_live)
+    return " ".join(cmd)
 
 
 rule get_complete_correct_cens_bed:
@@ -35,17 +62,8 @@ rule get_complete_correct_cens_bed:
         ),
     params:
         # Allow not running nucflag.
-        infile_stream=lambda wc, input: (
-            f"join -t \"$(printf '\\t')\" <(sort -k1 {input.interm_bed}) <(sort -k1 {input.nucflag_bed})"
-            if input.nucflag_bed
-            else f"cat {input.interm_bed}"
-        ),
-        cmd_intersect=lambda wc: (
-            cmd_intersect_live(wc)
-            if config.get("get_complete_correct_cens", {}).get("filter_by_hor", True)
-            and "cmd_intersect_live" in globals()
-            else ""
-        ),
+        infile_stream=cmd_infile,
+        cmd_into_bed9=cmd_complete_bed_as_bed9(),
     log:
         join(
             COMPLETE_CORRECT_CENS_LOGDIR,
@@ -56,27 +74,7 @@ rule get_complete_correct_cens_bed:
     shell:
         """
         {{ {params.infile_stream} | \
-        sort -k1,1 -k2,2n -u \
-        {params.cmd_intersect} | \
-        awk -v OFS="\\t" '{{
-            adj_name=$1;
-            adj_st=$2; adj_end=$3;
-            ctg_name=$4;
-            ctg_len=$5;
-            ort=($1 ~ "rc-") ? "-" : "+";
-            ctg_st=$2; ctg_end=$3;
-            if (ort == "-") {{
-                new_ctg_st=ctg_len-ctg_end + 1;
-                new_ctg_end=ctg_len-ctg_st + 1;
-                ctg_st=new_ctg_st;
-                ctg_end=new_ctg_end;
-            }}
-            status=($8 == "good" || $8 == "") ? "good" : "misassembled";
-            if (status != "good") {{
-                next;
-            }};
-            print ctg_name, ctg_st, ctg_end, adj_name, 0, ort, adj_st, adj_end, "0,0,0"
-        }}' ;}} > {output} 2> {log}
+        {params.cmd_into_bed9} ;}} > {output} 2> {log}
         """
 
 

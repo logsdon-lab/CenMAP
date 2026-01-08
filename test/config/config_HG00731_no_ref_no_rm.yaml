@@ -1,0 +1,44 @@
+samples:
+- HG00731
+
+concat_asm:
+  input_dir: "test/data/assemblies"
+
+ident_cen_ctgs:
+  threads_srf: 24
+  mem_srf: 40GB
+  threads_aln: 16
+  mem_aln: 150GB
+  bp_merge: 2500000
+  bp_slop: 1000000
+  perc_multi_chrom: 5.0
+
+nucflag:
+  input_hifi_reads_dir: "test/data/raw_data"
+  reads_rgx: ".*\\.fastq.gz$"
+  config_nucflag: "test/config/nucflag.toml"
+  ignore_regions: "config/nucflag_ignore.bed"
+  threads_aln: 4
+  mem_nucflag: 4GB
+  mem_aln: 4GB
+  processes_nucflag: 2
+  samtools_view_flag: 2308
+
+humas_annot:
+  mode: "srf-n-trf"
+  threads: 4
+
+plot_hor_stv:
+  ref_stv: []
+
+calculate_hor_length:
+  ref_hor_lengths: []
+
+moddotplot:
+  mem: 4GB
+  window: 5000
+
+ideogram:
+  title: "{sm}"
+  height: 15
+  width: 5

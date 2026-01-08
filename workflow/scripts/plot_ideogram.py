@@ -47,7 +47,7 @@ def main():
     ap.add_argument(
         "-i",
         "--bed_cen",
-        type=str,
+        type=argparse.FileType("rb"),
         required=True,
         help="Complete and accurate centromere BED9 file.",
     )

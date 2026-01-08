@@ -65,7 +65,9 @@ def main():
         action="store_true",
         help=f"Add CT track with color {CT_HEX} filling entire region. Region corresponds to regex pattern: ({RGX_COORDS})",
     )
-    ap.add_argument("--to_abs", action="store_true", help="Convert to absolute coordinates.")
+    ap.add_argument(
+        "--to_abs", action="store_true", help="Convert to absolute coordinates."
+    )
 
     args = ap.parse_args()
 
@@ -86,26 +88,20 @@ def main():
         truncate_ragged_lines=True,
     )
     if args.to_abs:
-        df = (
-            df.with_columns(
-                ctg_st=pl.col("chrom").str.extract(r":(\d+)-").fill_null(0).cast(pl.Int64),
-            )
-            .with_columns(
-                chrom_st=pl.col("chrom_st") + pl.col("ctg_st"),
-                chrom_end=pl.col("chrom_end") + pl.col("ctg_st"),
-            )
+        df = df.with_columns(
+            ctg_st=pl.col("chrom").str.extract(r":(\d+)-").fill_null(0).cast(pl.Int64),
+        ).with_columns(
+            chrom_st=pl.col("chrom_st") + pl.col("ctg_st"),
+            chrom_end=pl.col("chrom_end") + pl.col("ctg_st"),
         )
-    df = (
-        df.with_columns(
-            strand=pl.when(pl.col("strand") == "C")
-            .then(pl.lit("-"))
-            .otherwise(pl.lit("+")),
-        )
-        .with_columns(
-            thick_st=pl.col("chrom_st"),
-            thick_end=pl.col("chrom_end"),
-            score=pl.lit(0),
-        )
+    df = df.with_columns(
+        strand=pl.when(pl.col("strand") == "C")
+        .then(pl.lit("-"))
+        .otherwise(pl.lit("+")),
+    ).with_columns(
+        thick_st=pl.col("chrom_st"),
+        thick_end=pl.col("chrom_end"),
+        score=pl.lit(0),
     )
 
     if isinstance(args.patterns, str):

@@ -5,3 +5,4 @@
 !config.schema.yaml
 !config_template.yaml
 !config_no_ref.yaml
+!config_minimal.yaml

@@ -53,12 +53,17 @@ tracks:
 
 This script produces a number of temporary files and a config as input data is partitioned by name. To keep these use `--keep-tempfiles`.
 
+To sort output by chromosome, provide the `--sort_order` flag which takes a single file of chromosome names.
+
 ## `reformat_rm.py`
 `RepeatMasker` produces awful, non-machine-readable output so we have to clean it up.
 * Renaming sequences to their original name.
     * It has an [arbitrary limit of 50 characters for sequence names](https://github.com/Dfam-consortium/RepeatMasker/issues/12) so to ensure no input causes issues, we rename all sequences before running.
 * Removing multi-row header.
 * Converting delimiters from arbitrary # of spaces to tabs.
+
+## `create_rm_overlay_bed.awk`
+Creates a BED file of satellite regions for `NucFlag` to plot.
 
 ## `create_rm_nucflag_ignore_bed.py`
 Creates a list of non-ALR/Alpha regions for `NucFlag` to ignore. If there are small repeats less that 10 kbp between ALR/Alpha (TEs), these are allowed to be called.

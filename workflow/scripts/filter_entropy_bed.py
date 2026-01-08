@@ -78,7 +78,7 @@ def main():
         "--prop_valid",
         type=float,
         default=0.99,
-        help="Proportion of dips in entropy over all ALR containing regions required to be valid. Majority by default.",
+        help="Proportion of dips in entropy over all evaluated repeat regions required to be valid.",
     )
     ap.add_argument(
         "-d",
@@ -93,13 +93,25 @@ def main():
         default=None,
         help="Trim coordinates to boundaries contain the largest block of these repeats.",
     )
+    ap.add_argument(
+        "--require_repeats",
+        nargs="+",
+        default=["ALR/Alpha"],
+        help="Require these repeats.",
+    )
+    ap.add_argument(
+        "--eval_repeats",
+        nargs="+",
+        default=["ALR/Alpha", "SAR"],
+        help="Require that these repeats be complete.",
+    )
     args = ap.parse_args()
 
     rm = args.repeatmasker
-    # rm = "/project/logsdon_shared/projects/GIAB_HG008_TN/results/6-repeatmasker/repeats/HG008-N/HG008-N_rc-chr14_haplotype2-0000120:4461582-6946730.fa.out"
     bed = args.infile
-    # bed = "/project/logsdon_shared/projects/GIAB_HG008_TN/exp_plot/HG008-N_rc-chr14_haplotype2-0000120:4461582-6946730.bed"
     thr_valid_prop = args.prop_valid
+    require_repeats = args.require_repeats
+    eval_repeats = set(args.eval_repeats)
 
     try:
         df_entropy = pl.read_csv(
@@ -129,12 +141,26 @@ def main():
         new_columns=["chrom", "st", "end", "rtype"],
     )
 
+    # No repeats.
+    if df_rm.filter(pl.col("rtype").is_in(require_repeats)).is_empty():
+        return 0
+
     itree_rm = defaultdict(it.IntervalTree)
-    for chrom, st, end, _ in df_rm.filter(pl.col("rtype") == "ALR/Alpha").iter_rows():
-        itree_rm[chrom].add(it.Interval(st, end))
+    for chrom, st, end, val in df_rm.filter(
+        pl.col("rtype").is_in(eval_repeats)
+    ).iter_rows():
+        itree_rm[chrom].add(it.Interval(st, end, val))
+
+    # Convert any overlapping regions to 0 entropy.
+    rows_entropy = []
+    for row in df_entropy.iter_rows(named=True):
+        if itree_rm[chrom].overlaps(row["st"], row["end"]):
+            row["score"] = 0.0
+        rows_entropy.append(row)
 
     df_entropy = (
-        df_entropy.sort(by=["chrom", "st"])
+        pl.DataFrame(rows_entropy, orient="row")
+        .sort(by=["chrom", "st"])
         # Minmax regions of same entropy so peak calling easier.
         .with_columns(rle_score=pl.col("score").rle_id().over("chrom"))
         .group_by(["chrom", "rle_score"])
@@ -149,6 +175,7 @@ def main():
             pl.col("item_rgb").first(),
         )
         .sort(by=["chrom", "st"])
+        .drop("rle_score")
     )
     for chrom, df_chrom_entropy in df_entropy.group_by(["chrom"]):
         df_chrom_entropy = df_chrom_entropy.with_row_index()
@@ -157,17 +184,16 @@ def main():
         dips, _ = scipy.signal.find_peaks(-df_chrom_entropy["score"].to_numpy())
         df_dips = df_chrom_entropy.filter(pl.col("index").is_in(dips))
 
-        # Get total length overlapping ALR and has zero entropy in window.
+        # Get total length overlapping repeats and has zero entropy in window.
         total_length = 0
         for st, end, score in df_chrom_entropy.select("st", "end", "score").iter_rows():
             length = end - st
             if itree_rm[chrom].overlaps(st, end) and score == 0.0:
                 total_length += length
 
-        # Is dip and contains ALR
+        # Is dip and contains repeats
         # Handles case where a single dip due to LINE or ALU insertion. Will create small spike in entropy but won't cover majority of array.
         # Possiblity to occur on most distal end.
-        # |9997000020|
         valid_length = 0
         for st, end, score in df_dips.select("st", "end", "score").iter_rows():
             if itree_rm[chrom].overlaps(st, end) and score == 0.0:

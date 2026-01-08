@@ -28,18 +28,3 @@ shell_plot_multiple_cen = """
     {params.options} {params.omit_if_empty} {params.ref_ax_idx} || true ;}} 2> {log}
     touch {output.plots}
 """
-
-
-rule wget:
-    output:
-        "",
-    params:
-        url="",
-    resources:
-        mem=1,
-    log:
-        "",
-    shell:
-        """
-        wget --no-verbose {params.url} -O {output} 2> {log}
-        """
