@@ -395,7 +395,7 @@ properties:
       bp_edge:
         type: integer
         description: Number of base pairs at edges adjacent to CDR to estimate height.
-        default: 500_000
+        default: 500000
       height_perc_valley_threshold:
         type: number
         description: Required CDR height threshold.
@@ -411,13 +411,18 @@ properties:
       baseline_avg_methyl:
         type: number
         description: Baseline expected average methylation. Scales thresholds if average methylation is below value, reducing false positives.
-        default: 0.4
+        default: 0.3
       use_srf_regions:
         type: boolean
         description: >-
           Use srf-n-trf regions instead of RepeatMasker output as putative alpha-satellite region.
           Merge based on bp_alr_merge and region minimum size based on alr_threshold.
         default: false
+      edge_height_heuristic:
+        type: string
+        enum: ["min", "max", "avg"]
+        default: avg
+        description: Heuristic used when determining edge height of CDR. Either min, avg, or max (By decreasing strictness).
       filter_by_live_hor:
         type: boolean
         description: >-
