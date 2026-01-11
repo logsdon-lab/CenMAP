@@ -218,25 +218,15 @@ rule format_monomer_sf_classes:
 # https://stackoverflow.com/a/63040288
 def humas_annot_sm_outputs(wc):
     _ = checkpoints.split_cens_for_humas_annot.get(**wc).output
-    if CHROMOSOMES:
-        wcs = glob_wildcards(
-            join(HUMAS_CENS_SPLIT_DIR, wc.sm + "_{chrom}_{ctg}.fa"),
-        )
-        fnames = [f"{wc.sm}_{chrom}_{ctg}" for chrom, ctg in zip(wcs.chrom, wcs.ctg)]
-        chrs = wcs.chrom
-    else:
-        wcs = glob_wildcards(join(HUMAS_CENS_SPLIT_DIR, wc.sm + "_{ctg}.fa"))
-        fnames = [f"{wc.sm}_{ctg}" for ctg in wcs.ctg]
-        chrs = []
+    wcs = glob_wildcards(join(HUMAS_CENS_SPLIT_DIR, f"{wc.sm}_{{ctg_name}}.fa"))
+    fnames = [f"{wc.sm}_{ctg_name}" for ctg_name in wcs.ctg_name]
 
     if config["humas_annot"]["mode"] == "srf-n-trf":
         return expand(rules.filter_srf_trf_annot.output, sm=wc.sm, fname=fnames)
     elif config["humas_annot"]["mode"] == "sf":
         return expand(rules.format_monomer_sf_classes.output, fname=fnames)
     else:
-        if not chrs and config["humas_annot"]["mode"] == "sd":
-            return []
-        return expand(rules.cens_generate_stv.output, zip, fname=fnames, chr=chrs)
+        return expand(rules.cens_generate_stv.output, fname=fnames)
 
 
 rule sm_stv:
@@ -309,9 +299,7 @@ def humas_annot_chr_outputs(wc):
             expand(rules.format_monomer_sf_classes.output, fname=fnames, mode="sf")
         )
     else:
-        if wc.chr == "all" and config["humas_annot"]["mode"] == "sd":
-            return []
-        outputs.extend(expand(rules.cens_generate_stv.output, fname=fnames, chr=wc.chr))
+        outputs.extend(expand(rules.cens_generate_stv.output, fname=fnames))
 
     return outputs
 
