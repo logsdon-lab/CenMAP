@@ -29,9 +29,13 @@ def main():
         name = name[0]
 
         # Get whole region
-        region_name, region_st, region_stop = df_regions.filter(
-            pl.col("name") == name
-        ).row(0)
+        try:
+            region_name, region_st, region_stop = df_regions.filter(
+                pl.col("name") == name
+            ).row(0)
+        except pl.exceptions.OutOfBoundsError:
+            continue
+
         # Get annotated region
         annotated_st, annotated_stop = df_grp["start"].min(), df_grp["stop"].max()
 

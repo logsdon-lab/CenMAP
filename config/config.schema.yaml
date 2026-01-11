@@ -395,15 +395,15 @@ properties:
       bp_edge:
         type: integer
         description: Number of base pairs at edges adjacent to CDR to estimate height.
-        default: 500_000
+        default: 500000
       height_perc_valley_threshold:
         type: number
         description: Required CDR height threshold.
-        default: 0.34
+        default: 0.2
       prom_perc_valley_threshold:
         type: number
         description: Required CDR prominence threshold.
-        default: 0.3
+        default: 0.1
       extend_edges_std:
         type: integer
         description: Extend CDRs along edges as long as height is less than mean + set standard deviation value.
@@ -418,6 +418,11 @@ properties:
           Use srf-n-trf regions instead of RepeatMasker output as putative alpha-satellite region.
           Merge based on bp_alr_merge and region minimum size based on alr_threshold.
         default: false
+      edge_height_heuristic:
+        type: string
+        enum: ["min", "avg", "max"]
+        default: avg
+        description: Heuristic used when determining edge height of CDR. Either min, avg, or max (By decreasing strictness).
       filter_by_live_hor:
         type: boolean
         description: >-

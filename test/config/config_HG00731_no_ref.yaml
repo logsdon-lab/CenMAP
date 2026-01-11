@@ -31,8 +31,7 @@ repeatmasker:
   repeat_colors: "config/repeatmasker_colors.json"
 
 humas_annot:
-  mode: "sd"
-  hmm_profile: "data/models/AS-HORs-hmmer3.4-071024.hmm.gz"
+  mode: "srf-n-trf"
   threads: 4
 
 plot_hor_stv:
