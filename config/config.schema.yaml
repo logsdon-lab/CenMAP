@@ -1,13 +1,18 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
+title: Configuration
+description: CenMAP configuration options.
 properties:
   output_dir:
     type: string
+    description: Output directory.
     default: results
   log_dir:
     type: string
+    description: Log directory.
     default: logs
   benchmark_dir:
     type: string
+    description: Benchmark directory. Runtime and memory usage is displayed here.
     default: benchmarks
   chromosomes:
     type: array
@@ -39,7 +44,9 @@ properties:
         "chrX",
         "chrY",
       ]
-    description: Chromosomes to evaluate.
+    description: "Chromosomes to evaluate.\n\n
+      * Specifying `[]` disables assigning chromosome names to assembly contigs and reorienting relative to CHM13v2.\n\n
+      * This is desirable if your assembly contigs are already assigned and oriented."
   samples:
     type: array
     items:
@@ -47,14 +54,18 @@ properties:
     description: Sample names.
   container:
     type: string
-    description: Container for workflow if using singularity.
+    description: "Container for workflow.\n\n
+      * Only applicable if running using `Snakemake` and the `--sdm singularity` flag."
     default: "docker://logsdonlab/cenmap:latest"
   # Rules
   concat_asm:
     type: object
     additionalProperties: false
+    description: Configuration for concatenating given assemblies.
     properties:
       input_dir:
+        description: "Input directory for genome assemblies.\n\n
+          * Should have format `{dir}/{sample}/` and include all contigs as fasta or gzipped fasta files."
         type: string
       mem:
         type: string
@@ -64,13 +75,14 @@ properties:
       - input_dir
   ident_cen_ctgs:
     type: object
+    description: >-
+      Configuration for identifying centromeric contigs using [srf](https://github.com/lh3/srf) and [trf](https://github.com/lh3/TRF-mod)
+      with [srf-n-trf](https://anaconda.org/channels/bioconda/packages/srf-n-trf/overview).
     additionalProperties: false
     properties:
       reference:
         type: ["string", "null"]
-        description: >-
-          Path to reference assembly.
-          Will download CHM13v2.0 if not specified.
+        description: Path to reference assembly. Will download CHM13v2.0 if not specified.
         default: null
       threads_srf:
         type: integer
@@ -90,27 +102,27 @@ properties:
         type: array
         items:
           type: integer
-        description: Monomer periods to search for. Smallest period is used as kmer size.
+        description: "Monomer periods to search for.\n\n
+          * The smallest period is used as kmer size.\n\n
+          * The monomer size `42` is added internally for HSAT-1A (SAR)."
         default: [170, 340]
       exclude_kmers_lt_n:
         type: integer
-        description: >-
-          Filter kmers occuring less than n times. Corresponds to kmc's ci parameter.
-          Smaller value will pick up smaller, infrequent HORs at the cost of mapping runtime.
+        description: "Filter kmers occuring less than n times.\n\n
+          * Corresponds to `kmc`'s `ci` parameter.\n\n
+          * Smaller value will pick up smaller, infrequent HORs at the cost of mapping runtime."
         default: 10
       bp_min_length:
         type: integer
-        description: >-
-          Minimum length of satellite repeat groups.
-          Occurs after grouping but before merging.
-          Allows removing small false-positive TRs matching required 171/42 bp periods.
+        description: "Minimum length of satellite repeat groups.\n\n
+          * Occurs after grouping but before merging.\n\n
+          * Allows removing small false-positive TRs matching required `171`/`42` bp periods."
         default: 30000
       bp_merge:
         type: integer
-        description: >-
-          Merge grouped satellite repeat blocks n base pairs.
-          Smaller values will reduce the length of p-arms of the acrocentric chromosomes but at the risk of considering monomeric/divergent HORs in p-arm acrocentric chromosomes as a correct centromere.
-          The repeatmasker.bp_shannon_window parameter should be increased as well to prevent this.
+        description: "Merge grouped satellite repeat blocks n base pairs.\n\n
+          * Smaller values will reduce the length of p-arms of the acrocentric chromosomes but at the risk of considering monomeric/divergent HORs in p-arm acrocentric chromosomes as a correct centromere.\n\n
+          * The `repeatmasker.bp_shannon_window` parameter should be increased as well to prevent this."
         default: 100000
       bp_slop:
         type: integer
@@ -119,7 +131,7 @@ properties:
       perc_mon_len_diff:
         type: number
         # TODO: Tune more (2.0 > 1.0). Some HSAT-1A contains trf monomers that are close (168).
-        description: "Percent difference in monomer length to allow motif based on: 100 * ((motif_len % monomer_length) / monomer_length)"
+        description: "Percent difference in monomer length to allow motif based on: `100 * ((motif_len % monomer_length) / monomer_length)`"
         default: 2.0
       perc_multi_chrom:
         type: number
@@ -127,30 +139,29 @@ properties:
         default: 5.0
       paf2bed_min_ident:
         type: number
-        description: Minimum identity (-d) for srfutils.js paf2bed.
+        description: Minimum identity (`-d`) for `srfutils.js paf2bed`.
         default: 70.0
   nucflag:
     type: object
     additionalProperties: false
+    description: "Configuration for [NucFlag](https://github.com/logsdon-lab/NucFlag) and correctness check of QC.\n\n
+      * Regions are considered correct if nothing is flagged by `NucFlag`."
     properties:
       input_hifi_reads_fofn_dir:
         type: string
-        description: >-
-          Directory of hifi read fofn files.
-          Each file in this directory is named "{sample}.fofn".
+        description: "Directory of hifi read fofn files.\n\n
+          * Each file in this directory is named `{sample}.fofn`."
       input_hifi_reads_dir:
         type: string
-        description: >-
-          Directory of hifi reads.
-          Searched recursively for files in "{dir}/{sample}/" matching reads_rgx.
+        description: "Directory of hifi reads.\n\n
+          * Searched recursively for files in `{dir}/{sample}/` matching reads_rgx."
       reads_rgx:
         type: string
-        description: >-
-          Regular expression to find hifi reads if input_hifi_reads_dir is provided.
+        description: Regular expression to find hifi reads if `input_hifi_reads_dir` is provided.
         default: ".*\\.fastq.gz$"
       config_nucflag:
         type: string
-        description: Path to nucflag config file.
+        description: Path to `NucFlag` config file.
         default: "config/nucflag.toml"
       ignore_regions:
         type: ["string", "null"]
@@ -176,28 +187,29 @@ properties:
         default: 2308
       ignore_type:
         type: string
-        description: Restrict nucflag check to asat or live asat.
+        description: Restrict check to asat or live asat.
         enum: [asat, live_asat]
         default: asat
   repeatmasker:
     type: object
     additionalProperties: false
+    description: "Configuration for [RepeatMasker](https://www.repeatmasker.org/) and completeness check of QC.\n\n
+      * Regions are considered complete if entire array is surrounded by unique sequence.\n\n
+      * Omitting this block will omit `RepeatMasker` and attempt to determine partial centromeres via windowed shannon entropy of kmers via `censtats kmer-entropy`."
     properties:
       ref_repeatmasker_output:
         type: array
         items:
           type: string
         description: >-
-          Path of repeatmasker outputs from reference assemblies. Used for visualization.
+          Path of `RepeatMasker` outputs from reference assemblies. Used for visualization.
         default: [
           data/annotations/chm13_chm1_cens_v21.trimmed.fa.noheader.out
         ]
       bp_shannon_window:
         type: integer
-        description: >-
-          Window size to use in calculating shannon index for region filtering.
-          Smaller windows allow smaller centromeres but may increase the number of false-positives.
-          (ex. monomeric/divergent alpha-satellite or p-arm fragments of acrocentric chromosomes)
+        description: "Window size to use in calculating shannon index for region filtering.\n\n
+          * Smaller windows allow smaller centromeres but may increase the number of false-positives. (ex. monomeric/divergent alpha-satellite or p-arm fragments of acrocentric chromosomes)"
         default: 5000
       omit_shannon_plots:
         type: boolean
@@ -207,23 +219,23 @@ properties:
         type: array
         items:
           type: string
-        description: Trim centromeric regions to the largest block of these RepeatMasker repeat annotations.
+        description: Trim centromeric regions to the largest block of these `RepeatMasker` repeat annotations.
         default: []
         # default: ["ALR/Alpha", "SAR"]
       repeat_colors:
         type: string
-        description: Path to JSON file of repeat colors.
+        description: "Path to JSON file of repeat colors."
         default: config/repeatmasker_colors.json
       species:
         type: string
-        description: Repeatmasker species.
+        description: "`RepeatMasker` species."
         default: human
       threads:
         type: integer
         default: 12
       bp_slop:
         type: integer
-        description: Distance to add to region after trimming. If none, defaults to ident_cen_ctgs.bp_slop.
+        description: Distance to add to region after trimming. If `null`, defaults to `ident_cen_ctgs.bp_slop`.
       partition_by:
         type: array
         items:
@@ -234,12 +246,13 @@ properties:
   humas_annot:
     type: object
     additionalProperties: false
+    description: Configuration for alpha-satellite HOR annotation.
     properties:
       mode:
         type: string
         enum: ["sd", "hmmer", "srf-n-trf", "sf"]
         default: sd
-        description: Annotate centromere by reference-based approaches (sd, hmmer, sf) or the monomers found from srf/trf.
+        description: Annotate centromere by reference-based approaches (`sd`, `hmmer`, `sf`) or the monomers found from `srf`/`trf-mod` (`str-n-trf`).
       threads:
         type: integer
         default: 6
@@ -250,10 +263,11 @@ properties:
       hmm_profile:
         type: string
         default: data/models/AS-HORs-hmmer3.4-071024.hmm.gz
-        description: Path to hidden markov model profile used with HumAS-HMMER to use as HOR variant database.
+        description: Path to nhmmer HMM profile used with `HumAS-HMMER` to use as HOR variant database.
   plot_hor_stv:
     type: object
     additionalProperties: false
+    description: Configuration for plotting HOR structural variant plots.
     properties:
       ref_stv:
         type: array
@@ -286,6 +300,7 @@ properties:
   calculate_hor_length:
     type: object
     additionalProperties: false
+    description: Configuration for determing HOR array length and plots.
     properties:
       ref_hor_lengths:
         type: array
@@ -311,6 +326,8 @@ properties:
         default: config/chrom_colors.tsv
   moddotplot:
     type: object
+    description: "Configuration for [`ModDotPlot`](https://github.com/marbl/ModDotPlot).\n\n
+      * We use a lightweight port of the self-identity functionality in [`CenStats`](https://github.com/logsdon-lab/CenStats)."
     additionalProperties: false
     properties:
       mem:
@@ -320,19 +337,20 @@ properties:
       ident_thr:
         type: number
         default: 70.0
-        description: Sequence identity threshold for ModDotPlot
+        description: Sequence identity threshold for `ModDotPlot`
       window:
         type: integer
         default: 5000
-        description: Window size passed to ModDotPlot
+        description: Window size passed to `ModDotPlot`
   ideogram:
     type: object
     additionalProperties: false
+    description: Configuration for contig-level ideogram plot.
     properties:
       title:
         type: string
         default: "{sm}"
-        description: Plot title. If "{sm}" is present, replaced with sample name.
+        description: Plot title. If `{sm}` is present, replaced with sample name.
       height:
         type: integer
         default: 15
@@ -351,6 +369,8 @@ properties:
         description: Use renamed and reoriented coordinates.
   cdr_finder:
     type: object
+    description: "`CDR-Finder` configuration.\n\n
+      * For more information or examples on parameters and tuning, see [here](https://github.com/logsdon-lab/CDR-Finder?tab=readme-ov-file#parameters)."
     additionalProperties: false
     properties:
       aligner:
@@ -358,17 +378,15 @@ properties:
         enum: ["minimap2", "winnowmap"]
       input_bam_fofn_dir:
         type: string
-        description: >-
-          Directory of read fofn files.
-          Each file in this directory is named "{sample}.fofn".
+        description: "Directory of read fofn files.\n\n
+          * Each file in this directory is named `{sample}.fofn`."
       input_bam_dir:
         type: string
-        description: Path to directory with methyl BAM files. Searches recursively for files matching bam_rgx.
+        description: Path to directory with methyl BAM files. Searches recursively for files matching `bam_rgx`.
       bam_rgx:
         type: string
-        description: >-
-          Regular expression to search input_bam_dir for methyl BAM files.
-          Despite the name, also supports gzipped fastq files if MM and ML tags are in name.
+        description: "Regular expression to search input_bam_dir for methyl BAM files.\n\n
+          * Despite the name, also supports gzipped fastq files if `MM` and `ML` tags are in name."
       aln_mem:
         type: string
         pattern: "\\d+GB"
@@ -414,20 +432,19 @@ properties:
         default: 0.4
       use_srf_regions:
         type: boolean
-        description: >-
-          Use srf-n-trf regions instead of RepeatMasker output as putative alpha-satellite region.
-          Merge based on bp_alr_merge and region minimum size based on alr_threshold.
+        description: "Use `srf-n-trf` regions instead of `RepeatMasker` output as putative alpha-satellite region.\n\n
+          * Merge based on `bp_alr_merge` and region minimum size based on `alr_threshold`."
         default: false
       edge_height_heuristic:
         type: string
         enum: ["min", "avg", "max"]
         default: avg
-        description: Heuristic used when determining edge height of CDR. Either min, avg, or max (By decreasing strictness).
+        description: "Heuristic used when determining edge height of CDR.\n\n
+          * Either min, avg, or max (By decreasing strictness)."
       filter_by_live_hor:
         type: boolean
-        description: >-
-          Use HOR annotation to filter CDRs.
-          Only applied to human annotation modes, sd and hmmer.
+        description: "Use HOR annotation to filter CDRs.\n\n
+          * Only applied to human annotation modes, `sd` and `hmmer`."
         default: true
     required:
       - input_bam_dir
@@ -438,9 +455,8 @@ properties:
     properties:
       filter_by_live_hor:
         type: boolean
-        description: >-
-          Use HOR annotation to filter out non-live alpha-satellite HOR centromeres.
-          Only applied to human annotation modes, sd and hmmer.
+        description: "Use HOR annotation to filter out non-live alpha-satellite HOR centromeres.\n\n
+          * Only applied to human annotation modes, `sd` and `hmmer`."
         default: true
 required:
   - samples
