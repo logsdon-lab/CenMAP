@@ -1,10 +1,9 @@
 name: GitHub Pages
 
+# Only update docs when PR closed.
 on:
-  push:
-    branches: ["main"]
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+  pull_request:
+    types: [closed]
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -37,6 +36,7 @@ jobs:
           mkdir dist
           pushd dist
           generate-schema-doc --config-file ../docs/json-schema-configuration.yaml ../config/config.schema.yaml
+          mv schema_doc.html index.html
           popd
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

@@ -30,3 +30,4 @@ run.sh
 SG_*
 all_*
 /schema_*
+dist/

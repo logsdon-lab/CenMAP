@@ -326,8 +326,8 @@ properties:
         default: config/chrom_colors.tsv
   moddotplot:
     type: object
-    description: "Configuration for [`ModDotPlot`](https://github.com/marbl/ModDotPlot).\n\n
-      * We use a lightweight port of the self-identity functionality in [`CenStats`](https://github.com/logsdon-lab/CenStats)."
+    description: "Configuration for [ModDotPlot](https://github.com/marbl/ModDotPlot).\n\n
+      * We use a lightweight port of the self-identity functionality in [CenStats](https://github.com/logsdon-lab/CenStats)."
     additionalProperties: false
     properties:
       mem:
