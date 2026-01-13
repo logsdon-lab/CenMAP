@@ -29,3 +29,5 @@ run.sh
 *_working
 SG_*
 all_*
+/schema_*
+dist/
