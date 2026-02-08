@@ -215,6 +215,10 @@ properties:
         type: boolean
         description: Omit entropy plots.
         default: true
+      omit_entropy_filter:
+        type: boolean
+        description: Remove entropy filter. Only for RepeatMasker-based version.
+        default: false
       trim_to_repeats:
         type: array
         items:

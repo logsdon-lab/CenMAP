@@ -80,12 +80,33 @@ rule filter_entropy_bed:
         """
 
 
+rule no_filter_entropy:
+    output:
+        bed=temp(
+            join(
+                FIX_RM_OUTDIR,
+                "entropy",
+                "interm",
+                "{sm}_{fname}_noop.bed",
+            )
+        ),
+    run:
+        ctg, coords = wildcards.fname.rsplit(":", 1)
+        st, end = coords.split("-")
+        with open(str(output.bed), "wt") as fh:
+            print(ctg, st, end, str(wildcards.fname), sep="\t", file=fh)
+
+
 def valid_beds_by_cen_entropy(wc):
     outdir = checkpoints.split_cens_for_rm.get(**wc).output[0]
     fa_glob_pattern = join(outdir, "{fname}.fa")
     wcs = glob_wildcards(fa_glob_pattern)
     fnames = wcs.fname
-    return expand(rules.filter_entropy_bed.output, sm=wc.sm, fname=fnames)
+
+    if config["repeatmasker"].get("omit_entropy_filter"):
+        return expand(rules.no_filter_entropy.output, sm=wc.sm, fname=fnames)
+    else:
+        return expand(rules.filter_entropy_bed.output, sm=wc.sm, fname=fnames)
 
 
 # Merge complete centromere coordinates. Prior to running NucFlag.
