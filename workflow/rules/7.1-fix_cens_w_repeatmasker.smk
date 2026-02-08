@@ -86,8 +86,8 @@ rule no_filter_entropy:
             join(
                 FIX_RM_OUTDIR,
                 "entropy",
-                "interm",
-                "{sm}_{fname}_noop.bed",
+                "interm_noop",
+                "{sm}_{fname}.bed",
             )
         ),
     run:
