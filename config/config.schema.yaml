@@ -454,9 +454,6 @@ properties:
         description: "Use HOR annotation to filter CDRs.\n\n
           * Only applied to human annotation modes, `sd` and `hmmer`."
         default: true
-    required:
-      - input_bam_dir
-      - bam_rgx
   get_complete_correct_cens:
     type: object
     additionalProperties: false
