@@ -169,6 +169,8 @@ else:
     ignore_regions = str(rules.create_rm_nucflag_ignore_bed.output)
     overlay_beds = [str(rules.create_rm_overlay_bed.output)]
 
+
+# TODO: Integrate NucFlag v1.0
 NUCFLAG_CFG = {
     "samples": [
         {

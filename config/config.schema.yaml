@@ -434,6 +434,10 @@ properties:
         type: number
         description: Baseline expected average methylation. Scales thresholds if average methylation is below value, reducing false positives.
         default: 0.4
+      rolling_mean_window:
+        type: integer
+        description: Apply a rolling mean window over CpG signal. Helps in improving CDR calling in less prominent CDRs.
+        default: 3
       use_srf_regions:
         type: boolean
         description: "Use `srf-n-trf` regions instead of `RepeatMasker` output as putative alpha-satellite region.\n\n

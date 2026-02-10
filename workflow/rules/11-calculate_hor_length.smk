@@ -21,6 +21,7 @@ rule calculate_as_hor_length:
             "{chr}_AS-HOR_lengths.bed",
         ),
     params:
+        # TODO: censtats length should be modified to look at active SF classes (SF1, SF2, SF3, SF01, etc.) if not using sd.
         length_params=(
             "--allow_nonlive -mu 100000 -mb 100000 -ua 0 -ub 0 -fp 0.0 -fl 0"
             if config["humas_annot"]["mode"] not in ["sd", "hmmer"]

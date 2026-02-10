@@ -82,6 +82,6 @@ cdr_finder:
   alr_threshold: 100000
   bp_alr_merge: 8000
   bp_edge: 500_000
-  height_perc_valley_threshold: 0.34
-  prom_perc_valley_threshold: 0.3
+  height_perc_valley_threshold: 0.2
+  prom_perc_valley_threshold: 0.1
   extend_edges_std: -1
