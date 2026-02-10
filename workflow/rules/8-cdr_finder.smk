@@ -10,13 +10,21 @@ if IS_HUMAN_ANNOT:
 
 
 # Get sample names with subdirs in cdr_finder.input_bam_dir
-SAMPLE_NAMES_BAM = set(
-    glob_wildcards(join(config["cdr_finder"]["input_bam_dir"], "{sm}")).sm
-)
+if config["cdr_finder"].get("input_bam_fofn_dir"):
+    glob_sm = join(config["cdr_finder"]["input_bam_fofn_dir"], "{sm}.fofn")
+    cfg_cdr_aln = lambda sm: {"read_fofn": glob_sm.format(sm=sm)}
+else:
+    glob_sm = join(config["cdr_finder"]["input_bam_dir"], "{sm}")
+    cfg_cdr_aln = lambda sm: {
+        "read_dir": glob_sm.format(sm=sm),
+        "read_rgx": config["cdr_finder"]["bam_rgx"],
+    }
+
+SAMPLE_NAMES_BAM = set(glob_wildcards(glob_sm).sm)
 SAMPLE_NAMES_INTERSECTION = SAMPLE_NAMES_BAM.intersection(set(SAMPLE_NAMES))
 print(
     f"Using {len(SAMPLE_NAMES_INTERSECTION)} out of {len(SAMPLE_NAMES)} samples "
-    f"that have subdirs in {config['cdr_finder']['input_bam_dir']} for CDR-Finder.",
+    f"that have match {glob_sm} for CDR-Finder.",
     file=sys.stderr,
 )
 ALIGNER = config["cdr_finder"].get("aligner", "minimap2")
@@ -47,18 +55,7 @@ CDR_ALIGN_CFG = {
         {
             "name": sm,
             "asm_fa": expand(rules.create_final_asm.output.fa, sm=sm)[0],
-            **(
-                {
-                    "read_fofn": join(
-                        config["cdr_finder"]["input_bam_fofn_dir"], f"{sm}.fofn"
-                    ),
-                }
-                if config["cdr_finder"].get("input_bam_fofn_dir")
-                else {
-                    "read_dir": join(config["cdr_finder"]["input_bam_dir"], sm),
-                    "read_rgx": config["cdr_finder"]["bam_rgx"],
-                }
-            ),
+            **cfg_cdr_aln(sm),
         }
         for sm in SAMPLE_NAMES_INTERSECTION
     ],
