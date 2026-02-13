@@ -231,7 +231,7 @@ def humas_annot_sm_outputs(wc):
 
 rule sm_stv:
     input:
-        humas_annot_sm_outputs,
+        ancient(humas_annot_sm_outputs),
     output:
         join(HUMAS_ANNOT_OUTDIR, "{sm}_live_stv.bed"),
     conda:
@@ -272,7 +272,7 @@ checkpoint run_humas_annot:
             if config["humas_annot"]["mode"] != "srf-n-trf"
             else []
         ),
-        humas_annot_sm_outputs,
+        ancient(humas_annot_sm_outputs),
         rules.sm_stv.output if IS_HUMAN_ANNOT else [],
     output:
         touch(join(HUMAS_ANNOT_OUTDIR, "humas_annot_{sm}.done")),
