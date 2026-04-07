@@ -1,10 +1,11 @@
 import sys
-import gzip
+import pysam
 import tarfile
 import pathlib
 import polars as pl
 
 from typing import Any, Callable
+from pysam import BGZFile
 from multiprocessing import get_context
 from concurrent.futures import Future, ProcessPoolExecutor
 
@@ -63,10 +64,11 @@ def write_bedfile(
         assert output_fname_suffix.endswith(".gz"), (
             "Output filename suffix must end in gz."
         )
-        with gzip.open(
-            output_dir.joinpath("bed", f"{sm}_{output_fname_suffix}"), "wb"
-        ) as fh:
+        outfile_bgzip = output_dir.joinpath("bed", f"{sm}_{output_fname_suffix}")
+        with BGZFile(outfile_bgzip.as_posix(), "wb") as fh:
             df.write_csv(fh, separator="\t", include_header=False)
+
+        pysam.tabix_index(outfile_bgzip.as_posix(), preset="bed")
     return
 
 
@@ -133,7 +135,7 @@ def format_bedfile(
             # Keep sm
             .drop("ctg", "ctg_len")
         )
-    return df_bed
+    return df_bed.sort("chrom", "st")
 
 
 def cp_rm_outputs(
