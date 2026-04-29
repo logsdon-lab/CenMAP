@@ -68,6 +68,7 @@ rule filter_entropy_bed:
             else ""
         ),
         bp_merge=config["ident_cen_ctgs"]["bp_merge"],
+        perc_valid=config["repeatmasker"]["perc_valid"],
     conda:
         "../envs/py.yaml"
     shell:
@@ -75,6 +76,7 @@ rule filter_entropy_bed:
         python {params.script} \
         -i {input.entropy_bed} \
         -r {input.rm_out} \
+        -p {params.perc_valid} \
         {params.trim_to_repeats} \
         -d {params.bp_merge} > {output} 2> {log}
         """

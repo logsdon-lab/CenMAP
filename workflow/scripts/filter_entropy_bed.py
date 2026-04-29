@@ -77,7 +77,7 @@ def main():
         "-p",
         "--prop_valid",
         type=float,
-        default=0.99,
+        default=0.9,
         help="Proportion of dips in entropy over all evaluated repeat regions required to be valid.",
     )
     ap.add_argument(
