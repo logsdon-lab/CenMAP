@@ -61,12 +61,14 @@ rule filter_entropy_bed:
     params:
         script=workflow.source_path("../scripts/filter_entropy_bed_kmers.py"),
         bp_merge=config["ident_cen_ctgs"]["bp_merge"],
+        perc_valid=config["ident_cen_ctgs"]["perc_valid"],
     conda:
         "../envs/py.yaml"
     shell:
         """
         python {params.script} \
         -i <(cat {input.entropy_dir}/*.bed) \
+        -p {params.perc_valid} \
         -b {input.putative_alr_bed} \
         -d {params.bp_merge} > {output} 2> {log}
         """
