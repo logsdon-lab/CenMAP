@@ -137,14 +137,14 @@ def generate_default_config(output_dir: str) -> None:
 
 def make_config(
     args: argparse.Namespace, working_dir: str, template_config: Path
-) -> Path:
+) -> Path | RuntimeError:
     sample = args.sample
     if not args.sample:
-        raise ValueError("Sample name is required.")
+        return RuntimeError("Sample name is required.")
 
     fasta_files: list[str] | None = args.input_asm
     if not fasta_files:
-        raise RuntimeError("No assembly files provided.")
+        return RuntimeError("No assembly files provided.")
 
     ont_files: list[str] | None = args.ont
     hifi_files: list[str] | None = args.hifi
@@ -227,13 +227,18 @@ def make_config(
         cfg["output_dir"] = "results"
         cfg["samples"] = [sample]
         cfg["chromosomes"] = chroms
+        # TODO: Add comment with version number
         yaml.safe_dump(cfg, ofh)
 
     return new_cfg
 
 
+def wrap_text(txt: str) -> str:
+    return f"\033[31m{txt}\033[0m"
+
+
 def main() -> int:
-    print(f"\033[31m{ASCII_ART}\033[0m", file=sys.stderr)
+    print(wrap_text(ASCII_ART), file=sys.stderr)
     ap = argparse.ArgumentParser(
         description="(Cen)tromere (M)apping and (A)nnotation (P)ipeline."
     )
@@ -382,8 +387,14 @@ def main() -> int:
         generate_default_config(args.output_dir)
         return 0
     else:
-        new_config = make_config(args, working_dir=cwd, template_config=CFG).absolute()
+        res_new_config = make_config(args, working_dir=cwd, template_config=CFG)
+        if isinstance(res_new_config, RuntimeError):
+            ap.print_usage(file=sys.stderr)
+            print(f"cenmap: error: {res_new_config}", file=sys.stderr)
+            sys.exit(1)
+
         samples = [args.sample]
+        new_config = res_new_config.absolute()
         print(f"Generated configfile:\n\t{new_config}", file=sys.stderr)
         output_dir = Path(args.output_dir, args.sample)
 
