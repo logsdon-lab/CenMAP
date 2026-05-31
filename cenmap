@@ -99,16 +99,16 @@ def update_relative_to_wd(
 def generate_default_config(output_dir: str) -> None:
     with open(CFG, "rt") as fh:
         cfg = yaml.safe_load(fh)
-        output_dir = Path(output_dir)
+        path_output_dir = Path(output_dir)
         validate(cfg, schema=CFG_SCHEMA, set_default=True)
         # Transfer config to working dir
         print("Copying files...", file=sys.stderr)
-        update_relative_to_wd(cfg=cfg, working_dir=output_dir, config_dir=CFG_DIR)
+        update_relative_to_wd(cfg=cfg, working_dir=path_output_dir, config_dir=CFG_DIR)
         # Copy both profiles for user choice.
         for file in (HMM_PROFILE_HOR, HMM_PROFILE_SF):
             bname = os.path.basename(file)
-            outfile = output_dir.joinpath(CFG_DIR, bname)
-            if output_dir.joinpath(CFG_DIR, bname).exists():
+            outfile = path_output_dir.joinpath(CFG_DIR, bname)
+            if path_output_dir.joinpath(CFG_DIR, bname).exists():
                 continue
             shutil.copy(file, outfile)
         # No samples
@@ -173,6 +173,10 @@ def make_config(
         cfg["repeatmasker"]["species"] = "primates"
         cfg["humas_annot"]["mode"] = "sf"
         cfg["humas_annot"]["hmm_profile"] = str(HMM_PROFILE_SF)
+        # Merge more since no live mon filter
+        # Allow more variation in mon length
+        cfg["ident_cen_ctgs"]["bp_merge"] = 2500000
+        cfg["ident_cen_ctgs"]["perc_mon_len_diff"] = 2.0
 
     if args.omit_repeatmasker:
         # Remove repeatmasker

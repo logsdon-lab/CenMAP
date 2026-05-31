@@ -47,8 +47,11 @@ ident_cen_ctgs:
   mem_srf: 50GB
   threads_aln: 8
   mem_aln: 150GB
-  bp_merge: 5000000
-  bp_slop: 1000000
+  # Merge more since no live annotation to filter and want single centromere
+  bp_merge: 2500000
+  bp_slop: 500000
+  # Allow greater variance in putative alpha-satellite monomer length
+  perc_mon_len_diff: 2.0
 
 nucflag:
   # input_hifi_reads_fofn_dir: "data/hifi"

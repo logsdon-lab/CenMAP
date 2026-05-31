@@ -10,8 +10,8 @@ ident_cen_ctgs:
   mem_srf: 50GB
   threads_aln: 8
   mem_aln: 150GB
-  bp_merge: 2500000
-  bp_slop: 1000000
+  bp_merge: 500000
+  bp_slop: 500000
 
 nucflag:
   # input_hifi_reads_fofn_dir: "data/hifi"
