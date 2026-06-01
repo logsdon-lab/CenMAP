@@ -1,7 +1,7 @@
 
 BEGIN {
     OFS="\t"
-    ALR_COLOR="#8B008B"
+    ALR_COLOR="#522758"
 } {
     name=$5; start=$6; end=$7; rType=$10; rClass=$11;
 
@@ -35,9 +35,9 @@ BEGIN {
     }
 
     # Set action for NucFlag
-    action="plot"
+    color=""
     if (new_rClass == "ALR/Alpha") {
-        action="plot:"ALR_COLOR
+        color=ALR_COLOR
     }
-    print ctg_name[1], start, end, new_rClass, action
+    print ctg_name[1], start, end, new_rClass, 0, ".", start, end, color
 }

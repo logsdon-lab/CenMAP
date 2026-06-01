@@ -18,6 +18,7 @@
 [submodule "workflow/rules/Snakemake-NucFlag"]
 	path = workflow/rules/Snakemake-NucFlag
 	url = https://github.com/logsdon-lab/Snakemake-NucFlag.git
+	branch = feature/nucflag-v1.0
 	ignore = dirty
 [submodule "workflow/rules/Snakemake-srf"]
 	path = workflow/rules/Snakemake-srf
