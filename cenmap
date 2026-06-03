@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 from snakemake.utils import validate
 
-__version__ = "1.2.1"
+__version__ = "1.3.0"
 
 # Follow symlinks to install dir.
 WD = Path(__file__).resolve().parent
@@ -231,7 +231,6 @@ def make_config(
         cfg["output_dir"] = "results"
         cfg["samples"] = [sample]
         cfg["chromosomes"] = chroms
-        # TODO: Add comment with version number
         yaml.safe_dump(cfg, ofh)
 
     return new_cfg
