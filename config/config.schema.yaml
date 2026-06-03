@@ -149,7 +149,7 @@ properties:
     type: object
     additionalProperties: false
     description: "Configuration for [NucFlag](https://github.com/logsdon-lab/NucFlag) and correctness check of QC.\n\n
-      * Regions are considered correct if nothing is flagged by `NucFlag`."
+      * Regions are considered correct if `filter_if_contains` is `0.0` and/or QV is greater than `filter_if_lt_qv`."
     properties:
       input_hifi_reads_fofn_dir:
         type: string
@@ -193,6 +193,15 @@ properties:
         description: Restrict check to asat or live asat.
         enum: [asat, live_asat]
         default: asat
+      filter_if_contains:
+        items:
+          type: string
+        description: Filter if calls contain any of these types. See https://github.com/logsdon-lab/NucFlag/wiki#types for more info.
+        default: [misjoin, deletion, insertion, other_repeat, false_dup, collapse, scaffold]
+      filter_if_lt_qv:
+        type: ["number", "null"]
+        description: Filter if NucFlag region QV is less than this value.
+        default: 20
   repeatmasker:
     type: object
     additionalProperties: false

@@ -18,7 +18,7 @@ if IS_HUMAN_ANNOT:
 
 def cmd_infile(wc, input):
     cmd = []
-    if input.nucflag_bed:
+    if input.nucflag_status:
         cmd.extend(
             [
                 "bedtools",
@@ -28,13 +28,8 @@ def cmd_infile(wc, input):
                 "-a",
                 f"<(sort -k1,1 -k2,2n {input.interm_bed})",
                 "-b",
+                f"<(sort -k1,1 -k2,2n {input.nucflag_status})",
             ]
-        )
-        # TODO: Filter if:
-        # * containing misjoin, deletion, insertion, other_repeat, false_duplication, collapse, scaffold
-        # * QV > 20
-        cmd.append(
-            f"<(sort -k1,1 -k2,2n {input.nucflag_bed} | awk '$4 == \"correct\"')"
         )
     else:
         cmd.extend(["cat", input.interm_bed])
@@ -53,9 +48,9 @@ rule get_complete_correct_cens_bed:
         # (name, st, end, ctg_name, ctg_len)
         interm_bed=rules.make_complete_cens_bed.output.cen_bed,
         # (name, st, end, status, ..., QV)
-        # Where ... are the 15 call types
-        nucflag_bed=(
-            rules.check_asm_nucflag.output.status if config.get("nucflag") else []
+        # Where ... are the 15 call types. Already filtered.
+        nucflag_status=(
+            rules.filter_nucflag_status_bed.output if config.get("nucflag") else []
         ),
         stv_chkpt=rules.sm_stv.output if IS_HUMAN_ANNOT else [],
     output:

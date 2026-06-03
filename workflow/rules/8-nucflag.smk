@@ -21,12 +21,12 @@ if config.get("humas_annot"):
 rule create_rm_overlay_bed:
     input:
         rm=(
-            expand(rules.fix_cens_rm_out.output, sm="{sm}", typ="all")
+            rules.create_fixed_rm_bed_by_sm.output
             if RUN_REPEATMASKER
             else rules.make_srf_putative_alr_regions.output
         ),
     output:
-        # [ctg_name, st, end, desc, action]
+        # BED9
         join(
             NUCFLAG_OUTDIR,
             "{sm}_plot_rm.bed",
@@ -35,15 +35,15 @@ rule create_rm_overlay_bed:
         join(NUCFLAG_LOGDIR, "create_rm_overlay_bed_{sm}.log"),
     params:
         script=(
-            workflow.source_path("../scripts/create_rm_overlay_bed.awk")
+            """<(printf '{{ match($1, "^(.+):", chroms); $1=chroms[1]; print }}')"""
             if RUN_REPEATMASKER
-            else """<(printf '{{ OFS="\\t" }} {{ print $1, $2, $3, $4, 0, ".", $2, $3, "#522758"}}')"""
+            else """<(printf '{{ print $1, $2, $3, $4, 0, ".", $2, $3, "#522758"}}')"""
         ),
     conda:
         "../envs/tools.yaml"
     shell:
         """
-        awk -f {params.script} {input.rm} > {output} 2> {log}
+        awk -v OFS="\\t" -f {params.script} {input.rm} > {output} 2> {log}
         """
 
 
@@ -104,7 +104,7 @@ rule create_nucflag_ignore_bed:
     params:
         # Size of LINE
         bp_merge=8000,
-        filter_str="L" if FILTER_BY_LIVE_ASAT else "ALR/Alpha",
+        filter_str="L" if FILTER_BY_LIVE_ASAT else "ALR",
         bed9_annot=lambda wc, input: (
             input.bed9_annot if input.bed9_annot else '<(echo "")'
         ),
@@ -177,7 +177,55 @@ module NucFlag:
 use rule * from NucFlag
 
 
+# NucFlag's default output status merges by non-overlapping regions.
+# We want just by input region. Since we ignore non-asat, we do it here.
+rule create_region_status:
+    input:
+        bed_cen=rules.make_complete_cens_bed.output.cen_bed,
+        bed_calls=rules.check_asm_nucflag.output.misassemblies,
+    output:
+        join(
+            NUCFLAG_OUTDIR,
+            "{sm}_status_asat.bed",
+        ),
+    conda:
+        "Snakemake-NucFlag/workflow/env/nucflag.yaml"
+    log:
+        join(NUCFLAG_LOGDIR, "create_region_status_{sm}.log"),
+    shell:
+        """
+        nucflag status -i {input.bed_calls} -b {input.bed_cen} > {output} 2> {log}
+        """
+
+
+# Filter if:
+# * Contains misjoin, deletion, insertion, other_repeat, false_duplication, collapse, scaffold
+# * QV less than some value
+# If no conditions, no operation done.
+rule filter_nucflag_status_bed:
+    input:
+        rules.create_region_status.output,
+    output:
+        join(
+            NUCFLAG_OUTDIR,
+            "{sm}_status_asat_filtered.bed",
+        ),
+    params:
+        script=workflow.source_path("../scripts/filter_nucflag_status.py"),
+        lt_qv=(
+            f"-q {config["nucflag"]["filter_if_lt_qv"]}"
+            if config["nucflag"]["filter_if_lt_qv"]
+            else ""
+        ),
+        contains_type=f"-t {" ".join(config["nucflag"]["filter_if_contains"])}",
+    shell:
+        """
+        python {params.script} {input} {params.lt_qv} {params.contains_type} > {output}
+        """
+
+
 rule nucflag_all:
     input:
         expand(rules.nucflag.input, sm=SAMPLE_NAMES),
+        expand(rules.filter_nucflag_status_bed.input, sm=SAMPLE_NAMES),
     default_target: True
