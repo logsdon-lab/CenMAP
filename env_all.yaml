@@ -39,7 +39,7 @@ dependencies:
 - snakemake>=8.24.0,<=9.5.0
 - cenplot>=0.1.4
 - censtats>=0.1.3
-- nucflag>=0.3.7
+- nucflag>=1.0.0,<2.0.0
 - intervaltree
 - matplotlib-base
 - numpy
