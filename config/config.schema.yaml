@@ -123,20 +123,20 @@ properties:
         description: "Merge grouped satellite repeat blocks n base pairs.\n\n
           * Smaller values will reduce the length of p-arms of the acrocentric chromosomes but at the risk of considering monomeric/divergent HORs in p-arm acrocentric chromosomes as a correct centromere.\n\n
           * The `repeatmasker.bp_shannon_window` parameter should be increased as well to prevent this."
-        default: 100000
+        default: 500000
       bp_slop:
         type: integer
         description: Add n base pairs to extend edges of query HOR array.
-        default: 1000000
+        default: 500000
       perc_valid:
         type: number
         description: "Percentage of putative alpha-satellite array covered by low entropy to consider complete."
-        default: 0.9
+        default: 0.8
       perc_mon_len_diff:
         type: number
         # TODO: Tune more (2.0 > 1.0). Some HSAT-1A contains trf monomers that are close (168).
         description: "Percent difference in monomer length to allow motif based on: `100 * ((motif_len % monomer_length) / monomer_length)`"
-        default: 2.0
+        default: 1.25
       perc_multi_chrom:
         type: number
         description: Percent of mapped reference chromosome required to add to name.
@@ -149,7 +149,7 @@ properties:
     type: object
     additionalProperties: false
     description: "Configuration for [NucFlag](https://github.com/logsdon-lab/NucFlag) and correctness check of QC.\n\n
-      * Regions are considered correct if nothing is flagged by `NucFlag`."
+      * Regions are considered correct if `filter_if_contains` is `0.0` and/or QV is greater than `filter_if_lt_qv`."
     properties:
       input_hifi_reads_fofn_dir:
         type: string
@@ -167,16 +167,15 @@ properties:
         type: string
         description: Path to `NucFlag` config file.
         default: "config/nucflag.toml"
-      ignore_regions:
-        type: ["string", "null"]
-        description: Path to BED file with regions to ignore in the assembly.
-        default: null
       threads_aln:
         type: integer
         default: 8
       processes_nucflag:
         type: integer
         default: 12
+      threads_nucflag:
+        type: integer
+        default: 2
       mem_nucflag:
         type: string
         pattern: "\\d+GB"
@@ -194,6 +193,15 @@ properties:
         description: Restrict check to asat or live asat.
         enum: [asat, live_asat]
         default: asat
+      filter_if_contains:
+        items:
+          type: string
+        description: Filter if calls contain any of these types. See https://github.com/logsdon-lab/NucFlag/wiki#types for more info.
+        default: [misjoin, deletion, insertion, other_repeat, false_dup, collapse, scaffold]
+      filter_if_lt_qv:
+        type: ["number", "null"]
+        description: Filter if NucFlag region QV is less than this value.
+        default: 20
   repeatmasker:
     type: object
     additionalProperties: false

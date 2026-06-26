@@ -6,7 +6,9 @@ include: "7-finalize_cens.smk"
 NUCFLAG_OUTDIR = join(OUTPUT_DIR, "8-nucflag")
 NUCFLAG_LOGDIR = join(LOG_DIR, "8-nucflag")
 NUCFLAG_BMKDIR = join(BMK_DIR, "8-nucflag")
-
+FILTER_BY_LIVE_ASAT = (
+    config.get("humas_annot") and config["nucflag"].get("ignore_type") == "live_asat"
+)
 
 if config.get("humas_annot"):
 
@@ -19,12 +21,12 @@ if config.get("humas_annot"):
 rule create_rm_overlay_bed:
     input:
         rm=(
-            expand(rules.fix_cens_rm_out.output, sm="{sm}", typ="all")
+            rules.create_fixed_rm_bed_by_sm.output
             if RUN_REPEATMASKER
             else rules.make_srf_putative_alr_regions.output
         ),
     output:
-        # [ctg_name, st, end, desc, action]
+        # BED9
         join(
             NUCFLAG_OUTDIR,
             "{sm}_plot_rm.bed",
@@ -33,15 +35,15 @@ rule create_rm_overlay_bed:
         join(NUCFLAG_LOGDIR, "create_rm_overlay_bed_{sm}.log"),
     params:
         script=(
-            workflow.source_path("../scripts/create_rm_overlay_bed.awk")
+            """<(printf '{{ match($1, "^(.+):", chroms); $1=chroms[1]; print }}')"""
             if RUN_REPEATMASKER
-            else """<(printf '{{ OFS="\\t" }} {{ print $1, $2, $3, $4, "plot:#8B008B"}}')"""
+            else """<(printf '{{ print $1, $2, $3, $4, 0, ".", $2, $3, "#522758"}}')"""
         ),
     conda:
         "../envs/tools.yaml"
     shell:
         """
-        awk -f {params.script} {input.rm} > {output} 2> {log}
+        awk -v OFS="\\t" -f {params.script} {input.rm} > {output} 2> {log}
         """
 
 
@@ -80,97 +82,51 @@ rule create_stv_overlay_bed:
             num_mon=int(hor_len / {params.hor_mon_len})
             stv_color=stv_colors[num_mon]
             if (stv_color == "") {{ stv_color="gray"; }}
-            print ctg_name[1], st, end, num_mon, "plot:"stv_color
+            print ctg_name[1], st, end, num_mon, 0, ".", st, end, stv_color
         }}' {input.annot_colors} {params.stv} > {output} 2> {log}
         """
 
 
-# Create bedfile that only looks at regions annotated as ALR/Alpha and ignores everything else.
-# We also ignored unannotated regions and scaffolds at the edges.
-# Also add ignore bed if provided.
-rule create_rm_nucflag_ignore_bed:
+# Create bedfile that only looks at live asat HOR regions or asat regions.
+rule create_nucflag_ignore_bed:
     input:
-        rm=rules.create_rm_overlay_bed.output,
-        bed=rules.make_complete_cens_bed.output.cen_bed,
-        ignore_bed=(
-            config["nucflag"]["ignore_regions"]
-            if config["nucflag"].get("ignore_regions")
-            else []
+        bed9_annot=lambda wc: (
+            humas_annot_sm_outputs(wc)
+            if FILTER_BY_LIVE_ASAT
+            else rules.create_rm_overlay_bed.output
         ),
+        bed_cen=rules.make_complete_cens_bed.output.cen_bed,
     output:
         join(
             NUCFLAG_OUTDIR,
-            "{sm}_ignore_non_asat.bed",
+            "{sm}_ignore_regions.bed",
         ),
     params:
-        script=workflow.source_path("../scripts/create_rm_nucflag_ignore_bed.py"),
-        # Concatenate ignore bed.
-        ignore_bed=lambda wc, input: (
-            f"| cat - {input.ignore_bed}" if input.ignore_bed else ""
+        # Size of LINE
+        bp_merge=8000,
+        filter_str="L" if FILTER_BY_LIVE_ASAT else "ALR",
+        bed9_annot=lambda wc, input: (
+            input.bed9_annot if input.bed9_annot else '<(echo "")'
         ),
-    conda:
-        "../envs/py.yaml"
-    log:
-        join(NUCFLAG_LOGDIR, "create_rm_nucflag_ignore_bed_{sm}.log"),
-    shell:
-        """
-        python {params.script} -i {input.rm} -r {input.bed} {params.ignore_bed} > {output} 2> {log}
-        """
-
-
-# Create bedfile that only looks at live HOR and ignores everything else.
-# Also add ignore bed if provided.
-rule create_stv_nucflag_ignore_bed:
-    input:
-        stv=lambda wc: humas_annot_sm_outputs(wc) if config.get("humas_annot") else [],
-        bed=rules.make_complete_cens_bed.output.cen_bed,
-        ignore_bed=(
-            config["nucflag"]["ignore_regions"]
-            if config["nucflag"].get("ignore_regions")
-            else []
-        ),
-    output:
-        join(
-            NUCFLAG_OUTDIR,
-            "{sm}_ignore_non_live_asat.bed",
-        ),
-    params:
-        bp_annot_gap_thr=1,
-        # Concatenate ignore bed.
-        ignore_bed=lambda wc, input: (
-            f"| cat - {input.ignore_bed}" if input.ignore_bed else ""
-        ),
-        stv=lambda wc, input: input.stv if input.stv else '<(echo "")',
     conda:
         "../envs/tools.yaml"
     log:
-        join(NUCFLAG_LOGDIR, "format_stv_nucflag_ignore_bed_{sm}.log"),
+        join(NUCFLAG_LOGDIR, "create_nucflag_group_bed_{sm}.log"),
     shell:
         """
-        # Subtract all other regions from annotated HORs.
-        # Include annotation gaps greater than {params.bp_annot_gap_thr} bp.
-        {{ bedtools subtract \
-        -a {input.bed} \
-        -b <(cat {params.stv}) | \
-        awk -v OFS="\\t" '{{
-            len=$3-$2;
-            if (len > {params.bp_annot_gap_thr}) {{
-                print $0, "non-HOR", "ignore:absolute"
-            }}
-        }}' {params.ignore_bed};}} > {output} 2> {log}
+        # Filter to only live or asat. Sort
+        # Merge by small distance
+        # Then subtract by everything else
+        {{ awk -v OFS="\\t" '{{if ($4 ~ "{params.filter_str}") {{print $1, $2, $3}}}}' {params.bed9_annot} | \
+        sort -k1,1 -k2,2n | \
+        bedtools merge -i - -d {params.bp_merge} | \
+        bedtools subtract \
+            -a <(sort -k1,1 -k2,2n {input.bed_cen}) \
+            -b - | \
+        cut -f1-3 ;}} > {output} 2> {log}
         """
 
 
-IGNORE_TYPE = config["nucflag"].get("ignore_type")
-if config.get("humas_annot") and IGNORE_TYPE == "live_asat":
-    ignore_regions = [str(rules.create_stv_nucflag_ignore_bed.output)]
-    overlay_beds = [str(rules.create_stv_overlay_bed.output)]
-else:
-    ignore_regions = str(rules.create_rm_nucflag_ignore_bed.output)
-    overlay_beds = [str(rules.create_rm_overlay_bed.output)]
-
-
-# TODO: Integrate NucFlag v1.0
 NUCFLAG_CFG = {
     "samples": [
         {
@@ -192,14 +148,21 @@ NUCFLAG_CFG = {
             "config": config["nucflag"]["config_nucflag"],
             "region_bed": rules.make_complete_cens_bed.output.cen_bed,
             # Ignore regions.
-            "ignore_bed": ignore_regions,
-            "overlay_beds": overlay_beds,
+            "ignore_bed": [str(rules.create_nucflag_ignore_bed.output)],
+            "overlay_beds": [
+                str(
+                    rules.create_stv_overlay_bed.output
+                    if FILTER_BY_LIVE_ASAT
+                    else rules.create_rm_overlay_bed.output
+                )
+            ],
         }
         for sm in SAMPLE_NAMES
     ],
     "output_dir": NUCFLAG_OUTDIR,
     "logs_dir": NUCFLAG_LOGDIR,
     "benchmarks_dir": NUCFLAG_BMKDIR,
+    "output_plots": True,
     **config["nucflag"],
 }
 
@@ -214,7 +177,55 @@ module NucFlag:
 use rule * from NucFlag
 
 
+# NucFlag's default output status merges by non-overlapping regions.
+# We want just by input region. Since we ignore non-asat, we do it here.
+rule create_region_status:
+    input:
+        bed_cen=rules.make_complete_cens_bed.output.cen_bed,
+        bed_calls=rules.check_asm_nucflag.output.misassemblies,
+    output:
+        join(
+            NUCFLAG_OUTDIR,
+            "{sm}_status_asat.bed",
+        ),
+    conda:
+        "Snakemake-NucFlag/workflow/env/nucflag.yaml"
+    log:
+        join(NUCFLAG_LOGDIR, "create_region_status_{sm}.log"),
+    shell:
+        """
+        nucflag status -i {input.bed_calls} -b {input.bed_cen} > {output} 2> {log}
+        """
+
+
+# Filter if:
+# * Contains misjoin, deletion, insertion, other_repeat, false_duplication, collapse, scaffold
+# * QV less than some value
+# If no conditions, no operation done.
+rule filter_nucflag_status_bed:
+    input:
+        rules.create_region_status.output,
+    output:
+        join(
+            NUCFLAG_OUTDIR,
+            "{sm}_status_asat_filtered.bed",
+        ),
+    params:
+        script=workflow.source_path("../scripts/filter_nucflag_status.py"),
+        lt_qv=(
+            f"-q {config["nucflag"]["filter_if_lt_qv"]}"
+            if config["nucflag"]["filter_if_lt_qv"]
+            else ""
+        ),
+        contains_type=f"-t {" ".join(config["nucflag"]["filter_if_contains"])}",
+    shell:
+        """
+        python {params.script} {input} {params.lt_qv} {params.contains_type} > {output}
+        """
+
+
 rule nucflag_all:
     input:
         expand(rules.nucflag.input, sm=SAMPLE_NAMES),
+        expand(rules.filter_nucflag_status_bed.input, sm=SAMPLE_NAMES),
     default_target: True
