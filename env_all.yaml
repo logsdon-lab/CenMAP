@@ -43,7 +43,7 @@ dependencies:
 - intervaltree
 - matplotlib-base
 - numpy
-- polars
+- polars>=1.19.0,<2.0
 - pyarrow
 - pyyaml
 - scipy
