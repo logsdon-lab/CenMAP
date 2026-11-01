@@ -5,8 +5,10 @@ def run_integration_test(*args: str, expected_output: str) -> None:
     process = subprocess.run(
         [*args],
         capture_output=True,
-        check=True,
     )
+    if process.returncode != 0:
+        raise RuntimeError(process.stderr.decode())
+
     res = sorted(
         line.strip().split("\t") for line in process.stdout.decode().split("\n") if line
     )
