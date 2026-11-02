@@ -20,7 +20,6 @@ nucflag:
   input_hifi_reads_dir: "test/data/raw_data"
   reads_rgx: ".*\\.bam$"
   config_nucflag: "config/nucflag.toml"
-  ignore_regions: "config/nucflag_ignore.bed"
   threads_aln: 4
   mem_nucflag: 50GB
   mem_aln: 120GB

@@ -9,7 +9,7 @@ import polars as pl
 from typing import Any, TextIO
 from collections import defaultdict
 
-from cenplot import plot_tracks, read_tracks
+from cenplot import plot_tracks, read_tracks, TrackPosition
 
 
 # Don't copy references
@@ -234,6 +234,9 @@ def main():
             chrom = track.data["chrom"].first()
             if hasattr(track.options, "legend_title"):
                 track.options.legend_title = chrom
+
+        if track.data.is_empty() and track.pos == TrackPosition.Overlap:
+            continue
 
         final_tracks.append(track)
 

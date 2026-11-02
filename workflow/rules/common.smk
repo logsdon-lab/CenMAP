@@ -126,8 +126,8 @@ def cmd_complete_bed_as_bed9(bed: str | None = None) -> str:
             ort=($1 ~ "rc-") ? "-" : "+";
             ctg_st=$2; ctg_end=$3;
             if (ort == "-") {
-                new_ctg_st=ctg_len-ctg_end + 1;
-                new_ctg_end=ctg_len-ctg_st + 1;
+                new_ctg_st=ctg_len-ctg_end;
+                new_ctg_end=ctg_len-ctg_st;
                 ctg_st=new_ctg_st;
                 ctg_end=new_ctg_end;
             };

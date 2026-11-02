@@ -21,7 +21,6 @@ nucflag:
   input_hifi_reads_dir: "test/data/raw_data"
   reads_rgx: ".*\\.fastq.gz$"
   config_nucflag: "test/config/nucflag.toml"
-  ignore_regions: "config/nucflag_ignore.bed"
   threads_aln: 4
   mem_nucflag: 4GB
   mem_aln: 4GB
