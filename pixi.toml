@@ -3,7 +3,7 @@ authors = ["Keith Oshima <koshima789@gmail.com>"]
 channels = ["conda-forge", "bioconda"]
 name = "CenMAP"
 platforms = ["linux-64"]
-version = "1.2.1"
+version = "1.2.2"
 
 [tasks]
 
@@ -22,7 +22,7 @@ rustybam = "*"
 minimap2 = ">=2.29"
 ont-modkit = ">=0.6.0"
 pbmm2 = ">=1.17.0"
-python = ">=3.12.0"
+python = "==3.12.0"
 repeatmasker = "==4.1.2.p1"
 samtools = ">=1.13"
 seqkit = "*"
