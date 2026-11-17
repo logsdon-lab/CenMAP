@@ -23,7 +23,7 @@ dependencies:
 - ont-modkit>=0.6.0
 - pbmm2>=1.17.0
 # repeatmasker/others
-- python>=3.12.0
+- python==3.12.0
 - repeatmasker ==4.1.2.p1 # Last release before conda releases break and doesn't break with rmblast install.
 - samtools>=1.13
 - seqkit
