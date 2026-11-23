@@ -90,14 +90,14 @@ properties:
       mem_srf:
         type: string
         pattern: "\\d+GB"
-        default: 12GB
+        default: 50GB
       threads_aln:
         type: integer
         default: 8
       mem_aln:
         type: string
         pattern: "\\d+GB"
-        default: 20GB
+        default: 100GB
       monomer_periods:
         type: array
         items:
