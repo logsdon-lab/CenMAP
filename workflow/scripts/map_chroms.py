@@ -88,11 +88,14 @@ def main():
     ap.add_argument(
         "--ignore_multi_chr_assignments",
         nargs="*",
-        default=ACRO_CHRS,
         help="Ignore chromosomes when building multiple chromosome assignments",
     )
 
     args = ap.parse_args()
+
+    ignore_multi_chr_assignments = args.ignore_multi_chr_assignments
+    if not ignore_multi_chr_assignments:
+        ignore_multi_chr_assignments = ACRO_CHRS
 
     df = pl.read_csv(
         args.input, separator="\t", has_header=True, truncate_ragged_lines=True
@@ -132,7 +135,7 @@ def main():
         # Ignore and just take max if all multi_chr.
         if (
             df_ref_length_prop["#reference_name"]
-            .is_in(args.ignore_multi_chr_assignments)
+            .is_in(ignore_multi_chr_assignments)
             .all()
         ):
             df_ref_length_prop = df_ref_length_prop.filter(
