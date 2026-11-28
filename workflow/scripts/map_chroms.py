@@ -88,14 +88,12 @@ def main():
     ap.add_argument(
         "--ignore_multi_chr_assignments",
         nargs="*",
+        default=ACRO_CHRS,
         help="Ignore chromosomes when building multiple chromosome assignments",
     )
 
     args = ap.parse_args()
-
     ignore_multi_chr_assignments = args.ignore_multi_chr_assignments
-    if not ignore_multi_chr_assignments:
-        ignore_multi_chr_assignments = ACRO_CHRS
 
     df = pl.read_csv(
         args.input, separator="\t", has_header=True, truncate_ragged_lines=True
@@ -133,9 +131,15 @@ def main():
         )
 
         # Ignore and just take max if all multi_chr.
+        # Polars series operation (here: is_in and unique) return None with python==3.15.2 and polars==1.44.2
+        # Datafame operations are unaffected
+        # I've been unable to find similar GH issues.
+        # Bumping polars to >2 or reverting to python==3.12.0 and polar==1.32.0 fix these issues.
         if (
-            df_ref_length_prop["#reference_name"]
-            .is_in(ignore_multi_chr_assignments)
+            df_ref_length_prop.with_columns(
+                is_ign=pl.col("#reference_name").is_in(ignore_multi_chr_assignments)
+            )
+            .get_column("is_ign")
             .all()
         ):
             df_ref_length_prop = df_ref_length_prop.filter(
@@ -143,8 +147,8 @@ def main():
             )
 
         chrom = "-".join(
-            df_ref_length_prop.get_column("#reference_name")
-            .unique(maintain_order=True)
+            df_ref_length_prop.unique(subset="#reference_name", maintain_order=True)
+            .get_column("#reference_name")
             .to_list()
         )
         if not chrom:
